@@ -1,0 +1,26 @@
+<Window
+  x:Class="BallGM.Client.Avalonia.MainWindow"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  Title="BallGM"
+  Width="1120"
+  Height="720"
+  MinWidth="900"
+  MinHeight="560"
+  x:DataType="vm:MainWindowViewModel">
+  <Grid RowDefinitions="Auto,*" Margin="24" RowSpacing="20">
+    <StackPanel Spacing="6">
+      <TextBlock Text="{Binding ProductName}" FontSize="28" FontWeight="SemiBold" />
+      <TextBlock Text="{Binding ArchitectureStage}" FontSize="16" />
+      <TextBlock Text="{Binding ClientBoundary}" FontSize="14" Opacity="0.72" />
+    </StackPanel>
+
+    <Border Grid.Row="1" Padding="18" BorderThickness="1" CornerRadius="6">
+      <StackPanel Spacing="10">
+        <TextBlock Text="Architecture proof" FontSize="18" FontWeight="SemiBold" />
+        <TextBlock Text="The desktop shell is rendering an application query. League rules and simulation code stay in pure .NET projects." TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>

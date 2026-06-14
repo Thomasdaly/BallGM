@@ -42,7 +42,7 @@ AI-controlled teams can:
 13. AI general managers
 14. Save/load
 15. JSON data-pack/mod loading
-16. Godot management UI
+16. Avalonia management UI
 
 ## Deferred systems
 

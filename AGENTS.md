@@ -9,15 +9,15 @@ The product should prioritise management depth, rules accuracy, long-term simula
 ## Language and platform
 
 - Use C# for production code.
-- Use Godot 4 C# for the desktop presentation layer.
+- Use Avalonia with C# for the desktop presentation layer.
 - Use pure .NET class libraries for simulation and domain logic.
 - Target Windows, macOS, and Linux desktop platforms.
 - Do not introduce JavaScript or TypeScript without an explicit approved architectural reason.
 
 ## Architecture boundaries
 
-- The simulation core must not reference Godot.
-- UI nodes must not contain league or collective-bargaining rules.
+- The simulation core must not reference Avalonia.
+- UI views and view models must not contain league or collective-bargaining rules.
 - Domain logic must be testable without launching the game client.
 - External services, persistence, Steam, and engine APIs must sit behind interfaces/adapters.
 - Prefer explicit domain services and rule objects over large manager classes.

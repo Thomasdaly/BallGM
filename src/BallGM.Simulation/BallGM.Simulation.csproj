@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\BallGM.Domain\BallGM.Domain.csproj" />
+    <ProjectReference Include="..\BallGM.Rules\BallGM.Rules.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -7,7 +7,7 @@ Each milestone should finish with a buildable repository, passing tests, a revie
 - Scaffold the solution.
 - Add CI.
 - Add formatting and test conventions.
-- Add a minimal Godot client shell.
+- Add a minimal Avalonia client shell.
 - Demonstrate dependency boundaries.
 - Add one deterministic simulation smoke test.
 - Add one save round-trip smoke test.
@@ -102,7 +102,7 @@ Each milestone should finish with a buildable repository, passing tests, a revie
 - compatibility errors
 - documentation
 
-## Milestone 10 — Godot product vertical slice
+## Milestone 10 — Avalonia product vertical slice
 
 - dashboards
 - roster and cap screens

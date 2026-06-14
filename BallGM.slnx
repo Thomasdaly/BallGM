@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BallGM.Application/BallGM.Application.csproj" />
+    <Project Path="src/BallGM.Client.Avalonia/BallGM.Client.Avalonia.csproj" />
+    <Project Path="src/BallGM.Domain/BallGM.Domain.csproj" />
+    <Project Path="src/BallGM.Infrastructure/BallGM.Infrastructure.csproj" />
+    <Project Path="src/BallGM.Mods/BallGM.Mods.csproj" />
+    <Project Path="src/BallGM.Rules/BallGM.Rules.csproj" />
+    <Project Path="src/BallGM.Simulation/BallGM.Simulation.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BallGM.Domain.Tests/BallGM.Domain.Tests.csproj" />
+    <Project Path="tests/BallGM.Integration.Tests/BallGM.Integration.Tests.csproj" />
+    <Project Path="tests/BallGM.Rules.Tests/BallGM.Rules.Tests.csproj" />
+    <Project Path="tests/BallGM.Simulation.Tests/BallGM.Simulation.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/BallGM.DataValidator/BallGM.DataValidator.csproj" />
+  </Folder>
+</Solution>

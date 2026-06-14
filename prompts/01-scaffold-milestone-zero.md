@@ -8,9 +8,9 @@ Required outcomes:
 - Enable nullable reference types and consistent build settings.
 - Create a pure .NET domain library.
 - Create a minimal application library.
-- Create a rules library with no Godot dependency.
+- Create a rules library with no Avalonia dependency.
 - Create test projects.
-- Create a placeholder Godot C# client only if the required Godot tooling is installed; otherwise document the exact missing prerequisite and create no fake generated project.
+- Create a minimal Avalonia client shell.
 - Add a deterministic random abstraction and one reproducibility test.
 - Add a minimal versioned league-save envelope and one round-trip test.
 - Add a structured validation result and one invalid-operation test.

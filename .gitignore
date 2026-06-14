@@ -1,0 +1,19 @@
+bin/
+obj/
+.vs/
+.vscode/
+.idea/
+TestResults/
+artifacts/
+coverage/
+*.binlog
+*.nupkg
+*.snupkg
+*.user
+*.suo
+*.rsuser
+.DS_Store
+
+# Local SDK/tooling caches used by Codex or developer machines.
+.dotnet/
+.nuget/

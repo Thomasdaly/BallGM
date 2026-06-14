@@ -1,26 +1,26 @@
 # Architecture direction
 
-This is a starting architecture decision, not permission to overbuild every layer immediately.
+This is the current Milestone 0 architecture proof. It is intentionally small and is not permission to overbuild every layer immediately.
 
-## Recommended solution structure
+## Current solution structure
 
 ```text
-BasketballFrontOfficeSim.sln
+BallGM.slnx
 src/
-  BasketballSim.Domain/
-  BasketballSim.Application/
-  BasketballSim.Rules/
-  BasketballSim.Simulation/
-  BasketballSim.Infrastructure/
-  BasketballSim.Mods/
-  BasketballSim.Client.Godot/
+  BallGM.Domain/
+  BallGM.Application/
+  BallGM.Rules/
+  BallGM.Simulation/
+  BallGM.Infrastructure/
+  BallGM.Mods/
+  BallGM.Client.Avalonia/
 tests/
-  BasketballSim.Domain.Tests/
-  BasketballSim.Rules.Tests/
-  BasketballSim.Simulation.Tests/
-  BasketballSim.Integration.Tests/
+  BallGM.Domain.Tests/
+  BallGM.Rules.Tests/
+  BallGM.Simulation.Tests/
+  BallGM.Integration.Tests/
 tools/
-  BasketballSim.DataValidator/
+  BallGM.DataValidator/
 docs/
 prompts/
 ```
@@ -51,21 +51,25 @@ Persistence, filesystem access, SQLite if adopted, logging adapters, platform in
 
 Versioned external schemas, loading, validation, compatibility checks, content manifests, and safe asset discovery.
 
-### Godot client
+### Avalonia client
 
-Presentation, input, navigation, view models/presenters, localisation, accessibility, and desktop-platform integration.
+Presentation, input, navigation, view models, localisation, accessibility, and desktop-platform integration.
 
-## Dependency direction
+## Current project references
 
 ```text
-Godot Client -> Application -> Domain
-Infrastructure -> Application/Domain interfaces
-Rules -> Domain
-Simulation -> Domain and Rules abstractions
-Mods -> schema/validation and approved application interfaces
+BallGM.Domain
+BallGM.Application -> BallGM.Domain
+BallGM.Rules -> BallGM.Domain
+BallGM.Simulation -> BallGM.Domain, BallGM.Rules
+BallGM.Infrastructure -> BallGM.Application, BallGM.Domain
+BallGM.Mods -> BallGM.Application, BallGM.Domain
+BallGM.Client.Avalonia -> BallGM.Application
+BallGM.DataValidator -> BallGM.Mods
 ```
 
 The Domain project must not reference the other production projects.
+Only `BallGM.Client.Avalonia` may reference Avalonia packages.
 
 ## Cross-cutting design decisions
 
@@ -79,12 +83,14 @@ The Domain project must not reference the other production projects.
 - Make league rules data-driven, while keeping complex rule algorithms in trusted C#.
 - Version both saves and external content schemas from the beginning.
 
-## First architectural proof
+## Milestone 0 proofs
 
-Before implementing broad gameplay, prove that:
+Implemented before broad gameplay:
 
 1. the pure .NET projects compile and test independently;
-2. the Godot client can call one application query without domain leakage;
-3. a tiny fictional league can serialize and deserialize;
-4. a seeded simulation produces the same result twice;
-5. an invalid transaction returns structured explanations.
+2. the Avalonia client shell calls one application query without referencing Domain directly;
+3. a minimal versioned fictional league save envelope serializes and deserializes;
+4. a seeded simulation smoke path produces a stable signature;
+5. an invalid league-start operation returns structured rule explanations;
+6. integration tests check that non-client projects do not reference Avalonia and Domain has no project references;
+7. GitHub Actions restores, checks formatting, builds, and tests the solution on Windows, macOS, and Linux.

@@ -7,7 +7,7 @@ Acceptance criteria:
 - A team roster can add and remove players through invariant-preserving methods.
 - Duplicate player membership is rejected.
 - Configurable minimum and maximum roster limits are represented without hardcoding one real league.
-- Domain code has no Godot, filesystem, database, or JSON concerns.
+- Domain code has no Avalonia, filesystem, database, or JSON concerns.
 - Tests cover valid membership, duplicate membership, removal, and roster-limit failures.
 - Include structured error codes and readable messages.
 - Update `docs/domain-language.md` only where necessary.

@@ -7,7 +7,7 @@ Check:
 - correctness and hidden state mutation;
 - domain invariants;
 - deterministic behaviour;
-- simulation-core independence from Godot;
+- simulation-core independence from Avalonia;
 - save/mod compatibility concerns;
 - misuse of floating point for money;
 - unclear ownership semantics;

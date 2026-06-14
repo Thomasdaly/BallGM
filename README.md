@@ -16,11 +16,11 @@ Use the Codex desktop app as the main command centre, an IDE for manual review a
 
 ## Important principle
 
-The simulation engine must be a pure .NET library. Godot is the presentation layer, not the owner of the league, contract, salary-cap, draft-pick, trade, or simulation rules.
+The simulation engine must be a pure .NET library. Avalonia is the presentation layer, not the owner of the league, contract, salary-cap, draft-pick, trade, or simulation rules.
 
 ## Initial intended stack
 
-- Godot 4 with C# for the desktop client
+- Avalonia with C# for the desktop client
 - Modern supported .NET SDK for pure C# libraries
 - xUnit for tests
 - System.Text.Json for configuration and save DTOs
@@ -38,3 +38,22 @@ Codex should first:
 - identify assumptions and risks;
 - scaffold a minimal buildable solution;
 - run tests and report exact results.
+
+## Local verification
+
+The repository pins the .NET SDK in `global.json` and keeps NuGet/tooling caches under the repository-local `.nuget/` and `.dotnet/` folders where possible.
+
+Run the full verification path with:
+
+```bash
+./tools/verify-dotnet.sh
+```
+
+Equivalent individual commands:
+
+```bash
+dotnet restore BallGM.slnx
+dotnet format BallGM.slnx --verify-no-changes --no-restore
+dotnet build BallGM.slnx --configuration Release --no-restore -p:UseSharedCompilation=false
+dotnet test BallGM.slnx --configuration Release --no-build
+```
