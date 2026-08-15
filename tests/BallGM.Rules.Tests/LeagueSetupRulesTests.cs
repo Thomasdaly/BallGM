@@ -1,5 +1,5 @@
+using BallGM.Domain.Common;
 using BallGM.Rules.LeagueSetup;
-using BallGM.Rules.Validation;
 
 namespace BallGM.Rules.Tests;
 
@@ -12,30 +12,26 @@ public sealed class LeagueSetupRulesTests
 
         var result = rules.ValidateLeagueCanStart(franchiseCount: 1);
 
-        Assert.False(result.IsValid);
-        var violation = Assert.Single(result.Violations);
-        Assert.Equal("league.minimum_franchises", violation.Code);
-        Assert.Contains("at least two franchises", violation.Explanation);
+        Assert.True(result.IsFailure);
+        var error = Assert.Single(result.Errors);
+        Assert.Equal("league.minimum_franchises", error.Code);
+        Assert.Contains("at least two franchises", error.Message);
     }
 
     [Fact]
-    public void RuleValidationResultCopiesViolationInputs()
+    public void ValidateLeagueCanStartSucceedsWithTwoOrMoreFranchises()
     {
-        var violations = new[]
-        {
-            new RuleViolation("league.minimum_franchises", "A fictional league must have at least two franchises.")
-        };
+        var rules = new LeagueSetupRules();
 
-        var result = RuleValidationResult.Invalid(violations);
-        violations[0] = new RuleViolation("changed", "Changed after result creation.");
+        var result = rules.ValidateLeagueCanStart(franchiseCount: 2);
 
-        var violation = Assert.Single(result.Violations);
-        Assert.Equal("league.minimum_franchises", violation.Code);
+        Assert.True(result.IsSuccess);
+        Assert.Empty(result.Errors);
     }
 
     [Fact]
-    public void InvalidValidationResultRequiresAtLeastOneViolation()
+    public void FailureRequiresAtLeastOneError()
     {
-        Assert.Throws<ArgumentException>(() => RuleValidationResult.Invalid());
+        Assert.Throws<ArgumentException>(() => DomainOperationResult.Failure());
     }
 }

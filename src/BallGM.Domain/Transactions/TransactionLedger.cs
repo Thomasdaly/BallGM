@@ -1,0 +1,135 @@
+using BallGM.Domain.Common;
+using BallGM.Domain.Contracts;
+using BallGM.Domain.DraftAssets;
+using BallGM.Domain.Franchises;
+using BallGM.Domain.Leagues;
+using BallGM.Domain.Players;
+using BallGM.Domain.Teams;
+
+namespace BallGM.Domain.Transactions;
+
+/// <summary>
+/// The append-only record of every cap-affecting event. There is no update and no delete: a payroll
+/// figure that changed without a line here is a bug, because the ledger is the only account of
+/// <em>why</em> a team's books look the way they do.
+/// <para>
+/// Timestamps come from an injected <see cref="IClock"/> and identifiers from
+/// <see cref="SortableId"/>, so a fixture or a test produces the same ledger every run.
+/// </para>
+/// </summary>
+public sealed class TransactionLedger
+{
+    private readonly List<TransactionEntry> _entries = [];
+    private readonly IClock _clock;
+
+    public TransactionLedger(IClock clock)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        _clock = clock;
+    }
+
+    /// <summary>
+    /// Entries in the order they were appended, as a read-only view — a caller who casts this back
+    /// to a list still cannot edit or remove anything. Appending is the only way in.
+    /// </summary>
+    public IReadOnlyList<TransactionEntry> Entries => _entries.AsReadOnly();
+
+    public int Count => _entries.Count;
+
+    /// <summary>
+    /// Appends an entry and returns it. Recording cannot fail on a business rule — the rule check
+    /// happens before the event does — so this returns the entry rather than a result type.
+    /// </summary>
+    public TransactionEntry Record(
+        TransactionKind kind,
+        Season season,
+        TeamId teamId,
+        string reason,
+        PlayerId? playerId = null,
+        ContractId? contractId = null,
+        Money? amount = null)
+    {
+        ArgumentNullException.ThrowIfNull(season);
+        ArgumentNullException.ThrowIfNull(teamId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        var timestamp = _clock.UtcNow;
+        var entry = new TransactionEntry(
+            new TransactionId(SortableId.NewId(timestamp)),
+            _entries.Count,
+            timestamp,
+            kind,
+            season,
+            teamId,
+            playerId,
+            contractId,
+            amount,
+            reason);
+
+        _entries.Add(entry);
+        return entry;
+    }
+
+    /// <summary>
+    /// Appends a draft-asset event. Same ledger, same sequence, new kinds: a pick's history and a
+    /// payroll's history are the same audit trail, and splitting them would let a trade appear in
+    /// one account and not the other.
+    /// </summary>
+    public TransactionEntry RecordPickEvent(
+        TransactionKind kind,
+        Season season,
+        FranchiseId franchiseId,
+        DraftPickId draftPickId,
+        string reason,
+        FranchiseId? counterpartyFranchiseId = null)
+    {
+        ArgumentNullException.ThrowIfNull(season);
+        ArgumentNullException.ThrowIfNull(franchiseId);
+        ArgumentNullException.ThrowIfNull(draftPickId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        var timestamp = _clock.UtcNow;
+        var entry = new TransactionEntry(
+            new TransactionId(SortableId.NewId(timestamp)),
+            _entries.Count,
+            timestamp,
+            kind,
+            season,
+            teamId: null,
+            playerId: null,
+            contractId: null,
+            amount: null,
+            reason,
+            franchiseId,
+            counterpartyFranchiseId,
+            draftPickId);
+
+        _entries.Add(entry);
+        return entry;
+    }
+
+    public IReadOnlyList<TransactionEntry> EntriesForTeam(TeamId teamId)
+    {
+        ArgumentNullException.ThrowIfNull(teamId);
+        return _entries.Where(entry => entry.TeamId == teamId).ToList();
+    }
+
+    /// <summary>
+    /// Everything that happened to a franchise, including events where it was the other side of the
+    /// trade — a pick leaving is as much a part of a franchise's history as one arriving.
+    /// </summary>
+    public IReadOnlyList<TransactionEntry> EntriesForFranchise(FranchiseId franchiseId)
+    {
+        ArgumentNullException.ThrowIfNull(franchiseId);
+        return _entries
+            .Where(entry => entry.FranchiseId == franchiseId || entry.CounterpartyFranchiseId == franchiseId)
+            .ToList();
+    }
+
+    /// <summary>One asset's whole history — the drill-down behind a cell on the pick-ownership board.</summary>
+    public IReadOnlyList<TransactionEntry> EntriesForPick(DraftPickId draftPickId)
+    {
+        ArgumentNullException.ThrowIfNull(draftPickId);
+        return _entries.Where(entry => entry.DraftPickId == draftPickId).ToList();
+    }
+}

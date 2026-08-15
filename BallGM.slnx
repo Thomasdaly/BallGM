@@ -9,6 +9,7 @@
     <Project Path="src/BallGM.Simulation/BallGM.Simulation.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/BallGM.Application.Tests/BallGM.Application.Tests.csproj" />
     <Project Path="tests/BallGM.Domain.Tests/BallGM.Domain.Tests.csproj" />
     <Project Path="tests/BallGM.Integration.Tests/BallGM.Integration.Tests.csproj" />
     <Project Path="tests/BallGM.Rules.Tests/BallGM.Rules.Tests.csproj" />

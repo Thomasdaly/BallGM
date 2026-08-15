@@ -1,0 +1,89 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.CapSheetView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:CapSheetViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="16">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding TeamName}" FontSize="22" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding SeasonLine}" Opacity="0.7" />
+      </StackPanel>
+
+      <Border Padding="12" CornerRadius="4" Background="#20808080">
+        <TextBlock Text="{Binding Headline}" TextWrapping="Wrap" />
+      </Border>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="PAYROLL" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <Grid ColumnDefinitions="200,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
+          <TextBlock Text="Committed salary" />
+          <TextBlock Grid.Column="1" Text="{Binding CommittedSalary}" />
+          <TextBlock Grid.Row="1" Text="Dead money" />
+          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DeadMoney}" />
+          <TextBlock Grid.Row="2" Text="Total payroll" FontWeight="SemiBold" />
+          <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TotalPayroll}" FontWeight="SemiBold" />
+        </Grid>
+      </StackPanel>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="THRESHOLDS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <Grid ColumnDefinitions="140,110,140">
+          <TextBlock Text="LINE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <TextBlock Grid.Column="1" Text="AMOUNT" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <TextBlock Grid.Column="2" Text="DISTANCE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        </Grid>
+        <ItemsControl ItemsSource="{Binding Thresholds}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ThresholdRow">
+              <StackPanel Spacing="1" Margin="0,0,0,8">
+                <Grid ColumnDefinitions="140,110,140">
+                  <TextBlock Text="{Binding Name}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Amount}" />
+                  <TextBlock Grid.Column="2" Text="{Binding Distance}" FontWeight="SemiBold" />
+                </Grid>
+                <TextBlock Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" FontSize="12" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="WHAT THE PAYROLL IS MADE OF" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <ItemsControl ItemsSource="{Binding Charges}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ChargeRow">
+              <Grid ColumnDefinitions="240,140,*" Height="24">
+                <TextBlock Text="{Binding PlayerName}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding Amount}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="{Binding Kind}" VerticalAlignment="Center" Opacity="0.7" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="RECENT TRANSACTIONS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <ItemsControl ItemsSource="{Binding Transactions}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:LedgerRow">
+              <Grid ColumnDefinitions="130,140,90,*" Height="24">
+                <TextBlock Text="{Binding RecordedAt}" VerticalAlignment="Center" Opacity="0.7" />
+                <TextBlock Grid.Column="1" Text="{Binding Kind}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="{Binding Amount}" VerticalAlignment="Center" />
+                <TextBlock
+                  Grid.Column="3"
+                  Text="{Binding Reason}"
+                  VerticalAlignment="Center"
+                  TextTrimming="CharacterEllipsis" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

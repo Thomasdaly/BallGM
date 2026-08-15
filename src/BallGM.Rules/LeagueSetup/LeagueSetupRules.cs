@@ -1,18 +1,18 @@
-using BallGM.Rules.Validation;
+using BallGM.Domain.Common;
 
 namespace BallGM.Rules.LeagueSetup;
 
 public sealed class LeagueSetupRules
 {
-    public RuleValidationResult ValidateLeagueCanStart(int franchiseCount)
+    public DomainOperationResult ValidateLeagueCanStart(int franchiseCount)
     {
         if (franchiseCount >= 2)
         {
-            return RuleValidationResult.Valid;
+            return DomainOperationResult.Success;
         }
 
-        return RuleValidationResult.Invalid(
-            new RuleViolation(
+        return DomainOperationResult.Failure(
+            new DomainError(
                 "league.minimum_franchises",
                 "A fictional league must have at least two franchises before simulation can start."));
     }

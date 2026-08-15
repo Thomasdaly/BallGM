@@ -2,6 +2,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BallGM.Application\BallGM.Application.csproj" />
+    <!-- Composition root only: Program.cs picks the concrete ILeagueDataSource. Views and view
+         models must stay on Application types - enforced by ArchitectureBoundaryTests. -->
+    <ProjectReference Include="..\BallGM.Infrastructure\BallGM.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

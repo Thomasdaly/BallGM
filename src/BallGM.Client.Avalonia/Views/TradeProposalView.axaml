@@ -1,0 +1,77 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.TradeProposalView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:app="clr-namespace:BallGM.Application.Leagues;assembly=BallGM.Application"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:TradeProposalViewModel">
+  <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
+    <Border Padding="12" CornerRadius="4" Background="#40806000">
+      <TextBlock Text="{Binding StubWarning}" TextWrapping="Wrap" />
+    </Border>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,24,*">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Top" Spacing="6">
+          <TextBlock Text="SENDING" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding SendingTeam}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="app:TeamSummary">
+                <TextBlock Text="{Binding TeamName}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="Players this team gives up." Opacity="0.6" FontSize="12" />
+        </StackPanel>
+        <ListBox
+          ItemsSource="{Binding SendingRoster}"
+          SelectedItems="{Binding SendingSelection}"
+          SelectionMode="Multiple"
+          Margin="0,8,0,0">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="app:RosterSpot">
+              <Grid ColumnDefinitions="*,50,40">
+                <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Text="{Binding Position}" Opacity="0.7" />
+                <TextBlock Grid.Column="2" Text="{Binding Overall}" Opacity="0.7" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <DockPanel Grid.Column="2">
+        <StackPanel DockPanel.Dock="Top" Spacing="6">
+          <TextBlock Text="RECEIVING" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding ReceivingTeam}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="app:TeamSummary">
+                <TextBlock Text="{Binding TeamName}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="Players coming back the other way." Opacity="0.6" FontSize="12" />
+        </StackPanel>
+        <ListBox
+          ItemsSource="{Binding ReceivingRoster}"
+          SelectedItems="{Binding ReceivingSelection}"
+          SelectionMode="Multiple"
+          Margin="0,8,0,0">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="app:RosterSpot">
+              <Grid ColumnDefinitions="*,50,40">
+                <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Text="{Binding Position}" Opacity="0.7" />
+                <TextBlock Grid.Column="2" Text="{Binding Overall}" Opacity="0.7" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+    </Grid>
+
+    <Button Grid.Row="2" Content="Propose trade" Command="{Binding ProposeCommand}" HorizontalAlignment="Left" />
+
+    <TextBlock Grid.Row="3" Text="{Binding Status}" TextWrapping="Wrap" Opacity="0.85" />
+  </Grid>
+</UserControl>

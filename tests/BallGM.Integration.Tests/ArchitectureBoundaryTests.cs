@@ -38,6 +38,28 @@ public sealed class ArchitectureBoundaryTests
         Assert.DoesNotContain("BallGM.Domain.csproj", projectXml);
     }
 
+    [Fact]
+    public void AvaloniaViewsAndViewModelsDoNotReachIntoInfrastructure()
+    {
+        var root = FindRepositoryRoot();
+        var clientRoot = Path.Combine(root, "src", "BallGM.Client.Avalonia");
+
+        var presentationFiles = new[] { "Views", "ViewModels" }
+            .Select(folder => Path.Combine(clientRoot, folder))
+            .Where(Directory.Exists)
+            .SelectMany(folder => Directory.EnumerateFiles(folder, "*.*", SearchOption.AllDirectories))
+            .Where(path => path.EndsWith(".cs", StringComparison.Ordinal) || path.EndsWith(".axaml", StringComparison.Ordinal));
+
+        foreach (var path in presentationFiles)
+        {
+            var contents = File.ReadAllText(path);
+            Assert.False(
+                contents.Contains("BallGM.Infrastructure", StringComparison.Ordinal),
+                $"{Path.GetFileName(path)} references BallGM.Infrastructure. The client may only name concrete " +
+                "Infrastructure types in its composition root, not in views or view models.");
+        }
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

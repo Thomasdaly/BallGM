@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "name": "Continental Basketball Association — Standard Rules",
+  "regularSeasonGameCount": 78,
+  "minimumRosterPlayers": 12,
+  "maximumRosterPlayers": 15,
+  "softCap": 141000000,
+  "luxuryTax": 172000000,
+  "firstApron": 179000000,
+  "secondApron": 190000000,
+  "hardCap": 205000000,
+  "draftRoundCount": 2,
+  "draftLotteryEnabled": true,
+  "tradableFutureDraftHorizon": 5,
+  "retainedRoundNumber": 1,
+  "retainedRoundInterval": 2
+}

@@ -15,7 +15,10 @@ public sealed partial class App : global::Avalonia.Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow();
+            desktop.MainWindow = new MainWindow
+            {
+                DataContext = LeagueClientComposition.CreateMainWindowViewModel(),
+            };
         }
 
         base.OnFrameworkInitializationCompleted();

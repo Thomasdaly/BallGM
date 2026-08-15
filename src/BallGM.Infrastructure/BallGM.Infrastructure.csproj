@@ -3,6 +3,15 @@
   <ItemGroup>
     <ProjectReference Include="..\BallGM.Application\BallGM.Application.csproj" />
     <ProjectReference Include="..\BallGM.Domain\BallGM.Domain.csproj" />
+    <ProjectReference Include="..\BallGM.Rules\BallGM.Rules.csproj" />
+  </ItemGroup>
+
+  <!-- Ships the default ruleset next to the binaries so every consumer (client, tests)
+       exercises the same on-disk moddable-rules path rather than a hardcoded ruleset. -->
+  <ItemGroup>
+    <None Include="..\..\data\rulesets\*.json" LinkBase="data\rulesets">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

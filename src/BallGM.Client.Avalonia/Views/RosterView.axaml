@@ -1,0 +1,42 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.RosterView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:app="clr-namespace:BallGM.Application.Leagues;assembly=BallGM.Application"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:RosterViewModel">
+  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
+    <StackPanel Spacing="2">
+      <TextBlock Text="{Binding TeamName}" FontSize="22" FontWeight="SemiBold" />
+      <TextBlock Text="{Binding FranchiseName}" Opacity="0.7" />
+      <TextBlock Text="{Binding RosterCountLabel}" Opacity="0.7" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,60,60,2*" Margin="0,8,0,0">
+      <TextBlock Text="PLAYER" FontWeight="SemiBold" FontSize="12" Opacity="0.6" />
+      <TextBlock Grid.Column="1" Text="POS" FontWeight="SemiBold" FontSize="12" Opacity="0.6" />
+      <TextBlock Grid.Column="2" Text="OVR" FontWeight="SemiBold" FontSize="12" Opacity="0.6" />
+      <TextBlock Grid.Column="3" Text="STATUS" FontWeight="SemiBold" FontSize="12" Opacity="0.6" />
+    </Grid>
+
+    <ScrollViewer Grid.Row="2">
+      <ItemsControl ItemsSource="{Binding Roster}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="app:RosterSpot">
+            <Grid ColumnDefinitions="*,60,60,2*" Height="30">
+              <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="{Binding Position}" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="2" Text="{Binding Overall}" VerticalAlignment="Center" />
+              <TextBlock
+                Grid.Column="3"
+                Text="{Binding InjuryDescription}"
+                IsVisible="{Binding IsInjured}"
+                VerticalAlignment="Center"
+                TextTrimming="CharacterEllipsis" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </Grid>
+</UserControl>
