@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "name": "Continental Basketball Association — Standard Rules",
   "regularSeasonGameCount": 78,
   "minimumRosterPlayers": 12,
@@ -13,5 +13,9 @@
   "draftLotteryEnabled": true,
   "tradableFutureDraftHorizon": 5,
   "retainedRoundNumber": 1,
-  "retainedRoundInterval": 2
+  "retainedRoundInterval": 2,
+  "salaryMatchPercent": 125,
+  "salaryMatchAllowance": 250000,
+  "injuredPlayerTradeEligibility": "AllowedWithWarning",
+  "secondApronBlocksSalaryIncrease": true
 }

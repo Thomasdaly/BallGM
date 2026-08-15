@@ -1,5 +1,6 @@
 using BallGM.Domain.Common;
 using BallGM.Domain.Teams;
+using BallGM.Domain.Trades;
 using BallGM.Rules.Configuration;
 
 namespace BallGM.Rules.Tests;
@@ -20,7 +21,8 @@ public sealed class LeagueRulesetTests
                 new Money(130),
                 new Money(140),
                 new Money(150)).Value,
-            draftRules: new DraftRules(roundCount: 2, lotteryEnabled: true, tradableFutureDraftHorizon: 5, retainedRoundNumber: 1, retainedRoundInterval: 2));
+            draftRules: new DraftRules(roundCount: 2, lotteryEnabled: true, tradableFutureDraftHorizon: 5, retainedRoundNumber: 1, retainedRoundInterval: 2),
+            tradeRules: TestTradeRules);
 
         Assert.Equal(82, ruleset.RegularSeasonGameCount);
         Assert.Equal(15, ruleset.RosterLimits.MaximumPlayers);
@@ -38,6 +40,13 @@ public sealed class LeagueRulesetTests
             gameCount,
             new RosterSizeLimits(minimumPlayers: 12, maximumPlayers: 15),
             CapThresholds.Create(new Money(100), new Money(120), new Money(130), new Money(140), new Money(150)).Value,
-            new DraftRules(roundCount: 2, lotteryEnabled: true, tradableFutureDraftHorizon: 5, retainedRoundNumber: 1, retainedRoundInterval: 2)));
+            new DraftRules(roundCount: 2, lotteryEnabled: true, tradableFutureDraftHorizon: 5, retainedRoundNumber: 1, retainedRoundInterval: 2),
+            TestTradeRules));
     }
+
+    private static TradeRules TestTradeRules => TradeRules.Create(
+        salaryMatchPercent: 125,
+        new Money(250_000),
+        InjuredPlayerTradeEligibility.AllowedWithWarning,
+        secondApronBlocksSalaryIncrease: true).Value;
 }

@@ -77,6 +77,8 @@ UI: add a pick-ownership board (who owns which future picks, protections visible
 - atomic execution
 - explainable failures
 
+Assessment and execution are separate operations, and only execution touches the league — see `docs/architecture.md` → "The trade engine: assessment and execution are different operations" for the split, the undo-stack atomicity, the ledger-length staleness token, and what is deferred. This milestone also introduces `LeagueSession`, because a trade is the first thing in the game that changes the league a screen is looking at.
+
 UI: wire the Milestone 2 trade-proposal form to real validation and execution, surfacing structured rule-violation explanations directly in the UI.
 
 ## Milestone 6 — Contract negotiation and free agency

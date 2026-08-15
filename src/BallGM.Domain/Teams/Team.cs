@@ -124,6 +124,80 @@ public sealed class Team
         return DomainOperationResult.Success;
     }
 
+    /// <summary>
+    /// Applies both sides of a trade at once: players leaving and players arriving, checked against
+    /// the roster limits as one net result.
+    /// <para>
+    /// Deliberately not <see cref="RemovePlayer"/> followed by <see cref="AddPlayer"/>. A legal
+    /// one-for-one trade by a team sitting on the roster minimum would fail halfway through that
+    /// sequence, and a team at the maximum would fail the other ordering — the transient state is an
+    /// artefact of the steps, not a rule anybody wrote. The aggregate judges where the roster ends
+    /// up, and mutates nothing unless the whole movement is legal.
+    /// </para>
+    /// </summary>
+    public DomainOperationResult ApplyTrade(
+        IReadOnlyCollection<PlayerId> outgoingPlayers,
+        IReadOnlyCollection<PlayerId> incomingPlayers)
+    {
+        ArgumentNullException.ThrowIfNull(outgoingPlayers);
+        ArgumentNullException.ThrowIfNull(incomingPlayers);
+
+        var errors = new List<DomainError>();
+
+        foreach (var playerId in outgoingPlayers.Where(playerId => !_playerIds.Contains(playerId)))
+        {
+            errors.Add(new DomainError(
+                MissingPlayerCode,
+                $"Player '{playerId.Value}' is not on team '{Id.Value}' and cannot be traded away by it."));
+        }
+
+        foreach (var playerId in incomingPlayers.Where(playerId => _playerIds.Contains(playerId)))
+        {
+            errors.Add(new DomainError(
+                DuplicatePlayerCode,
+                $"Player '{playerId.Value}' is already on team '{Id.Value}'."));
+        }
+
+        var resulting = new HashSet<PlayerId>(_playerIds);
+        resulting.ExceptWith(outgoingPlayers);
+        resulting.UnionWith(incomingPlayers);
+
+        if (resulting.Count > RosterLimits.MaximumPlayers)
+        {
+            errors.Add(new DomainError(
+                MaximumRosterCode,
+                $"The trade would leave team '{Id.Value}' with {resulting.Count} players, above the configured maximum of {RosterLimits.MaximumPlayers}."));
+        }
+
+        if (resulting.Count < RosterLimits.MinimumPlayers)
+        {
+            errors.Add(new DomainError(
+                MinimumRosterCode,
+                $"The trade would leave team '{Id.Value}' with {resulting.Count} players, below the configured minimum of {RosterLimits.MinimumPlayers}."));
+        }
+
+        if (errors.Count > 0)
+        {
+            return DomainOperationResult.Failure(errors.ToArray());
+        }
+
+        _playerIds.Clear();
+        _playerIds.UnionWith(resulting);
+        return DomainOperationResult.Success;
+    }
+
+    /// <summary>
+    /// Puts the roster back exactly as it was. Used to unwind a partially applied trade, which is
+    /// why it takes no view on the roster limits: the state it restores was legal when it was left.
+    /// </summary>
+    public void RestoreRoster(IReadOnlyCollection<PlayerId> playerIds)
+    {
+        ArgumentNullException.ThrowIfNull(playerIds);
+
+        _playerIds.Clear();
+        _playerIds.UnionWith(playerIds);
+    }
+
     public DomainOperationResult RemovePlayer(PlayerId playerId)
     {
         ArgumentNullException.ThrowIfNull(playerId);

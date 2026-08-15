@@ -3,6 +3,7 @@ using BallGM.Client.Avalonia.ViewModels;
 using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
+using BallGM.Infrastructure.Trades;
 
 namespace BallGM.Client.Avalonia;
 
@@ -11,16 +12,22 @@ namespace BallGM.Client.Avalonia;
 /// <see cref="ILeagueDataSource"/>. Everything under <c>Views/</c> and <c>ViewModels/</c> stays on
 /// Application types; <c>ArchitectureBoundaryTests</c> enforces that, so the UI never grows a
 /// direct dependency on persistence or on the ruleset file format.
+/// <para>
+/// The session is created here and lives for the run. Before trades existed, every screen could
+/// reload the league on demand; now that a trade changes it, one owner has to hold it.
+/// </para>
 /// </summary>
 internal static class LeagueClientComposition
 {
     public static MainWindowViewModel CreateMainWindowViewModel()
     {
-        var query = new GetLeagueOverviewQuery(
+        var session = new LeagueSession(
             new FixtureLeagueDataSource(),
             new RulesCapLedger(),
-            new RulesDraftAssetLedger());
-        var result = query.Execute();
+            new RulesDraftAssetLedger(),
+            new RulesTradeEngine());
+
+        var result = session.Load();
 
         if (result.IsFailure)
         {
@@ -31,6 +38,6 @@ internal static class LeagueClientComposition
             return new MainWindowViewModel(messages);
         }
 
-        return new MainWindowViewModel(result.Value);
+        return new MainWindowViewModel(result.Value, session);
     }
 }

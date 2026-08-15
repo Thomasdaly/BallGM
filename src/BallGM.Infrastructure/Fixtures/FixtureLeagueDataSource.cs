@@ -347,7 +347,11 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
             ruleset.DraftRules.LotteryEnabled,
             ruleset.DraftRules.TradableFutureDraftHorizon,
             ruleset.DraftRules.RetainedRoundNumber,
-            ruleset.DraftRules.RetainedRoundInterval);
+            ruleset.DraftRules.RetainedRoundInterval,
+            ruleset.TradeRules.SalaryMatchPercent,
+            ruleset.TradeRules.SalaryMatchAllowance,
+            ruleset.TradeRules.InjuredPlayerEligibility,
+            ruleset.TradeRules.SecondApronBlocksSalaryIncrease);
 
         return DomainOperationResult<LeagueSnapshot>.Success(
             new LeagueSnapshot(

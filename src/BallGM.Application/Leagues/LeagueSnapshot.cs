@@ -5,6 +5,7 @@ using BallGM.Domain.Franchises;
 using BallGM.Domain.Leagues;
 using BallGM.Domain.Players;
 using BallGM.Domain.Teams;
+using BallGM.Domain.Trades;
 using BallGM.Domain.Transactions;
 
 namespace BallGM.Application.Leagues;
@@ -50,4 +51,8 @@ public sealed record LeagueConfiguration(
     bool DraftLotteryEnabled,
     int TradableFutureDraftHorizon,
     int RetainedRoundNumber,
-    int RetainedRoundInterval);
+    int RetainedRoundInterval,
+    int SalaryMatchPercent,
+    Money SalaryMatchAllowance,
+    InjuredPlayerTradeEligibility InjuredPlayerTradeEligibility,
+    bool SecondApronBlocksSalaryIncrease);

@@ -9,6 +9,7 @@ using BallGM.Domain.Franchises;
 using BallGM.Domain.Leagues;
 using BallGM.Domain.Players;
 using BallGM.Domain.Teams;
+using BallGM.Domain.Trades;
 using BallGM.Domain.Transactions;
 
 namespace BallGM.Application.Tests;
@@ -502,6 +503,9 @@ public sealed class GetLeagueOverviewQueryTests
         internal const int DraftHorizon = 2;
         internal const int RetainedRoundNumber = 1;
         internal const int RetainedRoundInterval = 2;
+        internal const int SalaryMatchPercent = 125;
+        internal const long SalaryMatchAllowance = 250_000;
+        internal const bool SecondApronBlocksSalaryIncrease = true;
         internal const string OwedPickReason = "The next first-round pick is owed, top-4 protected.";
 
         private static readonly RosterSizeLimits Limits = new(1, 15);
@@ -675,7 +679,11 @@ public sealed class GetLeagueOverviewQueryTests
                 DraftLotteryEnabled,
                 DraftHorizon,
                 RetainedRoundNumber,
-                RetainedRoundInterval);
+                RetainedRoundInterval,
+                SalaryMatchPercent,
+                new Money(SalaryMatchAllowance),
+                InjuredPlayerTradeEligibility.AllowedWithWarning,
+                SecondApronBlocksSalaryIncrease);
 
             var snapshot = new LeagueSnapshot(
                 league,

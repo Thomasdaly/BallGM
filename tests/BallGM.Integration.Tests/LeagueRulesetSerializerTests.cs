@@ -1,5 +1,6 @@
 using BallGM.Domain.Common;
 using BallGM.Domain.Teams;
+using BallGM.Domain.Trades;
 using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.Configuration;
 
@@ -22,7 +23,8 @@ public sealed class LeagueRulesetSerializerTests
                 new Money(130_000),
                 new Money(140_000),
                 new Money(150_000)).Value,
-            draftRules: new DraftRules(roundCount: 2, lotteryEnabled: true, tradableFutureDraftHorizon: 5, retainedRoundNumber: 1, retainedRoundInterval: 2));
+            draftRules: new DraftRules(roundCount: 2, lotteryEnabled: true, tradableFutureDraftHorizon: 5, retainedRoundNumber: 1, retainedRoundInterval: 2),
+            tradeRules: TestTradeRules);
 
         var json = serializer.Serialize(ruleset);
         var result = serializer.Deserialize(json);
@@ -73,7 +75,7 @@ public sealed class LeagueRulesetSerializerTests
         var serializer = new LeagueRulesetSerializer();
         var envelopeJson = """
             {
-              "schemaVersion": 2,
+              "schemaVersion": 3,
               "name": "Broken Ruleset",
               "regularSeasonGameCount": 82,
               "minimumRosterPlayers": 12,
@@ -87,7 +89,11 @@ public sealed class LeagueRulesetSerializerTests
               "draftLotteryEnabled": true,
               "tradableFutureDraftHorizon": 5,
               "retainedRoundNumber": 4,
-              "retainedRoundInterval": 2
+              "retainedRoundInterval": 2,
+              "salaryMatchPercent": 125,
+              "salaryMatchAllowance": 250000,
+              "injuredPlayerTradeEligibility": "AllowedWithWarning",
+              "secondApronBlocksSalaryIncrease": true
             }
             """;
 
@@ -114,7 +120,7 @@ public sealed class LeagueRulesetSerializerTests
         var serializer = new LeagueRulesetSerializer();
         var envelopeJson = """
             {
-              "schemaVersion": 2,
+              "schemaVersion": 3,
               "name": "Broken Ruleset",
               "regularSeasonGameCount": 82,
               "minimumRosterPlayers": 12,
@@ -128,7 +134,11 @@ public sealed class LeagueRulesetSerializerTests
               "draftLotteryEnabled": true,
               "tradableFutureDraftHorizon": 5,
               "retainedRoundNumber": 1,
-              "retainedRoundInterval": 2
+              "retainedRoundInterval": 2,
+              "salaryMatchPercent": 125,
+              "salaryMatchAllowance": 250000,
+              "injuredPlayerTradeEligibility": "AllowedWithWarning",
+              "secondApronBlocksSalaryIncrease": true
             }
             """;
 
@@ -144,7 +154,7 @@ public sealed class LeagueRulesetSerializerTests
         var serializer = new LeagueRulesetSerializer();
         var envelopeJson = """
             {
-              "schemaVersion": 2,
+              "schemaVersion": 3,
               "name": "Broken Ruleset",
               "regularSeasonGameCount": 82,
               "minimumRosterPlayers": 20,
@@ -158,7 +168,11 @@ public sealed class LeagueRulesetSerializerTests
               "draftLotteryEnabled": true,
               "tradableFutureDraftHorizon": 5,
               "retainedRoundNumber": 1,
-              "retainedRoundInterval": 2
+              "retainedRoundInterval": 2,
+              "salaryMatchPercent": 125,
+              "salaryMatchAllowance": 250000,
+              "injuredPlayerTradeEligibility": "AllowedWithWarning",
+              "secondApronBlocksSalaryIncrease": true
             }
             """;
 
@@ -167,4 +181,10 @@ public sealed class LeagueRulesetSerializerTests
         Assert.True(result.IsFailure);
         Assert.Equal("ruleset.invalid_field", Assert.Single(result.Errors).Code);
     }
+
+    private static TradeRules TestTradeRules => TradeRules.Create(
+        salaryMatchPercent: 125,
+        new Money(250_000),
+        InjuredPlayerTradeEligibility.AllowedWithWarning,
+        secondApronBlocksSalaryIncrease: true).Value;
 }

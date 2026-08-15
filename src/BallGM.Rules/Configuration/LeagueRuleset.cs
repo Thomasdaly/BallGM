@@ -14,11 +14,12 @@ public sealed record LeagueRuleset
 {
     /// <summary>
     /// Bumped to 2 when Milestone 4 added the draft-asset restrictions (tradable horizon, retained
-    /// round, retention interval). A version-1 file cannot describe those rules at all, so it is
-    /// rejected rather than silently defaulted — a league quietly running restrictions its ruleset
-    /// never stated is worse than one that refuses to load.
+    /// round, retention interval), and to 3 when Milestone 5 added the trade rules (salary matching,
+    /// injured-player eligibility, the second-apron restriction). An older file cannot describe
+    /// those rules at all, so it is rejected rather than silently defaulted — a league quietly
+    /// running restrictions its ruleset never stated is worse than one that refuses to load.
     /// </summary>
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     public LeagueRuleset(
         int schemaVersion,
@@ -26,7 +27,8 @@ public sealed record LeagueRuleset
         int regularSeasonGameCount,
         RosterSizeLimits rosterLimits,
         CapThresholds capThresholds,
-        DraftRules draftRules)
+        DraftRules draftRules,
+        TradeRules tradeRules)
     {
         if (schemaVersion <= 0)
         {
@@ -46,6 +48,7 @@ public sealed record LeagueRuleset
         ArgumentNullException.ThrowIfNull(rosterLimits);
         ArgumentNullException.ThrowIfNull(capThresholds);
         ArgumentNullException.ThrowIfNull(draftRules);
+        ArgumentNullException.ThrowIfNull(tradeRules);
 
         SchemaVersion = schemaVersion;
         Name = name;
@@ -53,6 +56,7 @@ public sealed record LeagueRuleset
         RosterLimits = rosterLimits;
         CapThresholds = capThresholds;
         DraftRules = draftRules;
+        TradeRules = tradeRules;
     }
 
     public int SchemaVersion { get; }
@@ -66,4 +70,6 @@ public sealed record LeagueRuleset
     public CapThresholds CapThresholds { get; }
 
     public DraftRules DraftRules { get; }
+
+    public TradeRules TradeRules { get; }
 }

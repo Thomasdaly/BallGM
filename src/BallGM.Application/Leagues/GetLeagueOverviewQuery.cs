@@ -48,12 +48,20 @@ public sealed class GetLeagueOverviewQuery(
     public DomainOperationResult<LeagueOverview> Execute()
     {
         var snapshotResult = _dataSource.Load();
-        if (snapshotResult.IsFailure)
-        {
-            return DomainOperationResult<LeagueOverview>.Failure(snapshotResult.Errors.ToArray());
-        }
+        return snapshotResult.IsFailure
+            ? DomainOperationResult<LeagueOverview>.Failure(snapshotResult.Errors.ToArray())
+            : Project(snapshotResult.Value);
+    }
 
-        var snapshot = snapshotResult.Value;
+    /// <summary>
+    /// Projects an already-loaded league. Separate from <see cref="Execute"/> so a session that holds
+    /// a league in memory can re-project it after a trade without reloading from disk — reloading
+    /// would throw away the very change the screen is meant to show.
+    /// </summary>
+    public DomainOperationResult<LeagueOverview> Project(LeagueSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
         var teamsById = snapshot.Teams.ToDictionary(team => team.Id);
         var franchisesById = snapshot.Franchises.ToDictionary(franchise => franchise.Id);
         var playersById = snapshot.Players.ToDictionary(player => player.Id);
@@ -364,6 +372,7 @@ public sealed class GetLeagueOverviewQuery(
         TransactionKind.DraftPickExtinguished => "Obligation extinguished",
         TransactionKind.SwapRightExercised => "Swap exercised",
         TransactionKind.SwapRightDeclined => "Swap declined",
+        TransactionKind.PlayerTraded => "Player traded",
         _ => kind.ToString(),
     };
 

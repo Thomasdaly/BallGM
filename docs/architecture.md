@@ -111,6 +111,25 @@ The retention restriction itself is configuration, generically named, in `DraftR
 
 `BallGM.Infrastructure` references `BallGM.Rules` because loading and saving the league ruleset file (`BallGM.Infrastructure.Rulesets`) is persistence — Infrastructure's job — but the type being persisted (`LeagueRuleset`) is defined in Rules, matching this project's stated responsibility for "configurable rulesets for roster limits, contracts, cap thresholds ... draft operation." No cycle is created: Rules still has no knowledge of Infrastructure.
 
+## The trade engine: assessment and execution are different operations
+
+Milestone 5 splits a trade in two, because the two halves have opposite requirements.
+
+- `BallGM.Rules.Trades.TradeValidator` never mutates anything. A trade machine is nothing but speculative runs — a GM reworks a proposal a dozen times before submitting it — so assessment projects the result instead of applying it: charges are rebuilt against the team each contract *would* belong to and handed to the same `CapLedger` the cap sheet uses. It returns blocking violations, non-blocking warnings, and the resulting payroll, roster, and pick count for every team, so a rejection can be negotiated against rather than merely read.
+- `BallGM.Rules.Trades.TradeExecutor` re-validates against the league as it stands — never against an assessment handed in from outside — and then applies the trade with an undo stack. If any step fails, the stack unwinds and the league is exactly where it started. A half-applied trade would leave a player on two rosters or a pick owned by nobody, and no ledger line could explain it.
+
+It owns no rule that already exists elsewhere: pick movement goes through `PickOwnershipRules` and threshold standing through `CapLedger`, so a trade cannot legalise something the pick board or the cap sheet would call illegal.
+
+**Two aggregate operations exist purely because a trade cannot be expressed without them.** `Team.ApplyTrade(outgoing, incoming)` judges where a roster ends up rather than each step along the way — a legal one-for-one by a team on the roster minimum fails halfway through a remove-then-add, and a team on the maximum fails the other ordering; the transient state is an artefact of the steps, not a rule anybody wrote. `Contract.TransferTo(teamId)` moves the salary with the player, because a traded player whose contract stayed behind leaves both cap sheets wrong.
+
+**Staleness is detected with the ledger, not a hash of the world.** A `TradeProposal` records `LeagueStateToken` — the ledger's length when it was assembled. Every state change worth knowing about leaves a ledger entry, so a token that no longer matches means the proposal was built against a league that has since moved. This is also what stops a double submission from executing a trade twice: the trade's own ledger lines invalidate its proposal.
+
+**`BallGM.Application.Leagues.LeagueSession` holds the loaded league for the length of a run.** Before this milestone every screen could reload from its data source on demand, because nothing changed. A trade changes it, and reloading after an execution would discard the very change the screen exists to show. The session owns loading, re-projection, and trade submission, and it is where advancing the calendar will go. Saving is still out of scope — closing the client discards the run.
+
+`BallGM.Application.Trades.ITradeEngine` is the port; `BallGM.Infrastructure.Trades.RulesTradeEngine` is the adapter that maps the loaded `LeagueConfiguration` back onto `TradeRules`, `CapThresholds`, and `DraftRules`. Identical in shape to the cap and draft-asset pairs, for the same reason.
+
+Deliberately deferred rather than half-built, and named in `TradeRules`: trade and traded-player exceptions, sign-and-trade, cash considerations, aggregation windows and waiting periods after a signing, and no-trade clauses. Each needs state this build does not keep yet. What *is* configured, generically named, in the ruleset file: `SalaryMatchPercent`, `SalaryMatchAllowance`, `InjuredPlayerEligibility` (allowed, allowed-with-warning, or blocked), and `SecondApronBlocksSalaryIncrease`. Those additions took the ruleset file to schema version 3.
+
 ## Cross-cutting design decisions
 
 - Use identifiers rather than object graph persistence across every boundary.

@@ -44,6 +44,9 @@ public enum TransactionKind
 
     /// <summary>A swap right was not worth taking. The right is spent either way.</summary>
     SwapRightDeclined = 11,
+
+    /// <summary>A player changed teams in a trade. Recorded against both teams, from each one's side.</summary>
+    PlayerTraded = 12,
 }
 
 public sealed record TransactionId

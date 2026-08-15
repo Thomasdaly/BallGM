@@ -25,6 +25,7 @@ public sealed class Contract
     private const string SeasonHasNoOptionCode = "contract.season_has_no_option";
     private const string OptionAlreadyDecidedCode = "contract.option_already_decided";
     private const string AlreadyTerminatedCode = "contract.already_terminated";
+    private const string AlreadyOnTeamCode = "contract.already_on_team";
 
     private readonly List<ContractSeasonTerm> _terms;
 
@@ -104,7 +105,7 @@ public sealed class Contract
 
     public ContractId Id { get; }
 
-    public TeamId TeamId { get; }
+    public TeamId TeamId { get; private set; }
 
     public PlayerId PlayerId { get; }
 
@@ -163,6 +164,37 @@ public sealed class Contract
         }
 
         TerminatedFromSeason = effectiveSeason;
+        return DomainOperationResult.Success;
+    }
+
+    /// <summary>
+    /// Moves the contract to another team, as a trade does. The salary follows the player: a traded
+    /// player whose contract stayed behind would leave both teams' cap sheets wrong, which is why
+    /// this is an operation on the aggregate rather than a field the executor sets.
+    /// <para>
+    /// A terminated contract cannot move. Its remaining money is dead money on the team that
+    /// released the player, and dead money is not a tradeable asset at this milestone.
+    /// </para>
+    /// </summary>
+    public DomainOperationResult TransferTo(TeamId teamId)
+    {
+        ArgumentNullException.ThrowIfNull(teamId);
+
+        if (IsTerminated)
+        {
+            return DomainOperationResult.Failure(new DomainError(
+                AlreadyTerminatedCode,
+                $"Contract '{Id.Value}' was terminated from season {TerminatedFromSeason!.Year} and cannot be traded."));
+        }
+
+        if (teamId == TeamId)
+        {
+            return DomainOperationResult.Failure(new DomainError(
+                AlreadyOnTeamCode,
+                $"Contract '{Id.Value}' is already held by team '{teamId.Value}'."));
+        }
+
+        TeamId = teamId;
         return DomainOperationResult.Success;
     }
 

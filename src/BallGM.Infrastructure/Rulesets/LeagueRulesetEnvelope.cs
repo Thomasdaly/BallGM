@@ -22,7 +22,11 @@ public sealed record LeagueRulesetEnvelope
         bool draftLotteryEnabled,
         int tradableFutureDraftHorizon,
         int retainedRoundNumber,
-        int retainedRoundInterval)
+        int retainedRoundInterval,
+        int salaryMatchPercent,
+        long salaryMatchAllowance,
+        string injuredPlayerTradeEligibility,
+        bool secondApronBlocksSalaryIncrease)
     {
         SchemaVersion = schemaVersion;
         Name = name;
@@ -39,6 +43,10 @@ public sealed record LeagueRulesetEnvelope
         TradableFutureDraftHorizon = tradableFutureDraftHorizon;
         RetainedRoundNumber = retainedRoundNumber;
         RetainedRoundInterval = retainedRoundInterval;
+        SalaryMatchPercent = salaryMatchPercent;
+        SalaryMatchAllowance = salaryMatchAllowance;
+        InjuredPlayerTradeEligibility = injuredPlayerTradeEligibility;
+        SecondApronBlocksSalaryIncrease = secondApronBlocksSalaryIncrease;
     }
 
     public int SchemaVersion { get; }
@@ -73,4 +81,16 @@ public sealed record LeagueRulesetEnvelope
 
     /// <summary>How many consecutive future drafts the retention requirement is measured over.</summary>
     public int RetainedRoundInterval { get; }
+
+    /// <summary>How much salary a team over the cap may take back, as a percentage of what it sends.</summary>
+    public int SalaryMatchPercent { get; }
+
+    /// <summary>A flat amount allowed on top of the percentage.</summary>
+    public long SalaryMatchAllowance { get; }
+
+    /// <summary>Stored as a name rather than a number so the file stays readable if the enum grows.</summary>
+    public string InjuredPlayerTradeEligibility { get; } = string.Empty;
+
+    /// <summary>Whether a team finishing above the second apron may take on more salary than it sends.</summary>
+    public bool SecondApronBlocksSalaryIncrease { get; }
 }

@@ -135,7 +135,7 @@ public sealed class FixtureLeagueDataSourceTests
             path,
             """
             {
-              "schemaVersion": 2,
+              "schemaVersion": 3,
               "name": "Broken Thresholds",
               "regularSeasonGameCount": 78,
               "minimumRosterPlayers": 10,
@@ -149,7 +149,11 @@ public sealed class FixtureLeagueDataSourceTests
               "draftLotteryEnabled": true,
               "tradableFutureDraftHorizon": 5,
               "retainedRoundNumber": 1,
-              "retainedRoundInterval": 2
+              "retainedRoundInterval": 2,
+              "salaryMatchPercent": 125,
+              "salaryMatchAllowance": 250000,
+              "injuredPlayerTradeEligibility": "AllowedWithWarning",
+              "secondApronBlocksSalaryIncrease": true
             }
             """);
 
@@ -174,7 +178,7 @@ public sealed class FixtureLeagueDataSourceTests
             path,
             $$"""
             {
-              "schemaVersion": 2,
+              "schemaVersion": 3,
               "name": "Integration Test Ruleset",
               "regularSeasonGameCount": 78,
               "minimumRosterPlayers": 8,
@@ -188,7 +192,11 @@ public sealed class FixtureLeagueDataSourceTests
               "draftLotteryEnabled": true,
               "tradableFutureDraftHorizon": 5,
               "retainedRoundNumber": 1,
-              "retainedRoundInterval": 2
+              "retainedRoundInterval": 2,
+              "salaryMatchPercent": 125,
+              "salaryMatchAllowance": 250000,
+              "injuredPlayerTradeEligibility": "AllowedWithWarning",
+              "secondApronBlocksSalaryIncrease": true
             }
             """);
 

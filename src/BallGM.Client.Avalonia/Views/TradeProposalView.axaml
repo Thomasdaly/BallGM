@@ -5,12 +5,8 @@
   xmlns:app="clr-namespace:BallGM.Application.Leagues;assembly=BallGM.Application"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   x:DataType="vm:TradeProposalViewModel">
-  <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="12">
-    <Border Padding="12" CornerRadius="4" Background="#40806000">
-      <TextBlock Text="{Binding StubWarning}" TextWrapping="Wrap" />
-    </Border>
-
-    <Grid Grid.Row="1" ColumnDefinitions="*,24,*">
+  <Grid RowDefinitions="*,Auto,Auto,Auto" RowSpacing="10">
+    <Grid ColumnDefinitions="*,20,*">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Spacing="6">
           <TextBlock Text="SENDING" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
@@ -21,23 +17,44 @@
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-          <TextBlock Text="Players this team gives up." Opacity="0.6" FontSize="12" />
         </StackPanel>
-        <ListBox
-          ItemsSource="{Binding SendingRoster}"
-          SelectedItems="{Binding SendingSelection}"
-          SelectionMode="Multiple"
-          Margin="0,8,0,0">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="app:RosterSpot">
-              <Grid ColumnDefinitions="*,50,40">
-                <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
-                <TextBlock Grid.Column="1" Text="{Binding Position}" Opacity="0.7" />
-                <TextBlock Grid.Column="2" Text="{Binding Overall}" Opacity="0.7" />
-              </Grid>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <Grid RowDefinitions="*,Auto,120" Margin="0,8,0,0" RowSpacing="4">
+          <ListBox
+            ItemsSource="{Binding SendingRoster}"
+            SelectedItems="{Binding SendingPlayers}"
+            SelectionMode="Multiple">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:TradePlayerRow">
+                <Grid ColumnDefinitions="*,44,40,80">
+                  <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding Position}" Opacity="0.7" />
+                  <TextBlock Grid.Column="2" Text="{Binding Overall}" Opacity="0.7" />
+                  <TextBlock Grid.Column="3" Text="{Binding Salary}" Opacity="0.7" FontSize="12" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <TextBlock Grid.Row="1" Text="DRAFT ASSETS" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+          <ListBox
+            Grid.Row="2"
+            ItemsSource="{Binding SendingPickAssets}"
+            SelectedItems="{Binding SendingPicks}"
+            SelectionMode="Multiple">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:TradePickRow">
+                <StackPanel Spacing="0">
+                  <TextBlock Text="{Binding Label}" FontSize="12" />
+                  <TextBlock
+                    Text="{Binding Protection}"
+                    IsVisible="{Binding IsConditional}"
+                    FontSize="10"
+                    Opacity="0.6"
+                    TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
       </DockPanel>
 
       <DockPanel Grid.Column="2">
@@ -50,28 +67,114 @@
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-          <TextBlock Text="Players coming back the other way." Opacity="0.6" FontSize="12" />
         </StackPanel>
-        <ListBox
-          ItemsSource="{Binding ReceivingRoster}"
-          SelectedItems="{Binding ReceivingSelection}"
-          SelectionMode="Multiple"
-          Margin="0,8,0,0">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="app:RosterSpot">
-              <Grid ColumnDefinitions="*,50,40">
-                <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
-                <TextBlock Grid.Column="1" Text="{Binding Position}" Opacity="0.7" />
-                <TextBlock Grid.Column="2" Text="{Binding Overall}" Opacity="0.7" />
-              </Grid>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
+        <Grid RowDefinitions="*,Auto,120" Margin="0,8,0,0" RowSpacing="4">
+          <ListBox
+            ItemsSource="{Binding ReceivingRoster}"
+            SelectedItems="{Binding ReceivingPlayers}"
+            SelectionMode="Multiple">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:TradePlayerRow">
+                <Grid ColumnDefinitions="*,44,40,80">
+                  <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Text="{Binding Position}" Opacity="0.7" />
+                  <TextBlock Grid.Column="2" Text="{Binding Overall}" Opacity="0.7" />
+                  <TextBlock Grid.Column="3" Text="{Binding Salary}" Opacity="0.7" FontSize="12" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <TextBlock Grid.Row="1" Text="DRAFT ASSETS" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+          <ListBox
+            Grid.Row="2"
+            ItemsSource="{Binding ReceivingPickAssets}"
+            SelectedItems="{Binding ReceivingPicks}"
+            SelectionMode="Multiple">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:TradePickRow">
+                <StackPanel Spacing="0">
+                  <TextBlock Text="{Binding Label}" FontSize="12" />
+                  <TextBlock
+                    Text="{Binding Protection}"
+                    IsVisible="{Binding IsConditional}"
+                    FontSize="10"
+                    Opacity="0.6"
+                    TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
       </DockPanel>
     </Grid>
 
-    <Button Grid.Row="2" Content="Propose trade" Command="{Binding ProposeCommand}" HorizontalAlignment="Left" />
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+      <Button Content="Check trade" Command="{Binding CheckCommand}" />
+      <Button Content="Submit trade" Command="{Binding SubmitCommand}" IsEnabled="{Binding IsLegal}" />
+      <Button Content="Clear" Command="{Binding ClearCommand}" />
+    </StackPanel>
 
-    <TextBlock Grid.Row="3" Text="{Binding Status}" TextWrapping="Wrap" Opacity="0.85" />
+    <StackPanel Grid.Row="2" Spacing="2">
+      <TextBlock Text="{Binding Verdict}" FontWeight="SemiBold" IsVisible="{Binding HasAssessment}" />
+      <TextBlock Text="{Binding Status}" TextWrapping="Wrap" Opacity="0.8" />
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="3" IsVisible="{Binding HasAssessment}" MaxHeight="340">
+      <StackPanel Spacing="14">
+        <StackPanel Spacing="6" IsVisible="{Binding HasViolations}">
+          <TextBlock Text="WHY IT IS REJECTED" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <ItemsControl ItemsSource="{Binding Violations}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TradeFindingRow">
+                <Border Padding="8" CornerRadius="3" Background="#40903030" Margin="0,0,0,6">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding Heading}" FontSize="11" FontWeight="SemiBold" Opacity="0.8" />
+                    <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <StackPanel Spacing="6" IsVisible="{Binding HasWarnings}">
+          <TextBlock Text="WORTH KNOWING" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <ItemsControl ItemsSource="{Binding Warnings}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TradeFindingRow">
+                <Border Padding="8" CornerRadius="3" Background="#40806000" Margin="0,0,0,6">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding Heading}" FontSize="11" FontWeight="SemiBold" Opacity="0.8" />
+                    <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <StackPanel Spacing="6">
+          <TextBlock Text="WHAT IT DOES TO EACH TEAM" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <ItemsControl ItemsSource="{Binding Outcomes}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TradeOutcomeRow">
+                <Border Padding="10" CornerRadius="3" Background="#20808080" Margin="0,0,0,6">
+                  <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding TeamName}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding SalaryLine}" FontSize="12" Opacity="0.85" />
+                    <TextBlock Text="{Binding PayrollLine}" FontSize="12" Opacity="0.85" />
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                      <TextBlock Text="{Binding RosterLine}" FontSize="12" Opacity="0.7" />
+                      <TextBlock Text="{Binding PickLine}" FontSize="12" Opacity="0.7" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding ThresholdLine}" FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
   </Grid>
 </UserControl>

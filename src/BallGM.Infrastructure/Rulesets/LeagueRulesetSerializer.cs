@@ -42,7 +42,11 @@ public sealed class LeagueRulesetSerializer
             ruleset.DraftRules.LotteryEnabled,
             ruleset.DraftRules.TradableFutureDraftHorizon,
             ruleset.DraftRules.RetainedRoundNumber,
-            ruleset.DraftRules.RetainedRoundInterval);
+            ruleset.DraftRules.RetainedRoundInterval,
+            ruleset.TradeRules.SalaryMatchPercent,
+            ruleset.TradeRules.SalaryMatchAllowance.SmallestUnits,
+            ruleset.TradeRules.InjuredPlayerEligibility.ToString(),
+            ruleset.TradeRules.SecondApronBlocksSalaryIncrease);
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -93,6 +97,23 @@ public sealed class LeagueRulesetSerializer
                 return DomainOperationResult<LeagueRuleset>.Failure(capThresholdsResult.Errors.ToArray());
             }
 
+            var eligibilityResult = TradeRules.ParseEligibility(envelope.InjuredPlayerTradeEligibility ?? string.Empty);
+            if (eligibilityResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(eligibilityResult.Errors.ToArray());
+            }
+
+            var tradeRulesResult = TradeRules.Create(
+                envelope.SalaryMatchPercent,
+                new Money(envelope.SalaryMatchAllowance),
+                eligibilityResult.Value,
+                envelope.SecondApronBlocksSalaryIncrease);
+
+            if (tradeRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(tradeRulesResult.Errors.ToArray());
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
@@ -104,7 +125,8 @@ public sealed class LeagueRulesetSerializer
                     envelope.DraftLotteryEnabled,
                     envelope.TradableFutureDraftHorizon,
                     envelope.RetainedRoundNumber,
-                    envelope.RetainedRoundInterval));
+                    envelope.RetainedRoundInterval),
+                tradeRulesResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
