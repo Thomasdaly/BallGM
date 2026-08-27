@@ -17,12 +17,12 @@ public sealed class DraftAssetLedgerTests
     private static readonly LeagueId League = new(SortableId.NewId());
     private static readonly Season FirstDraft = new(2032);
 
-    private static readonly DraftRules Rules = new(
+    private static readonly DraftRules Rules = DraftRules.Create(
         roundCount: 1,
         lotteryEnabled: true,
         tradableFutureDraftHorizon: 3,
         retainedRoundNumber: 1,
-        retainedRoundInterval: 2);
+        retainedRoundInterval: 2).Value;
 
     private static readonly FranchiseId Harbourline = new("FRANCHISE-HARBOURLINE");
     private static readonly FranchiseId Verdanmoor = new("FRANCHISE-VERDANMOOR");

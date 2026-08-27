@@ -47,10 +47,27 @@ AI-controlled teams can:
 ## Deferred systems
 
 - detailed coaching/staff market;
-- owner personalities and board objectives;
+- owner personalities and board objectives, and the directives they set;
 - media and narrative generation;
 - advanced scouting uncertainty;
-- international leagues;
-- historical rulesets;
+- international leagues, and retained rights over players in them;
+- historical rulesets, and rule changes adopted mid-save;
+- player relationships, personality traits, and locker-room chemistry;
+- general-manager trust, and promises made during negotiation;
+- expansion, relocation, and rebranding during a save;
+- in-season secondary competitions;
+- cash as a tradeable asset;
+- post-buyout free-agent market and short-term contracts;
+- pre-authored draft-class playlists;
 - workshop publishing;
 - Steam achievements and cloud saves.
+
+Each of the new entries above is dated in `docs/competitive-feature-review.md`; most land in Milestone 13. "Deferred" there means a recorded decision with a milestone, not an omission.
+
+## Declined systems
+
+Recorded so they are not re-proposed — reasoning in `docs/competitive-feature-review.md`:
+
+- a player-controlled career mode with experience tiers, unlockable perks, and purchased attributes;
+- discrete named on-court bonuses for star pairings (a continuous chemistry term does the same job without the cliff);
+- hidden difficulty multipliers that are not expressible as ruleset overrides.

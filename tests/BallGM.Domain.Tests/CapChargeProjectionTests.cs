@@ -88,4 +88,36 @@ public sealed class CapChargeProjectionTests
         Assert.True(result.IsSuccess);
         return result.Value;
     }
+
+    /// <summary>
+    /// A roster-slot hold is a charge for a player who does not exist yet, so it carries neither a
+    /// player nor a contract. The two identifiers are optional per kind rather than optional in
+    /// general — the factories for the other two kinds still require both.
+    /// </summary>
+    [Fact]
+    public void ARosterSlotHoldCarriesNeitherAPlayerNorAContract()
+    {
+        var hold = CapCharge.RosterSlotHold(
+            new TeamId(SortableId.NewId()),
+            new Season(2031),
+            new Money(1_150_000));
+
+        Assert.Equal(CapChargeKind.RosterSlotHold, hold.Kind);
+        Assert.Null(hold.PlayerId);
+        Assert.Null(hold.ContractId);
+        Assert.True(hold.IsRosterSlotHold);
+        Assert.False(hold.IsDeadMoney);
+        Assert.Equal(1_150_000, hold.Amount.SmallestUnits);
+    }
+
+    [Fact]
+    public void AnActiveContractChargeStillRequiresBothIdentifiers()
+    {
+        Assert.Throws<ArgumentNullException>(() => CapCharge.ActiveContract(
+            new TeamId(SortableId.NewId()),
+            new Season(2031),
+            playerId: null!,
+            new ContractId(SortableId.NewId()),
+            new Money(1_000_000)));
+    }
 }

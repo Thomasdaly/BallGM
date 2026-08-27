@@ -1,6 +1,7 @@
 using System.Globalization;
 using BallGM.Application.Cap;
 using BallGM.Application.DraftAssets;
+using BallGM.Application.Negotiations;
 using BallGM.Domain.Cap;
 using BallGM.Domain.Common;
 using BallGM.Domain.Contracts;
@@ -27,7 +28,8 @@ namespace BallGM.Application.Leagues;
 public sealed class GetLeagueOverviewQuery(
     ILeagueDataSource dataSource,
     ICapLedger capLedger,
-    IDraftAssetLedger draftAssetLedger)
+    IDraftAssetLedger draftAssetLedger,
+    ISigningEngine signingEngine)
 {
     private const string UnknownTeamCode = "league_overview.unknown_team";
     private const string UnknownFranchiseCode = "league_overview.unknown_franchise";
@@ -44,6 +46,9 @@ public sealed class GetLeagueOverviewQuery(
 
     private readonly IDraftAssetLedger _draftAssetLedger =
         draftAssetLedger ?? throw new ArgumentNullException(nameof(draftAssetLedger));
+
+    private readonly ISigningEngine _signingEngine =
+        signingEngine ?? throw new ArgumentNullException(nameof(signingEngine));
 
     public DomainOperationResult<LeagueOverview> Execute()
     {
@@ -125,16 +130,74 @@ public sealed class GetLeagueOverviewQuery(
             configuration.RosterLimits.MinimumPlayers,
             configuration.RosterLimits.MaximumPlayers,
             new CapThresholdSummary(
-                configuration.SoftCap.SmallestUnits,
-                configuration.LuxuryTax.SmallestUnits,
-                configuration.FirstApron.SmallestUnits,
-                configuration.SecondApron.SmallestUnits,
-                configuration.HardCap.SmallestUnits),
+                configuration.PayrollFloor?.SmallestUnits,
+                configuration.SoftCap?.SmallestUnits,
+                configuration.LuxuryTax?.SmallestUnits,
+                configuration.FirstApron?.SmallestUnits,
+                configuration.SecondApron?.SmallestUnits,
+                configuration.HardCap?.SmallestUnits),
             teamSummaries,
-            pickBoardResult.Value);
+            pickBoardResult.Value,
+            BuildFreeAgentMarket(snapshot));
 
         return DomainOperationResult<LeagueOverview>.Success(overview);
     }
+
+    /// <summary>
+    /// Who is unsigned, with what this league permits anyone to pay them. A free agent is a loaded
+    /// player on nobody's roster and under no live contract — both checks, because a player released
+    /// mid-contract leaves a roster before their dead money leaves the books, and one of those
+    /// answers alone would put them in the wrong list.
+    /// </summary>
+    private FreeAgentMarketSummary BuildFreeAgentMarket(LeagueSnapshot snapshot)
+    {
+        var rosteredPlayerIds = snapshot.Teams
+            .SelectMany(team => team.PlayerIds)
+            .ToHashSet();
+
+        var contractedPlayerIds = snapshot.Contracts
+            .Where(contract => !contract.IsTerminated)
+            .Select(contract => contract.PlayerId)
+            .ToHashSet();
+
+        var negotiation = snapshot.Configuration.Negotiation;
+
+        var players = snapshot.Players
+            .Where(player => !rosteredPlayerIds.Contains(player.Id) && !contractedPlayerIds.Contains(player.Id))
+            .Select(player =>
+            {
+                var limits = _signingEngine.LimitsFor(snapshot, player.SeasonsOfService);
+
+                return new FreeAgentLine(
+                    player.Id.Value,
+                    player.FullName,
+                    DescribePosition(player.Position),
+                    player.Rating.Overall,
+                    player.AgeOn(AgeReferenceDate(snapshot.CurrentSeason)),
+                    player.SeasonsOfService,
+                    player.IsInjured,
+                    player.CurrentInjury?.Description,
+                    limits.Minimum?.SmallestUnits,
+                    limits.Maximum?.SmallestUnits);
+            })
+            .OrderByDescending(line => line.Overall)
+            .ThenBy(line => line.FullName, StringComparer.Ordinal)
+            .ToList();
+
+        return new FreeAgentMarketSummary(
+            players,
+            negotiation.HasCompensationFloor,
+            negotiation.HasCompensationCeiling,
+            negotiation.MaximumContractSeasons);
+    }
+
+    /// <summary>
+    /// The date ages are read at. A season is a year until the calendar milestone gives it real
+    /// dates, so every age on screen is "as at the first of the season's year" — stated here once
+    /// rather than left as an unexplained constant, and the one place to change when a real calendar
+    /// arrives. Reading a clock instead would age every player in a save between two launches.
+    /// </summary>
+    private static DateOnly AgeReferenceDate(Season season) => new(season.Year, 1, 1);
 
     /// <summary>
     /// Flattens the draft-asset board the rules layer builds, resolving franchise names and hanging
@@ -240,7 +303,12 @@ public sealed class GetLeagueOverviewQuery(
         IReadOnlyDictionary<PlayerId, Player> playersById)
     {
         var charges = CapChargeProjection.ForTeamSeason(snapshot.Contracts, team.Id, snapshot.CurrentSeason);
-        var capSheetResult = _capLedger.Evaluate(team.Id, snapshot.CurrentSeason, charges, snapshot.Configuration);
+        var capSheetResult = _capLedger.Evaluate(
+            team.Id,
+            snapshot.CurrentSeason,
+            charges,
+            team.RosterCount,
+            snapshot.Configuration);
         if (capSheetResult.IsFailure)
         {
             return DomainOperationResult<TeamCapSummary>.Failure(capSheetResult.Errors.ToArray());
@@ -250,7 +318,7 @@ public sealed class GetLeagueOverviewQuery(
 
         var chargeLines = capSheet.Charges
             .Select(charge => new CapChargeLine(
-                ResolvePlayerName(charge.PlayerId, playersById),
+                DescribeChargeSubject(charge, playersById),
                 DescribeChargeKind(charge.Kind),
                 charge.Amount.SmallestUnits,
                 charge.IsDeadMoney))
@@ -267,6 +335,7 @@ public sealed class GetLeagueOverviewQuery(
             capSheet.Season.Year,
             capSheet.CommittedSalary.SmallestUnits,
             capSheet.DeadMoney.SmallestUnits,
+            capSheet.RosterHolds.SmallestUnits,
             capSheet.TotalPayroll.SmallestUnits,
             capSheet.Thresholds.Select(ToSummary).ToList(),
             chargeLines,
@@ -280,6 +349,8 @@ public sealed class GetLeagueOverviewQuery(
             standing.Amount.SmallestUnits,
             standing.SignedDistanceSmallestUnits,
             standing.IsOver,
+            standing.IsBreached,
+            standing.IsFloor,
             standing.Explanation);
 
     private static string ResolveFranchiseName(
@@ -344,17 +415,30 @@ public sealed class GetLeagueOverviewQuery(
             ? 0
             : contract.Terms.Count(term => term.Season.Year >= currentSeason.Year && !term.IsDeclinedOption);
 
-    private static string ResolvePlayerName(PlayerId playerId, IReadOnlyDictionary<PlayerId, Player> playersById) =>
-        playersById.TryGetValue(playerId, out var player)
+    /// <summary>
+    /// What the charge is <em>for</em>. Usually a player; a roster-slot hold has none, because it is
+    /// a charge for a signing that has not happened yet, and naming it as an unknown player would
+    /// invent a person.
+    /// </summary>
+    private static string DescribeChargeSubject(CapCharge charge, IReadOnlyDictionary<PlayerId, Player> playersById)
+    {
+        if (charge.PlayerId is not { } playerId)
+        {
+            return "Unfilled roster spot";
+        }
+
+        return playersById.TryGetValue(playerId, out var player)
             ? player.FullName
             // A charge whose player was not loaded is still money on the books: showing the raw
             // identifier keeps the total honest instead of hiding a line the payroll includes.
             : $"Unknown player ({playerId.Value})";
+    }
 
     private static string DescribeChargeKind(CapChargeKind kind) => kind switch
     {
         CapChargeKind.ActiveContract => "Active contract",
         CapChargeKind.DeadMoney => "Dead money",
+        CapChargeKind.RosterSlotHold => "Roster-slot hold",
         _ => kind.ToString(),
     };
 
@@ -383,6 +467,7 @@ public sealed class GetLeagueOverviewQuery(
         CapThresholdKind.FirstApron => "First apron",
         CapThresholdKind.SecondApron => "Second apron",
         CapThresholdKind.HardCap => "Hard cap",
+        CapThresholdKind.PayrollFloor => "Payroll floor",
         _ => kind.ToString(),
     };
 

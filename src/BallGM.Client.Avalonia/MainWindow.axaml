@@ -63,6 +63,9 @@
           <DataTemplate DataType="vm:TradeProposalViewModel">
             <views:TradeProposalView />
           </DataTemplate>
+          <DataTemplate DataType="vm:FreeAgencyViewModel">
+            <views:FreeAgencyView />
+          </DataTemplate>
         </ContentControl.DataTemplates>
       </ContentControl>
     </Grid>

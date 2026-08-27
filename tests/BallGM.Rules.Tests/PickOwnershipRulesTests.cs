@@ -18,12 +18,12 @@ public sealed class PickOwnershipRulesTests
     private static readonly Season CurrentSeason = new(2031);
 
     /// <summary>Two rounds, four tradable future drafts, and a first-rounder retained every two drafts.</summary>
-    private static readonly DraftRules Rules = new(
+    private static readonly DraftRules Rules = DraftRules.Create(
         roundCount: 2,
         lotteryEnabled: true,
         tradableFutureDraftHorizon: 4,
         retainedRoundNumber: 1,
-        retainedRoundInterval: 2);
+        retainedRoundInterval: 2).Value;
 
     [Fact]
     public void OrdinaryTransfer_OfAFranchisesOwnPickIsAllowedWhileItStillKeepsEnoughOfThem()

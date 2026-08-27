@@ -1,0 +1,128 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.FreeAgencyView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:app="clr-namespace:BallGM.Application.Leagues;assembly=BallGM.Application"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:FreeAgencyViewModel">
+  <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="10">
+    <TextBlock Text="{Binding LeagueTermsLine}" FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,20,320">
+      <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="AVAILABLE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock
+          DockPanel.Dock="Top"
+          Text="Nobody is unsigned in this league."
+          IsVisible="{Binding !HasFreeAgents}"
+          Opacity="0.6"
+          Margin="0,8,0,0" />
+        <ListBox ItemsSource="{Binding FreeAgents}" SelectedItem="{Binding Player}" Margin="0,8,0,0">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:FreeAgentRow">
+              <Grid ColumnDefinitions="*,44,40" RowDefinitions="Auto,Auto,Auto">
+                <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Text="{Binding Position}" Opacity="0.7" />
+                <TextBlock Grid.Column="2" Text="{Binding Overall}" Opacity="0.7" />
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding Detail}" FontSize="11" Opacity="0.6" />
+                <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Text="{Binding PermittedRange}" FontSize="11" Opacity="0.6" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
+
+      <DockPanel Grid.Column="2">
+        <StackPanel DockPanel.Dock="Top" Spacing="6">
+          <TextBlock Text="OFFERING TEAM" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding Team}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="app:TeamSummary">
+                <TextBlock Text="{Binding TeamName}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+
+          <TextBlock Text="FIRST SEASON ($M)" FontSize="11" FontWeight="SemiBold" Opacity="0.6" Margin="0,8,0,0" />
+          <TextBox Text="{Binding FirstSeasonSalary}" />
+
+          <TextBlock Text="SEASONS" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+          <NumericUpDown Value="{Binding Seasons}" Minimum="1" Maximum="12" Increment="1" FormatString="0" />
+
+          <TextBlock Text="ANNUAL RAISE (% OF FIRST SEASON)" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+          <NumericUpDown Value="{Binding AnnualRaisePercent}" Minimum="-50" Maximum="50" Increment="1" FormatString="0" />
+        </StackPanel>
+
+        <DockPanel Margin="0,12,0,0">
+          <TextBlock DockPanel.Dock="Top" Text="HOW THIS WOULD BE PAID FOR" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+          <TextBlock
+            DockPanel.Dock="Top"
+            Text="Check the offer to see every route this league has, which of them would pay for it, and how much each one leaves."
+            IsVisible="{Binding !HasAssessment}"
+            FontSize="11"
+            Opacity="0.5"
+            TextWrapping="Wrap"
+            Margin="0,6,0,0" />
+          <ListBox ItemsSource="{Binding Routes}" IsVisible="{Binding HasAssessment}" Margin="0,6,0,0">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:SigningRouteRow">
+                <StackPanel Spacing="1">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding RouteName}" FontSize="12" />
+                    <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="11" Opacity="0.7" />
+                  </Grid>
+                  <TextBlock Text="{Binding Explanation}" FontSize="10" Opacity="0.6" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding RuleCode}" FontSize="10" Opacity="0.4" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </DockPanel>
+    </Grid>
+
+    <StackPanel Grid.Row="2" Spacing="6" IsVisible="{Binding HasAssessment}">
+      <TextBlock Text="{Binding Verdict}" FontWeight="SemiBold" />
+      <TextBlock Text="{Binding OutcomeLine}" FontSize="12" Opacity="0.75" TextWrapping="Wrap" />
+
+      <ItemsControl ItemsSource="{Binding Violations}" IsVisible="{Binding HasViolations}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SigningFindingRow">
+            <StackPanel Spacing="0" Margin="0,2,0,0">
+              <TextBlock Text="{Binding RuleCode}" FontSize="10" Opacity="0.5" />
+              <TextBlock Text="{Binding Explanation}" FontSize="12" TextWrapping="Wrap" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <ItemsControl ItemsSource="{Binding Warnings}" IsVisible="{Binding HasWarnings}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SigningFindingRow">
+            <StackPanel Spacing="0" Margin="0,2,0,0">
+              <TextBlock Text="{Binding RuleCode}" FontSize="10" Opacity="0.5" />
+              <TextBlock Text="{Binding Explanation}" FontSize="12" Opacity="0.8" TextWrapping="Wrap" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <ItemsControl ItemsSource="{Binding Notes}" IsVisible="{Binding HasNotes}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SigningFindingRow">
+            <StackPanel Spacing="0" Margin="0,2,0,0">
+              <TextBlock Text="{Binding RuleCode}" FontSize="10" Opacity="0.4" />
+              <TextBlock Text="{Binding Explanation}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+
+    <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+      <TextBlock Text="{Binding Status}" VerticalAlignment="Center" TextWrapping="Wrap" Opacity="0.8" />
+      <Button Grid.Column="1" Content="Check offer" Command="{Binding CheckCommand}" />
+      <Button Grid.Column="2" Content="Sign" Command="{Binding SignCommand}" IsEnabled="{Binding IsLegal}" />
+    </Grid>
+  </Grid>
+</UserControl>

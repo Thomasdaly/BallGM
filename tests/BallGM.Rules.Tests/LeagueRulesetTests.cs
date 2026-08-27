@@ -16,13 +16,14 @@ public sealed class LeagueRulesetTests
             regularSeasonGameCount: 82,
             rosterLimits: new RosterSizeLimits(minimumPlayers: 12, maximumPlayers: 15),
             capThresholds: CapThresholds.Create(
-                new Money(100),
-                new Money(120),
-                new Money(130),
-                new Money(140),
-                new Money(150)).Value,
-            draftRules: new DraftRules(roundCount: 2, lotteryEnabled: true, tradableFutureDraftHorizon: 5, retainedRoundNumber: 1, retainedRoundInterval: 2),
-            tradeRules: TestTradeRules);
+                softCap: new Money(100),
+                luxuryTax: new Money(120),
+                firstApron: new Money(130),
+                secondApron: new Money(140),
+                hardCap: new Money(150)).Value,
+            draftRules: DraftRules.Create(roundCount: 2, lotteryEnabled: true, tradableFutureDraftHorizon: 5, retainedRoundNumber: 1, retainedRoundInterval: 2).Value,
+            tradeRules: TestTradeRules,
+            negotiationRules: NegotiationRules.OpenMarket);
 
         Assert.Equal(82, ruleset.RegularSeasonGameCount);
         Assert.Equal(15, ruleset.RosterLimits.MaximumPlayers);
@@ -39,9 +40,10 @@ public sealed class LeagueRulesetTests
             "Standard Fictional Ruleset",
             gameCount,
             new RosterSizeLimits(minimumPlayers: 12, maximumPlayers: 15),
-            CapThresholds.Create(new Money(100), new Money(120), new Money(130), new Money(140), new Money(150)).Value,
-            new DraftRules(roundCount: 2, lotteryEnabled: true, tradableFutureDraftHorizon: 5, retainedRoundNumber: 1, retainedRoundInterval: 2),
-            TestTradeRules));
+            CapThresholds.Create(softCap: new Money(100), luxuryTax: new Money(120), firstApron: new Money(130), secondApron: new Money(140), hardCap: new Money(150)).Value,
+            DraftRules.Create(roundCount: 2, lotteryEnabled: true, tradableFutureDraftHorizon: 5, retainedRoundNumber: 1, retainedRoundInterval: 2).Value,
+            TestTradeRules,
+            NegotiationRules.OpenMarket));
     }
 
     private static TradeRules TestTradeRules => TradeRules.Create(

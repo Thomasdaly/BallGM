@@ -39,7 +39,7 @@ public sealed class CapLedgerTests
         var sheet = Evaluate();
 
         Assert.Equal(0, sheet.TotalPayroll.SmallestUnits);
-        Assert.Equal(SoftCap, sheet.StandingFor(CapThresholdKind.SoftCap).SignedDistanceSmallestUnits);
+        Assert.Equal(SoftCap, Standing(sheet, CapThresholdKind.SoftCap).SignedDistanceSmallestUnits);
     }
 
     [Theory]
@@ -65,14 +65,14 @@ public sealed class CapLedgerTests
     {
         var sheet = Evaluate(ActiveCharge(payroll));
 
-        Assert.Equal(expectedRuleCode, sheet.StandingFor(kind).RuleCode);
+        Assert.Equal(expectedRuleCode, Standing(sheet, kind).RuleCode);
     }
 
     [Fact]
     public void ThresholdDistance_IsSignedSoRoomAndOverageCannotBeConfused()
     {
-        var underTheCap = Evaluate(ActiveCharge(120_000_000)).StandingFor(CapThresholdKind.SoftCap);
-        var overTheCap = Evaluate(ActiveCharge(198_000_000)).StandingFor(CapThresholdKind.SoftCap);
+        var underTheCap = Standing(Evaluate(ActiveCharge(120_000_000)), CapThresholdKind.SoftCap);
+        var overTheCap = Standing(Evaluate(ActiveCharge(198_000_000)), CapThresholdKind.SoftCap);
 
         Assert.Equal(21_000_000, underTheCap.SignedDistanceSmallestUnits);
         Assert.Equal(ThresholdPosition.Under, underTheCap.Position);
@@ -88,11 +88,11 @@ public sealed class CapLedgerTests
     {
         var sheet = Evaluate(ActiveCharge(198_000_000));
 
-        Assert.True(sheet.StandingFor(CapThresholdKind.SoftCap).IsOver);
-        Assert.True(sheet.StandingFor(CapThresholdKind.LuxuryTax).IsOver);
-        Assert.True(sheet.StandingFor(CapThresholdKind.FirstApron).IsOver);
-        Assert.True(sheet.StandingFor(CapThresholdKind.SecondApron).IsOver);
-        Assert.False(sheet.StandingFor(CapThresholdKind.HardCap).IsOver);
+        Assert.True(Standing(sheet, CapThresholdKind.SoftCap).IsOver);
+        Assert.True(Standing(sheet, CapThresholdKind.LuxuryTax).IsOver);
+        Assert.True(Standing(sheet, CapThresholdKind.FirstApron).IsOver);
+        Assert.True(Standing(sheet, CapThresholdKind.SecondApron).IsOver);
+        Assert.False(Standing(sheet, CapThresholdKind.HardCap).IsOver);
     }
 
     [Fact]
@@ -102,7 +102,125 @@ public sealed class CapLedgerTests
 
         Assert.Equal(5, sheet.Thresholds.Count);
         Assert.All(sheet.Thresholds, standing => Assert.False(string.IsNullOrWhiteSpace(standing.Explanation)));
-        Assert.Contains("tax", sheet.StandingFor(CapThresholdKind.LuxuryTax).Explanation, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("tax", Standing(sheet, CapThresholdKind.LuxuryTax).Explanation, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// A league that configures two lines gets two standings. Not five, and certainly not five with
+    /// three of them set to zero, which would report every team as over three lines it does not
+    /// have.
+    /// </summary>
+    [Fact]
+    public void APartiallyConfiguredLeague_ReportsOnlyTheThresholdsItHas()
+    {
+        var partial = CapThresholds.Create(
+            softCap: new Money(SoftCap),
+            luxuryTax: new Money(LuxuryTax)).Value;
+
+        var sheet = new CapLedger()
+            .Evaluate(Team, Season2031, [ActiveCharge(150_000_000)], partial)
+            .Value;
+
+        Assert.Equal(
+            [CapThresholdKind.SoftCap, CapThresholdKind.LuxuryTax],
+            sheet.Thresholds.Select(standing => standing.Kind));
+
+        Assert.Null(sheet.StandingFor(CapThresholdKind.FirstApron));
+        Assert.Equal("cap.over_soft_cap", Standing(sheet, CapThresholdKind.SoftCap).RuleCode);
+        Assert.Equal("cap.under_luxury_tax", Standing(sheet, CapThresholdKind.LuxuryTax).RuleCode);
+    }
+
+    /// <summary>
+    /// An uncapped league produces a real payroll and nothing to measure it against — the truth,
+    /// rather than five zeroes every team is over.
+    /// </summary>
+    [Fact]
+    public void AnUncappedLeague_ProducesAPayrollAndNoStandings()
+    {
+        var sheet = new CapLedger()
+            .Evaluate(Team, Season2031, [ActiveCharge(88_000_000)], CapThresholds.Uncapped)
+            .Value;
+
+        Assert.Equal(88_000_000, sheet.TotalPayroll.SmallestUnits);
+        Assert.Empty(sheet.Thresholds);
+    }
+
+    [Fact]
+    public void StandingFor_ReturnsNullForAThresholdTheLeagueDoesNotConfigure()
+    {
+        var sheet = new CapLedger()
+            .Evaluate(Team, Season2031, [ActiveCharge(88_000_000)], CapThresholds.Uncapped)
+            .Value;
+
+        Assert.Null(sheet.StandingFor(CapThresholdKind.SoftCap));
+    }
+
+    /// <summary>
+    /// The payroll floor is the one threshold a team is on the wrong side of by being under it, so
+    /// the standing has to say that in words as well as in the sign of a number.
+    /// </summary>
+    [Fact]
+    public void ATeamBelowThePayrollFloor_GetsAStatedStanding()
+    {
+        var withFloor = CapThresholds.Create(
+            payrollFloor: new Money(127_000_000),
+            softCap: new Money(SoftCap)).Value;
+
+        var sheet = new CapLedger()
+            .Evaluate(Team, Season2031, [ActiveCharge(118_400_000)], withFloor)
+            .Value;
+
+        var floor = Standing(sheet, CapThresholdKind.PayrollFloor);
+
+        Assert.Equal("cap.under_payroll_floor", floor.RuleCode);
+        Assert.Equal(8_600_000, floor.SignedDistanceSmallestUnits);
+        Assert.True(floor.IsBreached);
+        Assert.True(floor.IsFloor);
+        Assert.Contains("below the payroll floor", floor.Explanation, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Over the floor is compliance, not a breach — the distinction the rest of the cap sheet keys
+    /// its highlighting off.
+    /// </summary>
+    [Fact]
+    public void ATeamAboveThePayrollFloor_IsNotReportedAsBreachingIt()
+    {
+        var withFloor = CapThresholds.Create(
+            payrollFloor: new Money(127_000_000),
+            softCap: new Money(SoftCap)).Value;
+
+        var sheet = new CapLedger()
+            .Evaluate(Team, Season2031, [ActiveCharge(135_000_000)], withFloor)
+            .Value;
+
+        var floor = Standing(sheet, CapThresholdKind.PayrollFloor);
+
+        Assert.True(floor.IsOver);
+        Assert.False(floor.IsBreached);
+    }
+
+    /// <summary>
+    /// A roster-slot hold is money a team has not spent yet but cannot spend twice. It counts
+    /// towards the payroll like any other charge, which is what makes the room it leaves real room.
+    /// </summary>
+    [Fact]
+    public void ARosterSlotHold_ReducesTheRoomUnderTheSoftCap()
+    {
+        var withoutHold = Evaluate(ActiveCharge(120_000_000));
+        var withHold = Evaluate(ActiveCharge(120_000_000), CapCharge.RosterSlotHold(Team, Season2031, new Money(1_150_000)));
+
+        Assert.Equal(121_150_000, withHold.TotalPayroll.SmallestUnits);
+        Assert.Equal(
+            Standing(withoutHold, CapThresholdKind.SoftCap).SignedDistanceSmallestUnits - 1_150_000,
+            Standing(withHold, CapThresholdKind.SoftCap).SignedDistanceSmallestUnits);
+
+        // Its own bucket. A hold is not dead money — nobody has been released — and it is not
+        // committed salary either, because no player is owed it; folding it into either would make
+        // one of those two figures answer a question it is not being asked.
+        Assert.Equal(0, withHold.DeadMoney.SmallestUnits);
+        Assert.Equal(120_000_000, withHold.CommittedSalary.SmallestUnits);
+        Assert.Equal(1_150_000, withHold.RosterHolds.SmallestUnits);
     }
 
     [Fact]
@@ -161,14 +279,26 @@ public sealed class CapLedgerTests
             new ContractId(SortableId.NewId()),
             new Money(amount));
 
+    /// <summary>
+    /// The standing against a threshold the league is known to configure. Nullable at the source —
+    /// a league can legitimately have no such line — so these tests assert it exists before reading
+    /// it rather than suppressing the warning.
+    /// </summary>
+    private static ThresholdStanding Standing(TeamCapSheet sheet, CapThresholdKind kind)
+    {
+        var standing = sheet.StandingFor(kind);
+        Assert.NotNull(standing);
+        return standing;
+    }
+
     private static CapThresholds Thresholds()
     {
         var result = CapThresholds.Create(
-            new Money(SoftCap),
-            new Money(LuxuryTax),
-            new Money(FirstApron),
-            new Money(SecondApron),
-            new Money(HardCap));
+            softCap: new Money(SoftCap),
+            luxuryTax: new Money(LuxuryTax),
+            firstApron: new Money(FirstApron),
+            secondApron: new Money(SecondApron),
+            hardCap: new Money(HardCap));
 
         Assert.True(result.IsSuccess);
         return result.Value;

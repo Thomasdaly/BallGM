@@ -3,6 +3,7 @@ using BallGM.Application.Leagues;
 using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
+using BallGM.Infrastructure.Negotiations;
 
 namespace BallGM.Integration.Tests;
 
@@ -11,7 +12,7 @@ public sealed class BoardDumpProbe
     [Fact]
     public void Dump()
     {
-        var result = new GetLeagueOverviewQuery(new FixtureLeagueDataSource(), new RulesCapLedger(), new RulesDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(new FixtureLeagueDataSource(), new RulesCapLedger(), new RulesDraftAssetLedger(), new RulesSigningEngine()).Execute();
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
 
         var text = new StringBuilder();

@@ -40,8 +40,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         _capSheet = new CapSheetViewModel(overview);
         _pickBoard = new PickBoardViewModel(overview);
         Trade = new TradeProposalViewModel(overview, session, ApplyLeagueChange);
+        FreeAgency = new FreeAgencyViewModel(overview, session, ApplyLeagueChange);
 
-        Sections = [_roster.Title, _capSheet.Title, _pickBoard.Title, Trade.Title];
+        Sections = [_roster.Title, _capSheet.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title];
         SelectedTeam = Teams.FirstOrDefault();
         SelectedSection = Sections[0];
     }
@@ -58,6 +59,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         _teams = [];
         Sections = [];
         Trade = null;
+        FreeAgency = null;
     }
 
     public bool HasLeague { get; }
@@ -77,6 +79,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public IReadOnlyList<string> Sections { get; }
 
     public TradeProposalViewModel? Trade { get; }
+
+    public FreeAgencyViewModel? FreeAgency { get; }
 
     public TeamSummary? SelectedTeam
     {
@@ -120,6 +124,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 _ when _capSheet is not null && value == _capSheet.Title => _capSheet,
                 _ when _pickBoard is not null && value == _pickBoard.Title => _pickBoard,
                 _ when Trade is not null && value == Trade.Title => Trade,
+                _ when FreeAgency is not null && value == FreeAgency.Title => FreeAgency,
                 _ => _roster,
             };
         }
@@ -153,8 +158,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         _capSheet.Team = _selectedTeam;
         _pickBoard.Team = _selectedTeam;
 
-        // The trade screen stays put: it is showing the result of what just happened, and rebuilding
-        // it would throw that away the moment it became worth reading.
+        // The trade and free-agency screens stay put: whichever one is showing is showing the result
+        // of what just happened, and rebuilding it would throw that away the moment it became worth
+        // reading. Both refresh their own bindings from the new overview instead.
         CurrentScreen = _currentScreen switch
         {
             CapSheetViewModel => _capSheet,

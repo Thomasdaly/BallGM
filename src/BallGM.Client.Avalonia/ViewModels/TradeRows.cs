@@ -40,15 +40,22 @@ public sealed record TradeOutcomeRow(
         };
 
         // The strictest line the team ends up over, so the row says what the trade costs them in
-        // freedom as well as in money.
-        var crossed = outcome.ThresholdsAfter.LastOrDefault(threshold => threshold.IsOver);
-        var nextLine = outcome.ThresholdsAfter.FirstOrDefault(threshold => !threshold.IsOver);
+        // freedom as well as in money. Ceilings only: the payroll floor is a line a team is on the
+        // wrong side of by being under it, so it is reported separately rather than as "crossed".
+        var ceilings = outcome.ThresholdsAfter.Where(threshold => !threshold.IsFloor).ToList();
+        var floor = outcome.ThresholdsAfter.FirstOrDefault(threshold => threshold.IsFloor);
+        var crossed = ceilings.LastOrDefault(threshold => threshold.IsOver);
+        var nextLine = ceilings.FirstOrDefault(threshold => !threshold.IsOver);
 
-        var thresholdLine = crossed is null
-            ? nextLine is null
-                ? "Past every configured line."
-                : $"Under every line — {MoneyDisplay.ToMillions(nextLine.SignedDistance)} below the {Spaced(nextLine.ThresholdName)}."
-            : $"Over the {Spaced(crossed.ThresholdName)} by {MoneyDisplay.ToMillions(Math.Abs(crossed.SignedDistance))} after the trade.";
+        var thresholdLine = outcome.ThresholdsAfter.Count == 0
+            ? "This league sets no cap, so the trade crosses no line."
+            : floor is { IsBreached: true }
+                ? $"Below the payroll floor by {MoneyDisplay.ToMillions(floor.SignedDistance)} after the trade."
+                : crossed is null
+                    ? nextLine is null
+                        ? "Past every configured line."
+                        : $"Under every line — {MoneyDisplay.ToMillions(nextLine.SignedDistance)} below the {Spaced(nextLine.ThresholdName)}."
+                    : $"Over the {Spaced(crossed.ThresholdName)} by {MoneyDisplay.ToMillions(Math.Abs(crossed.SignedDistance))} after the trade.";
 
         return new TradeOutcomeRow(
             outcome.TeamName,

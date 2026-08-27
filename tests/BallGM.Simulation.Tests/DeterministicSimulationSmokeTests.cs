@@ -1,4 +1,4 @@
-using BallGM.Simulation.Randomness;
+using BallGM.Domain.Randomness;
 using BallGM.Simulation.Smoke;
 
 namespace BallGM.Simulation.Tests;

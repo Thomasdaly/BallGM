@@ -30,8 +30,19 @@ public sealed class PickBoardViewModel : ViewModelBase
 
     public int SeasonYear { get; }
 
-    public string SeasonLine =>
-        $"Drafts {_board.FirstDraftSeason} to {_board.FirstDraftSeason + _board.DraftCount - 1} · {_board.RoundCount} rounds · the {SeasonYear} draft has already been settled";
+    /// <summary>Whether this league drafts at all. A league that does not gets a sentence, not an empty grid.</summary>
+    public bool HasDraft => _board.DraftCount > 0;
+
+    public string SeasonLine => HasDraft
+        ? $"Drafts {_board.FirstDraftSeason} to {_board.FirstDraftSeason + _board.DraftCount - 1} · {_board.RoundCount} rounds · the {SeasonYear} draft has already been settled"
+        : "This league holds no draft.";
+
+    /// <summary>
+    /// What to say when there is no board. A blank panel reads as a screen that failed to load;
+    /// saying the league has no draft is the same fact, stated.
+    /// </summary>
+    public string NoDraftExplanation =>
+        "Players in this league are signed rather than drafted, so no franchise holds draft picks and there is nothing to trade here.";
 
     public IReadOnlyList<int> DraftSeasons { get; }
 

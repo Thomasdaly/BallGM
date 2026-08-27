@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using BallGM.Domain.Cap;
 using BallGM.Domain.Common;
 using BallGM.Domain.Teams;
 using BallGM.Rules.Configuration;
@@ -20,7 +22,18 @@ public sealed class LeagueRulesetSerializer
 
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web)
     {
-        WriteIndented = true
+        WriteIndented = true,
+
+        // Absence is meaningful in this format: a league with no soft cap omits the field rather
+        // than writing a zero. Writing nulls back out would round-trip "no cap system" as an
+        // explicit null, which reads as a third state nobody defined.
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+
+        // A field this build does not know is a rule this build cannot run. Ignoring it — the
+        // default — is how a file that states a term limit gets loaded by a reader that enforces
+        // none, which is the version-gate failure arriving through a side door: the schema version
+        // catches a file from a build we know about, and this catches one from a build we do not.
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
     };
 
     public string Serialize(LeagueRuleset ruleset)
@@ -33,20 +46,32 @@ public sealed class LeagueRulesetSerializer
             ruleset.RegularSeasonGameCount,
             ruleset.RosterLimits.MinimumPlayers,
             ruleset.RosterLimits.MaximumPlayers,
-            ruleset.CapThresholds.SoftCap.SmallestUnits,
-            ruleset.CapThresholds.LuxuryTax.SmallestUnits,
-            ruleset.CapThresholds.FirstApron.SmallestUnits,
-            ruleset.CapThresholds.SecondApron.SmallestUnits,
-            ruleset.CapThresholds.HardCap.SmallestUnits,
-            ruleset.DraftRules.RoundCount,
+            ruleset.CapThresholds.PayrollFloor?.SmallestUnits,
+            ruleset.CapThresholds.SoftCap?.SmallestUnits,
+            ruleset.CapThresholds.LuxuryTax?.SmallestUnits,
+            ruleset.CapThresholds.FirstApron?.SmallestUnits,
+            ruleset.CapThresholds.SecondApron?.SmallestUnits,
+            ruleset.CapThresholds.HardCap?.SmallestUnits,
+            ruleset.DraftRules.HasDraft ? ruleset.DraftRules.RoundCount : null,
             ruleset.DraftRules.LotteryEnabled,
-            ruleset.DraftRules.TradableFutureDraftHorizon,
-            ruleset.DraftRules.RetainedRoundNumber,
-            ruleset.DraftRules.RetainedRoundInterval,
+            ruleset.DraftRules.HasDraft ? ruleset.DraftRules.TradableFutureDraftHorizon : null,
+            ruleset.DraftRules.HasDraft ? ruleset.DraftRules.RetainedRoundNumber : null,
+            ruleset.DraftRules.HasDraft ? ruleset.DraftRules.RetainedRoundInterval : null,
             ruleset.TradeRules.SalaryMatchPercent,
-            ruleset.TradeRules.SalaryMatchAllowance.SmallestUnits,
+            ruleset.TradeRules.HasSalaryMatching ? ruleset.TradeRules.SalaryMatchAllowance.SmallestUnits : null,
             ruleset.TradeRules.InjuredPlayerEligibility.ToString(),
-            ruleset.TradeRules.SecondApronBlocksSalaryIncrease);
+            ruleset.TradeRules.SecondApronBlocksSalaryIncrease,
+            ruleset.NegotiationRules.MaximumContractSeasons,
+            ruleset.NegotiationRules.MaximumIncumbentContractSeasons,
+            ruleset.NegotiationRules.MaximumAnnualEscalationPercent,
+            ruleset.NegotiationRules.MaximumAnnualDeescalationPercent,
+            ToCeilingTiers(ruleset.NegotiationRules.CompensationCeiling),
+            ToFloorBands(ruleset.NegotiationRules.CompensationFloor),
+            ruleset.NegotiationRules.StandardOverCapAllowance?.SmallestUnits,
+            ruleset.NegotiationRules.StandardOverCapAllowanceUnavailableAbove?.ToString(),
+            ruleset.NegotiationRules.AllowanceMaySplitAcrossPlayers,
+            ruleset.NegotiationRules.MarketResolution.ToString(),
+            ruleset.NegotiationRules.OfferExpiryDays);
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -75,22 +100,35 @@ public sealed class LeagueRulesetSerializer
         // A ruleset file this build cannot read fails structurally rather than loading with fields
         // this build invented. Draft-asset restrictions arrived in version 2, and a league silently
         // running restrictions its ruleset never stated is the failure mode worth refusing.
+        //
+        // The immediately previous version is the case worth explaining rather than just rejecting.
+        // Each bump so far has been additive-by-absence — version 4 made the cap system and the
+        // draft optional, version 5 added the negotiation section — so a valid file from the version
+        // before this one is a valid file for this one with the number changed. There is no
+        // migration to run. What the gate buys is the other direction: an older reader handed a
+        // newer file would read absent fields as zeroes, or ignore rules it cannot enforce, and run
+        // a rulebook the file never stated.
         if (envelope.SchemaVersion != LeagueRuleset.CurrentSchemaVersion)
         {
+            var upgradeHint = envelope.SchemaVersion == LeagueRuleset.CurrentSchemaVersion - 1
+                ? $" Version {LeagueRuleset.CurrentSchemaVersion} is the same format with an additional optional section, so a valid version {envelope.SchemaVersion} file only needs its schemaVersion changed to {LeagueRuleset.CurrentSchemaVersion}."
+                : string.Empty;
+
             return DomainOperationResult<LeagueRuleset>.Failure(
                 new DomainError(
                     UnsupportedSchemaVersionCode,
-                    $"League ruleset schema version {envelope.SchemaVersion} cannot be read by this build, which reads version {LeagueRuleset.CurrentSchemaVersion}."));
+                    $"League ruleset schema version {envelope.SchemaVersion} cannot be read by this build, which reads version {LeagueRuleset.CurrentSchemaVersion}.{upgradeHint}"));
         }
 
         try
         {
             var capThresholdsResult = CapThresholds.Create(
-                new Money(envelope.SoftCap),
-                new Money(envelope.LuxuryTax),
-                new Money(envelope.FirstApron),
-                new Money(envelope.SecondApron),
-                new Money(envelope.HardCap));
+                ToMoney(envelope.PayrollFloor),
+                ToMoney(envelope.SoftCap),
+                ToMoney(envelope.LuxuryTax),
+                ToMoney(envelope.FirstApron),
+                ToMoney(envelope.SecondApron),
+                ToMoney(envelope.HardCap));
 
             if (capThresholdsResult.IsFailure)
             {
@@ -105,7 +143,7 @@ public sealed class LeagueRulesetSerializer
 
             var tradeRulesResult = TradeRules.Create(
                 envelope.SalaryMatchPercent,
-                new Money(envelope.SalaryMatchAllowance),
+                ToMoney(envelope.SalaryMatchAllowance),
                 eligibilityResult.Value,
                 envelope.SecondApronBlocksSalaryIncrease);
 
@@ -114,19 +152,33 @@ public sealed class LeagueRulesetSerializer
                 return DomainOperationResult<LeagueRuleset>.Failure(tradeRulesResult.Errors.ToArray());
             }
 
+            var draftRulesResult = DraftRules.Create(
+                envelope.DraftRoundCount ?? 0,
+                envelope.DraftLotteryEnabled,
+                envelope.TradableFutureDraftHorizon ?? 0,
+                envelope.RetainedRoundNumber ?? 0,
+                envelope.RetainedRoundInterval ?? 0);
+
+            if (draftRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(draftRulesResult.Errors.ToArray());
+            }
+
+            var negotiationRulesResult = BuildNegotiationRules(envelope, capThresholdsResult.Value);
+            if (negotiationRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(negotiationRulesResult.Errors.ToArray());
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
                 envelope.RegularSeasonGameCount,
                 new RosterSizeLimits(envelope.MinimumRosterPlayers, envelope.MaximumRosterPlayers),
                 capThresholdsResult.Value,
-                new DraftRules(
-                    envelope.DraftRoundCount,
-                    envelope.DraftLotteryEnabled,
-                    envelope.TradableFutureDraftHorizon,
-                    envelope.RetainedRoundNumber,
-                    envelope.RetainedRoundInterval),
-                tradeRulesResult.Value);
+                draftRulesResult.Value,
+                tradeRulesResult.Value,
+                negotiationRulesResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
@@ -135,4 +187,78 @@ public sealed class LeagueRulesetSerializer
             return DomainOperationResult<LeagueRuleset>.Failure(new DomainError(InvalidFieldCode, exception.Message));
         }
     }
+
+    /// <summary>
+    /// Maps the negotiation section, checking it against the thresholds the same file configures.
+    /// The section is optional in full: a file that leaves out every field loads as an open market
+    /// rather than as a league where nobody may sign.
+    /// </summary>
+    private static DomainOperationResult<NegotiationRules> BuildNegotiationRules(
+        LeagueRulesetEnvelope envelope,
+        CapThresholds capThresholds)
+    {
+        var ceilingResult = CompensationCeilingScale.Create(
+            envelope.CompensationCeilingTiers?.Select(tier => new ScaleBand(tier.MinimumSeasonsOfService, tier.PercentOfSoftCap)));
+
+        if (ceilingResult.IsFailure)
+        {
+            return DomainOperationResult<NegotiationRules>.Failure(ceilingResult.Errors.ToArray());
+        }
+
+        var floorResult = CompensationFloorScale.Create(
+            envelope.CompensationFloorScale?.Select(band => new ScaleBand(band.MinimumSeasonsOfService, band.Amount)));
+
+        if (floorResult.IsFailure)
+        {
+            return DomainOperationResult<NegotiationRules>.Failure(floorResult.Errors.ToArray());
+        }
+
+        var resolutionResult = NegotiationRules.ParseMarketResolution(envelope.MarketResolution);
+        if (resolutionResult.IsFailure)
+        {
+            return DomainOperationResult<NegotiationRules>.Failure(resolutionResult.Errors.ToArray());
+        }
+
+        // Absence is the common case and means the allowance is never withdrawn, so it is settled
+        // here rather than inside the parser: a result type that carries a null success is a result
+        // type that throws on the field a league most often leaves out.
+        CapThresholdKind? allowanceLimit = null;
+        if (!string.IsNullOrWhiteSpace(envelope.StandardOverCapAllowanceUnavailableAbove))
+        {
+            var allowanceLimitResult = NegotiationRules.ParseAllowanceLimit(envelope.StandardOverCapAllowanceUnavailableAbove);
+            if (allowanceLimitResult.IsFailure)
+            {
+                return DomainOperationResult<NegotiationRules>.Failure(allowanceLimitResult.Errors.ToArray());
+            }
+
+            allowanceLimit = allowanceLimitResult.Value;
+        }
+
+        return NegotiationRules.Create(
+            capThresholds,
+            envelope.MaximumContractSeasons,
+            envelope.MaximumIncumbentContractSeasons,
+            envelope.MaximumAnnualEscalationPercent,
+            envelope.MaximumAnnualDeescalationPercent,
+            ceilingResult.Value,
+            floorResult.Value,
+            ToMoney(envelope.StandardOverCapAllowance),
+            allowanceLimit,
+            envelope.AllowanceMaySplitAcrossPlayers,
+            resolutionResult.Value,
+            envelope.OfferExpiryDays);
+    }
+
+    private static IReadOnlyList<CompensationCeilingTierEnvelope>? ToCeilingTiers(CompensationCeilingScale ceiling) =>
+        ceiling.IsConfigured
+            ? ceiling.Scale.Bands.Select(band => new CompensationCeilingTierEnvelope(band.MinimumKey, band.Value)).ToList()
+            : null;
+
+    private static IReadOnlyList<CompensationFloorBandEnvelope>? ToFloorBands(CompensationFloorScale floor) =>
+        floor.IsConfigured
+            ? floor.Scale.Bands.Select(band => new CompensationFloorBandEnvelope(band.MinimumKey, band.Value)).ToList()
+            : null;
+
+    /// <summary>Absent stays absent. A missing amount is a rule the league does not have, not an amount of zero.</summary>
+    private static Money? ToMoney(long? smallestUnits) => smallestUnits is null ? null : new Money(smallestUnits.Value);
 }

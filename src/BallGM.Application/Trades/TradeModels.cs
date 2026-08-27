@@ -18,12 +18,15 @@ public sealed record TradeAssetRequest(string AssetKind, string AssetId, string 
 
 /// <summary>
 /// The verdict in presentation terms. Warnings travel separately from violations because a trade
-/// machine that shows a GM one undifferentiated list of complaints teaches them to ignore all of it.
+/// machine that shows a GM one undifferentiated list of complaints teaches them to ignore all of it,
+/// and <paramref name="Notes"/> travels separately from both: a rule this league does not have is
+/// information about the league, not a caution about this trade.
 /// </summary>
 public sealed record TradeAssessmentSummary(
     bool IsLegal,
     IReadOnlyList<TradeFindingLine> Violations,
     IReadOnlyList<TradeFindingLine> Warnings,
+    IReadOnlyList<TradeFindingLine> Notes,
     IReadOnlyList<TradeTeamOutcomeLine> Teams);
 
 public sealed record TradeFindingLine(string RuleCode, string Explanation, string? TeamName);

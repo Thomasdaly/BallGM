@@ -18,9 +18,17 @@ namespace BallGM.Application.Cap;
 /// </summary>
 public interface ICapLedger
 {
+    /// <param name="filledRosterSpots">
+    /// How many players the team already has. The port needs it because the roster-slot holds that
+    /// keep a cap sheet honest are projected behind this boundary, from the league's roster minimum
+    /// and its compensation floor — both ruleset content, so both on the rules side of the port. The
+    /// alternative was for the caller to project holds and pass them in with the contract charges,
+    /// which would put a rule in the Application layer that the rules layer is supposed to own.
+    /// </param>
     DomainOperationResult<TeamCapSheet> Evaluate(
         TeamId teamId,
         Season season,
         IReadOnlyCollection<CapCharge> charges,
+        int filledRosterSpots,
         LeagueConfiguration configuration);
 }

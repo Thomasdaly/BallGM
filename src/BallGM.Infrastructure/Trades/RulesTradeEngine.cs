@@ -56,6 +56,7 @@ public sealed class RulesTradeEngine : ITradeEngine
         var configuration = snapshot.Configuration;
 
         var thresholdsResult = CapThresholds.Create(
+            configuration.PayrollFloor,
             configuration.SoftCap,
             configuration.LuxuryTax,
             configuration.FirstApron,
@@ -80,20 +81,18 @@ public sealed class RulesTradeEngine : ITradeEngine
                 .ToArray());
         }
 
-        DraftRules draftRules;
-        try
+        var draftRulesResult = DraftRules.Create(
+            configuration.DraftRoundCount,
+            configuration.DraftLotteryEnabled,
+            configuration.TradableFutureDraftHorizon,
+            configuration.RetainedRoundNumber,
+            configuration.RetainedRoundInterval);
+
+        if (draftRulesResult.IsFailure)
         {
-            draftRules = new DraftRules(
-                configuration.DraftRoundCount,
-                configuration.DraftLotteryEnabled,
-                configuration.TradableFutureDraftHorizon,
-                configuration.RetainedRoundNumber,
-                configuration.RetainedRoundInterval);
-        }
-        catch (ArgumentException exception)
-        {
-            return DomainOperationResult<TradeContext>.Failure(
-                new DomainError(InvalidDraftRulesCode, exception.Message));
+            return DomainOperationResult<TradeContext>.Failure(draftRulesResult.Errors
+                .Select(error => new DomainError(InvalidDraftRulesCode, error.Message))
+                .ToArray());
         }
 
         return DomainOperationResult<TradeContext>.Success(new TradeContext(
@@ -106,6 +105,6 @@ public sealed class RulesTradeEngine : ITradeEngine
             configuration.RosterLimits,
             thresholdsResult.Value,
             tradeRulesResult.Value,
-            draftRules));
+            draftRulesResult.Value));
     }
 }

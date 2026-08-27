@@ -24,7 +24,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithTeam("Verdanmoor Kestrels", "Verdanmoor Athletic", playerCount: 2)
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
         Assert.Equal(2, result.Value.Teams.Count);
@@ -42,7 +42,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithTeam("Harbourline Tidewatch", "Harbourline Basketball Club", playerCount: 2)
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Test Ruleset", result.Value.RulesetName);
@@ -62,7 +62,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithTeam("Northreach Aurora", "Northreach Athletic Union", playerCount: 1)
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
         Assert.Equal(
@@ -82,7 +82,7 @@ public sealed class GetLeagueOverviewQueryTests
                 ("Rotation Guard", Position.PointGuard, 74, null))
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
         Assert.Equal(
@@ -101,7 +101,7 @@ public sealed class GetLeagueOverviewQueryTests
                 ("Hurt Guard", Position.ShootingGuard, 80, "Sprained left ankle"))
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
         var roster = result.Value.Teams.Single().Roster;
@@ -125,7 +125,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithDanglingTeamReference("MISSING-TEAM")
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsFailure);
         var error = Assert.Single(result.Errors);
@@ -141,7 +141,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithoutLoadingPlayers()
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsFailure);
         Assert.All(result.Errors, error => Assert.Equal("league_overview.unknown_player", error.Code));
@@ -155,7 +155,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithoutLoadingFranchises()
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsFailure);
         var error = Assert.Single(result.Errors);
@@ -168,7 +168,7 @@ public sealed class GetLeagueOverviewQueryTests
         var failure = DomainOperationResult<LeagueSnapshot>.Failure(
             new DomainError("ruleset.malformed_file", "The league ruleset file is not valid JSON."));
 
-        var result = new GetLeagueOverviewQuery(new StubLeagueDataSource(failure), new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(new StubLeagueDataSource(failure), new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsFailure);
         var error = Assert.Single(result.Errors);
@@ -186,7 +186,7 @@ public sealed class GetLeagueOverviewQueryTests
                 ("Rotation Guard", Position.PointGuard, 74, null))
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
         var capSheet = result.Value.Teams.Single().CapSheet;
@@ -206,7 +206,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithReleasedPlayer("Casimir Vandeleur", guaranteedAmount: 6_200_000)
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
         var team = result.Value.Teams.Single();
@@ -226,7 +226,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithTeam("Harbourline Tidewatch", "Harbourline Basketball Club", playerCount: 2)
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
         var standing = Assert.Single(result.Value.Teams.Single().CapSheet.Thresholds);
@@ -245,7 +245,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithReleasedPlayer("Casimir Vandeleur", guaranteedAmount: 1_000_000)
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
         var transactions = result.Value.Teams.Single().CapSheet.Transactions;
@@ -265,7 +265,7 @@ public sealed class GetLeagueOverviewQueryTests
                 ("Star Wing", Position.SmallForward, 88, null))
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
         var spot = result.Value.Teams.Single().Roster.Single();
@@ -281,7 +281,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithTeam("Harbourline Tidewatch", "Harbourline Basketball Club", playerCount: 2)
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new FailingCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new FailingCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsFailure);
         Assert.Equal("cap_ledger.charge_team_mismatch", Assert.Single(result.Errors).Code);
@@ -299,7 +299,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithTeam("Harbourline Tidewatch", "Harbourline Basketball Club", playerCount: 2)
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
         Assert.Equal(LeagueBuilder.CurrentSeason.Year + 1, result.Value.PickBoard.FirstDraftSeason);
@@ -318,7 +318,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithAProtectedPickOwedToTheSecondFranchise()
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
 
@@ -345,7 +345,7 @@ public sealed class GetLeagueOverviewQueryTests
             .WithAProtectedPickOwedToTheSecondFranchise()
             .Build();
 
-        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(league, new StubCapLedger(), new StubDraftAssetLedger(), new StubSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess);
 
@@ -377,24 +377,30 @@ public sealed class GetLeagueOverviewQueryTests
             TeamId teamId,
             Season season,
             IReadOnlyCollection<CapCharge> charges,
+            int filledRosterSpots,
             LeagueConfiguration configuration)
         {
             var committed = Money.Sum(charges.Where(charge => !charge.IsDeadMoney).Select(charge => charge.Amount));
             var dead = Money.Sum(charges.Where(charge => charge.IsDeadMoney).Select(charge => charge.Amount));
             var total = committed + dead;
 
+            // The stub only stands in for a configured soft cap; a league without one is covered by
+            // the conformance tests against the real ledger.
+            var softCap = configuration.SoftCap ?? Money.Zero;
+
             return DomainOperationResult<TeamCapSheet>.Success(new TeamCapSheet(
                 teamId,
                 season,
                 committed,
                 dead,
+                Money.Zero,
                 total,
                 charges.ToList(),
                 [
                     new ThresholdStanding(
                         CapThresholdKind.SoftCap,
-                        configuration.SoftCap,
-                        configuration.SoftCap.SignedDifferenceFrom(total),
+                        softCap,
+                        softCap.SignedDifferenceFrom(total),
                         ThresholdPosition.Under,
                         "cap.under_soft_cap",
                         "Test explanation."),
@@ -476,6 +482,7 @@ public sealed class GetLeagueOverviewQueryTests
             TeamId teamId,
             Season season,
             IReadOnlyCollection<CapCharge> charges,
+            int filledRosterSpots,
             LeagueConfiguration configuration) =>
             DomainOperationResult<TeamCapSheet>.Failure(
                 new DomainError("cap_ledger.charge_team_mismatch", "A charge belonging to another team was supplied."));
@@ -507,6 +514,9 @@ public sealed class GetLeagueOverviewQueryTests
         internal const long SalaryMatchAllowance = 250_000;
         internal const bool SecondApronBlocksSalaryIncrease = true;
         internal const string OwedPickReason = "The next first-round pick is owed, top-4 protected.";
+
+        internal static readonly Money? PayrollFloor = new Money(127_000_000);
+        internal static readonly Money? SoftCap = new Money(141_000_000);
 
         private static readonly RosterSizeLimits Limits = new(1, 15);
         private static readonly DateTimeOffset LedgerInstant = new(2031, 7, 1, 9, 0, 0, TimeSpan.Zero);
@@ -557,6 +567,8 @@ public sealed class GetLeagueOverviewQueryTests
                     fullName,
                     position,
                     new PlayerRating(overall),
+                    new DateOnly(2002, 4, 9),
+                    seasonsOfService: 5,
                     injury is null ? null : new Injury(injury)));
 
                 _players.Add(player);
@@ -612,7 +624,9 @@ public sealed class GetLeagueOverviewQueryTests
                 new PlayerId(SortableId.NewId()),
                 fullName,
                 Position.PowerForward,
-                new PlayerRating(60)));
+                new PlayerRating(60),
+                new DateOnly(1998, 8, 2),
+                seasonsOfService: 10));
 
             var contract = Unwrap(Contract.Create(
                 new ContractId(SortableId.NewId()),
@@ -670,7 +684,8 @@ public sealed class GetLeagueOverviewQueryTests
                 "Test Ruleset",
                 78,
                 Limits,
-                new Money(141_000_000),
+                PayrollFloor,
+                SoftCap,
                 new Money(172_000_000),
                 new Money(179_000_000),
                 new Money(190_000_000),
@@ -683,7 +698,8 @@ public sealed class GetLeagueOverviewQueryTests
                 SalaryMatchPercent,
                 new Money(SalaryMatchAllowance),
                 InjuredPlayerTradeEligibility.AllowedWithWarning,
-                SecondApronBlocksSalaryIncrease);
+                SecondApronBlocksSalaryIncrease,
+                NegotiationConfiguration.OpenMarket);
 
             var snapshot = new LeagueSnapshot(
                 league,

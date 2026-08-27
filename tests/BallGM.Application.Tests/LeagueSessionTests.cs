@@ -59,7 +59,7 @@ public sealed class LeagueSessionTests
         var session = NewSession(out var engine, out var league);
         Assert.True(session.Load().IsSuccess);
 
-        engine.NextViolation = new TradeRuleFinding("trade.salary_not_matched", "Too much salary coming back.", new TeamId(league.FirstTeamId));
+        engine.NextViolation = new RuleFinding("trade.salary_not_matched", "Too much salary coming back.", new TeamId(league.FirstTeamId));
 
         var result = session.AssessTrade(SimpleRequest(league));
 
@@ -143,7 +143,7 @@ public sealed class LeagueSessionTests
         league = data;
         engine = new StubTradeEngine(data);
 
-        return new LeagueSession(data.DataSource, new PassThroughCapLedger(), new EmptyDraftAssetLedger(), engine);
+        return new LeagueSession(data.DataSource, new PassThroughCapLedger(), new EmptyDraftAssetLedger(), engine, new StubSigningEngine());
     }
 
     /// <summary>Two teams, one player each, one pick each — the smallest league a trade can happen in.</summary>
@@ -157,8 +157,21 @@ public sealed class LeagueSessionTests
             var firstFranchise = Franchise.Create(new FranchiseId("FRANCHISE-1"), "Harbourline Sporting Club").Value;
             var secondFranchise = Franchise.Create(new FranchiseId("FRANCHISE-2"), "Verdanmoor Basketball Club").Value;
 
-            var firstPlayer = Player.Create(new PlayerId("PLAYER-1"), "First Player", Position.PointGuard, new PlayerRating(70)).Value;
-            var secondPlayer = Player.Create(new PlayerId("PLAYER-2"), "Second Player", Position.Center, new PlayerRating(72)).Value;
+            var firstPlayer = Player.Create(
+                new PlayerId("PLAYER-1"),
+                "First Player",
+                Position.PointGuard,
+                new PlayerRating(70),
+                new DateOnly(2001, 2, 3),
+                seasonsOfService: 6).Value;
+
+            var secondPlayer = Player.Create(
+                new PlayerId("PLAYER-2"),
+                "Second Player",
+                Position.Center,
+                new PlayerRating(72),
+                new DateOnly(2004, 9, 14),
+                seasonsOfService: 2).Value;
 
             var limits = new RosterSizeLimits(1, 5);
             var firstTeam = Team.Create(new TeamId("TEAM-1"), firstFranchise.Id, "Harbourline Tidewatch", limits, [firstPlayer.Id]).Value;
@@ -181,6 +194,7 @@ public sealed class LeagueSessionTests
                     "Test Ruleset",
                     78,
                     limits,
+                    new Money(127_000_000),
                     new Money(141_000_000),
                     new Money(172_000_000),
                     new Money(179_000_000),
@@ -194,7 +208,8 @@ public sealed class LeagueSessionTests
                     SalaryMatchPercent: 125,
                     SalaryMatchAllowance: new Money(250_000),
                     InjuredPlayerTradeEligibility: InjuredPlayerTradeEligibility.AllowedWithWarning,
-                    SecondApronBlocksSalaryIncrease: true));
+                    SecondApronBlocksSalaryIncrease: true,
+                    Negotiation: NegotiationConfiguration.OpenMarket));
 
             DataSource = new StubLeagueDataSource(DomainOperationResult<LeagueSnapshot>.Success(Snapshot));
         }
@@ -216,7 +231,7 @@ public sealed class LeagueSessionTests
     {
         public TradeProposal? LastProposal { get; private set; }
 
-        public TradeRuleFinding? NextViolation { get; set; }
+        public RuleFinding? NextViolation { get; set; }
 
         public int LedgerEntryCount { get; set; }
 
@@ -242,6 +257,7 @@ public sealed class LeagueSessionTests
                 proposal.Id,
                 NextViolation is null ? [] : [NextViolation],
                 [],
+                [],
                 proposal.Participants
                     .Select(teamId => new TradeTeamOutcome(
                         teamId,
@@ -263,9 +279,10 @@ public sealed class LeagueSessionTests
             TeamId teamId,
             Season season,
             IReadOnlyCollection<CapCharge> charges,
+            int filledRosterSpots,
             LeagueConfiguration configuration) =>
             DomainOperationResult<TeamCapSheet>.Success(new TeamCapSheet(
-                teamId, season, Money.Zero, Money.Zero, Money.Zero, [], []));
+                teamId, season, Money.Zero, Money.Zero, Money.Zero, Money.Zero, [], []));
     }
 
     private sealed class EmptyDraftAssetLedger : IDraftAssetLedger

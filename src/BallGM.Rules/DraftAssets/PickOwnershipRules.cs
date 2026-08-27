@@ -23,6 +23,36 @@ public sealed class PickOwnershipRules
     private const string OutsideHorizonCode = "pick_transfer.outside_tradable_horizon";
     private const string EncumberedCode = "pick_transfer.conflicting_encumbrance";
     private const string RetentionCode = "pick_transfer.retained_round_restriction";
+    private const string NoDraftCode = "pick_registration.league_has_no_draft";
+    private const string RoundOutsideDraftCode = "pick_registration.round_outside_draft";
+
+    /// <summary>
+    /// Checks whether this league can hold the pick at all, before anything is registered against a
+    /// franchise. A league with no draft has no picks: an asset nobody will ever select with is not
+    /// an asset, and a franchise holding one would be able to trade a promise that can never be
+    /// kept.
+    /// </summary>
+    public DomainOperationResult ValidateRegistration(DraftPick pick, DraftRules draftRules)
+    {
+        ArgumentNullException.ThrowIfNull(pick);
+        ArgumentNullException.ThrowIfNull(draftRules);
+
+        if (!draftRules.HasDraft)
+        {
+            return Fail(
+                NoDraftCode,
+                $"This league holds no draft, so the {pick.DraftSeason.Year} round {pick.Round} pick cannot be registered: there is no draft to select with it.");
+        }
+
+        if (pick.Round > draftRules.RoundCount)
+        {
+            return Fail(
+                RoundOutsideDraftCode,
+                $"This league's draft runs to round {draftRules.RoundCount}, so a round {pick.Round} pick cannot be registered.");
+        }
+
+        return DomainOperationResult.Success;
+    }
 
     /// <summary>
     /// Checks one franchise handing one pick to another. Deliberately does not execute the transfer:
@@ -43,6 +73,13 @@ public sealed class PickOwnershipRules
         ArgumentNullException.ThrowIfNull(toFranchiseId);
         ArgumentNullException.ThrowIfNull(currentSeason);
         ArgumentNullException.ThrowIfNull(draftRules);
+
+        // A league with no draft has nothing to trade, and the horizon check below would measure
+        // against a window that does not exist.
+        if (!draftRules.HasDraft)
+        {
+            return Fail(NoDraftCode, "This league holds no draft, so there are no picks to trade.");
+        }
 
         var pick = book.Pick(pickId);
         var ownership = book.Ownership(pickId);
@@ -110,6 +147,11 @@ public sealed class PickOwnershipRules
         ArgumentNullException.ThrowIfNull(encumbrance);
         ArgumentNullException.ThrowIfNull(currentSeason);
         ArgumentNullException.ThrowIfNull(draftRules);
+
+        if (!draftRules.HasDraft)
+        {
+            return Fail(NoDraftCode, "This league holds no draft, so there are no picks to encumber.");
+        }
 
         var pick = book.Pick(pickId);
         var ownership = book.Ownership(pickId);

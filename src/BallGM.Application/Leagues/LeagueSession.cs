@@ -1,10 +1,13 @@
 using BallGM.Application.Cap;
 using BallGM.Application.DraftAssets;
+using BallGM.Application.Negotiations;
 using BallGM.Application.Trades;
 using BallGM.Domain.Cap;
 using BallGM.Domain.Common;
+using BallGM.Domain.Contracts;
 using BallGM.Domain.DraftAssets;
 using BallGM.Domain.Leagues;
+using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Teams;
 using BallGM.Domain.Trades;
@@ -30,9 +33,11 @@ public sealed class LeagueSession
     private const string UnknownTeamCode = "trade_request.unknown_team";
     private const string UnknownAssetCode = "trade_request.unknown_asset";
     private const string UnknownAssetKindCode = "trade_request.unknown_asset_kind";
+    private const string EmptyOfferCode = "offer_request.no_seasons";
 
     private readonly ILeagueDataSource _dataSource;
     private readonly ITradeEngine _tradeEngine;
+    private readonly ISigningEngine _signingEngine;
     private readonly GetLeagueOverviewQuery _overviewQuery;
 
     private LeagueSnapshot? _snapshot;
@@ -41,16 +46,19 @@ public sealed class LeagueSession
         ILeagueDataSource dataSource,
         ICapLedger capLedger,
         IDraftAssetLedger draftAssetLedger,
-        ITradeEngine tradeEngine)
+        ITradeEngine tradeEngine,
+        ISigningEngine signingEngine)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
         ArgumentNullException.ThrowIfNull(capLedger);
         ArgumentNullException.ThrowIfNull(draftAssetLedger);
         ArgumentNullException.ThrowIfNull(tradeEngine);
+        ArgumentNullException.ThrowIfNull(signingEngine);
 
         _dataSource = dataSource;
         _tradeEngine = tradeEngine;
-        _overviewQuery = new GetLeagueOverviewQuery(dataSource, capLedger, draftAssetLedger);
+        _signingEngine = signingEngine;
+        _overviewQuery = new GetLeagueOverviewQuery(dataSource, capLedger, draftAssetLedger, signingEngine);
     }
 
     public bool IsLoaded => _snapshot is not null;
@@ -136,6 +144,183 @@ public sealed class LeagueSession
             executionResult.Value.LedgerEntryCount,
             overviewResult.Value));
     }
+
+    /// <summary>
+    /// Judges an offer without changing anything. The offer screen's counterpart to
+    /// <see cref="AssessTrade"/>, and safe to call on every keystroke for the same reason.
+    /// </summary>
+    public DomainOperationResult<SigningAssessmentSummary> AssessOffer(OfferRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (_snapshot is null)
+        {
+            return NotLoaded<SigningAssessmentSummary>();
+        }
+
+        var partiesResult = ResolveParties(request, _snapshot);
+        if (partiesResult.IsFailure)
+        {
+            return DomainOperationResult<SigningAssessmentSummary>.Failure(partiesResult.Errors.ToArray());
+        }
+
+        var (team, player) = partiesResult.Value;
+
+        var offerResult = BuildOffer(request, team, player);
+        if (offerResult.IsFailure)
+        {
+            return DomainOperationResult<SigningAssessmentSummary>.Failure(offerResult.Errors.ToArray());
+        }
+
+        var assessmentResult = _signingEngine.Assess(offerResult.Value, _snapshot, team.Id, player.Id);
+        return assessmentResult.IsFailure
+            ? DomainOperationResult<SigningAssessmentSummary>.Failure(assessmentResult.Errors.ToArray())
+            : DomainOperationResult<SigningAssessmentSummary>.Success(ToSummary(assessmentResult.Value, team.Name, player.FullName));
+    }
+
+    /// <summary>
+    /// Signs the player, against the league as it stands right now. The offer is rebuilt from the
+    /// request at this moment and the engine re-validates regardless, because between assessing and
+    /// submitting, another team could have signed the same player.
+    /// <para>
+    /// A signing is the one transaction so far that <em>creates</em> an aggregate rather than moving
+    /// one that already exists, so the session replaces the league it holds with one that includes
+    /// the new contract. Every other consumer keeps reading it through the same projection.
+    /// </para>
+    /// </summary>
+    public DomainOperationResult<SigningSubmission> SubmitOffer(OfferRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (_snapshot is null)
+        {
+            return NotLoaded<SigningSubmission>();
+        }
+
+        var partiesResult = ResolveParties(request, _snapshot);
+        if (partiesResult.IsFailure)
+        {
+            return DomainOperationResult<SigningSubmission>.Failure(partiesResult.Errors.ToArray());
+        }
+
+        var (team, player) = partiesResult.Value;
+
+        var offerResult = BuildOffer(request, team, player);
+        if (offerResult.IsFailure)
+        {
+            return DomainOperationResult<SigningSubmission>.Failure(offerResult.Errors.ToArray());
+        }
+
+        var executionResult = _signingEngine.Execute(offerResult.Value, _snapshot, team.Id, player.Id);
+        if (executionResult.IsFailure)
+        {
+            return DomainOperationResult<SigningSubmission>.Failure(executionResult.Errors.ToArray());
+        }
+
+        var execution = executionResult.Value;
+        _snapshot = _snapshot with { Contracts = [.. _snapshot.Contracts, execution.Contract] };
+
+        var overviewResult = _overviewQuery.Project(_snapshot);
+        if (overviewResult.IsFailure)
+        {
+            return DomainOperationResult<SigningSubmission>.Failure(overviewResult.Errors.ToArray());
+        }
+
+        return DomainOperationResult<SigningSubmission>.Success(new SigningSubmission(
+            ToSummary(execution.Assessment, team.Name, player.FullName),
+            DescribeRoute(execution.Route),
+            execution.LedgerEntryCount,
+            overviewResult.Value));
+    }
+
+    /// <summary>
+    /// Resolves the two parties an offer names. A screen can legitimately hold an identifier the
+    /// league has moved on from, and that is a message rather than a crash.
+    /// </summary>
+    private static DomainOperationResult<(Team Team, Player Player)> ResolveParties(
+        OfferRequest request,
+        LeagueSnapshot snapshot)
+    {
+        var errors = new List<DomainError>();
+
+        var team = snapshot.Teams.FirstOrDefault(candidate => candidate.Id.Value == request.TeamId);
+        if (team is null)
+        {
+            errors.Add(new DomainError(UnknownTeamCode, $"Team '{request.TeamId}' is not a team in this league."));
+        }
+
+        var player = snapshot.Players.FirstOrDefault(candidate => candidate.Id.Value == request.PlayerId);
+        if (player is null)
+        {
+            errors.Add(new DomainError(UnknownAssetCode, $"Player '{request.PlayerId}' is not in this league."));
+        }
+
+        return errors.Count > 0
+            ? DomainOperationResult<(Team, Player)>.Failure(errors.ToArray())
+            : DomainOperationResult<(Team, Player)>.Success((team!, player!));
+    }
+
+    private static DomainOperationResult<Offer> BuildOffer(OfferRequest request, Team team, Player player)
+    {
+        if (request.Seasons.Count == 0)
+        {
+            return DomainOperationResult<Offer>.Failure(new DomainError(
+                EmptyOfferCode,
+                "An offer has to cover at least one season."));
+        }
+
+        var terms = request.Seasons
+            .Select(season => new ContractSeasonTerm(
+                new Season(season.SeasonYear),
+                new Money(season.Compensation),
+                new Money(season.GuaranteedAmount)))
+            .ToList();
+
+        return Offer.Create(new OfferId(SortableId.NewId()), team.Id, player.Id, terms);
+    }
+
+    private static SigningAssessmentSummary ToSummary(SigningAssessment assessment, string teamName, string playerName) =>
+        new(
+            assessment.IsLegal,
+            assessment.Offer.PlayerId.Value,
+            playerName,
+            assessment.Offer.TeamId.Value,
+            teamName,
+            assessment.Offer.SeasonCount,
+            assessment.Offer.FirstSeasonCompensation.SmallestUnits,
+            assessment.Offer.TotalCompensation.SmallestUnits,
+            assessment.Offer.TotalGuaranteed.SmallestUnits,
+            assessment.Violations.Select(ToSigningLine).ToList(),
+            assessment.Warnings.Select(ToSigningLine).ToList(),
+            assessment.Notes.Select(ToSigningLine).ToList(),
+            assessment.Routes.Select(ToLine).ToList(),
+            assessment.PermittingRoute is null ? null : DescribeRoute(assessment.PermittingRoute.Kind),
+            assessment.PayrollBefore.SmallestUnits,
+            assessment.PayrollAfter.SmallestUnits,
+            assessment.RosterCountBefore,
+            assessment.RosterCountAfter,
+            assessment.CapRoomBefore?.SmallestUnits);
+
+    private static SigningFindingLine ToSigningLine(RuleFinding finding) =>
+        new(finding.RuleCode, finding.Explanation);
+
+    private static SigningRouteLine ToLine(SigningRouteEvaluation route) =>
+        new(
+            DescribeRoute(route.Kind),
+            route.Applicable,
+            route.Permits,
+            route.MaximumFirstSeasonCompensation?.SmallestUnits,
+            route.RuleCode,
+            route.Explanation);
+
+    private static string DescribeRoute(SigningRouteKind kind) => kind switch
+    {
+        SigningRouteKind.UnrestrictedSigning => "Unrestricted signing",
+        SigningRouteKind.CapRoom => "Cap room",
+        SigningRouteKind.MinimumSalary => "Minimum salary",
+        SigningRouteKind.StandardOverCapAllowance => "Standard over-cap allowance",
+        _ => kind.ToString(),
+    };
 
     /// <summary>
     /// Turns identifiers from a read model into a domain proposal, failing explainably on anything
@@ -227,10 +412,11 @@ public sealed class LeagueSession
             assessment.IsLegal,
             assessment.Violations.Select(finding => ToLine(finding, teamNames)).ToList(),
             assessment.Warnings.Select(finding => ToLine(finding, teamNames)).ToList(),
+            assessment.Notes.Select(finding => ToLine(finding, teamNames)).ToList(),
             assessment.Outcomes.Select(outcome => ToLine(outcome, teamNames)).ToList());
     }
 
-    private static TradeFindingLine ToLine(TradeRuleFinding finding, IReadOnlyDictionary<TeamId, string> teamNames) =>
+    private static TradeFindingLine ToLine(RuleFinding finding, IReadOnlyDictionary<TeamId, string> teamNames) =>
         new(
             finding.RuleCode,
             finding.Explanation,
@@ -258,10 +444,12 @@ public sealed class LeagueSession
             standing.Amount.SmallestUnits,
             standing.SignedDistanceSmallestUnits,
             standing.IsOver,
+            standing.IsBreached,
+            standing.IsFloor,
             standing.Explanation);
 
     private static DomainOperationResult<T> NotLoaded<T>() =>
         DomainOperationResult<T>.Failure(new DomainError(
             NotLoadedCode,
-            "No league is loaded in this session. Load one before reading it or trading in it."));
+            "No league is loaded in this session. Load one before reading it, trading in it, or signing anyone."));
 }

@@ -2,6 +2,7 @@ using BallGM.Application.Leagues;
 using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
+using BallGM.Infrastructure.Negotiations;
 
 namespace BallGM.Integration.Tests;
 
@@ -143,7 +144,7 @@ public sealed class FixturePickBoardTests
         var result = new GetLeagueOverviewQuery(
             new FixtureLeagueDataSource(),
             new RulesCapLedger(),
-            new RulesDraftAssetLedger()).Execute();
+            new RulesDraftAssetLedger(), new RulesSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
         return result.Value;

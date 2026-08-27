@@ -108,6 +108,15 @@ internal static class FixtureDraftAssets
         ArgumentNullException.ThrowIfNull(ledger);
 
         var book = new DraftAssetBook(leagueId);
+
+        // A league that holds no draft gets an empty book, not a scripted pick history: there is
+        // nothing for a franchise to own, and every scripted trade below would be trading an asset
+        // no draft will ever select with.
+        if (!draftRules.HasDraft)
+        {
+            return DomainOperationResult<DraftAssetBook>.Success(book);
+        }
+
         var registerResult = RegisterPicks(book, leagueId, currentSeason, franchises, draftRules);
         if (registerResult.IsFailure)
         {
@@ -169,6 +178,14 @@ internal static class FixtureDraftAssets
                     if (pickResult.IsFailure)
                     {
                         return DomainOperationResult.Failure(pickResult.Errors.ToArray());
+                    }
+
+                    // Whether this league can hold the pick at all is a rules question, asked before
+                    // the book is touched — the same order the trade engine asks it in.
+                    var eligibilityResult = new PickOwnershipRules().ValidateRegistration(pickResult.Value, draftRules);
+                    if (eligibilityResult.IsFailure)
+                    {
+                        return eligibilityResult;
                     }
 
                     var registerResult = book.Register(pickResult.Value);

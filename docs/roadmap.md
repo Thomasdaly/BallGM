@@ -83,15 +83,34 @@ UI: wire the Milestone 2 trade-proposal form to real validation and execution, s
 
 ## Milestone 6 — Contract negotiation and free agency
 
-- Player preferences
+Ships in two halves with a checkpoint between them, because offer legality and the market have very
+different risk profiles. **6a** — offer legality, the signing routes, roster-slot holds, and an offer
+screen — is bounded and mechanical against machinery that already exists three times over. **6b** —
+the market — holds both genuinely open design questions (how a preference decomposes, how
+simultaneous offers are ordered) and all the new UI. Merged, the half most likely to balloon has
+nothing to balloon against.
+
+**6a (done):**
+
+- Offer legality: term, escalation, compensation ceiling and floor, all keyed on seasons of service
+- Four signing routes, each reporting permitted / refused-by-this-much / not-a-rule-here
+- Roster-slot holds, so the room a cap sheet reports is room a team can spend
+- Atomic, auditable acceptance in the trade executor's undo-stack shape
+
+**6b (next):**
+
+- Player preferences, decomposed per factor and never a single score
 - team fit
 - market demand
 - offers and counteroffers
-- options and guarantees
 - seeded stochastic choices
 - explainable outcomes
 
-UI: free-agency board and an offer/counteroffer screen.
+Scope for this milestone is fixed by `docs/negotiation-mechanisms.md`, which inventories every signing mechanism and marks each one built, deferred to a named milestone, or declined. Three signing routes ship here — cap room, minimum salary, and one standard over-cap allowance — and the rest are dated, not half-built. That document also lists four prerequisites this milestone cannot defer, the largest being that `Player` currently carries no service time or age.
+
+Two additions from `docs/competitive-feature-review.md`, both inside the work this milestone already owns: the free-agency board is columned **by position against the team's own depth** (a market you cannot read is a market you cannot play), and the market-resolution model is written into `docs/architecture.md` when chosen, not left implicit.
+
+UI: an offer screen with every signing route's verdict (6a, done), then the free-agency board — positional columns, best available per slot — and counteroffers (6b).
 
 ## Milestone 7 — Calendar and game simulation
 
@@ -104,6 +123,14 @@ UI: free-agency board and an offer/counteroffer screen.
 - standings
 - postseason
 
+From `docs/competitive-feature-review.md` §4 and §7, all of them ruleset data rather than code, and all cheaper now than retrofitted:
+
+- **Postseason format** — series length and home-court sequence configured, not fixed.
+- **Tie-break sequence** — an ordered list in the ruleset, with its own tests. A standings tie resolved by a rule the league never stated is the classic silent-wrong-answer bug.
+- **Bounded model terms** — every input to an outcome probability carries a named, tested bound. No single term may dominate a result.
+- **Positional depth chart** — needed for minutes allocation anyway, and reused by the M6 free-agency board.
+- **Short-term contracts** and the **in-season signing window**, which only become expressible once a calendar exists.
+
 UI: calendar/advance-date controls, box scores, and a standings view.
 
 ## Milestone 8 — Player lifecycle
@@ -114,6 +141,8 @@ UI: calendar/advance-date controls, box scores, and a standings view.
 - ageing
 - retirement
 - records and history
+
+The lottery lands here, and it lands **configurable** — a weighting table in the ruleset, not an algorithm in code, even for the first version. Same for the **award set**: which awards exist and how they are voted is data, because a modded league that has no defensive award should not need a code change. Player biography (birthplace, prior programme, draft class) is added with career history, since `docs/competitive-feature-review.md` §2 seeds relationships from it.
 
 UI: draft-class scouting view and a draft-day screen.
 
@@ -127,6 +156,14 @@ UI: draft-class scouting view and a draft-day screen.
 - draft decisions
 - explainable decisions and diagnostics
 
+Also here, from `docs/competitive-feature-review.md` §1 and §3, because each needs an AI counterparty to mean anything:
+
+- **Cash as a tradeable asset** — a fourth `TradeAssetMovement` kind with a per-season allowance in `TradeRules`. This is how a team buys a pick, and its absence is why AI trade markets feel thin.
+- **Configurable participant and asset caps** on a trade — stated as bounds on validation cost, not dressed up as a league rule.
+- **Contract buyouts** and the **post-buyout market** — a late-season pool of bought-out players, interacting with the postseason eligibility cutoff from M7.
+- **Player signing demands** — a free agent conditioning a signing on a named teammate, or refusing a named rival. Needs M13's relationship graph to be interesting; the plumbing goes here.
+- **League power rankings** and the **daily offseason digest** — both derived read models on the inbox surface. The power ranking must be computed from the same team-strength function the simulation uses, never a second opinion.
+
 UI: an inbox/news feed surfacing AI-driven trades and signings with their explanations, plus a diagnostics view for the explainability data already flowing through `DomainOperationResult`/rule-violation types since Milestone 0.
 
 ## Milestone 10 — Mod platform
@@ -138,6 +175,14 @@ UI: an inbox/news feed surfacing AI-driven trades and signings with their explan
 - sample data pack
 - compatibility errors
 - documentation
+
+This milestone carries the weight of the content-neutrality position in `docs/vision.md` → Moddability: people will model leagues we never anticipated, so the format has to be expressive enough that they do not need us. Concretely, from `docs/competitive-feature-review.md` §4 and §5:
+
+- **Per-rule prose** — an optional `description` on each configurable rule, explaining what it does and why a league might adopt it. Required for published packs by the validator.
+- **Per-rule editing in the UI** — sliders and fields over the ruleset directly, not just preset selection.
+- **Pre-authored draft-class playlists** — an ordered list of hand-authored classes consumed one per season, with loop, shuffle, and reverse. The strongest single moddability story on the list: a community can ship twenty years of classes as data.
+- **Uncapped and no-draft leagues** — the `schemaVersion` 4 fix already specified in `docs/negotiation-mechanisms.md` → "Ruleset genericity". It must land **before** the tax bill is built on top of the assumption that a tax line exists.
+- **Signing bonus amortisation** and **performance escalators** with likelihood classification — both are "buy cap relief now against a risk", and both belong with the tax work.
 
 UI: a mod-manager panel (load, validate, enable/disable data packs; surface validation errors from `BallGM.DataValidator`).
 
@@ -162,3 +207,30 @@ By this point every screen exists in rough form from Milestones 2–10. This mil
 - Steam adapter
 - achievements/cloud-save decisions
 - release pipelines
+
+Long-career performance belongs here specifically: a multi-decade save is the honest stress test for save size, ledger growth, and simulation throughput, and it is a profiling target rather than a feature.
+
+## Milestone 13 — league life and locker room (post-MVP)
+
+Added by `docs/competitive-feature-review.md`, which holds the reasoning and the per-item verdicts. Deliberately one milestone rather than scope smuggled into M6–M12, because every item here breaks one of two assumptions the codebase currently rests on: **the ruleset is loaded once and fixed**, and **league membership is fixed at creation**.
+
+Locker room:
+
+- player-to-player affinity as a directed graph, seeded from shared history (birthplace, prior team, prior amateur programme, draft class) and moved by competition — repeated postseason elimination by the same opponent breeds a rivalry;
+- personality traits as ruleset vocabulary, not a Domain enum, with compatibility driving locker-room friction;
+- team chemistry as a continuous term feeding team strength — explicitly not discrete named bonuses for star pairings;
+- **promises** as first-class objects: an assurance given during negotiation (playing time, a re-signing, no trade) that is later kept or broken. This is the clause concept `Contract` is missing, generalised past the contract;
+- a **general-manager trust rating** moved by kept and broken promises, gating how much a negotiating player believes an assurance. Treated as an explainability feature: it turns "the AI ignored my pitch" into a visible number;
+- descendant players — a retired player's child in a later draft class with correlated attributes.
+
+League life:
+
+- rule changes proposed and adopted **during** a save, making `LeagueRuleset` a versioned timeline rather than a load-time constant;
+- scheduled expansion, including an expansion draft, moving league membership from fixed-at-creation to an event;
+- franchise relocation and rebranding — the `Franchise`/`Team` split already models the identity this needs;
+- an in-season secondary competition, described in the ruleset schedule;
+- a master toggle disabling all automatic league evolution, because a simulation that reshapes the league without consent is a bug to some players.
+
+Both halves are save-schema and cross-project public-API changes, which `CLAUDE.md` puts under change control. Not to be started incrementally as a side effect of a smaller task.
+
+UI: a relationship/morale view on the roster screen, a trust and promises panel, and a league-rules screen showing what changed and when.

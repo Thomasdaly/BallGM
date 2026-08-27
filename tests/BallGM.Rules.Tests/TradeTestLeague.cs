@@ -59,30 +59,34 @@ internal sealed class TradeTestLeague
     public static TradeTestLeague Build(
         int minimumRoster = 2,
         int maximumRoster = 5,
-        int salaryMatchPercent = 125,
-        long salaryMatchAllowance = 1_000_000,
+        int? salaryMatchPercent = 125,
+        long? salaryMatchAllowance = 1_000_000,
         InjuredPlayerTradeEligibility injuredEligibility = InjuredPlayerTradeEligibility.AllowedWithWarning,
-        bool secondApronBlocksSalaryIncrease = true)
+        bool secondApronBlocksSalaryIncrease = true,
+        CapThresholds? capThresholds = null,
+        bool holdsDraft = true)
     {
-        var thresholds = CapThresholds.Create(
-            new Money(100_000_000),
-            new Money(120_000_000),
-            new Money(130_000_000),
-            new Money(140_000_000),
-            new Money(150_000_000)).Value;
+        var thresholds = capThresholds ?? CapThresholds.Create(
+            softCap: new Money(100_000_000),
+            luxuryTax: new Money(120_000_000),
+            firstApron: new Money(130_000_000),
+            secondApron: new Money(140_000_000),
+            hardCap: new Money(150_000_000)).Value;
 
         var tradeRules = Configuration.TradeRules.Create(
             salaryMatchPercent,
-            new Money(salaryMatchAllowance),
+            salaryMatchAllowance is null ? null : new Money(salaryMatchAllowance.Value),
             injuredEligibility,
             secondApronBlocksSalaryIncrease).Value;
 
-        var draftRules = new DraftRules(
-            roundCount: 2,
-            lotteryEnabled: true,
-            tradableFutureDraftHorizon: 4,
-            retainedRoundNumber: 1,
-            retainedRoundInterval: 2);
+        var draftRules = holdsDraft
+            ? DraftRules.Create(
+                roundCount: 2,
+                lotteryEnabled: true,
+                tradableFutureDraftHorizon: 4,
+                retainedRoundNumber: 1,
+                retainedRoundInterval: 2).Value
+            : DraftRules.NoDraft;
 
         return new TradeTestLeague(new RosterSizeLimits(minimumRoster, maximumRoster), thresholds, tradeRules, draftRules);
     }
@@ -99,7 +103,9 @@ internal sealed class TradeTestLeague
                 new PlayerId($"PLAYER-{key}-{index}"),
                 $"{key} Player {index}",
                 Position.PointGuard,
-                new PlayerRating(70)).Value;
+                new PlayerRating(70),
+                new DateOnly(2000, 1, 1),
+                seasonsOfService: 4).Value;
 
             _players.Add(player);
             playerIds.Add(player.Id);
@@ -154,6 +160,8 @@ internal sealed class TradeTestLeague
             existing.FullName,
             existing.Position,
             existing.Rating,
+            existing.BirthDate,
+            existing.SeasonsOfService,
             new Injury(description)).Value;
 
         _players[_players.IndexOf(existing)] = replacement;
@@ -230,11 +238,16 @@ internal sealed class TradeTestLeague
 
         return string.Join("|", rosters.Concat(contracts).Concat(picks)) + $"|ledger:{Ledger.Count}";
     }
+}
 
-    private sealed class SteppingTestClock(DateTimeOffset start, TimeSpan step) : IClock
-    {
-        private long _reads;
+/// <summary>
+/// A clock that advances by a fixed step on every read. Ledger entries then carry distinct, entirely
+/// predictable timestamps — a test league that reads the wall clock is a test league whose ledger
+/// assertions fail on a slow machine.
+/// </summary>
+internal sealed class SteppingTestClock(DateTimeOffset start, TimeSpan step) : IClock
+{
+    private long _reads;
 
-        public DateTimeOffset UtcNow => start + (step * _reads++);
-    }
+    public DateTimeOffset UtcNow => start + (step * _reads++);
 }

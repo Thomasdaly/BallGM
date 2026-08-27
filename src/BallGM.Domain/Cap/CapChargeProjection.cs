@@ -28,7 +28,7 @@ public static class CapChargeProjection
             // and identifiers are minted per load, so ordering on them would reshuffle per launch.
             .OrderBy(charge => charge.Kind)
             .ThenByDescending(charge => charge.Amount.SmallestUnits)
-            .ThenBy(charge => charge.PlayerId.Value, StringComparer.Ordinal)
+            .ThenBy(charge => charge.PlayerId?.Value ?? string.Empty, StringComparer.Ordinal)
             .ToList();
     }
 }

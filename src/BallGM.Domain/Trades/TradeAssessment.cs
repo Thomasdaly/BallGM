@@ -21,13 +21,6 @@ public enum InjuredPlayerTradeEligibility
 }
 
 /// <summary>
-/// One thing the rules have to say about a proposal — blocking or not. The code is what the UI keys
-/// behaviour off; the explanation is what the GM reads. Both, always: "illegal trade" on its own is
-/// not a trade machine, it is a shrug.
-/// </summary>
-public sealed record TradeRuleFinding(string RuleCode, string Explanation, TeamId? TeamId = null);
-
-/// <summary>
 /// What the trade would do to one team. Present whether or not the trade is legal, because the
 /// numbers are how a GM works out what to change — a rejection with no figures behind it cannot be
 /// negotiated against.
@@ -53,11 +46,18 @@ public sealed record TradeTeamOutcome(
 /// The verdict on a proposal, with the arithmetic that produced it. Assembling this never touches
 /// league state — validation that mutates is validation nobody can run speculatively, and a trade
 /// machine is nothing but speculative runs.
+/// <para>
+/// Three lists, not two. <paramref name="Notes"/> carries rules the league does not configure and
+/// the validator therefore skipped: a check that silently passes because a value was absent is
+/// indistinguishable from a check that ran and approved. Notes are not warnings — nothing is wrong
+/// with a league that has no salary matching, and styling it as a caution would say otherwise.
+/// </para>
 /// </summary>
 public sealed record TradeAssessment(
     TradeId TradeId,
-    IReadOnlyList<TradeRuleFinding> Violations,
-    IReadOnlyList<TradeRuleFinding> Warnings,
+    IReadOnlyList<RuleFinding> Violations,
+    IReadOnlyList<RuleFinding> Warnings,
+    IReadOnlyList<RuleFinding> Notes,
     IReadOnlyList<TradeTeamOutcome> Outcomes)
 {
     public bool IsLegal => Violations.Count == 0;

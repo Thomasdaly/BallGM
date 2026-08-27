@@ -65,12 +65,15 @@ public sealed class Team
                 "Initial roster cannot contain duplicate players."));
         }
 
-        if (playerIdList.Length < rosterLimits.MinimumPlayers)
-        {
-            errors.Add(new DomainError(
-                MinimumRosterCode,
-                $"Initial roster must include at least {rosterLimits.MinimumPlayers} players."));
-        }
+        // No minimum is enforced here, deliberately. The roster minimum is an obligation a team has
+        // to meet, not a shape a team is incapable of being in: a squad three players short is the
+        // ordinary state of a team in the middle of free agency, and it is precisely the state a
+        // roster-slot hold exists to price — see BallGM.Rules.Cap.RosterSlotHoldProjection. A league
+        // that could not express "three spots still to fill" could not have holds at all, and the
+        // cap sheet would go back to reporting room the team is not free to spend.
+        //
+        // The maximum stays a hard refusal, because it is a different kind of rule: a team over its
+        // limit is not a team with something left to do, it is a team in a state the league forbids.
 
         if (playerIdList.Length > rosterLimits.MaximumPlayers)
         {
@@ -169,7 +172,11 @@ public sealed class Team
                 $"The trade would leave team '{Id.Value}' with {resulting.Count} players, above the configured maximum of {RosterLimits.MaximumPlayers}."));
         }
 
-        if (resulting.Count < RosterLimits.MinimumPlayers)
+        // A trade may not take a team below the roster minimum — but a team already below it is not
+        // barred from trading, only from digging itself further in. Refusing every trade a short
+        // squad tries to make would punish it for a state free agency is meant to let it fix, and
+        // the reason given would be about the roster it already had rather than about this trade.
+        if (resulting.Count < RosterLimits.MinimumPlayers && resulting.Count < _playerIds.Count)
         {
             errors.Add(new DomainError(
                 MinimumRosterCode,

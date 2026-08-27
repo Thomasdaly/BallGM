@@ -6,8 +6,13 @@ namespace BallGM.Client.Avalonia.ViewModels;
 /// One threshold row on the cap sheet. <see cref="Distance"/> says "over" or "under" in words
 /// rather than by sign character: an unlabelled figure reads as room under the cap even when the
 /// payroll is over it, which is exactly the number a GM would misread.
+/// <para>
+/// <see cref="IsBreached"/> rather than "over" drives the highlight, because the payroll floor is
+/// the one line a team is on the wrong side of by being under it — and its distance is worded
+/// "short" and "clear" for the same reason.
+/// </para>
 /// </summary>
-public sealed record ThresholdRow(string Name, string Amount, string Distance, string Explanation, bool IsOver)
+public sealed record ThresholdRow(string Name, string Amount, string Distance, string Explanation, bool IsBreached)
 {
     public static ThresholdRow From(ThresholdStandingSummary standing)
     {
@@ -16,15 +21,24 @@ public sealed record ThresholdRow(string Name, string Amount, string Distance, s
         return new ThresholdRow(
             standing.ThresholdName,
             MoneyDisplay.ToMillions(standing.ThresholdAmount),
-            standing.SignedDistance switch
-            {
-                > 0 => $"{MoneyDisplay.ToMillions(standing.SignedDistance)} under",
-                < 0 => $"{MoneyDisplay.ToMillions(Math.Abs(standing.SignedDistance))} over",
-                _ => "exactly at the line",
-            },
+            Describe(standing),
             standing.Explanation,
-            standing.IsOver);
+            standing.IsBreached);
     }
+
+    private static string Describe(ThresholdStandingSummary standing) => standing.IsFloor
+        ? standing.SignedDistance switch
+        {
+            > 0 => $"{MoneyDisplay.ToMillions(standing.SignedDistance)} short",
+            < 0 => $"{MoneyDisplay.ToMillions(Math.Abs(standing.SignedDistance))} clear",
+            _ => "exactly at the line",
+        }
+        : standing.SignedDistance switch
+        {
+            > 0 => $"{MoneyDisplay.ToMillions(standing.SignedDistance)} under",
+            < 0 => $"{MoneyDisplay.ToMillions(Math.Abs(standing.SignedDistance))} over",
+            _ => "exactly at the line",
+        };
 }
 
 /// <summary>One line of what the payroll is made of: a live contract, or money owed to someone who is gone.</summary>

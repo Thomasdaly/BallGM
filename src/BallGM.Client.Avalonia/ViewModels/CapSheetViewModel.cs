@@ -32,6 +32,7 @@ public sealed class CapSheetViewModel(LeagueOverview overview) : ViewModelBase
             RaisePropertyChanged(nameof(DeadMoney));
             RaisePropertyChanged(nameof(TotalPayroll));
             RaisePropertyChanged(nameof(Thresholds));
+            RaisePropertyChanged(nameof(HasThresholds));
             RaisePropertyChanged(nameof(Charges));
             RaisePropertyChanged(nameof(Transactions));
         }
@@ -42,7 +43,21 @@ public sealed class CapSheetViewModel(LeagueOverview overview) : ViewModelBase
     public string SeasonLine => $"Season {overview.SeasonYear} · thresholds from ruleset \"{overview.RulesetName}\"";
 
     /// <summary>
-    /// The verdict in one line: the payroll, the strictest line it has crossed, and how far the
+    /// Whether this league configures any threshold at all. When it does not, the cap sheet is a
+    /// payroll and nothing else, which is the truth about the league rather than a screen that
+    /// failed to load.
+    /// </summary>
+    public bool HasThresholds => _team is { CapSheet.Thresholds.Count: > 0 };
+
+    /// <summary>
+    /// What to show instead of the threshold table in a league with no cap system. A blank panel and
+    /// "this league has no cap" are the same amount of screen and very different amounts of answer.
+    /// </summary>
+    public string NoThresholdsExplanation =>
+        "This league has no salary cap, no tax line, and no payroll floor. What a team may spend is limited by its roster and its owner, not by a line in the rules, so there is nothing here to measure a payroll against.";
+
+    /// <summary>
+    /// The verdict in one line: the payroll, the strictest line it has breached, and how far the
     /// next line up still is. Deliberately does not repeat the threshold's own explanation — that
     /// sentence appears once, against its own row, rather than twice on the same screen.
     /// </summary>
@@ -57,8 +72,24 @@ public sealed class CapSheetViewModel(LeagueOverview overview) : ViewModelBase
 
             var capSheet = _team.CapSheet;
             var payroll = MoneyDisplay.ToMillions(capSheet.TotalPayroll);
-            var crossed = capSheet.Thresholds.LastOrDefault(threshold => threshold.IsOver);
-            var nextLine = capSheet.Thresholds.FirstOrDefault(threshold => !threshold.IsOver);
+
+            if (capSheet.Thresholds.Count == 0)
+            {
+                return $"{payroll} payroll. This league sets no cap, so there is no line to be over.";
+            }
+
+            // Ceilings only: the payroll floor is breached from below, and "the strictest line you
+            // have crossed" is a statement about ceilings.
+            var ceilings = capSheet.Thresholds.Where(threshold => !threshold.IsFloor).ToList();
+            var floor = capSheet.Thresholds.FirstOrDefault(threshold => threshold.IsFloor);
+
+            if (floor is { IsBreached: true })
+            {
+                return $"{payroll} payroll — {MoneyDisplay.ToMillions(floor.SignedDistance)} below this league's payroll floor.";
+            }
+
+            var crossed = ceilings.LastOrDefault(threshold => threshold.IsOver);
+            var nextLine = ceilings.FirstOrDefault(threshold => !threshold.IsOver);
 
             if (crossed is null)
             {

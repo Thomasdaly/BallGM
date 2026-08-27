@@ -28,6 +28,7 @@ public sealed class TradeProposalViewModel : ViewModelBase
     private bool _isLegal;
     private IReadOnlyList<TradeFindingRow> _violations = [];
     private IReadOnlyList<TradeFindingRow> _warnings = [];
+    private IReadOnlyList<TradeFindingRow> _notes = [];
     private IReadOnlyList<TradeOutcomeRow> _outcomes = [];
 
     public TradeProposalViewModel(
@@ -166,6 +167,23 @@ public sealed class TradeProposalViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Money rules this league does not configure, and that the validator therefore skipped. Shown
+    /// plainly rather than as warnings: a GM in an uncapped league needs to know salary matching was
+    /// not applied, and needs not to read that as a problem with the trade.
+    /// </summary>
+    public IReadOnlyList<TradeFindingRow> Notes
+    {
+        get => _notes;
+        private set
+        {
+            if (SetProperty(ref _notes, value))
+            {
+                RaisePropertyChanged(nameof(HasNotes));
+            }
+        }
+    }
+
     public IReadOnlyList<TradeOutcomeRow> Outcomes
     {
         get => _outcomes;
@@ -175,6 +193,8 @@ public sealed class TradeProposalViewModel : ViewModelBase
     public bool HasViolations => Violations.Count > 0;
 
     public bool HasWarnings => Warnings.Count > 0;
+
+    public bool HasNotes => Notes.Count > 0;
 
     private void Check()
     {
@@ -327,6 +347,7 @@ public sealed class TradeProposalViewModel : ViewModelBase
     {
         Violations = assessment.Violations.Select(TradeFindingRow.From).ToList();
         Warnings = assessment.Warnings.Select(TradeFindingRow.From).ToList();
+        Notes = assessment.Notes.Select(TradeFindingRow.From).ToList();
         Outcomes = assessment.Teams.Select(TradeOutcomeRow.From).ToList();
         IsLegal = assessment.IsLegal;
         HasAssessment = true;
@@ -337,6 +358,7 @@ public sealed class TradeProposalViewModel : ViewModelBase
     {
         Violations = findings;
         Warnings = [];
+        Notes = [];
         Outcomes = [];
         IsLegal = false;
         HasAssessment = true;

@@ -3,6 +3,7 @@ using BallGM.Domain.Contracts;
 using BallGM.Domain.DraftAssets;
 using BallGM.Domain.Franchises;
 using BallGM.Domain.Leagues;
+using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Teams;
 
@@ -65,6 +66,49 @@ public sealed class TransactionLedger
             contractId,
             amount,
             reason);
+
+        _entries.Add(entry);
+        return entry;
+    }
+
+    /// <summary>
+    /// Appends a signing, naming the route that paid for it. Separate from <see cref="Record"/> only
+    /// because the route matters: how much of a fixed allowance a team has left this season is
+    /// derived by reading these entries back, never by keeping a running total somewhere that a
+    /// rolled-back transaction could leave wrong.
+    /// </summary>
+    public TransactionEntry RecordSigning(
+        Season season,
+        TeamId teamId,
+        PlayerId playerId,
+        ContractId contractId,
+        Money amount,
+        SigningRouteKind route,
+        string reason)
+    {
+        ArgumentNullException.ThrowIfNull(season);
+        ArgumentNullException.ThrowIfNull(teamId);
+        ArgumentNullException.ThrowIfNull(playerId);
+        ArgumentNullException.ThrowIfNull(contractId);
+        ArgumentNullException.ThrowIfNull(amount);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        var timestamp = _clock.UtcNow;
+        var entry = new TransactionEntry(
+            new TransactionId(SortableId.NewId(timestamp)),
+            _entries.Count,
+            timestamp,
+            TransactionKind.ContractSigned,
+            season,
+            teamId,
+            playerId,
+            contractId,
+            amount,
+            reason,
+            franchiseId: null,
+            counterpartyFranchiseId: null,
+            draftPickId: null,
+            signingRoute: route);
 
         _entries.Add(entry);
         return entry;

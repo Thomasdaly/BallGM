@@ -126,6 +126,68 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
         [(4, 0)] = "Right knee soreness — day to day",
     };
 
+    /// <summary>
+    /// How many roster spots each team leaves open, counted down from the ruleset's maximum. Not all
+    /// full, deliberately: a league with every roster at its limit is a league where free agency
+    /// cannot be played at all, and the two teams that fall below the roster <em>minimum</em> are
+    /// what puts a roster-slot hold on a cap sheet where a human can see it.
+    /// <para>
+    /// Only the last team falls below the minimum, and that is deliberate rather than shy: the team
+    /// sitting exactly on the soft cap has to stay exactly on it, because "at the line" is its own
+    /// case and a hold would push it over. So the league carries one team with holds, one team with
+    /// nothing to spare, and four with spare roster spots but no obligation to fill them.
+    /// </para>
+    /// </summary>
+    private static readonly int[] TeamOpenRosterSpots = [0, 1, 2, 3, 3, 5];
+
+    /// <summary>
+    /// One unsigned player, as the fixture describes them before the aggregates are built.
+    /// </summary>
+    private sealed record FreeAgentPlan(
+        string FullName,
+        Position Position,
+        int Overall,
+        int Age,
+        int SeasonsOfService,
+        string? Injury);
+
+    /// <summary>
+    /// The unsigned players, and what each of them is for. Every one exists to make a different
+    /// decision interesting, because a market of interchangeable players is a list, not a market.
+    /// <para>
+    /// What each of them <em>wants</em> — a contender, term over average salary, a role — is the
+    /// preference model's business and arrives with it. What is here now is the raw material every
+    /// one of those preferences reads: age, service, position, and playing strength. The names in
+    /// the comments are promises the next milestone has to keep, not behaviour this one implements.
+    /// </para>
+    /// </summary>
+    private static readonly FreeAgentPlan[] FreeAgents =
+    [
+        // The maximum-money star. Enough service to reach the top compensation tier and good enough
+        // that the ceiling, rather than anyone's willingness to pay, is what limits the offer.
+        new("Idris Vantongeren", Position.SmallForward, 91, 29, 11, null),
+
+        // The one who will take less to win. Priced well below what he is worth so that a team with
+        // only its allowance has something to say that a team with room cannot outbid.
+        new("Ravi Okonkwo-Sable", Position.PowerForward, 84, 31, 10, null),
+
+        // The one who wants years rather than the highest average. The term limit is the rule his
+        // decision runs into, which is why he has the service to be offered the longest deal.
+        new("Matthias Duquesne", Position.Center, 80, 27, 8, null),
+
+        // The one who wants to play. Good enough to start on a thin roster and not on a deep one, so
+        // the same offer means different things depending on who makes it.
+        new("Teodoro Ashgrove", Position.PointGuard, 76, 24, 4, null),
+
+        // A rookie with no service at all: the compensation floor's bottom band, and the only player
+        // here a team above the apron can actually sign.
+        new("Nnamdi Ferreiro", Position.ShootingGuard, 68, 21, 0, null),
+
+        // An injured veteran, so the market has a player whose asking price and whose availability
+        // point in different directions.
+        new("Curtis Vantaa", Position.Center, 73, 33, 12, "Achilles tendinitis — out 4 weeks"),
+    ];
+
     /// <summary>The season the fixture league is sitting in. Fictional, like everything else here.</summary>
     private static readonly Season FixtureSeason = new(2031);
 
@@ -244,7 +306,7 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
 
     private static DomainOperationResult<LeagueSnapshot> BuildLeague(LeagueRuleset ruleset)
     {
-        var rosterSize = ruleset.RosterLimits.MaximumPlayers;
+        var maximumRosterSize = ruleset.RosterLimits.MaximumPlayers;
         var franchises = new List<Franchise>();
         var teams = new List<Team>();
         var players = new List<Player>();
@@ -264,11 +326,14 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
                 continue;
             }
 
+            // Each team fills its roster to a different depth, so the league contains both a team
+            // with nowhere to put anyone and a team carrying holds for spots it has to fill.
+            var rosterSize = Math.Max(1, maximumRosterSize - TeamOpenRosterSpots[teamIndex]);
             var rosterIds = new List<PlayerId>(rosterSize);
             var roster = new List<Player>(rosterSize);
             for (var slot = 0; slot < rosterSize; slot++)
             {
-                var playerResult = CreatePlayer(teamIndex, slot, (teamIndex * rosterSize) + slot);
+                var playerResult = CreatePlayer(teamIndex, slot, (teamIndex * maximumRosterSize) + slot);
                 if (playerResult.IsFailure)
                 {
                     errors.AddRange(playerResult.Errors);
@@ -307,6 +372,16 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
             players.AddRange(payrollResult.Value.ReleasedPlayers);
         }
 
+        var freeAgentsResult = CreateFreeAgents();
+        if (freeAgentsResult.IsFailure)
+        {
+            errors.AddRange(freeAgentsResult.Errors);
+        }
+        else
+        {
+            players.AddRange(freeAgentsResult.Value);
+        }
+
         if (errors.Count > 0)
         {
             return DomainOperationResult<LeagueSnapshot>.Failure(errors.ToArray());
@@ -338,6 +413,7 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
             ruleset.Name,
             ruleset.RegularSeasonGameCount,
             ruleset.RosterLimits,
+            ruleset.CapThresholds.PayrollFloor,
             ruleset.CapThresholds.SoftCap,
             ruleset.CapThresholds.LuxuryTax,
             ruleset.CapThresholds.FirstApron,
@@ -351,7 +427,19 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
             ruleset.TradeRules.SalaryMatchPercent,
             ruleset.TradeRules.SalaryMatchAllowance,
             ruleset.TradeRules.InjuredPlayerEligibility,
-            ruleset.TradeRules.SecondApronBlocksSalaryIncrease);
+            ruleset.TradeRules.SecondApronBlocksSalaryIncrease,
+            new NegotiationConfiguration(
+                ruleset.NegotiationRules.MaximumContractSeasons,
+                ruleset.NegotiationRules.MaximumIncumbentContractSeasons,
+                ruleset.NegotiationRules.MaximumAnnualEscalationPercent,
+                ruleset.NegotiationRules.MaximumAnnualDeescalationPercent,
+                ruleset.NegotiationRules.CompensationCeiling.Scale,
+                ruleset.NegotiationRules.CompensationFloor.Scale,
+                ruleset.NegotiationRules.StandardOverCapAllowance,
+                ruleset.NegotiationRules.StandardOverCapAllowanceUnavailableAbove,
+                ruleset.NegotiationRules.AllowanceMaySplitAcrossPlayers,
+                ruleset.NegotiationRules.MarketResolution,
+                ruleset.NegotiationRules.OfferExpiryDays));
 
         return DomainOperationResult<LeagueSnapshot>.Success(
             new LeagueSnapshot(
@@ -569,7 +657,9 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
             new PlayerId(SortableId.NewId()),
             ReleasedPlayerNames[teamIndex],
             Position.PowerForward,
-            new PlayerRating(58));
+            new PlayerRating(58),
+            BirthDateForAge(31, teamIndex),
+            seasonsOfService: 9);
 
         if (playerResult.IsFailure)
         {
@@ -627,6 +717,48 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
 
     private sealed record ReleasedContract(Player Player, Contract Contract);
 
+    /// <summary>
+    /// The unsigned players. They are loaded exactly like anyone else and simply appear on no
+    /// roster and under no contract, which is what makes them free agents — there is no separate
+    /// pool, because a second collection of people is a second place a player can be forgotten.
+    /// </summary>
+    private static DomainOperationResult<IReadOnlyList<Player>> CreateFreeAgents()
+    {
+        var created = new List<Player>(FreeAgents.Length);
+        var errors = new List<DomainError>();
+
+        for (var index = 0; index < FreeAgents.Length; index++)
+        {
+            var plan = FreeAgents[index];
+
+            var playerResult = Player.Create(
+                new PlayerId(SortableId.NewId()),
+                plan.FullName,
+                plan.Position,
+                new PlayerRating(plan.Overall),
+                // The first of the season's year, rather than the spread of birthdays the rosters
+                // carry. Age is read at a fixed point in the season, so a free agent whose birthday
+                // falls later in the year would show up a year younger than the plan says — and a
+                // market fixture whose stated ages are not the ages on screen is a fixture that
+                // cannot be reasoned about. Rostered players keep varied dates; these nine do not.
+                new DateOnly(FixtureSeason.Year - plan.Age, 1, 1),
+                plan.SeasonsOfService,
+                plan.Injury is null ? null : new Injury(plan.Injury));
+
+            if (playerResult.IsFailure)
+            {
+                errors.AddRange(playerResult.Errors);
+                continue;
+            }
+
+            created.Add(playerResult.Value);
+        }
+
+        return errors.Count > 0
+            ? DomainOperationResult<IReadOnlyList<Player>>.Failure(errors.ToArray())
+            : DomainOperationResult<IReadOnlyList<Player>>.Success(created);
+    }
+
     private static DomainOperationResult<Player> CreatePlayer(int teamIndex, int slot, int leagueWidePlayerIndex)
     {
         // Both name lists are stepped by strides coprime with their length and shifted once per lap
@@ -651,13 +783,29 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
             ? new Injury(description)
             : null;
 
+        // A spread of ages and service across every roster, deterministic like the rest of the
+        // fixture. Rookies and veterans have to both exist for a tiered compensation rule to have
+        // anything to key off, and a league of identically aged players would hide that entirely.
+        var age = 19 + (((teamIndex * 3) + (slot * 5)) % 17);
+        var seasonsOfService = Math.Max(0, age - 19 - ((teamIndex + slot) % 2));
+
         return Player.Create(
             new PlayerId(SortableId.NewId()),
             fullName,
             RosterPositionPlan[(slot + (teamIndex * 2)) % RosterPositionPlan.Length],
             new PlayerRating(overall),
+            BirthDateForAge(age, leagueWidePlayerIndex),
+            seasonsOfService,
             injury);
     }
+
+    /// <summary>
+    /// A birth date that makes a player exactly <paramref name="age"/> during the fixture season.
+    /// Fixed, not random, so the same league appears on every launch — and expressed as a date
+    /// rather than a stored age, because an age stops being true the moment the calendar moves.
+    /// </summary>
+    private static DateOnly BirthDateForAge(int age, int index) =>
+        new(FixtureSeason.Year - age, ((index * 7) % 12) + 1, ((index * 11) % 28) + 1);
 
     /// <summary>
     /// The curve for rosters the plan covers; below it, each further slot drops two more points, so

@@ -3,6 +3,7 @@ using BallGM.Client.Avalonia.ViewModels;
 using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
+using BallGM.Infrastructure.Negotiations;
 using BallGM.Infrastructure.Trades;
 
 namespace BallGM.Client.Avalonia;
@@ -25,7 +26,8 @@ internal static class LeagueClientComposition
             new FixtureLeagueDataSource(),
             new RulesCapLedger(),
             new RulesDraftAssetLedger(),
-            new RulesTradeEngine());
+            new RulesTradeEngine(),
+            new RulesSigningEngine());
 
         var result = session.Load();
 

@@ -3,6 +3,7 @@ using BallGM.Domain.DraftAssets;
 using BallGM.Domain.Trades;
 using BallGM.Domain.Transactions;
 using BallGM.Rules.Configuration;
+using BallGM.Rules.DraftAssets;
 using BallGM.Rules.Trades;
 
 namespace BallGM.Rules.Tests;
@@ -318,6 +319,102 @@ public sealed class TradeValidatorTests
 
         var teamA = assessment.Outcomes.Single(outcome => outcome.TeamId == league.TeamOf("A").Id);
         Assert.Equal(teamA.PicksBefore - 1, teamA.PicksAfter);
+    }
+
+    /// <summary>
+    /// The uncapped case, and the reason the notes list exists: a trade that takes back four times
+    /// what it sends out is legal in a league with no soft cap, and the assessment says which rules
+    /// it skipped rather than leaving a GM to infer that they all passed.
+    /// </summary>
+    [Fact]
+    public void InAnUncappedLeague_SalaryMatchingIsSkippedAndTheAssessmentSaysSo()
+    {
+        var league = TradeTestLeague.Build(capThresholds: CapThresholds.Uncapped, holdsDraft: false)
+            .WithTeam("A", 40_000_000, 5_000_000)
+            .WithTeam("B", 5_000_000, 4_000_000);
+
+        var assessment = Assess(league, league.SendPlayer("A", 0, "B"), league.SendPlayer("B", 0, "A"));
+
+        Assert.True(assessment.IsLegal, string.Join("; ", assessment.Violations.Select(v => v.Explanation)));
+        Assert.DoesNotContain(assessment.Violations, violation => violation.RuleCode == "trade.salary_not_matched");
+
+        Assert.Contains(assessment.Notes, note => note.RuleCode == "trade.salary_matching_skipped_no_soft_cap");
+        Assert.Contains(assessment.Notes, note => note.RuleCode == "trade.hard_cap_check_skipped_no_hard_cap");
+        Assert.All(assessment.Notes, note => Assert.False(string.IsNullOrWhiteSpace(note.Explanation)));
+
+        // No line to cross means no crossing warnings either.
+        Assert.DoesNotContain(assessment.Warnings, warning => warning.RuleCode == "trade.crosses_luxury_tax");
+    }
+
+    /// <summary>
+    /// A capped league that simply states no matching percentage is a different skip from an
+    /// uncapped one, and gets its own rule code — otherwise the two are indistinguishable in the
+    /// assessment.
+    /// </summary>
+    [Fact]
+    public void ACappedLeagueWithNoMatchingPercentage_SkipsMatchingWithItsOwnRuleCode()
+    {
+        var league = TradeTestLeague.Build(salaryMatchPercent: null, salaryMatchAllowance: null)
+            .WithTeam("A", 40_000_000, 5_000_000)
+            .WithTeam("B", 5_000_000, 4_000_000);
+
+        var assessment = Assess(league, league.SendPlayer("A", 0, "B"), league.SendPlayer("B", 0, "A"));
+
+        Assert.Contains(assessment.Notes, note => note.RuleCode == "trade.salary_matching_skipped_not_configured");
+        Assert.DoesNotContain(assessment.Notes, note => note.RuleCode == "trade.salary_matching_skipped_no_soft_cap");
+    }
+
+    /// <summary>
+    /// A ruleset can ask for the apron restriction without configuring an apron. The restriction is
+    /// then skipped and said out loud, rather than quietly not firing because a value was null.
+    /// </summary>
+    [Fact]
+    public void AnApronRestrictionWithNoApron_IsSkippedAndSaidOutLoud()
+    {
+        var thresholds = CapThresholds.Create(
+            softCap: new Money(100_000_000),
+            hardCap: new Money(150_000_000)).Value;
+
+        var league = TradeTestLeague.Build(capThresholds: thresholds, secondApronBlocksSalaryIncrease: true)
+            .WithTeam("A", 20_000_000, 10_000_000)
+            .WithTeam("B", 22_000_000, 8_000_000);
+
+        var assessment = Assess(league, league.SendPlayer("A", 0, "B"), league.SendPlayer("B", 0, "A"));
+
+        Assert.Contains(assessment.Notes, note => note.RuleCode == "trade.apron_restriction_skipped_no_apron");
+        Assert.DoesNotContain(assessment.Notes, note => note.RuleCode == "trade.hard_cap_check_skipped_no_hard_cap");
+    }
+
+    /// <summary>A league that configures everything skips nothing, and says nothing about skipping.</summary>
+    [Fact]
+    public void AFullyConfiguredLeague_ReportsNoSkippedRules()
+    {
+        var league = TradeTestLeague.Build()
+            .WithTeam("A", 20_000_000, 10_000_000)
+            .WithTeam("B", 22_000_000, 8_000_000);
+
+        var assessment = Assess(league, league.SendPlayer("A", 0, "B"), league.SendPlayer("B", 0, "A"));
+
+        Assert.Empty(assessment.Notes);
+    }
+
+    [Fact]
+    public void InALeagueWithNoDraft_APickCannotBeTraded()
+    {
+        var league = TradeTestLeague.Build(holdsDraft: false)
+            .WithTeam("A", 20_000_000, 10_000_000)
+            .WithTeam("B", 22_000_000, 8_000_000);
+
+        var result = new PickOwnershipRules().ValidateTransfer(
+            league.DraftAssets,
+            new DraftPickId(SortableId.NewId()),
+            league.TeamOf("A").FranchiseId,
+            league.TeamOf("B").FranchiseId,
+            TradeTestLeague.CurrentSeason,
+            league.DraftRules);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("pick_registration.league_has_no_draft", Assert.Single(result.Errors).Code);
     }
 
     private static TradeAssessment Assess(TradeTestLeague league, params TradeAssetMovement[] movements)

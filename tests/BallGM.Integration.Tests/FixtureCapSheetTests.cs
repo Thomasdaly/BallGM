@@ -2,6 +2,7 @@ using BallGM.Application.Leagues;
 using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
+using BallGM.Infrastructure.Negotiations;
 
 namespace BallGM.Integration.Tests;
 
@@ -22,7 +23,7 @@ public sealed class FixtureCapSheetTests
         {
             var capSheet = team.CapSheet;
             Assert.Equal(capSheet.TotalPayroll, capSheet.Charges.Sum(charge => charge.Amount));
-            Assert.Equal(capSheet.CommittedSalary + capSheet.DeadMoney, capSheet.TotalPayroll);
+            Assert.Equal(capSheet.CommittedSalary + capSheet.DeadMoney + capSheet.RosterHolds, capSheet.TotalPayroll);
             Assert.Equal(overview.SeasonYear, capSheet.SeasonYear);
         });
     }
@@ -37,7 +38,9 @@ public sealed class FixtureCapSheetTests
         Assert.Equal(175_000_000, PayrollOf(overview, "Verdanmoor Kestrels"));
         Assert.Equal(168_000_000, PayrollOf(overview, "Saltpan City Prospectors"));
         Assert.Equal(141_000_000, PayrollOf(overview, "Northreach Aurora"));
-        Assert.Equal(118_400_000, PayrollOf(overview, "Old Foundry Bellringers"));
+        // Contracts plus two roster-slot holds: this team is two players short of the league minimum,
+        // and the payroll every threshold is measured against says so.
+        Assert.Equal(118_400_000 + 2_300_000, PayrollOf(overview, "Old Foundry Bellringers"));
     }
 
     [Fact]
@@ -59,15 +62,53 @@ public sealed class FixtureCapSheetTests
         Assert.Equal("cap.under_second_apron", RuleCodeFor(team, "Second apron"));
     }
 
+    /// <summary>
+    /// The room a short-handed team is shown is room it can actually spend. Without the holds this
+    /// team would appear to have the whole gap to the soft cap available, and would find out only
+    /// after spending it that two roster spots still had to be filled.
+    /// </summary>
     [Fact]
-    public void TheTeamUnderTheSoftCapIsReportedWithRoomLeft()
+    public void TheTeamUnderTheSoftCapIsReportedWithRoomLeftNetOfTheSpotsItStillHasToFill()
     {
         var team = TeamNamed(LoadShippedLeague(), "Old Foundry Bellringers");
         var softCap = team.CapSheet.Thresholds.Single(threshold => threshold.ThresholdName == "Soft cap");
 
         Assert.Equal("cap.under_soft_cap", softCap.RuleCode);
-        Assert.Equal(141_000_000 - 118_400_000, softCap.SignedDistance);
+        Assert.Equal(2_300_000, team.CapSheet.RosterHolds);
+        Assert.Equal(141_000_000 - 118_400_000 - 2_300_000, softCap.SignedDistance);
         Assert.False(softCap.IsOver);
+    }
+
+    /// <summary>
+    /// One hold per unfilled spot rather than one lumped figure, each priced at the league's minimum
+    /// salary for a player with no service — the least the team can possibly spend to fill it.
+    /// </summary>
+    [Fact]
+    public void AShortHandedTeamCarriesOneHoldPerUnfilledSpotAtTheLeagueMinimum()
+    {
+        var team = TeamNamed(LoadShippedLeague(), "Old Foundry Bellringers");
+        var holds = team.CapSheet.Charges.Where(charge => charge.Kind == "Roster-slot hold").ToList();
+
+        Assert.Equal(2, holds.Count);
+        Assert.All(holds, hold =>
+        {
+            Assert.Equal(1_150_000, hold.Amount);
+            Assert.Equal("Unfilled roster spot", hold.PlayerName);
+        });
+    }
+
+    /// <summary>
+    /// A team at the roster minimum holds nothing. The hold prices an obligation, and a team that has
+    /// met the obligation has none — a charge of nought on the sheet would say otherwise.
+    /// </summary>
+    [Fact]
+    public void ATeamAtTheRosterMinimumCarriesNoHolds()
+    {
+        var team = TeamNamed(LoadShippedLeague(), "Northreach Aurora");
+
+        Assert.Equal(12, team.RosterCount);
+        Assert.Equal(0, team.CapSheet.RosterHolds);
+        Assert.DoesNotContain(team.CapSheet.Charges, charge => charge.Kind == "Roster-slot hold");
     }
 
     [Fact]
@@ -131,13 +172,14 @@ public sealed class FixtureCapSheetTests
 
         Assert.Equal(
             [
+                overview.CapThresholds.PayrollFloor,
                 overview.CapThresholds.SoftCap,
                 overview.CapThresholds.LuxuryTax,
                 overview.CapThresholds.FirstApron,
                 overview.CapThresholds.SecondApron,
                 overview.CapThresholds.HardCap,
             ],
-            team.CapSheet.Thresholds.Select(threshold => threshold.ThresholdAmount));
+            team.CapSheet.Thresholds.Select(threshold => (long?)threshold.ThresholdAmount));
     }
 
     private static long PayrollOf(LeagueOverview overview, string teamName) =>
@@ -151,7 +193,7 @@ public sealed class FixtureCapSheetTests
 
     private static LeagueOverview LoadShippedLeague()
     {
-        var result = new GetLeagueOverviewQuery(new FixtureLeagueDataSource(), new RulesCapLedger(), new RulesDraftAssetLedger()).Execute();
+        var result = new GetLeagueOverviewQuery(new FixtureLeagueDataSource(), new RulesCapLedger(), new RulesDraftAssetLedger(), new RulesSigningEngine()).Execute();
 
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
         return result.Value;

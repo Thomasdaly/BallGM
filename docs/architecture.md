@@ -84,7 +84,11 @@ Cap rules read configuration that lives in `BallGM.Rules` (`CapThresholds`), but
 - `BallGM.Application.Cap.ICapLedger` is the port the Application query calls. Thresholds travel in per call from the already-loaded `LeagueConfiguration`, so there is one ruleset load path and no second copy of the amounts.
 - `BallGM.Infrastructure.Cap.RulesCapLedger` is the adapter: it maps `LeagueConfiguration` back onto `CapThresholds` and delegates. Infrastructure already referenced Rules for ruleset persistence, so no new dependency appears and no cycle is created.
 
-Explicitly deferred rather than half-built (see `CapLedger`'s own remarks): signing exceptions of any kind, minimum-salary and rookie-scale rules, cap holds for unsigned players, the size of the tax bill above the tax line, and the transaction restrictions each apron implies. The ledger reports where a team stands; enforcing what a threshold forbids is the trade engine's job at Milestone 5.
+**A payroll is three buckets and one sum.** `TeamCapSheet` reports committed salary (live contracts), dead money (guaranteed money owed to a released player), and roster holds — and adds all three into `TotalPayroll`, which is what every threshold is measured against. A **roster-slot hold** is a placeholder charge for a spot the team has not filled: one per unfilled spot, priced at the compensation floor for a player with no service, produced by `BallGM.Rules.Cap.RosterSlotHoldProjection`. Without it a team eight players deep with room to spend appears able to put all of it on one player and discovers only afterwards that the roster still has to be filled — a trap the UI would set for a human and the AI front office would walk into.
+
+That projection sits in Rules rather than beside `CapChargeProjection` in Domain, because its size and count come from the ruleset (the compensation floor and the roster minimum) and a projection that needs the ruleset is a rules service. It runs *behind* `ICapLedger`, inside the adapter, which is why the port takes a roster count: the alternative was for the Application query to project holds and pass them in, putting a rule in the layer that is supposed to have none. Two consequences worth stating rather than discovering: holds count towards the payroll floor as well as the ceilings, because a payroll that means something different depending on which line it is compared against is arithmetic nobody can explain; and a league with no compensation floor produces **no holds at all** rather than holds of nought, because there is no honest figure to reserve.
+
+Explicitly deferred rather than half-built (see `CapLedger`'s own remarks): cap holds for a team's own expiring players, the size of the tax bill above the tax line, signing-bonus amortisation, and the transaction restrictions each apron implies. The ledger reports where a team stands; enforcing what a threshold forbids belongs to the trade and signing engines.
 
 `BallGM.Domain.Transactions.TransactionLedger` is append-only — `Entries` is exposed as a read-only view and there is no update or delete — because a payroll figure that changed without a ledger line behind it is a bug, not a shortcut. Draft-asset events (Milestone 4) are recorded in that same ledger through `RecordPickEvent`, as new `TransactionKind` members rather than a second ledger: an asset trail kept apart from the money trail is two accounts of the same trade that can disagree. A ledger entry names a team (cap events, whose subject is a season's squad) or a franchise (draft assets, which outlive one), and naming neither throws.
 
@@ -130,6 +134,37 @@ It owns no rule that already exists elsewhere: pick movement goes through `PickO
 
 Deliberately deferred rather than half-built, and named in `TradeRules`: trade and traded-player exceptions, sign-and-trade, cash considerations, aggregation windows and waiting periods after a signing, and no-trade clauses. Each needs state this build does not keep yet. What *is* configured, generically named, in the ruleset file: `SalaryMatchPercent`, `SalaryMatchAllowance`, `InjuredPlayerEligibility` (allowed, allowed-with-warning, or blocked), and `SecondApronBlocksSalaryIncrease`. Those additions took the ruleset file to schema version 3.
 
+## The signing engine: routes, and what "no such rule" looks like
+
+Milestone 6a splits a signing the same way Milestone 5 split a trade, and for the same reasons. `BallGM.Rules.Signings.SigningValidator` never mutates anything, so an offer screen can ask on every keystroke; `SigningExecutor` re-validates against the league as it stands, then applies the signing with an undo stack and writes the ledger line last. An entry recorded and then rolled back would describe something that did not happen.
+
+`BallGM.Domain.Negotiations.Offer` is an immutable value object carrying `ContractSeasonTerm`s — the same type the resulting contract carries, so an offer cannot pass a shape check the contract it becomes would fail. Both go through the shared `ContractTerms.Normalize`. An offer is superseded, never amended.
+
+**A signing is legal only if some route permits it, and every route reports.** `SigningRouteTable` evaluates four, in a fixed order that preserves the scarce thing — minimum salary consumes nothing, cap room is simply payroll, and the standard allowance is the only finite pot, so it is tried last:
+
+| Route | Needs | Answers |
+|---|---|---|
+| Unrestricted signing | no soft cap configured | permits anything; roster space is the only constraint |
+| Minimum salary | a compensation floor | always available regardless of payroll, at the player's service tier |
+| Cap room | a soft cap | the gap below the line, counting back the hold this signing releases |
+| Standard over-cap allowance | a configured allowance | what is left of a fixed sum, withdrawn above a named line |
+
+Every deferred route in `docs/negotiation-mechanisms.md` — incumbent retention, post-room, periodic, injury replacement — is a variation on *eligibility*, so each arrives as another row here rather than a branch inside an existing one.
+
+**Three states per route, not two.** A route can permit, refuse with the figure behind the refusal, or *not apply at all*. `Applicable` is separate from `Permits` because "this league has no such line" is an answer, and a screen that renders it identically to "you cannot afford it" teaches a GM the rules of a league they are not playing in. Inapplicable routes and skipped offer-legality checks travel in the assessment's `Notes` list — the same shape `TradeAssessment` already uses, and deliberately not a second way of saying a rule was skipped. `BallGM.Domain.Common.RuleFinding` is now shared by both engines rather than duplicated per engine, so the third list cannot be forgotten in one of them.
+
+**Offer legality is separate from affordability.** `OfferLegality` checks the shape a league permits — term limit (longer for an incumbent, where a league says so), season-over-season escalation and de-escalation as a share of the *first* season (measuring against the previous season would let a long enough contract compound to any figure at all), a compensation ceiling as a share of the soft cap, and a compensation floor. Each is skippable by configuration and each reports its own skip.
+
+**The hard cap is not a route, it is a ceiling on the result.** No route may leave a team above it, and a league without one has no such ceiling. The payroll floor is the opposite kind of line — being under it after a signing is a *warning*, because a team short of the minimum spend is a team with spending still to do, not a team barred from signing.
+
+**Market resolution is chosen, not stumbled into.** `NegotiationRules.MarketResolution` is a ruleset field with two values. `ResolutionPoint` — the default — accumulates offers during a window and resolves the market at an explicit point, ordering offers within it by a stated deterministic key rather than by arrival. `Immediate` decides the instant an offer lands: defensible, simpler, and dependent on the order the UI happened to submit things in, which is the "the game cheated" complaint. Milestone 6a builds no market, so nothing consumes this field yet — one team offering one player resolves immediately by definition. The field ships now so that the market half adds no second schema change, and the ordering keys are written here when 6b implements them.
+
+**Absence is a default for a mode and a rule for a limit.** Every negotiation *limit* is optional by absence, meaning the league does not have it — a league configuring none of them is an open market where any team may pay anyone anything, which is exactly the uncapped conformance league, and emphatically not a league where nobody may sign. `MarketResolution` is not a limit: every league resolves offers somehow, so its absence is a documented default, the same way `DraftLotteryEnabled` and `SecondApronBlocksSalaryIncrease` already behave. That distinction is the one to reach for when the draft-slot scale and the tax brackets arrive.
+
+`BallGM.Application.Negotiations.ISigningEngine` is the port and `BallGM.Infrastructure.Negotiations.RulesSigningEngine` the adapter, identical in shape to the cap, draft-asset, and trade pairs. `LeagueSession` gains `AssessOffer` and `SubmitOffer`; a signing is the one transaction so far that *creates* an aggregate rather than moving one, so the session replaces the snapshot it holds with one that includes the new contract.
+
+**The roster minimum became an obligation rather than an invariant.** `Team.Create` no longer refuses a roster below the minimum, and `TradeValidator`/`Team.ApplyTrade` refuse only a trade that takes a team *further* below it. A squad three players short is the ordinary state of a team in the middle of free agency, and it is precisely the state a roster-slot hold prices — a league whose teams cannot be short of the minimum is a league where holds are unreachable code. The maximum stays a hard refusal, because it is a different kind of rule: a team over its limit is not a team with something left to do.
+
 ## Cross-cutting design decisions
 
 - Use identifiers rather than object graph persistence across every boundary.
@@ -137,7 +172,7 @@ Deliberately deferred rather than half-built, and named in `TradeRules`: trade a
 - Use explicit result types for rule validation.
 - Return machine-readable rule codes plus human-readable explanations.
 - Store money in integer smallest units or a dedicated value object.
-- Inject clocks and random sources.
+- Inject clocks and random sources. `IRandomSource` and its deterministic `SeededRandomSource` both live in `BallGM.Domain.Randomness`: everything that composes a seeded run has to be able to construct one, including the Infrastructure composition root, which does not reference the simulation project and should not have to.
 - Record transactions as an auditable ledger.
 - Make league rules data-driven, while keeping complex rule algorithms in trusted C#.
 - Version both saves and external content schemas from the beginning.
@@ -146,7 +181,28 @@ Deliberately deferred rather than half-built, and named in `TradeRules`: trade a
 
 The concrete reason "make league rules data-driven" is a top-level design decision rather than an aspiration: a licensed sports game's balance rules are baked into the shipped code, so a rule the community considers broken stays broken until the next annual release. `LeagueRuleset` (`BallGM.Rules.Configuration`) plus `LeagueRulesetSerializer` (`BallGM.Infrastructure.Rulesets`) exist so a cap or draft rule change is a new ruleset file, not a code change or a new build.
 
-The financial thresholds (`CapThresholds`) are named generically — `SoftCap`, `LuxuryTax`, `FirstApron`, `SecondApron`, `HardCap` — rather than after any one real-world league's current agreement, matching the `Threshold` term already defined in `docs/domain-language.md`. What each threshold actually restricts during a trade or free-agent signing is trade-engine logic (Milestone 5); today these types only carry the configured amounts and guarantee `SoftCap ≤ LuxuryTax ≤ FirstApron ≤ SecondApron ≤ HardCap`. Because a ruleset file is untrusted input the moment it's editable outside the build, `LeagueRulesetSerializer.Deserialize` never throws on a malformed or self-contradictory file — it returns a structured `DomainOperationResult<LeagueRuleset>` failure, the same explainable-failure mechanism the rest of the domain uses.
+The financial thresholds (`CapThresholds`) are named generically — `PayrollFloor`, `SoftCap`, `LuxuryTax`, `FirstApron`, `SecondApron`, `HardCap` — rather than after any one real-world league's current agreement, matching the `Threshold` term already defined in `docs/domain-language.md`. What each threshold actually restricts during a trade or free-agent signing is trade-engine logic (Milestone 5); these types carry the configured amounts and guarantee `PayrollFloor ≤ SoftCap ≤ LuxuryTax ≤ FirstApron ≤ SecondApron ≤ HardCap`. Because a ruleset file is untrusted input the moment it's editable outside the build, `LeagueRulesetSerializer.Deserialize` never throws on a malformed or self-contradictory file — it returns a structured `DomainOperationResult<LeagueRuleset>` failure, the same explainable-failure mechanism the rest of the domain uses.
+
+### Optional by absence (schema version 4)
+
+Loading changed shape in version 4, and the shape is the point: **a rule the file does not mention is a rule the league does not have.** Every threshold is `Money?`, a draft round count of zero means the league holds no draft, and an absent salary-match percentage means the league does not match salary. No new JSON keys were added — absence itself carries the meaning — and the ordering guarantee above applies to the thresholds that are *present*, in that one fixed sequence.
+
+Three consequences worth stating, because they are what make this different from defaulting:
+
+- **Nullability stops at the boundary in one direction only.** `LeagueRulesetEnvelope` is nullable because JSON is; `LeagueRuleset` does not grow a nullable field to match. The optionality lives in `CapThresholds`, `DraftRules.HasDraft`, and `TradeRules.HasSalaryMatching` — rules concepts — and travels through `LeagueConfiguration` to the read model as `long?`, so the client can render "this league has no cap" rather than "0".
+- **A skipped rule is reported, never inferred.** `TradeValidator` returns a third list, `Notes`, naming each money rule it did not run and why (`trade.salary_matching_skipped_no_soft_cap`, `trade.hard_cap_check_skipped_no_hard_cap`, `trade.apron_restriction_skipped_no_apron`). A check that silently passes because a value was null is indistinguishable from a check that ran and approved; that ambiguity is the class of bug the whole scheme exists to remove.
+- **Version 3 is refused, not migrated.** The two versions differ only in which fields may be absent, so a valid version 3 file is a valid version 4 file with the number changed, and the error message says exactly that. The version still had to move: a version 3 reader handed a version 4 file would read every absent field as zero and run a cap system the ruleset never stated.
+
+## Two assumptions Milestone 13 will break
+
+`docs/competitive-feature-review.md` defines Milestone 13 (league life and locker room). It is recorded here, well ahead of the work, because every item in it invalidates one of two assumptions the current codebase quietly relies on — and knowing which assumptions those are should shape what gets built between now and then.
+
+1. **The ruleset is loaded once and is then fixed.** `LeagueRulesetSerializer.Deserialize` runs at load, and every rules service takes a `LeagueRuleset` as an immutable dependency. In-save rule changes make the ruleset a **versioned timeline** — "the rules as of season N" — which means a rules service can no longer capture one instance for the lifetime of a session, and a historical transaction must be explainable against the rules that were in force when it happened, not today's. The cheap thing to do now is to keep passing the ruleset in per operation rather than caching it in constructors.
+2. **League membership is fixed at creation.** Expansion and relocation make membership an event. `League` already references teams by `TeamId` rather than embedding them, and `Franchise` is already separate from `Team`, so the aggregate shape survives; what does not survive is any code that treats the team set as a constant, or any read model that caches a franchise's name or city.
+
+Both are save-schema and cross-project public-API changes, which `CLAUDE.md` puts under change control. Neither is to be started incrementally as a side effect of a smaller task — but neither should be made *more* expensive by new code that assumes the opposite.
+
+The same document's content-neutrality position (`docs/vision.md` → Moddability) has one direct architectural consequence: a league the format cannot express is a code change, and a code change is a failure of the moddability pillar. The uncapped-league and no-draft gaps recorded in `docs/negotiation-mechanisms.md` → "Ruleset genericity" are the first two measured instances of that; both are closed at schema version 4, and `tests/BallGM.Integration.Tests/RulesetConformanceTests.cs` is where the measurement lives — it now asserts the fixed behaviour rather than pinning the broken behaviour.
 
 ## Mod and data-pack trust model
 

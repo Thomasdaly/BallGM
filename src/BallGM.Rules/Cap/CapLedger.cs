@@ -11,13 +11,17 @@ namespace BallGM.Rules.Cap;
 /// configured threshold, as a rule code plus an explanation rather than a bare number — a GM who
 /// cannot see <em>why</em> they are capped has not been given a cap sheet.
 /// <para>
-/// Deliberately narrow. This milestone models exactly two ways money lands on the books — a live
-/// contract and guaranteed money owed to a released player — because those two are all the ledger
-/// needs to be internally coherent. Explicitly deferred, and not partially implemented here:
-/// signing exceptions of any kind, minimum-salary and rookie-scale rules, cap holds for unsigned
-/// players, trade exceptions and salary-matching (Milestone 5), the tax bill owed above the tax
-/// line, and apron-specific transaction restrictions (Milestone 5). This type reports where a team
-/// stands; enforcing what each threshold forbids belongs to the trade and signing engines.
+/// Three ways money lands on the books: a live contract, guaranteed money owed to a released player,
+/// and a placeholder for a roster spot the team has not filled (see
+/// <see cref="RosterSlotHoldProjection"/>). Still explicitly deferred, and not partially implemented
+/// here: cap holds for a team's own expiring players, the tax bill owed above the tax line, and
+/// signing-bonus amortisation. This type reports where a team stands; enforcing what each threshold
+/// forbids belongs to the trade and signing engines.
+/// </para>
+/// <para>
+/// Every threshold is optional. A standing is built only for a line the ruleset configures, so the
+/// number of rows on a cap sheet is a fact about the league rather than a constant — see
+/// <see cref="CapThresholds"/>.
 /// </para>
 /// </summary>
 public sealed class CapLedger
@@ -65,21 +69,27 @@ public sealed class CapLedger
             return DomainOperationResult<TeamCapSheet>.Failure(errors.ToArray());
         }
 
-        var committed = Money.Sum(charges.Where(charge => !charge.IsDeadMoney).Select(charge => charge.Amount));
+        // Three buckets, one sum. A roster-slot hold is money a team has to spend and therefore
+        // cannot spend on someone else, so it belongs in the payroll every threshold is measured
+        // against — but it is not a player, so it is not committed salary either, and a cap sheet
+        // that hid it inside that figure would be answering "who is expensive" with a placeholder.
+        var committed = Money.Sum(charges
+            .Where(charge => charge.Kind == CapChargeKind.ActiveContract)
+            .Select(charge => charge.Amount));
         var dead = Money.Sum(charges.Where(charge => charge.IsDeadMoney).Select(charge => charge.Amount));
-        var total = committed + dead;
+        var holds = Money.Sum(charges.Where(charge => charge.IsRosterSlotHold).Select(charge => charge.Amount));
+        var total = committed + dead + holds;
 
-        var standings = new List<ThresholdStanding>
-        {
-            Compare(total, CapThresholdKind.SoftCap, thresholds.SoftCap),
-            Compare(total, CapThresholdKind.LuxuryTax, thresholds.LuxuryTax),
-            Compare(total, CapThresholdKind.FirstApron, thresholds.FirstApron),
-            Compare(total, CapThresholdKind.SecondApron, thresholds.SecondApron),
-            Compare(total, CapThresholdKind.HardCap, thresholds.HardCap),
-        };
+        // One standing per threshold the league actually configures, in the ruleset's own ascending
+        // order. An uncapped league produces an empty list and a real payroll, rather than five
+        // zeroes every team is over — a line the ruleset never stated is a line nobody is measured
+        // against.
+        var standings = thresholds.Configured
+            .Select(entry => Compare(total, entry.Kind, entry.Amount))
+            .ToList();
 
         return DomainOperationResult<TeamCapSheet>.Success(
-            new TeamCapSheet(teamId, season, committed, dead, total, charges.ToList(), standings));
+            new TeamCapSheet(teamId, season, committed, dead, holds, total, charges.ToList(), standings));
     }
 
     private static ThresholdStanding Compare(Money payroll, CapThresholdKind kind, Money threshold)
@@ -112,6 +122,7 @@ public sealed class CapLedger
             CapThresholdKind.FirstApron => "first_apron",
             CapThresholdKind.SecondApron => "second_apron",
             CapThresholdKind.HardCap => "hard_cap",
+            CapThresholdKind.PayrollFloor => "payroll_floor",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown cap threshold."),
         };
 
@@ -167,6 +178,15 @@ public sealed class CapLedger
             "Exactly at the hard cap: no further salary may be taken on at all.",
         (CapThresholdKind.HardCap, ThresholdPosition.Over) =>
             "Over the hard cap: this payroll is not legal under the configured ruleset and cannot be reached by any transaction.",
+
+        // The one threshold a team breaches by being *under* it, which is why a cap sheet reads
+        // ThresholdStanding.IsBreached rather than IsOver.
+        (CapThresholdKind.PayrollFloor, ThresholdPosition.Under) =>
+            "Below the payroll floor: the team is spending less than this league requires and must reach the line. What missing it costs is not modelled yet.",
+        (CapThresholdKind.PayrollFloor, ThresholdPosition.At) =>
+            "Exactly at the payroll floor: the minimum spend is met, with nothing to spare.",
+        (CapThresholdKind.PayrollFloor, ThresholdPosition.Over) =>
+            "Above the payroll floor: this league's minimum spend is met.",
 
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown cap threshold."),
     };

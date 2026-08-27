@@ -7,6 +7,11 @@ namespace BallGM.Domain.Cap;
 /// league's current agreement. Mirrors <c>BallGM.Rules.Configuration.CapThresholds</c>, which owns
 /// the amounts; this enum exists so a cap-sheet result can name which line it is talking about
 /// without Domain depending on the Rules project.
+/// <para>
+/// The numbers are identity, not order. <see cref="PayrollFloor"/> sits <em>below</em>
+/// <see cref="SoftCap"/> in money terms but is appended here so the existing members keep the
+/// values they already had; the order a cap sheet presents them in comes from the cap ledger.
+/// </para>
 /// </summary>
 public enum CapThresholdKind
 {
@@ -15,6 +20,12 @@ public enum CapThresholdKind
     FirstApron = 2,
     SecondApron = 3,
     HardCap = 4,
+
+    /// <summary>
+    /// The minimum total payroll a team must reach. The only threshold a team breaches by being
+    /// <em>under</em> it — see <see cref="ThresholdStanding.IsBreached"/>.
+    /// </summary>
+    PayrollFloor = 5,
 }
 
 /// <summary>Where a payroll sits relative to one threshold.</summary>
@@ -68,5 +79,18 @@ public sealed record ThresholdStanding
 
     public string Explanation { get; }
 
+    /// <summary>Literally over the amount. For a floor that is compliance, not a problem — see <see cref="IsBreached"/>.</summary>
     public bool IsOver => Position == ThresholdPosition.Over;
+
+    /// <summary>Whether this threshold is a minimum rather than a maximum.</summary>
+    public bool IsFloor => Kind == CapThresholdKind.PayrollFloor;
+
+    /// <summary>
+    /// Whether the team is on the wrong side of this line. A ceiling is breached by being over it;
+    /// the payroll floor is breached by being under it. Screens key off this rather than off
+    /// <see cref="IsOver"/>, because a team comfortably above the floor is complying with it.
+    /// </summary>
+    public bool IsBreached => IsFloor
+        ? Position == ThresholdPosition.Under
+        : Position == ThresholdPosition.Over;
 }

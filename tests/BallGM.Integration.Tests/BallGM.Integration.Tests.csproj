@@ -15,6 +15,15 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Ruleset conformance fixtures: rulesets the schema should be able to express and currently
+       cannot. Copied only here, and deliberately outside the data\rulesets\*.json glob in
+       BallGM.Infrastructure, so nothing that loads a playable ruleset can pick one up. -->
+  <ItemGroup>
+    <None Include="..\..\data\rulesets\conformance\*.json" LinkBase="data\rulesets\conformance">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\BallGM.Application\BallGM.Application.csproj" />
     <ProjectReference Include="..\..\src\BallGM.Domain\BallGM.Domain.csproj" />

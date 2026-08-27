@@ -29,7 +29,12 @@
 
       <StackPanel Spacing="8">
         <TextBlock Text="THRESHOLDS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        <Grid ColumnDefinitions="140,110,140">
+
+        <Border Padding="12" CornerRadius="4" Background="#20808080" IsVisible="{Binding !HasThresholds}">
+          <TextBlock Text="{Binding NoThresholdsExplanation}" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="140,110,140" IsVisible="{Binding HasThresholds}">
           <TextBlock Text="LINE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
           <TextBlock Grid.Column="1" Text="AMOUNT" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
           <TextBlock Grid.Column="2" Text="DISTANCE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />

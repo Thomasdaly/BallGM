@@ -10,7 +10,16 @@
       <TextBlock Text="{Binding SeasonLine}" Opacity="0.7" />
     </StackPanel>
 
-    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" MaxHeight="300">
+    <Border
+      Grid.Row="1"
+      Padding="12"
+      CornerRadius="4"
+      Background="#20808080"
+      IsVisible="{Binding !HasDraft}">
+      <TextBlock Text="{Binding NoDraftExplanation}" TextWrapping="Wrap" />
+    </Border>
+
+    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" MaxHeight="300" IsVisible="{Binding HasDraft}">
       <StackPanel Spacing="4">
         <ItemsControl ItemsSource="{Binding Rows}">
           <ItemsControl.ItemTemplate>
@@ -62,12 +71,12 @@
       </StackPanel>
     </ScrollViewer>
 
-    <StackPanel Grid.Row="2" Spacing="4">
+    <StackPanel Grid.Row="2" Spacing="4" IsVisible="{Binding HasDraft}">
       <TextBlock Text="{Binding SelectedFranchiseName}" FontSize="16" FontWeight="SemiBold" />
       <TextBlock Text="{Binding Summary}" Opacity="0.75" TextWrapping="Wrap" />
     </StackPanel>
 
-    <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="16">
+    <Grid Grid.Row="3" ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding HasDraft}">
       <ListBox ItemsSource="{Binding Assets}" SelectedItem="{Binding SelectedAsset}">
         <ListBox.ItemTemplate>
           <DataTemplate x:DataType="vm:PickAssetRow">

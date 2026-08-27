@@ -1,9 +1,10 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 5,
   "name": "Continental Basketball Association — Standard Rules",
   "regularSeasonGameCount": 78,
   "minimumRosterPlayers": 12,
   "maximumRosterPlayers": 15,
+  "payrollFloor": 127000000,
   "softCap": 141000000,
   "luxuryTax": 172000000,
   "firstApron": 179000000,
@@ -17,5 +18,42 @@
   "salaryMatchPercent": 125,
   "salaryMatchAllowance": 250000,
   "injuredPlayerTradeEligibility": "AllowedWithWarning",
-  "secondApronBlocksSalaryIncrease": true
+  "secondApronBlocksSalaryIncrease": true,
+  "maximumContractSeasons": 5,
+  "maximumIncumbentContractSeasons": 6,
+  "maximumAnnualEscalationPercent": 8,
+  "maximumAnnualDeescalationPercent": 8,
+  "compensationCeilingTiers": [
+    {
+      "minimumSeasonsOfService": 0,
+      "percentOfSoftCap": 25
+    },
+    {
+      "minimumSeasonsOfService": 7,
+      "percentOfSoftCap": 30
+    },
+    {
+      "minimumSeasonsOfService": 10,
+      "percentOfSoftCap": 35
+    }
+  ],
+  "compensationFloorScale": [
+    {
+      "minimumSeasonsOfService": 0,
+      "amount": 1150000
+    },
+    {
+      "minimumSeasonsOfService": 3,
+      "amount": 2100000
+    },
+    {
+      "minimumSeasonsOfService": 10,
+      "amount": 3300000
+    }
+  ],
+  "standardOverCapAllowance": 12800000,
+  "standardOverCapAllowanceUnavailableAbove": "FirstApron",
+  "allowanceMaySplitAcrossPlayers": true,
+  "marketResolution": "ResolutionPoint",
+  "offerExpiryDays": 3
 }

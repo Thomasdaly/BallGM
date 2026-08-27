@@ -105,8 +105,14 @@ public sealed class TeamRosterTests
         Assert.Equal(1, team.RosterCount);
     }
 
+    /// <summary>
+    /// A squad short of the roster minimum is a squad with signings still to make, not a squad that
+    /// cannot exist. The minimum is an obligation the cap sheet prices as roster-slot holds; making
+    /// it a construction invariant would mean no team could ever be in the state the holds describe,
+    /// and free agency would have nowhere to happen.
+    /// </summary>
     [Fact]
-    public void CreateReturnsStructuredFailureForUndersizedInitialRosterInsteadOfThrowing()
+    public void CreateAcceptsARosterBelowTheMinimumBecauseThatIsAnObligationRatherThanAnImpossibility()
     {
         var result = Team.Create(
             new TeamId("team-001"),
@@ -115,9 +121,26 @@ public sealed class TeamRosterTests
             new RosterSizeLimits(minimumPlayers: 2, maximumPlayers: 5),
             initialPlayers: [new PlayerId("player-001")]);
 
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
+        Assert.Equal(1, result.Value.RosterCount);
+    }
+
+    /// <summary>
+    /// The maximum is the other kind of rule, and stays a refusal: a team over its limit is not a
+    /// team with something left to do, it is a team in a state the league forbids outright.
+    /// </summary>
+    [Fact]
+    public void CreateStillRefusesARosterAboveTheMaximum()
+    {
+        var result = Team.Create(
+            new TeamId("team-001"),
+            new FranchiseId("franchise-001"),
+            "Fictional City Five",
+            new RosterSizeLimits(minimumPlayers: 1, maximumPlayers: 2),
+            initialPlayers: [new PlayerId("player-001"), new PlayerId("player-002"), new PlayerId("player-003")]);
+
         Assert.True(result.IsFailure);
-        var error = Assert.Single(result.Errors);
-        Assert.Equal("roster.minimum_required", error.Code);
+        Assert.Equal("roster.maximum_exceeded", Assert.Single(result.Errors).Code);
     }
 
     [Fact]

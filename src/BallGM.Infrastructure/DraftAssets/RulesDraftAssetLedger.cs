@@ -56,19 +56,17 @@ public sealed class RulesDraftAssetLedger : IDraftAssetLedger
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        try
-        {
-            return DomainOperationResult<DraftRules>.Success(new DraftRules(
-                configuration.DraftRoundCount,
-                configuration.DraftLotteryEnabled,
-                configuration.TradableFutureDraftHorizon,
-                configuration.RetainedRoundNumber,
-                configuration.RetainedRoundInterval));
-        }
-        catch (ArgumentException exception)
-        {
-            return DomainOperationResult<DraftRules>.Failure(
-                new DomainError(InvalidDraftRulesCode, exception.Message));
-        }
+        var result = DraftRules.Create(
+            configuration.DraftRoundCount,
+            configuration.DraftLotteryEnabled,
+            configuration.TradableFutureDraftHorizon,
+            configuration.RetainedRoundNumber,
+            configuration.RetainedRoundInterval);
+
+        return result.IsFailure
+            ? DomainOperationResult<DraftRules>.Failure(result.Errors
+                .Select(error => new DomainError(InvalidDraftRulesCode, error.Message))
+                .ToArray())
+            : result;
     }
 }

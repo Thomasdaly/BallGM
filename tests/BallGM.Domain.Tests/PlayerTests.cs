@@ -11,11 +11,14 @@ public sealed class PlayerTests
             new PlayerId("player-001"),
             "Fictional Forward",
             Position.SmallForward,
-            new PlayerRating(overall: 75));
+            new PlayerRating(overall: 75),
+            new DateOnly(2000, 6, 15),
+            seasonsOfService: 4);
 
         Assert.True(result.IsSuccess);
         Assert.False(result.Value.IsInjured);
         Assert.Null(result.Value.CurrentInjury);
+        Assert.Equal(4, result.Value.SeasonsOfService);
     }
 
     [Fact]
@@ -26,6 +29,8 @@ public sealed class PlayerTests
             "Fictional Forward",
             Position.SmallForward,
             new PlayerRating(overall: 75),
+            new DateOnly(2000, 6, 15),
+            seasonsOfService: 4,
             new Injury("Sprained ankle"));
 
         Assert.True(result.IsSuccess);
@@ -83,12 +88,63 @@ public sealed class PlayerTests
         Assert.Equal("player.not_injured", error.Code);
     }
 
+    /// <summary>
+    /// Age is measured against a supplied date rather than the wall clock, so this assertion cannot
+    /// start failing on the player's birthday.
+    /// </summary>
+    [Fact]
+    public void AgeIsCountedInCompletedYearsAgainstTheSuppliedDate()
+    {
+        var player = Player.Create(
+            new PlayerId("player-001"),
+            "Fictional Forward",
+            Position.SmallForward,
+            new PlayerRating(overall: 75),
+            new DateOnly(2000, 6, 15),
+            seasonsOfService: 4).Value;
+
+        Assert.Equal(31, player.AgeOn(new DateOnly(2031, 6, 15)));
+        Assert.Equal(30, player.AgeOn(new DateOnly(2031, 6, 14)));
+    }
+
+    [Fact]
+    public void CreateRejectsNegativeSeasonsOfServiceRatherThanThrowing()
+    {
+        var result = Player.Create(
+            new PlayerId("player-001"),
+            "Fictional Forward",
+            Position.SmallForward,
+            new PlayerRating(overall: 75),
+            new DateOnly(2000, 6, 15),
+            seasonsOfService: -1);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("player.negative_seasons_of_service", Assert.Single(result.Errors).Code);
+    }
+
+    [Fact]
+    public void CreateRejectsAMissingBirthDateRatherThanDefaultingIt()
+    {
+        var result = Player.Create(
+            new PlayerId("player-001"),
+            "Fictional Forward",
+            Position.SmallForward,
+            new PlayerRating(overall: 75),
+            birthDate: default,
+            seasonsOfService: 4);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("player.missing_birth_date", Assert.Single(result.Errors).Code);
+    }
+
     private static Player CreatePlayer()
     {
         return Player.Create(
             new PlayerId("player-001"),
             "Fictional Forward",
             Position.SmallForward,
-            new PlayerRating(overall: 75)).Value;
+            new PlayerRating(overall: 75),
+            new DateOnly(2000, 6, 15),
+            seasonsOfService: 4).Value;
     }
 }

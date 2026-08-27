@@ -3,6 +3,7 @@ using BallGM.Domain.Contracts;
 using BallGM.Domain.DraftAssets;
 using BallGM.Domain.Franchises;
 using BallGM.Domain.Leagues;
+using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Teams;
 
@@ -88,7 +89,8 @@ public sealed record TransactionEntry
         string reason,
         FranchiseId? franchiseId = null,
         FranchiseId? counterpartyFranchiseId = null,
-        DraftPickId? draftPickId = null)
+        DraftPickId? draftPickId = null,
+        SigningRouteKind? signingRoute = null)
     {
         ArgumentNullException.ThrowIfNull(id);
         ArgumentNullException.ThrowIfNull(season);
@@ -124,6 +126,7 @@ public sealed record TransactionEntry
         FranchiseId = franchiseId;
         CounterpartyFranchiseId = counterpartyFranchiseId;
         DraftPickId = draftPickId;
+        SigningRoute = signingRoute;
     }
 
     public TransactionId Id { get; }
@@ -154,4 +157,12 @@ public sealed record TransactionEntry
     public FranchiseId? CounterpartyFranchiseId { get; }
 
     public DraftPickId? DraftPickId { get; }
+
+    /// <summary>
+    /// How the team paid for a signing, on the entries that record one. A ledger that says a contract
+    /// was signed but not what permitted it cannot answer the question a GM asks next — how much of
+    /// the allowance is left — and it is the one figure a later signing has to derive from history
+    /// rather than from stored state.
+    /// </summary>
+    public SigningRouteKind? SigningRoute { get; }
 }

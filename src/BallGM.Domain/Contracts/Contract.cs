@@ -17,10 +17,6 @@ namespace BallGM.Domain.Contracts;
 /// </summary>
 public sealed class Contract
 {
-    private const string NoSeasonsCode = "contract.no_seasons";
-    private const string DuplicateSeasonCode = "contract.duplicate_season";
-    private const string NonContiguousSeasonsCode = "contract.seasons_not_contiguous";
-    private const string GuaranteeExceedsCompensationCode = "contract.guarantee_exceeds_compensation";
     private const string SeasonNotInContractCode = "contract.season_not_in_contract";
     private const string SeasonHasNoOptionCode = "contract.season_has_no_option";
     private const string OptionAlreadyDecidedCode = "contract.option_already_decided";
@@ -53,52 +49,13 @@ public sealed class Contract
         ArgumentNullException.ThrowIfNull(playerId);
         ArgumentNullException.ThrowIfNull(terms);
 
-        var termList = terms.ToList();
-        if (termList.Any(term => term is null))
+        var normalized = ContractTerms.Normalize(terms, nameof(terms));
+        if (normalized.IsFailure)
         {
-            throw new ArgumentException("Contract terms cannot contain null seasons.", nameof(terms));
+            return DomainOperationResult<Contract>.Failure(normalized.Errors.ToArray());
         }
 
-        var errors = new List<DomainError>();
-
-        if (termList.Count == 0)
-        {
-            errors.Add(new DomainError(NoSeasonsCode, "A contract must cover at least one season."));
-            return DomainOperationResult<Contract>.Failure(errors.ToArray());
-        }
-
-        termList = termList.OrderBy(term => term.Season.Year).ToList();
-
-        for (var index = 1; index < termList.Count; index++)
-        {
-            var previousYear = termList[index - 1].Season.Year;
-            var year = termList[index].Season.Year;
-
-            if (year == previousYear)
-            {
-                errors.Add(new DomainError(
-                    DuplicateSeasonCode,
-                    $"A contract cannot carry two terms for season {year}."));
-            }
-            else if (year != previousYear + 1)
-            {
-                errors.Add(new DomainError(
-                    NonContiguousSeasonsCode,
-                    $"Contract seasons must run consecutively: season {year} does not follow season {previousYear}."));
-            }
-        }
-
-        foreach (var term in termList.Where(term => term.GuaranteedAmount > term.Compensation))
-        {
-            errors.Add(new DomainError(
-                GuaranteeExceedsCompensationCode,
-                $"Season {term.Season.Year} guarantees {term.GuaranteedAmount.SmallestUnits}, which is more than its compensation of {term.Compensation.SmallestUnits}."));
-        }
-
-        if (errors.Count > 0)
-        {
-            return DomainOperationResult<Contract>.Failure(errors.ToArray());
-        }
+        var termList = normalized.Value.ToList();
 
         return DomainOperationResult<Contract>.Success(new Contract(id, teamId, playerId, termList));
     }

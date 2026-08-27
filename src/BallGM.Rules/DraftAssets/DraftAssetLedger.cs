@@ -32,6 +32,15 @@ public sealed class DraftAssetLedger
         ArgumentNullException.ThrowIfNull(firstDraftSeason);
         ArgumentNullException.ThrowIfNull(draftRules);
 
+        // A league with no draft gets a board with no drafts on it, not a failure: "there is nothing
+        // to show here" is a true answer about a league, and refusing to build the board would stop
+        // the rest of the screen loading over a section that league does not have.
+        if (!draftRules.HasDraft)
+        {
+            return DomainOperationResult<DraftAssetBoard>.Success(
+                new DraftAssetBoard(firstDraftSeason, DraftCount: 0, RoundCount: 0, Rows: []));
+        }
+
         var draftCount = draftRules.TradableFutureDraftHorizon;
         if (draftCount <= 0)
         {

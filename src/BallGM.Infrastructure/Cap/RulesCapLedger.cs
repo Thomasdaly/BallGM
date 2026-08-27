@@ -23,13 +23,16 @@ public sealed class RulesCapLedger : ICapLedger
         TeamId teamId,
         Season season,
         IReadOnlyCollection<CapCharge> charges,
+        int filledRosterSpots,
         LeagueConfiguration configuration)
     {
+        ArgumentNullException.ThrowIfNull(charges);
         ArgumentNullException.ThrowIfNull(configuration);
 
         // The configuration came from a file a modder can edit, so an inconsistent set of
         // thresholds is untrusted input: it fails explainably here rather than throwing.
         var thresholdsResult = CapThresholds.Create(
+            configuration.PayrollFloor,
             configuration.SoftCap,
             configuration.LuxuryTax,
             configuration.FirstApron,
@@ -41,6 +44,19 @@ public sealed class RulesCapLedger : ICapLedger
             return DomainOperationResult<TeamCapSheet>.Failure(thresholdsResult.Errors.ToArray());
         }
 
-        return _capLedger.Evaluate(teamId, season, charges, thresholdsResult.Value);
+        // Contract charges arrive from the caller; holds are projected here, on the rules side of the
+        // port, because their size and count are ruleset content. The two lists are added together
+        // into one collection rather than kept apart: a payroll is one sum, and a hold that has to be
+        // added in a second place is a hold one caller eventually forgets.
+        var holds = RosterSlotHoldProjection.ForTeamSeason(
+            teamId,
+            season,
+            filledRosterSpots,
+            configuration.RosterLimits,
+            CompensationFloorScale.From(configuration.Negotiation.CompensationFloorScale));
+
+        var allCharges = charges.Concat(holds).ToList();
+
+        return _capLedger.Evaluate(teamId, season, allCharges, thresholdsResult.Value);
     }
 }
