@@ -202,7 +202,8 @@ public sealed class FixtureSigningTests
             new RulesCapLedger(),
             new RulesDraftAssetLedger(),
             new RulesTradeEngine(),
-            new RulesSigningEngine());
+            new RulesSigningEngine(),
+            new RulesFreeAgencyMarket());
 
         var result = session.Load();
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));

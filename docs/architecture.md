@@ -157,13 +157,67 @@ Every deferred route in `docs/negotiation-mechanisms.md` — incumbent retention
 
 **The hard cap is not a route, it is a ceiling on the result.** No route may leave a team above it, and a league without one has no such ceiling. The payroll floor is the opposite kind of line — being under it after a signing is a *warning*, because a team short of the minimum spend is a team with spending still to do, not a team barred from signing.
 
-**Market resolution is chosen, not stumbled into.** `NegotiationRules.MarketResolution` is a ruleset field with two values. `ResolutionPoint` — the default — accumulates offers during a window and resolves the market at an explicit point, ordering offers within it by a stated deterministic key rather than by arrival. `Immediate` decides the instant an offer lands: defensible, simpler, and dependent on the order the UI happened to submit things in, which is the "the game cheated" complaint. Milestone 6a builds no market, so nothing consumes this field yet — one team offering one player resolves immediately by definition. The field ships now so that the market half adds no second schema change, and the ordering keys are written here when 6b implements them.
+**Market resolution is chosen, not stumbled into.** `NegotiationRules.MarketResolution` is a ruleset field with two values. `ResolutionPoint` — the default — accumulates offers during a window and resolves the market at an explicit point, ordering offers within it by a stated deterministic key rather than by arrival. `Immediate` decides the instant an offer lands: defensible, simpler, and dependent on the order the UI happened to submit things in, which is the "the game cheated" complaint. Milestone 6a built no market, so nothing consumed the field; Milestone 6b consumes it, and the section below states the key.
 
 **Absence is a default for a mode and a rule for a limit.** Every negotiation *limit* is optional by absence, meaning the league does not have it — a league configuring none of them is an open market where any team may pay anyone anything, which is exactly the uncapped conformance league, and emphatically not a league where nobody may sign. `MarketResolution` is not a limit: every league resolves offers somehow, so its absence is a documented default, the same way `DraftLotteryEnabled` and `SecondApronBlocksSalaryIncrease` already behave. That distinction is the one to reach for when the draft-slot scale and the tax brackets arrive.
 
 `BallGM.Application.Negotiations.ISigningEngine` is the port and `BallGM.Infrastructure.Negotiations.RulesSigningEngine` the adapter, identical in shape to the cap, draft-asset, and trade pairs. `LeagueSession` gains `AssessOffer` and `SubmitOffer`; a signing is the one transaction so far that *creates* an aggregate rather than moving one, so the session replaces the snapshot it holds with one that includes the new contract.
 
 **The roster minimum became an obligation rather than an invariant.** `Team.Create` no longer refuses a roster below the minimum, and `TradeValidator`/`Team.ApplyTrade` refuse only a trade that takes a team *further* below it. A squad three players short is the ordinary state of a team in the middle of free agency, and it is precisely the state a roster-slot hold prices — a league whose teams cannot be short of the minimum is a league where holds are unreachable code. The maximum stays a hard refusal, because it is a different kind of rule: a team over its limit is not a team with something left to do.
+
+## The free-agency market: how a player chooses, and what may decide it
+
+Milestone 6b is the other half of a signing: 6a answers "may this team sign this player", and this answers "given everyone who wants them, who gets them". Same division of labour as the trade and signing engines, and the same two types: `BallGM.Rules.Negotiations.FreeAgencyMarketResolver` never mutates anything, and `FreeAgencyMarketExecutor` re-validates against the league as it stands, then applies the outcome with a restore point.
+
+**Every competing offer is re-run through `SigningValidator`.** The market owns no affordability rule of its own. An offer that has stopped being a legal signing since it was made — its team crossed an apron, filled its roster, spent its allowance elsewhere — is excluded on a rule code rather than shaded down on taste, and the two ways an offer can lose stay visibly apart on the assessment: one the *league* would not permit, and one the *player* would not accept.
+
+### The preference model is four factors, and never a total
+
+`BallGM.Domain.Negotiations.OfferPreference` carries one `PreferenceContribution` per factor — money, term, team fit, market demand — each with its own 0–100 reading, its own rule code, and its own sentence. There is deliberately no sum, no weight vector, and no overall score anywhere in the type.
+
+The alternative was a weighted total that is always displayed decomposed, which is what most management games do. It was rejected for one reason: a total cannot answer "which factor beat me". A GM who outbid a rival by $2m and lost has to be told it was the three extra guaranteed seasons, and any presentation layered over `69.8 vs 71.2` is reconstructing that answer after the fact rather than reporting it.
+
+**Ranking is therefore a comparison, not a sort key.** `PreferenceRanking.Compare` walks the factors in a fixed order — money, term, team fit, market demand — and stops at the first one where the two offers differ by more than that factor's **materiality band**. A factor inside its band has no opinion and hands over to the next: a player does not move towns over $200k, and a model that lets them is a model where money quietly decides everything. Money leads because money is what a GM is actually bidding with; a market where the biggest cheque routinely loses to a marginal fit reading is a market nobody can play.
+
+Two consequences worth stating, because both shaped the code:
+
+- **The comparison is not transitive**, and cannot be: A can sit inside B's band and B inside C's while A and C are apart. So the resolver *selects* repeatedly from a list already in the stated key order rather than handing the comparison to `Sort`, whose result would otherwise depend on the sort's internals.
+- **Indifference is a definable state rather than an exact-tie coincidence.** That is what bounds the seeded draw: it fires only where no factor separates the leaders at all, and never as a tiebreak on a number.
+
+### The ordering key, stated
+
+Within a resolution point, offers are ordered by **team identifier, then offer identifier, both ordinal ascending**. Both are `SortableId`s, so the order is stable across runs, stable across platforms, and independent of the order a UI submitted anything in. `Negotiation.LiveOffersOn` returns them in that order, so nothing downstream has to remember to sort.
+
+`Immediate` mode is the one place arrival order is read, because arrival order is the entire content of that mode: the first acceptable offer is taken and later ones are never weighed against it. It is reported as a note on the assessment, so a GM in such a league knows why their better offer was never considered.
+
+### Where randomness is allowed, and where it is not
+
+Every part of a resolution is arithmetic on the league except one: when the preference comparison reports it cannot separate the leading offers on any factor, one is drawn through `IRandomSource`. The draw runs over a list already in the stated key order, so the same league, the same offers and the same seed produce the same winner on every run. Below the top place the tie falls to the key rather than spending a draw on an ordering nobody acts on.
+
+The assessment carries `TieBreakUsed`, and the board says so in words. "The draw landed that way" is a better answer to a GM than a reason invented after the fact.
+
+### Time, before there is a calendar
+
+Offer expiry is measured in `NegotiationRules.OfferExpiryDays`, so the market needs a notion of elapsed time — and the schedule does not arrive until Milestone 7. `BallGM.Domain.Negotiations.SeasonDay` is an index counted from the day the market opened, not a date: an offer that expired because a wall clock moved would make a save irreproducible, and re-opening a league next week must not quietly expire everything in it. When the calendar lands it maps its own dates onto this index and nothing that reads an expiry changes.
+
+**Expiry is a query, not a stored flag.** `LiveOffersOn` answers what stands on a given day for a given league's rule; recording that an offer expired is a separate, explicit act performed by the executor. An assessment has to be able to ask what has timed out without that question being what times it out.
+
+### An in-flight negotiation is session state, not league state
+
+`Negotiation` is not on `LeagueSnapshot`. A negotiation is market state a session owns for as long as free agency is running, and putting it in the snapshot would give every read model in the game an opinion about it. `LeagueSession` holds them keyed by player, and the port takes the negotiation as an argument.
+
+`BallGM.Application.Negotiations.IFreeAgencyMarket` is the port and `BallGM.Infrastructure.Negotiations.RulesFreeAgencyMarket` the adapter, identical in shape to the cap, draft-asset, trade, and signing pairs. `LeagueSession` gains `OpenNegotiation`, `PlaceOffer`, `Counteroffer`, `WithdrawOffer`, `AssessMarket`, `ResolveMarket`, `FreeAgencyBoard`, and `AdoptNegotiation` — the last being the load half of a save.
+
+**Saves are versioned per concept.** `NegotiationEnvelope` carries its own `CurrentSchemaVersion`, independent of the ruleset's and of `LeagueSaveEnvelope`'s, because a negotiation and a ruleset change for different reasons and one version covering both would force a migration on everyone whenever either moved. Loading **replays the history through the aggregate's own methods** rather than assigning fields, so a save claiming a team withdrew an offer it never made is refused by the same rule that would have refused it live — and the state the file declares is checked against the state the replay reaches, so a file cannot assert an outcome its own history does not support. The serializer also sets `JsonUnmappedMemberHandling.Disallow`, so a file from a later build fails structurally instead of silently dropping half a market.
+
+### Rolling back a market
+
+`FreeAgencyMarketExecutor` mutates the negotiation first — expiries, then the outcome — and signs last. Everything before the signing is reversible through `Negotiation.RestoreTo`, which is a plain state restore rather than a rule-checked method for the same reason `Team.RestoreRoster` is: an undo that can be refused is not an undo. If the signing is refused, the history unwinds and the league was never touched.
+
+### The board is columned by position, on purpose
+
+`FreeAgencyBoardSummary` presents the market as one column per position, each carrying the team's own depth chart at that position alongside the best players available for it, plus whatever this team has on the table and whatever the player has countered with. A league-wide "best available" list answers who the best free agent is and nothing about whether this team needs one; a market a GM cannot read against their own squad is a market they cannot play.
+
 
 ## Cross-cutting design decisions
 

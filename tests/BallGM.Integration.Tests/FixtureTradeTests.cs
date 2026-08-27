@@ -201,7 +201,9 @@ public sealed class FixtureTradeTests
             new FixtureLeagueDataSource(),
             new RulesCapLedger(),
             new RulesDraftAssetLedger(),
-            new RulesTradeEngine(), new RulesSigningEngine());
+            new RulesTradeEngine(),
+            new RulesSigningEngine(),
+            new RulesFreeAgencyMarket());
 
         var result = session.Load();
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));

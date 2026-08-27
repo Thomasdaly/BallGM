@@ -31,7 +31,7 @@ generic name is also the obvious one, and that is a good sign.
 
 ## Verdict key
 
-- **M6a** / **M6b** — Milestone 6 ships in two halves, with a checkpoint between them. **6a** is offer legality, the signing routes, roster-slot holds, and an offer screen: a GM can sign an uncontested free agent, or be refused and told exactly which line they crossed. **6b** is the market: the `Negotiation` state machine, the decomposed `PlayerPreference`, seeded tie-breaking, simultaneity and resolution ordering, competing offers, and the free-agency board. 6a is bounded and mechanical against machinery that already exists three times over; 6b holds both genuinely open design questions and all the new UI, and merging them would leave the half most likely to balloon with nothing to balloon against.
+- **M6a** / **M6b** — Milestone 6 ships in two halves, with a checkpoint between them. **6a** is offer legality, the signing routes, roster-slot holds, and an offer screen: a GM can sign an uncontested free agent, or be refused and told exactly which line they crossed. **6b** is the market: the `Negotiation` state machine, the decomposed `PlayerPreference`, seeded tie-breaking, simultaneity and resolution ordering, competing offers, and the free-agency board. 6a is bounded and mechanical against machinery that already exists three times over; 6b holds both genuinely open design questions and all the new UI, and merging them would leave the half most likely to balloon with nothing to balloon against. **Both halves are now shipped.**
 - **M6** — built in Milestone 6 (used below where the half does not matter).
 - **M7**–**M12** — named now, built in the stated milestone, because it depends on machinery
   that milestone introduces (a calendar, a draft class, an AI front office).
@@ -121,7 +121,7 @@ your standard allowance has $2.1m left" is.
 | **Retention offer** | A standing offer to your own expiring player that makes them contestable rather than free | M9 | Domain — `Negotiation` variant |
 | **Matching right** | Incumbent's right to match a rival's signed offer and keep the player | M9 | Rules service + `Negotiation` state |
 | **Competing offer sheet** | The rival offer a matching right is exercised against | M9 | Domain |
-| **Agreement moratorium** | A window where terms are agreed but not signable, so the market resolves as a batch | Configured (M6a), consumed M6b | `NegotiationRules.MarketResolution` |
+| **Agreement moratorium** | A window where terms are agreed but not signable, so the market resolves as a batch | **Built (M6b)** — configured in 6a, consumed in 6b | `NegotiationRules.MarketResolution` + `FreeAgencyMarketResolver` |
 | **Prior-salary arbitrage rules** | Adjustments preventing a just-signed contract being used as matching salary | Declined | — |
 
 **Roster-slot hold is in M6a for one reason:** without it, a team with eight players and $30m of
@@ -129,15 +129,18 @@ room appears able to spend all $30m on one player, then discovers it cannot fill
 the minimum. That is a trap the UI would set for the player and the AI would walk into. It is a
 small piece of `CapChargeProjection` and it belongs with the first signing.
 
-**Simultaneity.** The prompt for this milestone flags market resolution ordering as the decision
-most likely to expand scope. This document's position: the **agreement moratorium** is the
-mechanism that makes it a rule rather than an accident. Offers accumulate during a window; the
-market resolves at an explicit point; within a resolution point, offers are ordered
-deterministically by a stated key, not by arrival. The alternative — a player decides the
-instant an offer lands — is defensible and simpler, but makes the outcome depend on the order
-the UI happened to submit things in, which is exactly the "the game cheated" complaint. Whichever
-is chosen, it is a `LeagueRuleset` field, not a hardcoded behaviour, and it gets written into
-`docs/architecture.md`.
+**Simultaneity — settled, and built as this document proposed.** The prompt for this milestone
+flagged market resolution ordering as the decision most likely to expand scope. This document's
+position was that the **agreement moratorium** is the mechanism that makes it a rule rather than an
+accident, and that is what shipped: offers accumulate, the market resolves at an explicit point, and
+within a resolution point offers are ordered by a stated key rather than by arrival. `Immediate`
+exists as the other mode, is honestly labelled as arrival-order dependent, and reports itself as a
+note so a GM in such a league knows why their better late offer was never weighed.
+
+**The stated key is `(TeamId, OfferId)`, ordinal ascending.** Both are `SortableId`s, so the order is
+stable across runs and platforms and owes nothing to submission order. The reasoning, and the
+non-transitivity consequence that stopped it being a sort comparator, are in `docs/architecture.md` →
+"The free-agency market".
 
 ## 4. Roster structure
 
@@ -179,10 +182,33 @@ The minimum coherent set, restated as one list, and split across the two halves.
 6. Conformance: free agency in `data/rulesets/conformance/uncapped-open-league.json`, where any
    team may pay anyone anything and every other route reports "this league has no such line".
 
-**Milestone 6b — next.** The `Negotiation` state machine with its offer history, `PlayerPreference`
-decomposed per factor, seeded tie-breaking where the model is genuinely indifferent, the
-simultaneity model consumed rather than merely configured, competing offers, counteroffers, expiry,
-the positional free-agency board, and a save round trip of an in-flight negotiation.
+**Milestone 6b — shipped.**
+
+1. The `Negotiation` aggregate: an ordered history of offers, counteroffers, withdrawals and
+   expiries, and the four states that history leaves it in — open, resolved on an offer, signed, or
+   closed with nobody. Every transition is rule-checked, including on load.
+2. Preference decomposed per factor — money, term, team fit, market demand — each reporting its own
+   reading, rule code and sentence, and **never summed**. Ranking compares factor by factor with a
+   materiality band per factor.
+3. `MarketResolution` consumed rather than merely configured, with the ordering key stated above.
+4. Competing offers resolved together at one point, each re-checked through the same
+   `SigningValidator` an offer screen uses, so an offer that stopped being legal loses on a rule code.
+5. Seeded tie-breaking through `IRandomSource`, and **only** where the comparison reports that no
+   factor separates the leaders. Surfaced on the assessment rather than hidden.
+6. Offer expiry, measured in `SeasonDay` — an index rather than a date, because there is no calendar
+   until Milestone 7 and a save must not age when a wall clock does.
+7. The positional free-agency board: one column per position against the team's own depth, best
+   available per slot, with our offer and their counter on each candidate.
+8. A save round trip of an in-flight negotiation, at `NegotiationEnvelope` schema version 1, loaded
+   by replaying the history through the aggregate rather than by assigning fields.
+
+Three decisions from 6b worth not re-deriving. **A counteroffer is a new `Offer` in the history
+authored by the player, not a state transition** — the negotiation stays open, nothing is accepted,
+and a team that likes the counter answers it by offering again. **There is no overall preference
+score anywhere in the model**, and a weighted total that is merely displayed decomposed was
+considered and rejected: it cannot answer "which factor beat me". **An in-flight negotiation is
+session state, not league state**, so it is not on `LeagueSnapshot` and it carries its own save
+schema version independent of the ruleset's.
 
 Everything else above is named, dated, and out.
 

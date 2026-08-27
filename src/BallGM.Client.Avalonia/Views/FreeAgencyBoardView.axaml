@@ -1,0 +1,196 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.FreeAgencyBoardView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:FreeAgencyBoardViewModel">
+  <Grid RowDefinitions="Auto,*" RowSpacing="10">
+    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+      <TextBlock Text="{Binding BoardLine}" FontSize="12" Opacity="0.7" TextWrapping="Wrap" VerticalAlignment="Center" />
+      <TextBlock Grid.Column="1" Text="DAY" FontSize="11" FontWeight="SemiBold" Opacity="0.6" VerticalAlignment="Center" />
+      <NumericUpDown Grid.Column="2" Value="{Binding Day}" Minimum="0" Maximum="365" Increment="1" FormatString="0" Width="110" />
+    </Grid>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,20,340">
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Columns}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="10" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:BoardColumnRow">
+              <Border BorderBrush="#33888888" BorderThickness="1" CornerRadius="4" Padding="8" Width="230">
+                <DockPanel>
+                  <StackPanel DockPanel.Dock="Top" Spacing="2">
+                    <TextBlock Text="{Binding Position}" FontSize="16" FontWeight="Bold" />
+                    <TextBlock Text="{Binding DepthLine}" FontSize="11" Opacity="0.6" />
+                  </StackPanel>
+
+                  <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding OwnPlayers}" Margin="0,6,0,0">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:BoardDepthRow">
+                        <Grid ColumnDefinitions="*,32" Margin="0,1">
+                          <TextBlock Text="{Binding FullName}" FontSize="11" Opacity="0.75" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="1" Text="{Binding Overall}" FontSize="11" Opacity="0.75" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <TextBlock
+                    DockPanel.Dock="Top"
+                    Text="AVAILABLE"
+                    FontSize="10"
+                    FontWeight="SemiBold"
+                    Opacity="0.6"
+                    Margin="0,10,0,4" />
+
+                  <TextBlock
+                    DockPanel.Dock="Top"
+                    Text="Nobody unsigned at this position."
+                    FontSize="11"
+                    Opacity="0.5"
+                    IsVisible="{Binding !HasCandidates}" />
+
+                  <ListBox ItemsSource="{Binding Candidates}" SelectedItem="{Binding $parent[UserControl].((vm:FreeAgencyBoardViewModel)DataContext).Candidate}">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate x:DataType="vm:BoardCandidateRow">
+                        <StackPanel Spacing="1">
+                          <Grid ColumnDefinitions="*,32">
+                            <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="1" Text="{Binding Overall}" Opacity="0.7" />
+                          </Grid>
+                          <TextBlock Text="{Binding Detail}" FontSize="10" Opacity="0.6" />
+                          <TextBlock Text="{Binding AskLine}" FontSize="10" Opacity="0.6" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding MarketLine}" FontSize="10" Opacity="0.6" TextWrapping="Wrap" />
+                          <TextBlock Text="{Binding OurOfferLine}" FontSize="10" Opacity="0.6" TextWrapping="Wrap" />
+                          <TextBlock
+                            Text="{Binding CounterLine}"
+                            FontSize="10"
+                            FontWeight="SemiBold"
+                            Opacity="0.85"
+                            TextWrapping="Wrap"
+                            IsVisible="{Binding HasCounter}" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </DockPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <DockPanel Grid.Column="2">
+        <StackPanel DockPanel.Dock="Top" Spacing="6">
+          <TextBlock Text="SELECTED" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+          <TextBlock Text="{Binding CandidateLine}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
+
+          <TextBlock Text="FIRST SEASON ($M)" FontSize="11" FontWeight="SemiBold" Opacity="0.6" Margin="0,8,0,0" />
+          <TextBox Text="{Binding FirstSeasonSalary}" />
+
+          <TextBlock Text="SEASONS" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+          <NumericUpDown Value="{Binding Seasons}" Minimum="1" Maximum="12" Increment="1" FormatString="0" />
+
+          <Grid ColumnDefinitions="*,8,*" Margin="0,6,0,0">
+            <Button Content="Offer" Command="{Binding OfferCommand}" IsEnabled="{Binding HasCandidate}" HorizontalAlignment="Stretch" />
+            <Button Grid.Column="2" Content="Counter" Command="{Binding CounterCommand}" IsEnabled="{Binding HasCandidate}" HorizontalAlignment="Stretch" />
+          </Grid>
+
+          <Grid ColumnDefinitions="*,8,*">
+            <Button Content="Check market" Command="{Binding CheckMarketCommand}" IsEnabled="{Binding HasCandidate}" HorizontalAlignment="Stretch" />
+            <Button Grid.Column="2" Content="Resolve market" Command="{Binding ResolveMarketCommand}" IsEnabled="{Binding HasCandidate}" HorizontalAlignment="Stretch" />
+          </Grid>
+
+          <TextBlock Text="{Binding Status}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" Margin="0,4,0,0" />
+          <TextBlock Text="{Binding MarketLine}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <ScrollViewer Margin="0,10,0,0">
+          <StackPanel Spacing="8">
+            <ItemsControl ItemsSource="{Binding Standings}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:MarketStandingRow">
+                  <Border BorderBrush="#33888888" BorderThickness="1" CornerRadius="4" Padding="6" Margin="0,0,0,6">
+                    <StackPanel Spacing="2">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding TeamName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{Binding RankLabel}" FontSize="11" Opacity="0.7" />
+                      </Grid>
+                      <TextBlock Text="{Binding Terms}" FontSize="11" Opacity="0.7" />
+                      <TextBlock Text="{Binding Narrative}" FontSize="11" Opacity="0.8" TextWrapping="Wrap" />
+
+                      <ItemsControl ItemsSource="{Binding Factors}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:PreferenceFactorRow">
+                            <StackPanel Margin="0,1">
+                              <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding Factor}" FontSize="11" />
+                                <TextBlock Grid.Column="1" Text="{Binding ScoreLine}" FontSize="10" Opacity="0.6" />
+                              </Grid>
+                              <TextBlock Text="{Binding Explanation}" FontSize="10" Opacity="0.6" TextWrapping="Wrap" />
+                            </StackPanel>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+
+                      <ItemsControl ItemsSource="{Binding Exclusions}" IsVisible="{Binding HasExclusions}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:SigningFindingRow">
+                            <TextBlock Text="{Binding Explanation}" FontSize="10" Opacity="0.75" TextWrapping="Wrap" Margin="0,1" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <StackPanel IsVisible="{Binding HasWarnings}" Spacing="2">
+              <TextBlock Text="WORTH KNOWING" FontSize="10" FontWeight="SemiBold" Opacity="0.6" />
+              <ItemsControl ItemsSource="{Binding Warnings}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SigningFindingRow">
+                    <TextBlock Text="{Binding Explanation}" FontSize="10" Opacity="0.7" TextWrapping="Wrap" Margin="0,1" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+            <StackPanel IsVisible="{Binding HasNotes}" Spacing="2">
+              <TextBlock Text="NOT RULES IN THIS LEAGUE" FontSize="10" FontWeight="SemiBold" Opacity="0.6" />
+              <ItemsControl ItemsSource="{Binding Notes}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:SigningFindingRow">
+                    <TextBlock Text="{Binding Explanation}" FontSize="10" Opacity="0.7" TextWrapping="Wrap" Margin="0,1" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+
+            <StackPanel IsVisible="{Binding HasOurNegotiations}" Spacing="2">
+              <TextBlock Text="OUR MARKETS" FontSize="10" FontWeight="SemiBold" Opacity="0.6" />
+              <ItemsControl ItemsSource="{Binding OurNegotiations}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:BoardNegotiationRow">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,1">
+                      <StackPanel>
+                        <TextBlock Text="{Binding PlayerName}" FontSize="11" />
+                        <TextBlock Text="{Binding Detail}" FontSize="10" Opacity="0.6" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="1" Text="{Binding State}" FontSize="10" Opacity="0.6" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Grid>
+  </Grid>
+</UserControl>

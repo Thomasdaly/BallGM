@@ -97,20 +97,20 @@ nothing to balloon against.
 - Roster-slot holds, so the room a cap sheet reports is room a team can spend
 - Atomic, auditable acceptance in the trade executor's undo-stack shape
 
-**6b (next):**
+**6b (done):**
 
-- Player preferences, decomposed per factor and never a single score
-- team fit
-- market demand
-- offers and counteroffers
-- seeded stochastic choices
-- explainable outcomes
+- The `Negotiation` aggregate: offer history, counteroffers, withdrawals, expiry, four states
+- Player preferences decomposed per factor — money, term, team fit, market demand — never summed
+- Competing offers resolved together at one point, each re-checked by the signing validator
+- `MarketResolution` consumed: a stated ordering key at a resolution point, arrival order on immediate
+- Seeded tie-breaking, and only where no factor separates the leaders
+- A positional free-agency board, and a versioned save round trip of an in-flight negotiation
 
 Scope for this milestone is fixed by `docs/negotiation-mechanisms.md`, which inventories every signing mechanism and marks each one built, deferred to a named milestone, or declined. Three signing routes ship here — cap room, minimum salary, and one standard over-cap allowance — and the rest are dated, not half-built. That document also lists four prerequisites this milestone cannot defer, the largest being that `Player` currently carries no service time or age.
 
 Two additions from `docs/competitive-feature-review.md`, both inside the work this milestone already owns: the free-agency board is columned **by position against the team's own depth** (a market you cannot read is a market you cannot play), and the market-resolution model is written into `docs/architecture.md` when chosen, not left implicit.
 
-UI: an offer screen with every signing route's verdict (6a, done), then the free-agency board — positional columns, best available per slot — and counteroffers (6b).
+UI: an offer screen with every signing route's verdict (6a, done), and the free-agency board — positional columns, best available per slot, counteroffers, and the per-factor breakdown behind every competing offer (6b, done).
 
 ## Milestone 7 — Calendar and game simulation
 

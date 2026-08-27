@@ -471,7 +471,12 @@ public sealed class GetLeagueOverviewQuery(
         _ => kind.ToString(),
     };
 
-    private static string DescribePosition(Position position) => position switch
+    /// <summary>
+    /// The short label every screen shows a position by. Internal rather than private because the
+    /// free-agency board columns by position too, and two copies of this map is two places for a
+    /// league's positions to stop agreeing with each other.
+    /// </summary>
+    internal static string DescribePosition(Position position) => position switch
     {
         Position.PointGuard => "PG",
         Position.ShootingGuard => "SG",

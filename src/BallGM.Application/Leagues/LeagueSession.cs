@@ -9,6 +9,7 @@ using BallGM.Domain.DraftAssets;
 using BallGM.Domain.Leagues;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
+using BallGM.Domain.Randomness;
 using BallGM.Domain.Teams;
 using BallGM.Domain.Trades;
 
@@ -27,7 +28,7 @@ namespace BallGM.Application.Leagues;
 /// client discards it. Persistence arrives with save migrations.
 /// </para>
 /// </summary>
-public sealed class LeagueSession
+public sealed partial class LeagueSession
 {
     private const string NotLoadedCode = "league_session.not_loaded";
     private const string UnknownTeamCode = "trade_request.unknown_team";
@@ -35,10 +36,27 @@ public sealed class LeagueSession
     private const string UnknownAssetKindCode = "trade_request.unknown_asset_kind";
     private const string EmptyOfferCode = "offer_request.no_seasons";
 
+    /// <summary>
+    /// The seed every free-agency tie-break is drawn from until a save carries one. A constant rather
+    /// than a clock: two runs of the same league from the same fixture have to resolve the same
+    /// market the same way, or nothing about free agency is reproducible.
+    /// </summary>
+    public const int DefaultMarketSeed = 20260828;
+
     private readonly ILeagueDataSource _dataSource;
     private readonly ITradeEngine _tradeEngine;
     private readonly ISigningEngine _signingEngine;
+    private readonly IFreeAgencyMarket _freeAgencyMarket;
+    private readonly IRandomSource _marketRandom;
     private readonly GetLeagueOverviewQuery _overviewQuery;
+
+    /// <summary>
+    /// The negotiations currently running, keyed by the player whose market each one is. Held here
+    /// rather than on <see cref="LeagueSnapshot"/> because an in-flight negotiation is market state
+    /// this session owns for as long as free agency is running, not league state every screen has to
+    /// project. It survives a signing, a trade, and a re-projection, and it is what a save writes.
+    /// </summary>
+    private readonly Dictionary<string, Negotiation> _negotiations = [];
 
     private LeagueSnapshot? _snapshot;
 
@@ -47,17 +65,22 @@ public sealed class LeagueSession
         ICapLedger capLedger,
         IDraftAssetLedger draftAssetLedger,
         ITradeEngine tradeEngine,
-        ISigningEngine signingEngine)
+        ISigningEngine signingEngine,
+        IFreeAgencyMarket freeAgencyMarket,
+        int marketSeed = DefaultMarketSeed)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
         ArgumentNullException.ThrowIfNull(capLedger);
         ArgumentNullException.ThrowIfNull(draftAssetLedger);
         ArgumentNullException.ThrowIfNull(tradeEngine);
         ArgumentNullException.ThrowIfNull(signingEngine);
+        ArgumentNullException.ThrowIfNull(freeAgencyMarket);
 
         _dataSource = dataSource;
         _tradeEngine = tradeEngine;
         _signingEngine = signingEngine;
+        _freeAgencyMarket = freeAgencyMarket;
+        _marketRandom = new SeededRandomSource(marketSeed);
         _overviewQuery = new GetLeagueOverviewQuery(dataSource, capLedger, draftAssetLedger, signingEngine);
     }
 

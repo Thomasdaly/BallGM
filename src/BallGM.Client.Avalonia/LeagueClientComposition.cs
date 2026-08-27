@@ -27,7 +27,8 @@ internal static class LeagueClientComposition
             new RulesCapLedger(),
             new RulesDraftAssetLedger(),
             new RulesTradeEngine(),
-            new RulesSigningEngine());
+            new RulesSigningEngine(),
+            new RulesFreeAgencyMarket());
 
         var result = session.Load();
 

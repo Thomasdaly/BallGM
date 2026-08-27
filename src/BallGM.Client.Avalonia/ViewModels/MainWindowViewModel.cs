@@ -41,8 +41,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         _pickBoard = new PickBoardViewModel(overview);
         Trade = new TradeProposalViewModel(overview, session, ApplyLeagueChange);
         FreeAgency = new FreeAgencyViewModel(overview, session, ApplyLeagueChange);
+        FreeAgencyBoard = new FreeAgencyBoardViewModel(overview, session, ApplyLeagueChange);
 
-        Sections = [_roster.Title, _capSheet.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title];
+        Sections = [_roster.Title, _capSheet.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title];
         SelectedTeam = Teams.FirstOrDefault();
         SelectedSection = Sections[0];
     }
@@ -60,6 +61,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         Sections = [];
         Trade = null;
         FreeAgency = null;
+        FreeAgencyBoard = null;
     }
 
     public bool HasLeague { get; }
@@ -81,6 +83,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public TradeProposalViewModel? Trade { get; }
 
     public FreeAgencyViewModel? FreeAgency { get; }
+
+    public FreeAgencyBoardViewModel? FreeAgencyBoard { get; }
 
     public TeamSummary? SelectedTeam
     {
@@ -106,6 +110,11 @@ public sealed class MainWindowViewModel : ViewModelBase
             {
                 _pickBoard.Team = value;
             }
+
+            if (FreeAgencyBoard is not null)
+            {
+                FreeAgencyBoard.Team = value;
+            }
         }
     }
 
@@ -125,6 +134,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 _ when _pickBoard is not null && value == _pickBoard.Title => _pickBoard,
                 _ when Trade is not null && value == Trade.Title => Trade,
                 _ when FreeAgency is not null && value == FreeAgency.Title => FreeAgency,
+                _ when FreeAgencyBoard is not null && value == FreeAgencyBoard.Title => FreeAgencyBoard,
                 _ => _roster,
             };
         }
@@ -157,6 +167,11 @@ public sealed class MainWindowViewModel : ViewModelBase
         _roster.Team = _selectedTeam;
         _capSheet.Team = _selectedTeam;
         _pickBoard.Team = _selectedTeam;
+
+        // The board rebuilds itself against the new league rather than being replaced: it is holding
+        // a day, a selected free agent, and the standings of a market a GM is in the middle of
+        // reading, and none of that survives being thrown away.
+        FreeAgencyBoard?.RefreshFrom(overview);
 
         // The trade and free-agency screens stay put: whichever one is showing is showing the result
         // of what just happened, and rebuilding it would throw that away the moment it became worth
