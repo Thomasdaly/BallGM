@@ -29,7 +29,10 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
     private const string InvalidPostseasonRulesCode = "ruleset.invalid_postseason_rules";
     private const string InvalidNegotiationRulesCode = "ruleset.invalid_negotiation_rules";
 
-    private readonly SeasonEngine _engine = new(matchEngine ?? new UnplayedMatchEngine());
+    // The real model by default. A caller may still hand in UnplayedMatchEngine — a standings test
+    // that wants to inject its own results, or a tool that only cares about the calendar — but a
+    // build that ships without a game model would be a build in which no season ever finishes.
+    private readonly SeasonEngine _engine = new(matchEngine ?? new PossessionMatchEngine());
 
     public DomainOperationResult<SeasonStartOutcome> Start(LeagueSnapshot snapshot, DateOnly seasonStart, int seed)
     {

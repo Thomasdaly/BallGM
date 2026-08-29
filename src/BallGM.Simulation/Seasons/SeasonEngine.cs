@@ -66,6 +66,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
     private const string NoSigningWindowCode = "season.in_season_signing_window_not_configured";
     private const string NoEligibilityCutoffCode = "season.playoff_eligibility_cutoff_not_configured";
     private const string NoShortTermContractsCode = "season.short_term_contracts_not_configured";
+    private const string UnknownTeamCode = "season.unknown_team";
     private const string BracketNotYetDrawnCode = "season.postseason_bracket_not_yet_drawn";
     private const string BracketCannotBeSeededCode = "season.postseason_bracket_cannot_be_seeded";
     private const string PostseasonNeedsMoreDaysCode = "season.postseason_needs_more_days_than_reserved";
@@ -301,7 +302,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         if (team is null)
         {
             return DomainOperationResult<DepthChartBuild>.Failure(new DomainError(
-                "season.unknown_team",
+                UnknownTeamCode,
                 $"Team '{teamId.Value}' is not a team in this league."));
         }
 
@@ -332,11 +333,20 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
                 return DomainOperationResult.Failure(awayChart.Errors.ToArray());
             }
 
-            var setup = new MatchSetup(
-                fixture,
-                homeChart.Value.Chart,
-                awayChart.Value.Chart,
-                run.Seed.ForGame(fixture.Id));
+            var homeTeam = MatchTeamFor(run, context, fixture.HomeTeamId, homeChart.Value.Chart, day);
+            var awayTeam = MatchTeamFor(run, context, fixture.AwayTeamId, awayChart.Value.Chart, day);
+
+            if (homeTeam is null || awayTeam is null)
+            {
+                return DomainOperationResult.Failure(new DomainError(
+                    UnknownTeamCode,
+                    $"Game '{fixture.Id.Value}' is scheduled between teams this league does not have."));
+            }
+
+            // The seed is derived from the game's own identifier and nothing else, so this game plays
+            // out the same way whether it is the first thing simulated after a load or the four
+            // hundredth of an uninterrupted run. See SeedMixer.
+            var setup = new MatchSetup(fixture, homeTeam, awayTeam, run.Seed.ForGame(fixture.Id));
 
             var playResult = _matchEngine.Play(setup);
             if (playResult.IsFailure)
@@ -344,16 +354,76 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
                 return DomainOperationResult.Failure(playResult.Errors.ToArray());
             }
 
-            var recordResult = run.RecordResult(playResult.Value);
+            var outcome = playResult.Value;
+
+            var recordResult = run.RecordResult(outcome.Result);
             if (recordResult.IsFailure)
             {
                 return DomainOperationResult.Failure(recordResult.Errors.ToArray());
             }
 
-            played.Add(playResult.Value);
+            RecordInjuries(run, outcome, day);
+            played.Add(outcome.Result);
         }
 
         return DomainOperationResult.Success;
+    }
+
+    /// <summary>
+    /// Turns the knocks the model reported into spells against the calendar. The model counts an
+    /// injury in days because it has no calendar; deciding <em>which</em> days those are is
+    /// sequencing, and belongs here.
+    /// <para>
+    /// A spell starts the day after the game. The player finished the one they were hurt in — that
+    /// is why the box score has their minutes in it — and an injury that began on the day of the
+    /// game would make them retrospectively unavailable for a game they had already played.
+    /// </para>
+    /// </summary>
+    private static void RecordInjuries(SeasonRun run, MatchOutcome outcome, SeasonDay day)
+    {
+        foreach (var injury in outcome.Injuries)
+        {
+            var from = day.Plus(1);
+
+            run.RecordInjury(new InjurySpell(
+                injury.PlayerId,
+                injury.Description,
+                from,
+                from.Plus(injury.DaysOut)));
+        }
+    }
+
+    /// <summary>One side as the match engine needs it: the rotation, the ratings behind it, and its rest.</summary>
+    private static MatchTeam? MatchTeamFor(
+        SeasonRun run,
+        SeasonContext context,
+        TeamId teamId,
+        DepthChart rotation,
+        SeasonDay day)
+    {
+        var team = context.Team(teamId);
+
+        return team is null
+            ? null
+            : new MatchTeam(teamId, rotation, AvailableFor(team, run, day), RestDaysFor(run, teamId, day));
+    }
+
+    /// <summary>
+    /// Days since this team last played. A team with no previous game is fully rested rather than
+    /// infinitely so, because the fatigue term is bounded and a first game should not be worth more
+    /// than a well-rested one.
+    /// </summary>
+    private static int RestDaysFor(SeasonRun run, TeamId teamId, SeasonDay day)
+    {
+        var previous = run.Schedule.Fixtures
+            .Where(fixture => fixture.Day < day && fixture.Involves(teamId))
+            .Select(fixture => fixture.Day.Index)
+            .DefaultIfEmpty(-1)
+            .Max();
+
+        return previous < 0
+            ? MatchModelBounds.FullyRestedDays
+            : day.Index - previous;
     }
 
     /// <summary>

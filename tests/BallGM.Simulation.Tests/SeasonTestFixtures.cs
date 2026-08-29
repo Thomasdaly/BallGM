@@ -26,7 +26,7 @@ internal sealed class OrdinalMatchEngine : IMatchEngine
 
     public int GamesPlayed { get; private set; }
 
-    public DomainOperationResult<GameResult> Play(MatchSetup setup)
+    public DomainOperationResult<MatchOutcome> Play(MatchSetup setup)
     {
         ArgumentNullException.ThrowIfNull(setup);
 
@@ -36,7 +36,13 @@ internal sealed class OrdinalMatchEngine : IMatchEngine
             setup.Fixture.HomeTeamId.Value,
             setup.Fixture.AwayTeamId.Value) < 0;
 
-        return GameResult.Create(setup.Fixture, homeWins ? 101 : 99, homeWins ? 99 : 101);
+        var result = GameResult.Create(setup.Fixture, homeWins ? 101 : 99, homeWins ? 99 : 101);
+
+        // Nobody is ever hurt here: an injury would change who is available for a later game, and
+        // these tests assert the bracket, not the roster.
+        return result.IsFailure
+            ? DomainOperationResult<MatchOutcome>.Failure(result.Errors.ToArray())
+            : DomainOperationResult<MatchOutcome>.Success(MatchOutcome.Unhurt(result.Value));
     }
 }
 
