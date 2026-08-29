@@ -38,6 +38,10 @@ public sealed record NegotiationRules
     private const string AllowanceLimitNotConfiguredCode = "ruleset.allowance_limit_threshold_not_configured";
     private const string NonPositiveExpiryCode = "ruleset.non_positive_offer_expiry";
     private const string NonPositiveAllowanceCode = "ruleset.non_positive_allowance";
+    private const string HalfSigningWindowCode = "ruleset.half_stated_signing_window";
+    private const string SigningWindowInvertedCode = "ruleset.signing_window_closes_before_it_opens";
+    private const string NegativeSigningWindowDayCode = "ruleset.negative_signing_window_day";
+    private const string NonPositiveShortTermCode = "ruleset.non_positive_short_term_contract_days";
 
     private NegotiationRules(
         int? maximumContractSeasons,
@@ -50,7 +54,10 @@ public sealed record NegotiationRules
         CapThresholdKind? standardOverCapAllowanceUnavailableAbove,
         bool allowanceMaySplitAcrossPlayers,
         MarketResolutionMode marketResolution,
-        int? offerExpiryDays)
+        int? offerExpiryDays,
+        int? inSeasonSigningWindowOpensDay,
+        int? inSeasonSigningWindowClosesDay,
+        int? shortTermContractDays)
     {
         MaximumContractSeasons = maximumContractSeasons;
         MaximumIncumbentContractSeasons = maximumIncumbentContractSeasons;
@@ -63,6 +70,9 @@ public sealed record NegotiationRules
         AllowanceMaySplitAcrossPlayers = allowanceMaySplitAcrossPlayers;
         MarketResolution = marketResolution;
         OfferExpiryDays = offerExpiryDays;
+        InSeasonSigningWindowOpensDay = inSeasonSigningWindowOpensDay;
+        InSeasonSigningWindowClosesDay = inSeasonSigningWindowClosesDay;
+        ShortTermContractDays = shortTermContractDays;
     }
 
     /// <summary>
@@ -80,6 +90,9 @@ public sealed record NegotiationRules
         null,
         false,
         MarketResolutionMode.ResolutionPoint,
+        null,
+        null,
+        null,
         null);
 
     /// <summary>Longest contract anyone may sign. Absent means the league does not limit term.</summary>
@@ -118,6 +131,35 @@ public sealed record NegotiationRules
     /// <summary>How long an offer stands before it expires. Absent means offers do not expire.</summary>
     public int? OfferExpiryDays { get; }
 
+    /// <summary>
+    /// The season day the in-season signing window opens on. Only expressible now that a calendar
+    /// exists — before Milestone 7 there was no day for a window to open on. Absent means this
+    /// league does not restrict when a signing may happen, which the signing validator reports as a
+    /// note rather than passing silently.
+    /// </summary>
+    public int? InSeasonSigningWindowOpensDay { get; }
+
+    /// <summary>The season day the window closes on, exclusive. Absent alongside the opening day.</summary>
+    public int? InSeasonSigningWindowClosesDay { get; }
+
+    /// <summary>
+    /// How many days a short-term contract runs for.
+    /// <para>
+    /// A field on the existing rules rather than a new kind of contract, deliberately. A short-term
+    /// deal is an ordinary contract with a stated length in days; making it a second
+    /// <c>Contract</c> subtype would give the cap ledger, the trade validator, and every signing
+    /// route a second shape to handle for the sake of one number. Absent means this league has no
+    /// short-term contract at all.
+    /// </para>
+    /// </summary>
+    public int? ShortTermContractDays { get; }
+
+    /// <summary>Whether this league restricts when in the season a signing may happen.</summary>
+    public bool HasInSeasonSigningWindow =>
+        InSeasonSigningWindowOpensDay is not null && InSeasonSigningWindowClosesDay is not null;
+
+    public bool HasShortTermContracts => ShortTermContractDays is not null;
+
     public bool HasTermLimit => MaximumContractSeasons is not null;
 
     public bool HasEscalationLimit =>
@@ -150,7 +192,10 @@ public sealed record NegotiationRules
         CapThresholdKind? standardOverCapAllowanceUnavailableAbove,
         bool allowanceMaySplitAcrossPlayers,
         MarketResolutionMode marketResolution,
-        int? offerExpiryDays)
+        int? offerExpiryDays,
+        int? inSeasonSigningWindowOpensDay = null,
+        int? inSeasonSigningWindowClosesDay = null,
+        int? shortTermContractDays = null)
     {
         ArgumentNullException.ThrowIfNull(capThresholds);
 
@@ -264,6 +309,39 @@ public sealed record NegotiationRules
                 $"'{marketResolution}' is not a market resolution mode this build knows."));
         }
 
+        // Half a window is not a rule anyone can enforce: an opening day with no closing day says
+        // signing starts and never stops, which is the same as having no window while looking as
+        // though the league stated one. Both or neither.
+        if (inSeasonSigningWindowOpensDay is null != (inSeasonSigningWindowClosesDay is null))
+        {
+            errors.Add(new DomainError(
+                HalfSigningWindowCode,
+                "This ruleset states one end of the in-season signing window and not the other. State both days, or leave both out — a window with one edge is not a window."));
+        }
+
+        if (inSeasonSigningWindowOpensDay is < 0 || inSeasonSigningWindowClosesDay is < 0)
+        {
+            errors.Add(new DomainError(
+                NegativeSigningWindowDayCode,
+                "The in-season signing window is stated in season days, counted from the opening day, so neither end can be negative."));
+        }
+
+        if (inSeasonSigningWindowOpensDay is { } opensOn &&
+            inSeasonSigningWindowClosesDay is { } closesOn &&
+            closesOn <= opensOn)
+        {
+            errors.Add(new DomainError(
+                SigningWindowInvertedCode,
+                $"The in-season signing window opens on day {opensOn} and closes on day {closesOn}, so it is never open."));
+        }
+
+        if (shortTermContractDays is <= 0)
+        {
+            errors.Add(new DomainError(
+                NonPositiveShortTermCode,
+                $"A short-term contract is configured to run for {shortTermContractDays} days. Leave the field out if this league has no short-term contract."));
+        }
+
         return errors.Count > 0
             ? DomainOperationResult<NegotiationRules>.Failure(errors.ToArray())
             : DomainOperationResult<NegotiationRules>.Success(new NegotiationRules(
@@ -277,7 +355,10 @@ public sealed record NegotiationRules
                 standardOverCapAllowanceUnavailableAbove,
                 allowanceMaySplitAcrossPlayers,
                 marketResolution,
-                offerExpiryDays));
+                offerExpiryDays,
+                inSeasonSigningWindowOpensDay,
+                inSeasonSigningWindowClosesDay,
+                shortTermContractDays));
     }
 
     /// <summary>

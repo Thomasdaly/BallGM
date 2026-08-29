@@ -69,6 +69,9 @@
           <DataTemplate DataType="vm:FreeAgencyViewModel">
             <views:FreeAgencyView />
           </DataTemplate>
+          <DataTemplate DataType="vm:SeasonViewModel">
+            <views:SeasonView />
+          </DataTemplate>
         </ContentControl.DataTemplates>
       </ContentControl>
     </Grid>

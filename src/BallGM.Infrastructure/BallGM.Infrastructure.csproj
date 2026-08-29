@@ -4,6 +4,11 @@
     <ProjectReference Include="..\BallGM.Application\BallGM.Application.csproj" />
     <ProjectReference Include="..\BallGM.Domain\BallGM.Domain.csproj" />
     <ProjectReference Include="..\BallGM.Rules\BallGM.Rules.csproj" />
+    <!-- Milestone 7: the season engine adapter drives the match engine, which lives in
+         BallGM.Simulation. Same shape as the reference to BallGM.Rules above — Infrastructure is
+         the layer allowed to name concrete implementations behind an Application port — and no
+         cycle is created, because Simulation knows nothing of Infrastructure or Application. -->
+    <ProjectReference Include="..\BallGM.Simulation\BallGM.Simulation.csproj" />
   </ItemGroup>
 
   <!-- Ships the default ruleset next to the binaries so every consumer (client, tests)

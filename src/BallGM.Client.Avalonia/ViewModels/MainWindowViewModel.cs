@@ -42,8 +42,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         Trade = new TradeProposalViewModel(overview, session, ApplyLeagueChange);
         FreeAgency = new FreeAgencyViewModel(overview, session, ApplyLeagueChange);
         FreeAgencyBoard = new FreeAgencyBoardViewModel(overview, session, ApplyLeagueChange);
+        Season = new SeasonViewModel(session, ApplyLeagueChange);
 
-        Sections = [_roster.Title, _capSheet.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title];
+        Sections = [_roster.Title, _capSheet.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, Season.Title];
         SelectedTeam = Teams.FirstOrDefault();
         SelectedSection = Sections[0];
     }
@@ -62,6 +63,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         Trade = null;
         FreeAgency = null;
         FreeAgencyBoard = null;
+        Season = null;
     }
 
     public bool HasLeague { get; }
@@ -85,6 +87,12 @@ public sealed class MainWindowViewModel : ViewModelBase
     public FreeAgencyViewModel? FreeAgency { get; }
 
     public FreeAgencyBoardViewModel? FreeAgencyBoard { get; }
+
+    /// <summary>
+    /// The calendar screen. Held for the run rather than rebuilt on every league change: it owns the
+    /// season in progress, and throwing it away would discard the day the league has reached.
+    /// </summary>
+    public SeasonViewModel? Season { get; }
 
     public TeamSummary? SelectedTeam
     {
@@ -135,6 +143,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 _ when Trade is not null && value == Trade.Title => Trade,
                 _ when FreeAgency is not null && value == FreeAgency.Title => FreeAgency,
                 _ when FreeAgencyBoard is not null && value == FreeAgencyBoard.Title => FreeAgencyBoard,
+                _ when Season is not null && value == Season.Title => Season,
                 _ => _roster,
             };
         }

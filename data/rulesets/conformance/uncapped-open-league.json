@@ -1,8 +1,9 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "name": "Meridian Open League — Uncapped Rules",
   "regularSeasonGameCount": 34,
   "minimumRosterPlayers": 10,
   "maximumRosterPlayers": 14,
+  "regularSeasonDays": 90,
   "injuredPlayerTradeEligibility": "AllowedWithWarning"
 }

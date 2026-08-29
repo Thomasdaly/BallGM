@@ -304,6 +304,26 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
         return BuildLeague(rulesetResult.Value);
     }
 
+    /// <summary>
+    /// Splits the fixture's teams into two conferences of one division each, in the order they were
+    /// built. Deterministic, like everything else in the fixture: the same league appears on every
+    /// launch, so the schedule generated from it is comparable between runs.
+    /// </summary>
+    private static IReadOnlyList<LeagueConference> BuildConferences(IReadOnlyList<Team> teams)
+    {
+        var half = (teams.Count + 1) / 2;
+
+        return
+        [
+            new LeagueConference(
+                "Coastal Conference",
+                [new LeagueDivision("Tidewater Division", teams.Take(half).Select(team => team.Id))]),
+            new LeagueConference(
+                "Interior Conference",
+                [new LeagueDivision("Highland Division", teams.Skip(half).Select(team => team.Id))]),
+        ];
+    }
+
     private static DomainOperationResult<LeagueSnapshot> BuildLeague(LeagueRuleset ruleset)
     {
         var maximumRosterSize = ruleset.RosterLimits.MaximumPlayers;
@@ -387,10 +407,22 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
             return DomainOperationResult<LeagueSnapshot>.Failure(errors.ToArray());
         }
 
+        // Two conferences of one division each, so the fixture exercises a real alignment rather
+        // than the flat case: the schedule generator's opponent weighting, the division and
+        // conference tie-breaks, and the postseason's per-conference qualifiers all need groups to
+        // mean anything, and a fixture with none would leave every one of them untested by the
+        // league the client actually opens.
+        var alignmentResult = LeagueAlignment.Create(BuildConferences(teams));
+        if (alignmentResult.IsFailure)
+        {
+            return DomainOperationResult<LeagueSnapshot>.Failure(alignmentResult.Errors.ToArray());
+        }
+
         var leagueResult = League.Create(
             new LeagueId(SortableId.NewId()),
             ruleset.Name,
-            teams.Select(team => team.Id));
+            teams.Select(team => team.Id),
+            alignmentResult.Value);
 
         if (leagueResult.IsFailure)
         {
@@ -439,7 +471,26 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
                 ruleset.NegotiationRules.StandardOverCapAllowanceUnavailableAbove,
                 ruleset.NegotiationRules.AllowanceMaySplitAcrossPlayers,
                 ruleset.NegotiationRules.MarketResolution,
-                ruleset.NegotiationRules.OfferExpiryDays));
+                ruleset.NegotiationRules.OfferExpiryDays,
+                ruleset.NegotiationRules.InSeasonSigningWindowOpensDay,
+                ruleset.NegotiationRules.InSeasonSigningWindowClosesDay,
+                ruleset.NegotiationRules.ShortTermContractDays),
+            new SeasonScheduleConfiguration(
+                ruleset.ScheduleRules.PreseasonDays,
+                ruleset.ScheduleRules.RegularSeasonDays,
+                ruleset.ScheduleRules.OffseasonDays,
+                ruleset.ScheduleRules.GamesVersusDivisionOpponent,
+                ruleset.ScheduleRules.GamesVersusConferenceOpponent,
+                ruleset.ScheduleRules.GamesVersusOtherConferenceOpponent),
+            ruleset.StandingsRules.TieBreaks,
+            ruleset.HasPostseason
+                ? new PostseasonConfiguration(
+                    ruleset.PostseasonRules.PostseasonDays,
+                    ruleset.PostseasonRules.QualifyingTeamsPerConference,
+                    ruleset.PostseasonRules.SeriesLengths,
+                    ruleset.PostseasonRules.HomeCourtSequence.ToString(),
+                    ruleset.PostseasonRules.PlayoffEligibilityCutoffDay)
+                : null);
 
         return DomainOperationResult<LeagueSnapshot>.Success(
             new LeagueSnapshot(

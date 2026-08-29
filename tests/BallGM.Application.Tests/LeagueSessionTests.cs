@@ -143,7 +143,14 @@ public sealed class LeagueSessionTests
         league = data;
         engine = new StubTradeEngine(data);
 
-        return new LeagueSession(data.DataSource, new PassThroughCapLedger(), new EmptyDraftAssetLedger(), engine, new StubSigningEngine(), new StubFreeAgencyMarket());
+        return new LeagueSession(
+            data.DataSource,
+            new PassThroughCapLedger(),
+            new EmptyDraftAssetLedger(),
+            engine,
+            new StubSigningEngine(),
+            new StubFreeAgencyMarket(),
+            new StubSeasonEngine());
     }
 
     /// <summary>Two teams, one player each, one pick each — the smallest league a trade can happen in.</summary>

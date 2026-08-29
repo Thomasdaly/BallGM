@@ -6,6 +6,7 @@ using BallGM.Domain.Franchises;
 using BallGM.Domain.Leagues;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
+using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 using BallGM.Domain.Trades;
 using BallGM.Domain.Transactions;
@@ -65,7 +66,10 @@ public sealed record LeagueConfiguration(
     Money SalaryMatchAllowance,
     InjuredPlayerTradeEligibility InjuredPlayerTradeEligibility,
     bool SecondApronBlocksSalaryIncrease,
-    NegotiationConfiguration Negotiation)
+    NegotiationConfiguration Negotiation,
+    SeasonScheduleConfiguration? Schedule = null,
+    TieBreakSequence? StandingsTieBreaks = null,
+    PostseasonConfiguration? Postseason = null)
 {
     /// <summary>Whether this league configures any threshold at all.</summary>
     public bool IsUncapped =>
@@ -74,7 +78,58 @@ public sealed record LeagueConfiguration(
 
     /// <summary>Whether this league holds a draft. False means no franchise can hold a pick.</summary>
     public bool HasDraft => DraftRoundCount > 0;
+
+    /// <summary>
+    /// The phase lengths and opponent weighting, or the shortest playable calendar where the league
+    /// states none. Absent means "a regular season and nothing either side of it", which is a real
+    /// league rather than a missing configuration.
+    /// </summary>
+    public SeasonScheduleConfiguration ResolvedSchedule => Schedule ?? SeasonScheduleConfiguration.Minimal;
+
+    /// <summary>The stated tie-break sequence, or <see cref="TieBreakSequence.None"/> where the league states none.</summary>
+    public TieBreakSequence ResolvedTieBreaks => StandingsTieBreaks ?? TieBreakSequence.None;
+
+    /// <summary>Whether this league holds a postseason at all.</summary>
+    public bool HasPostseason => Postseason is not null;
 }
+
+/// <summary>
+/// How long each phase of a season runs and how often each kind of opponent is played, in the shape
+/// the Application layer carries it.
+/// <para>
+/// Note what is <em>not</em> here: which teams are in which conference and division. That is league
+/// content and travels on the <c>League</c> aggregate inside <see cref="LeagueSnapshot"/>, so one
+/// ruleset can serve two differently aligned leagues.
+/// </para>
+/// </summary>
+public sealed record SeasonScheduleConfiguration(
+    int PreseasonDays,
+    int RegularSeasonDays,
+    int OffseasonDays,
+    int? GamesVersusDivisionOpponent,
+    int? GamesVersusConferenceOpponent,
+    int? GamesVersusOtherConferenceOpponent)
+{
+    /// <summary>A regular season and nothing either side of it.</summary>
+    public static SeasonScheduleConfiguration Minimal { get; } = new(0, 1, 0, null, null, null);
+
+    public bool HasOpponentWeighting =>
+        GamesVersusDivisionOpponent is not null &&
+        GamesVersusConferenceOpponent is not null &&
+        GamesVersusOtherConferenceOpponent is not null;
+}
+
+/// <summary>
+/// This league's postseason format. The whole record is absent in a league that holds no
+/// postseason, which is a league rather than a misconfiguration — and one of the cases the client
+/// has to be able to render as "there is none" instead of as a bracket of nought rounds.
+/// </summary>
+public sealed record PostseasonConfiguration(
+    int PostseasonDays,
+    int QualifyingTeamsPerConference,
+    IReadOnlyList<int> SeriesLengths,
+    string HomeCourtSequence,
+    int? PlayoffEligibilityCutoffDay);
 
 /// <summary>
 /// What this league permits in a contract offer, and how a team may pay for it, in the shape the
@@ -99,7 +154,10 @@ public sealed record NegotiationConfiguration(
     CapThresholdKind? StandardOverCapAllowanceUnavailableAbove,
     bool AllowanceMaySplitAcrossPlayers,
     MarketResolutionMode MarketResolution,
-    int? OfferExpiryDays)
+    int? OfferExpiryDays,
+    int? InSeasonSigningWindowOpensDay = null,
+    int? InSeasonSigningWindowClosesDay = null,
+    int? ShortTermContractDays = null)
 {
     /// <summary>A league that constrains nothing about what may be offered or how it is paid for.</summary>
     public static NegotiationConfiguration OpenMarket { get; } = new(
@@ -122,4 +180,10 @@ public sealed record NegotiationConfiguration(
     public bool HasCompensationFloor => !CompensationFloorScale.IsEmpty;
 
     public bool HasStandardOverCapAllowance => StandardOverCapAllowance is not null;
+
+    /// <summary>Whether this league restricts which days of the season a signing may happen on.</summary>
+    public bool HasInSeasonSigningWindow =>
+        InSeasonSigningWindowOpensDay is not null && InSeasonSigningWindowClosesDay is not null;
+
+    public bool HasShortTermContracts => ShortTermContractDays is not null;
 }

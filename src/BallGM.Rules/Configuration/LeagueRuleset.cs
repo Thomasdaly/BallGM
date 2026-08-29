@@ -39,7 +39,18 @@ public sealed record LeagueRuleset
     /// know, so a file from a later build fails structurally rather than silently dropping rules.
     /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 5;
+    /// <remarks>
+    /// Version 6 added everything a calendar makes expressible: the schedule section (phase lengths
+    /// and the per-group opponent weighting), the standings tie-break sequence, the postseason
+    /// format, the in-season signing window, the playoff eligibility cutoff, and short-term
+    /// contracts. Optional by absence exactly as version 4 established — a file stating none of it
+    /// is a league with a bare regular season, no stated tie-break, and no postseason, all of which
+    /// are real leagues — so nothing about absence changes meaning. The version moved for the same
+    /// reason it moved at 5: a version 5 reader handed a version 6 file would run a league with no
+    /// tie-break sequence in a league that stated one, and settle every tie by a rule the ruleset
+    /// never mentioned. That is the exact failure this gate exists to refuse.
+    /// </remarks>
+    public const int CurrentSchemaVersion = 6;
 
     public LeagueRuleset(
         int schemaVersion,
@@ -49,7 +60,10 @@ public sealed record LeagueRuleset
         CapThresholds capThresholds,
         DraftRules draftRules,
         TradeRules tradeRules,
-        NegotiationRules negotiationRules)
+        NegotiationRules negotiationRules,
+        ScheduleRules? scheduleRules = null,
+        StandingsRules? standingsRules = null,
+        PostseasonRules? postseasonRules = null)
     {
         if (schemaVersion <= 0)
         {
@@ -80,6 +94,9 @@ public sealed record LeagueRuleset
         DraftRules = draftRules;
         TradeRules = tradeRules;
         NegotiationRules = negotiationRules;
+        ScheduleRules = scheduleRules ?? ScheduleRules.Minimal;
+        StandingsRules = standingsRules ?? StandingsRules.None;
+        PostseasonRules = postseasonRules ?? PostseasonRules.None;
     }
 
     public int SchemaVersion { get; }
@@ -101,4 +118,21 @@ public sealed record LeagueRuleset
     /// configures none of it is an open market — see <see cref="Configuration.NegotiationRules"/>.
     /// </summary>
     public NegotiationRules NegotiationRules { get; }
+
+    /// <summary>
+    /// How long each phase of a season runs, and how often each kind of opponent is played. Note
+    /// that <em>who</em> is in which conference and division is not here: alignment is league
+    /// content on the <c>League</c> aggregate, so one ruleset can serve two differently aligned
+    /// leagues and an expansion is not a ruleset edit.
+    /// </summary>
+    public ScheduleRules ScheduleRules { get; }
+
+    /// <summary>The ordered tie-break sequence, or <see cref="Configuration.StandingsRules.None"/> where the league states none.</summary>
+    public StandingsRules StandingsRules { get; }
+
+    /// <summary>The postseason format, or <see cref="Configuration.PostseasonRules.None"/> in a league that holds no postseason.</summary>
+    public PostseasonRules PostseasonRules { get; }
+
+    /// <summary>Whether this league plays a postseason at all.</summary>
+    public bool HasPostseason => PostseasonRules.IsConfigured;
 }

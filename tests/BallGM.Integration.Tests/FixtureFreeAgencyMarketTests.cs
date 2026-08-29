@@ -5,6 +5,7 @@ using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
 using BallGM.Infrastructure.Negotiations;
+using BallGM.Infrastructure.Seasons;
 using BallGM.Infrastructure.Trades;
 
 namespace BallGM.Integration.Tests;
@@ -400,6 +401,7 @@ public sealed class FixtureFreeAgencyMarketTests
             new RulesTradeEngine(),
             new RulesSigningEngine(),
             new RulesFreeAgencyMarket(),
+            new RulesSeasonEngine(),
             seed);
 
         var result = session.Load();

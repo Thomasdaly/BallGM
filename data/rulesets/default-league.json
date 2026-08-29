@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "name": "Continental Basketball Association — Standard Rules",
   "regularSeasonGameCount": 78,
   "minimumRosterPlayers": 12,
@@ -55,5 +55,29 @@
   "standardOverCapAllowanceUnavailableAbove": "FirstApron",
   "allowanceMaySplitAcrossPlayers": true,
   "marketResolution": "ResolutionPoint",
-  "offerExpiryDays": 3
+  "offerExpiryDays": 3,
+  "preseasonDays": 14,
+  "regularSeasonDays": 170,
+  "offseasonDays": 60,
+  "gamesVersusDivisionOpponent": 18,
+  "gamesVersusConferenceOpponent": 18,
+  "gamesVersusOtherConferenceOpponent": 14,
+  "standingsTieBreaks": [
+    "HeadToHeadRecord",
+    "DivisionRecord",
+    "ConferenceRecord",
+    "PointDifferential",
+    "PointsScored"
+  ],
+  "postseasonDays": 30,
+  "postseasonQualifyingTeamsPerConference": 2,
+  "postseasonSeriesLengths": [
+    5,
+    7
+  ],
+  "postseasonHomeCourtSequence": "2-2-1-1-1",
+  "playoffEligibilityCutoffDay": 170,
+  "inSeasonSigningWindowOpensDay": 14,
+  "inSeasonSigningWindowClosesDay": 170,
+  "shortTermContractDays": 10
 }

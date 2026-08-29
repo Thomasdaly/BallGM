@@ -1,0 +1,134 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.SeasonView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:SeasonViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="16">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{Binding Headline}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding PhaseLine}" Opacity="0.7" />
+      </StackPanel>
+
+      <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasNoSeason}">
+        <Button Content="Start season" Command="{Binding StartSeasonCommand}" />
+      </StackPanel>
+
+      <StackPanel Spacing="8" IsVisible="{Binding HasSeason}">
+        <TextBlock Text="ADVANCE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Text="Days" VerticalAlignment="Center" Opacity="0.7" />
+          <ComboBox ItemsSource="{Binding AdvanceOptions}" SelectedItem="{Binding AdvanceDays}" MinWidth="90" />
+          <Button Content="Advance" Command="{Binding AdvanceCommand}" />
+          <Button Content="To end of season" Command="{Binding AdvanceToEndCommand}" />
+        </StackPanel>
+        <TextBlock Text="{Binding AdvancePreview}" Opacity="0.75" TextWrapping="Wrap" />
+      </StackPanel>
+
+      <Border
+        Padding="12"
+        CornerRadius="4"
+        Background="#20808080"
+        IsVisible="{Binding HasMessage}">
+        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+      </Border>
+
+      <StackPanel Spacing="8" IsVisible="{Binding HasSeason}">
+        <TextBlock Text="CALENDAR" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <ItemsControl ItemsSource="{Binding Phases}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CalendarPhaseRow">
+              <Grid ColumnDefinitions="150,130,*,60" Height="24">
+                <TextBlock Text="{Binding Phase}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding Days}" VerticalAlignment="Center" Opacity="0.7" />
+                <TextBlock Grid.Column="2" Text="{Binding Dates}" VerticalAlignment="Center" Opacity="0.7" />
+                <TextBlock
+                  Grid.Column="3"
+                  Text="now"
+                  VerticalAlignment="Center"
+                  FontWeight="SemiBold"
+                  IsVisible="{Binding IsCurrent}" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Spacing="8" IsVisible="{Binding HasSeason}">
+        <TextBlock Text="STANDINGS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Text="{Binding TieBreakLine}" Opacity="0.7" TextWrapping="Wrap" FontSize="12" />
+        <Grid ColumnDefinitions="34,200,190,70,70,70,70,70">
+          <TextBlock Text="#" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <TextBlock Grid.Column="1" Text="TEAM" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <TextBlock Grid.Column="2" Text="GROUP" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <TextBlock Grid.Column="3" Text="W-L" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <TextBlock Grid.Column="4" Text="DIV" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <TextBlock Grid.Column="5" Text="CONF" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <TextBlock Grid.Column="6" Text="DIFF" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+          <TextBlock Grid.Column="7" Text="PF" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        </Grid>
+        <ItemsControl ItemsSource="{Binding Standings}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StandingsRowDisplay">
+              <Grid ColumnDefinitions="34,200,190,70,70,70,70,70" Height="24">
+                <TextBlock Text="{Binding Position}" VerticalAlignment="Center" Opacity="0.7" />
+                <TextBlock Grid.Column="1" Text="{Binding TeamName}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="{Binding Group}" VerticalAlignment="Center" Opacity="0.7" FontSize="12" />
+                <TextBlock Grid.Column="3" Text="{Binding Record}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="4" Text="{Binding DivisionRecord}" VerticalAlignment="Center" Opacity="0.8" />
+                <TextBlock Grid.Column="5" Text="{Binding ConferenceRecord}" VerticalAlignment="Center" Opacity="0.8" />
+                <TextBlock Grid.Column="6" Text="{Binding PointDifferential}" VerticalAlignment="Center" Opacity="0.8" />
+                <TextBlock Grid.Column="7" Text="{Binding PointsFor}" VerticalAlignment="Center" Opacity="0.8" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Spacing="8" IsVisible="{Binding HasSeason}">
+        <TextBlock Text="NEXT UP" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <ItemsControl ItemsSource="{Binding UpcomingFixtures}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:FixtureRow">
+              <Grid ColumnDefinitions="190,*,90" Height="24">
+                <TextBlock Text="{Binding Day}" VerticalAlignment="Center" Opacity="0.7" FontSize="12" />
+                <TextBlock Grid.Column="1" Text="{Binding Matchup}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="{Binding Score}" VerticalAlignment="Center" Opacity="0.8" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Spacing="8" IsVisible="{Binding HasWarnings}">
+        <TextBlock Text="WARNINGS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <ItemsControl ItemsSource="{Binding Warnings}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SeasonFindingRow">
+              <StackPanel Spacing="1" Margin="0,0,0,8">
+                <TextBlock Text="{Binding Scope}" FontWeight="SemiBold" FontSize="12" />
+                <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Code}" Opacity="0.5" FontSize="11" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Spacing="8" IsVisible="{Binding HasNotes}">
+        <TextBlock Text="RULES THIS LEAGUE DOES NOT STATE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <ItemsControl ItemsSource="{Binding Notes}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SeasonFindingRow">
+              <StackPanel Spacing="1" Margin="0,0,0,8">
+                <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" Opacity="0.85" />
+                <TextBlock Text="{Binding Code}" Opacity="0.5" FontSize="11" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -4,6 +4,7 @@ using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
 using BallGM.Infrastructure.Negotiations;
+using BallGM.Infrastructure.Seasons;
 using BallGM.Infrastructure.Trades;
 
 namespace BallGM.Integration.Tests;
@@ -203,7 +204,8 @@ public sealed class FixtureSigningTests
             new RulesDraftAssetLedger(),
             new RulesTradeEngine(),
             new RulesSigningEngine(),
-            new RulesFreeAgencyMarket());
+            new RulesFreeAgencyMarket(),
+            new RulesSeasonEngine());
 
         var result = session.Load();
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));

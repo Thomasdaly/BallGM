@@ -71,7 +71,24 @@ public sealed class LeagueRulesetSerializer
             ruleset.NegotiationRules.StandardOverCapAllowanceUnavailableAbove?.ToString(),
             ruleset.NegotiationRules.AllowanceMaySplitAcrossPlayers,
             ruleset.NegotiationRules.MarketResolution.ToString(),
-            ruleset.NegotiationRules.OfferExpiryDays);
+            ruleset.NegotiationRules.OfferExpiryDays,
+            ruleset.ScheduleRules.PreseasonDays == 0 ? null : ruleset.ScheduleRules.PreseasonDays,
+            ruleset.ScheduleRules.RegularSeasonDays,
+            ruleset.ScheduleRules.OffseasonDays == 0 ? null : ruleset.ScheduleRules.OffseasonDays,
+            ruleset.ScheduleRules.GamesVersusDivisionOpponent,
+            ruleset.ScheduleRules.GamesVersusConferenceOpponent,
+            ruleset.ScheduleRules.GamesVersusOtherConferenceOpponent,
+            ruleset.StandingsRules.HasTieBreaks
+                ? ruleset.StandingsRules.TieBreaks.Steps.Select(step => step.ToString()).ToList()
+                : null,
+            ruleset.HasPostseason ? ruleset.PostseasonRules.PostseasonDays : null,
+            ruleset.HasPostseason ? ruleset.PostseasonRules.QualifyingTeamsPerConference : null,
+            ruleset.HasPostseason ? ruleset.PostseasonRules.SeriesLengths.ToList() : null,
+            ruleset.HasPostseason ? ruleset.PostseasonRules.HomeCourtSequence.ToString() : null,
+            ruleset.HasPostseason ? ruleset.PostseasonRules.PlayoffEligibilityCutoffDay : null,
+            ruleset.NegotiationRules.InSeasonSigningWindowOpensDay,
+            ruleset.NegotiationRules.InSeasonSigningWindowClosesDay,
+            ruleset.NegotiationRules.ShortTermContractDays);
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -170,6 +187,31 @@ public sealed class LeagueRulesetSerializer
                 return DomainOperationResult<LeagueRuleset>.Failure(negotiationRulesResult.Errors.ToArray());
             }
 
+            var scheduleRulesResult = ScheduleRules.Create(
+                envelope.PreseasonDays ?? 0,
+                envelope.RegularSeasonDays ?? ScheduleRules.Minimal.RegularSeasonDays,
+                envelope.OffseasonDays ?? 0,
+                envelope.GamesVersusDivisionOpponent,
+                envelope.GamesVersusConferenceOpponent,
+                envelope.GamesVersusOtherConferenceOpponent);
+
+            if (scheduleRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(scheduleRulesResult.Errors.ToArray());
+            }
+
+            var standingsRulesResult = StandingsRules.Parse(envelope.StandingsTieBreaks);
+            if (standingsRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(standingsRulesResult.Errors.ToArray());
+            }
+
+            var postseasonRulesResult = BuildPostseasonRules(envelope, scheduleRulesResult.Value);
+            if (postseasonRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(postseasonRulesResult.Errors.ToArray());
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
@@ -178,7 +220,10 @@ public sealed class LeagueRulesetSerializer
                 capThresholdsResult.Value,
                 draftRulesResult.Value,
                 tradeRulesResult.Value,
-                negotiationRulesResult.Value);
+                negotiationRulesResult.Value,
+                scheduleRulesResult.Value,
+                standingsRulesResult.Value,
+                postseasonRulesResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
@@ -246,7 +291,41 @@ public sealed class LeagueRulesetSerializer
             allowanceLimit,
             envelope.AllowanceMaySplitAcrossPlayers,
             resolutionResult.Value,
-            envelope.OfferExpiryDays);
+            envelope.OfferExpiryDays,
+            envelope.InSeasonSigningWindowOpensDay,
+            envelope.InSeasonSigningWindowClosesDay,
+            envelope.ShortTermContractDays);
+    }
+
+    /// <summary>
+    /// Maps the postseason section, which is absent in full for a league that holds no postseason.
+    /// A file that names one part of it and not the rest has described a format nobody can play, so
+    /// the missing pieces are reported by <see cref="PostseasonRules.Create"/> rather than filled in
+    /// with a default this build invented.
+    /// </summary>
+    private static DomainOperationResult<PostseasonRules> BuildPostseasonRules(
+        LeagueRulesetEnvelope envelope,
+        ScheduleRules scheduleRules)
+    {
+        var statesNothing =
+            envelope.PostseasonDays is null &&
+            envelope.PostseasonQualifyingTeamsPerConference is null &&
+            envelope.PostseasonSeriesLengths is null &&
+            envelope.PostseasonHomeCourtSequence is null &&
+            envelope.PlayoffEligibilityCutoffDay is null;
+
+        if (statesNothing)
+        {
+            return DomainOperationResult<PostseasonRules>.Success(PostseasonRules.None);
+        }
+
+        return PostseasonRules.Create(
+            envelope.PostseasonDays ?? 0,
+            envelope.PostseasonQualifyingTeamsPerConference ?? 0,
+            envelope.PostseasonSeriesLengths ?? [],
+            envelope.PostseasonHomeCourtSequence ?? string.Empty,
+            envelope.PlayoffEligibilityCutoffDay,
+            scheduleRules.PreseasonDays + scheduleRules.RegularSeasonDays);
     }
 
     private static IReadOnlyList<CompensationCeilingTierEnvelope>? ToCeilingTiers(CompensationCeilingScale ceiling) =>

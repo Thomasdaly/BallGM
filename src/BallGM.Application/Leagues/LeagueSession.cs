@@ -43,10 +43,27 @@ public sealed partial class LeagueSession
     /// </summary>
     public const int DefaultMarketSeed = 20260828;
 
+    /// <summary>
+    /// The seed a season is simulated from until a save carries one, and the month and day the
+    /// season's calendar opens on.
+    /// <para>
+    /// Constants rather than anything read from a clock, for the reason the whole milestone rests
+    /// on: a league whose season opened on today's date would produce different dates — and, once
+    /// anything keys off them, different seasons — depending on when it was started. The opening
+    /// date is derived from the season year alone.
+    /// </para>
+    /// </summary>
+    public const int DefaultSeasonSeed = 20260701;
+
+    public const int SeasonOpeningMonth = 7;
+
+    public const int SeasonOpeningDayOfMonth = 1;
+
     private readonly ILeagueDataSource _dataSource;
     private readonly ITradeEngine _tradeEngine;
     private readonly ISigningEngine _signingEngine;
     private readonly IFreeAgencyMarket _freeAgencyMarket;
+    private readonly Seasons.ISeasonEngine _seasonEngine;
     private readonly IRandomSource _marketRandom;
     private readonly GetLeagueOverviewQuery _overviewQuery;
 
@@ -67,6 +84,7 @@ public sealed partial class LeagueSession
         ITradeEngine tradeEngine,
         ISigningEngine signingEngine,
         IFreeAgencyMarket freeAgencyMarket,
+        Seasons.ISeasonEngine seasonEngine,
         int marketSeed = DefaultMarketSeed)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
@@ -75,11 +93,13 @@ public sealed partial class LeagueSession
         ArgumentNullException.ThrowIfNull(tradeEngine);
         ArgumentNullException.ThrowIfNull(signingEngine);
         ArgumentNullException.ThrowIfNull(freeAgencyMarket);
+        ArgumentNullException.ThrowIfNull(seasonEngine);
 
         _dataSource = dataSource;
         _tradeEngine = tradeEngine;
         _signingEngine = signingEngine;
         _freeAgencyMarket = freeAgencyMarket;
+        _seasonEngine = seasonEngine;
         _marketRandom = new SeededRandomSource(marketSeed);
         _overviewQuery = new GetLeagueOverviewQuery(dataSource, capLedger, draftAssetLedger, signingEngine);
     }
@@ -96,6 +116,7 @@ public sealed partial class LeagueSession
         }
 
         _snapshot = snapshotResult.Value;
+        _seasonRun = null;
         return _overviewQuery.Project(_snapshot);
     }
 
