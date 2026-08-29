@@ -5,6 +5,7 @@ using BallGM.Domain.Franchises;
 using BallGM.Domain.Leagues;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
+using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 using BallGM.Domain.Transactions;
 using BallGM.Rules.Configuration;
@@ -127,6 +128,17 @@ internal sealed class SigningTestLeague
         RosterLimits,
         CapThresholds,
         NegotiationRules);
+
+    /// <summary>
+    /// The same league, signing on a stated day of a season with a stated postseason. Only the
+    /// playoff eligibility cutoff reads either, so every other assertion in this suite is unaffected
+    /// by which overload it went through.
+    /// </summary>
+    public SigningContext ContextOn(SeasonDay? day, PostseasonRules? postseason) => Context() with
+    {
+        PostseasonRules = postseason,
+        SigningDay = day,
+    };
 
     /// <summary>An offer of the given first-season salary, flat across the seasons unless a step is given.</summary>
     public Offer Offer(long firstSeasonCompensation, int seasons = 2, long stepPerSeason = 0) =>

@@ -3,6 +3,7 @@ using BallGM.Domain.Common;
 using BallGM.Domain.Contracts;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
+using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 
 namespace BallGM.Application.Negotiations;
@@ -20,17 +21,25 @@ namespace BallGM.Application.Negotiations;
 /// </summary>
 public interface ISigningEngine
 {
+    /// <param name="day">
+    /// The season day the signing is being made on, or null where no season is under way. The one
+    /// rule that reads it is this league's playoff eligibility cutoff, and a null day is reported as
+    /// "not checked" rather than treated as inside the window.
+    /// </param>
     DomainOperationResult<SigningAssessment> Assess(
         Offer offer,
         LeagueSnapshot snapshot,
         TeamId teamId,
-        PlayerId playerId);
+        PlayerId playerId,
+        SeasonDay? day = null);
 
+    /// <inheritdoc cref="Assess"/>
     DomainOperationResult<SigningResult> Execute(
         Offer offer,
         LeagueSnapshot snapshot,
         TeamId teamId,
-        PlayerId playerId);
+        PlayerId playerId,
+        SeasonDay? day = null);
 
     /// <summary>
     /// What this league permits anyone to pay a player with this much service. Behind the port

@@ -3,6 +3,7 @@ using BallGM.Application.Negotiations;
 using BallGM.Domain.Common;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
+using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 
 namespace BallGM.Application.Tests;
@@ -18,7 +19,8 @@ internal sealed class StubSigningEngine : ISigningEngine
         Offer offer,
         LeagueSnapshot snapshot,
         TeamId teamId,
-        PlayerId playerId) =>
+        PlayerId playerId,
+        SeasonDay? day = null) =>
         DomainOperationResult<SigningAssessment>.Failure(
             new DomainError("test.signing_not_stubbed", "This test's signing engine does not assess offers."));
 
@@ -26,7 +28,8 @@ internal sealed class StubSigningEngine : ISigningEngine
         Offer offer,
         LeagueSnapshot snapshot,
         TeamId teamId,
-        PlayerId playerId) =>
+        PlayerId playerId,
+        SeasonDay? day = null) =>
         DomainOperationResult<SigningResult>.Failure(
             new DomainError("test.signing_not_stubbed", "This test's signing engine does not execute offers."));
 

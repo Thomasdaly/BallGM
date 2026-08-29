@@ -30,6 +30,9 @@ public sealed class SigningValidator
     public const string AboveHardCapCode = "signing.payroll_would_exceed_hard_cap";
     public const string NoHardCapCode = "signing.no_hard_cap_configured";
     public const string BelowFloorAfterCode = "signing.still_below_payroll_floor";
+    public const string PostseasonIneligibleCode = "signing.after_playoff_eligibility_cutoff";
+    public const string NoEligibilityCutoffCode = "signing.no_playoff_eligibility_cutoff";
+    public const string EligibilityUncheckableCode = "signing.playoff_eligibility_cutoff_not_checked";
 
     private readonly CapLedger _capLedger = new();
 
@@ -178,6 +181,8 @@ public sealed class SigningValidator
                 offer.TeamId));
         }
 
+        CheckPlayoffEligibility(context, offer.TeamId, warnings, notes);
+
         var capRoomBefore = thresholds.SoftCap is { } softCap
             ? new Money(Math.Max(0, softCap.SmallestUnits - before.TotalPayroll.SmallestUnits))
             : null;
@@ -193,6 +198,64 @@ public sealed class SigningValidator
             context.Team.RosterCount,
             context.Team.RosterCount + 1,
             capRoomBefore));
+    }
+
+    /// <summary>
+    /// Applies this league's playoff eligibility cutoff to the day the signing is being made on.
+    /// <para>
+    /// A warning, not a violation. A league with a cutoff does not forbid signing anybody after it —
+    /// it decides who may appear in the postseason, and a team signing cover for the last fortnight
+    /// of a regular season is doing something legal and deliberate. What it must never be is silent:
+    /// a GM who signs a player on the wrong side of the cutoff has bought someone who cannot play in
+    /// the games the signing was probably for.
+    /// </para>
+    /// <para>
+    /// The three ways the check cannot fire — no postseason, no stated cutoff, no season under way —
+    /// are each reported as their own note rather than collapsed into one. A check that never ran is
+    /// otherwise indistinguishable from a check that ran and approved, which is the contract every
+    /// other assessment in this codebase keeps.
+    /// </para>
+    /// </summary>
+    private static void CheckPlayoffEligibility(
+        SigningContext context,
+        TeamId teamId,
+        List<RuleFinding> warnings,
+        List<RuleFinding> notes)
+    {
+        if (context.PostseasonRules is not { } postseason || !postseason.IsConfigured)
+        {
+            notes.Add(new RuleFinding(
+                NoEligibilityCutoffCode,
+                "This league holds no postseason, so no signing date can make a player ineligible for one.",
+                teamId));
+            return;
+        }
+
+        if (!postseason.HasEligibilityCutoff)
+        {
+            notes.Add(new RuleFinding(
+                NoEligibilityCutoffCode,
+                "This league states no playoff eligibility cutoff, so a player signed on the last day of the regular season is as eligible as one signed on the first.",
+                teamId));
+            return;
+        }
+
+        if (context.SigningDay is not { } day)
+        {
+            notes.Add(new RuleFinding(
+                EligibilityUncheckableCode,
+                $"This league's playoff eligibility cutoff falls on day {postseason.PlayoffEligibilityCutoffDay}, but no season is under way in this session, so there is no day to measure this signing against.",
+                teamId));
+            return;
+        }
+
+        if (context.IsPostseasonEligible == false)
+        {
+            warnings.Add(new RuleFinding(
+                PostseasonIneligibleCode,
+                $"{context.Player.FullName} would be signed on {day}, after this league's playoff eligibility cutoff on day {postseason.PlayoffEligibilityCutoffDay}. The signing is permitted and the player may play the rest of the regular season, but not the postseason.",
+                teamId));
+        }
     }
 
     private static string Describe(SigningRouteKind kind) => kind switch

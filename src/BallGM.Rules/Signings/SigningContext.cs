@@ -1,5 +1,6 @@
 using BallGM.Domain.Contracts;
 using BallGM.Domain.Leagues;
+using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Teams;
 using BallGM.Domain.Transactions;
@@ -26,7 +27,9 @@ public sealed record SigningContext(
     TransactionLedger Ledger,
     RosterSizeLimits RosterLimits,
     CapThresholds CapThresholds,
-    NegotiationRules NegotiationRules)
+    NegotiationRules NegotiationRules,
+    PostseasonRules? PostseasonRules = null,
+    SeasonDay? SigningDay = null)
 {
     /// <summary>
     /// Whether this is the player's current team. It changes the term limit where a league lets an
@@ -39,4 +42,16 @@ public sealed record SigningContext(
         Contracts.FirstOrDefault(contract => contract.PlayerId == Player.Id && !contract.IsTerminated);
 
     public bool IsFreeAgent => ExistingContract is null;
+
+    /// <summary>
+    /// Whether a player signed on <see cref="SigningDay"/> would be eligible for this league's
+    /// postseason, or null where the question cannot be answered: a league that states no cutoff, a
+    /// league with no postseason, or a signing made with no season under way. Null is not "yes" —
+    /// see <c>SigningValidator</c>, which reports which of the three it was rather than approving
+    /// silently.
+    /// </summary>
+    public bool? IsPostseasonEligible =>
+        PostseasonRules is { HasEligibilityCutoff: true } postseason && SigningDay is not null
+            ? SigningDay.Index <= postseason.PlayoffEligibilityCutoffDay!.Value
+            : null;
 }

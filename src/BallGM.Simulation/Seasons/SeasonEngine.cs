@@ -66,12 +66,16 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
     private const string NoSigningWindowCode = "season.in_season_signing_window_not_configured";
     private const string NoEligibilityCutoffCode = "season.playoff_eligibility_cutoff_not_configured";
     private const string NoShortTermContractsCode = "season.short_term_contracts_not_configured";
+    private const string BracketNotYetDrawnCode = "season.postseason_bracket_not_yet_drawn";
+    private const string BracketCannotBeSeededCode = "season.postseason_bracket_cannot_be_seeded";
+    private const string PostseasonNeedsMoreDaysCode = "season.postseason_needs_more_days_than_reserved";
 
     private readonly IMatchEngine _matchEngine = matchEngine ?? throw new ArgumentNullException(nameof(matchEngine));
     private readonly SeasonCalendarBuilder _calendarBuilder = new();
     private readonly ScheduleGenerator _scheduleGenerator = new();
     private readonly DepthChartBuilder _depthChartBuilder = new();
     private readonly StandingsCalculator _standingsCalculator = new();
+    private readonly PostseasonBracketBuilder _bracketBuilder = new();
 
     /// <summary>
     /// Builds the calendar and the fixture list, and opens the season on day 0 with nothing played.
@@ -120,9 +124,12 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         var notes = new List<RuleFinding>(scheduleResult.Value.Notes);
         ReportUnconfiguredCalendarRules(context, notes);
 
+        var warnings = new List<RuleFinding>(scheduleResult.Value.Warnings);
+        ReportPostseasonDayBudget(context, warnings);
+
         return DomainOperationResult<SeasonStarted>.Success(new SeasonStarted(
             runResult.Value,
-            scheduleResult.Value.Warnings,
+            warnings,
             notes,
             scheduleResult.Value.GamesPerTeam));
     }
@@ -181,6 +188,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         }
 
         ReportUnconfiguredCalendarRules(context, notes);
+        AssessPostseason(run, context, target, violations, warnings, notes);
 
         return DomainOperationResult<SeasonAdvanceAssessment>.Success(new SeasonAdvanceAssessment(
             run.CurrentDay.Index,
@@ -228,6 +236,17 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
             {
                 run.RestoreTo(restorePoint);
                 return DomainOperationResult<SeasonAdvanced>.Failure(advanceResult.Errors.ToArray());
+            }
+
+            // The bracket is drawn as the day arrives rather than laid out at the start, because
+            // round two's participants are not known until round one is decided. Drawing happens
+            // whether or not this build can play a game: a bracket is a statement about the table,
+            // and a build with no match model still has one.
+            var drawResult = DrawPostseasonFor(run, context, day);
+            if (drawResult.IsFailure)
+            {
+                run.RestoreTo(restorePoint);
+                return DomainOperationResult<SeasonAdvanced>.Failure(drawResult.Errors.ToArray());
             }
 
             if (!_matchEngine.CanPlay)
@@ -348,6 +367,128 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         return team.Players
             .Where(player => !unavailable.Contains(player.PlayerId.Value))
             .ToArray();
+    }
+
+    /// <summary>
+    /// Draws whatever the bracket wants played on one day and adds it to the schedule. A no-op on
+    /// every day outside the postseason, and on a postseason day whose games are already drawn, so
+    /// the advance loop can call it unconditionally.
+    /// </summary>
+    private DomainOperationResult DrawPostseasonFor(SeasonRun run, SeasonContext context, SeasonDay day)
+    {
+        var rules = context.Ruleset.PostseasonRules;
+        var phase = run.Calendar.Phase(SeasonPhase.Postseason);
+
+        if (!rules.IsConfigured || phase is null || !phase.Contains(day))
+        {
+            return DomainOperationResult.Success;
+        }
+
+        var seeding = _bracketBuilder.Seed(context.League, Standings(run, context), rules);
+        if (seeding.IsFailure)
+        {
+            return DomainOperationResult.Failure(seeding.Errors.ToArray());
+        }
+
+        var draw = _bracketBuilder.DrawFor(
+            context.Season,
+            seeding.Value,
+            rules,
+            run.Calendar,
+            run.Schedule,
+            run.Results,
+            day);
+
+        if (draw.IsFailure)
+        {
+            return DomainOperationResult.Failure(draw.Errors.ToArray());
+        }
+
+        if (draw.Value.Violations.Count > 0)
+        {
+            return DomainOperationResult.Failure(draw.Value.Violations
+                .Select(violation => new DomainError(violation.RuleCode, violation.Explanation))
+                .ToArray());
+        }
+
+        return draw.Value.Fixtures.Count == 0
+            ? DomainOperationResult.Success
+            : run.ExtendSchedule(draw.Value.Fixtures);
+    }
+
+    /// <summary>
+    /// What the bracket has to say about an advance that reaches the postseason, worked out without
+    /// drawing anything.
+    /// <para>
+    /// A seeding that cannot be drawn at all — more conferences than this build brackets, a
+    /// conference with fewer teams than it seeds — is a violation here rather than a failure part
+    /// way through the advance. Both are day-independent facts about the league's shape, so there
+    /// is nothing to be gained by letting a caller advance eighty days and then roll all of them
+    /// back.
+    /// </para>
+    /// </summary>
+    private void AssessPostseason(
+        SeasonRun run,
+        SeasonContext context,
+        SeasonDay target,
+        List<RuleFinding> violations,
+        List<RuleFinding> warnings,
+        List<RuleFinding> notes)
+    {
+        var rules = context.Ruleset.PostseasonRules;
+        var phase = run.Calendar.Phase(SeasonPhase.Postseason);
+
+        if (!rules.IsConfigured || phase is null || target <= phase.StartDay)
+        {
+            return;
+        }
+
+        var seeding = _bracketBuilder.Seed(context.League, Standings(run, context), rules);
+        if (seeding.IsFailure)
+        {
+            violations.AddRange(seeding.Errors.Select(error => new RuleFinding(BracketCannotBeSeededCode, error.Message)));
+            return;
+        }
+
+        warnings.AddRange(seeding.Value.Warnings);
+
+        // The fixture list on an assessment is what the schedule already holds, and the bracket is
+        // not in it yet. Saying so is the difference between "this advance plays no postseason
+        // games" and "this advance plays games that cannot be listed yet".
+        var undrawn = run.Schedule.Fixtures.Count(fixture => fixture.Phase == SeasonPhase.Postseason) == 0;
+
+        if (undrawn)
+        {
+            notes.Add(new RuleFinding(
+                BracketNotYetDrawnCode,
+                $"This advance reaches the postseason, whose bracket is drawn a round at a time from the table as each day arrives. Its fixtures are not in the schedule yet, so they are not listed above."));
+        }
+    }
+
+    /// <summary>
+    /// Whether the postseason the league states can be played in the days it reserves for it. A
+    /// warning rather than a failure at this point: the regular season is unaffected, and the league
+    /// is entitled to be told the two figures rather than refused a season over them.
+    /// </summary>
+    private static void ReportPostseasonDayBudget(SeasonContext context, List<RuleFinding> warnings)
+    {
+        var rules = context.Ruleset.PostseasonRules;
+
+        if (!rules.IsConfigured)
+        {
+            return;
+        }
+
+        var groups = context.League.Alignment.IsFlat ? 1 : context.League.Alignment.Conferences.Count;
+        var rounds = rules.RoundsPerConference + (groups > 1 ? 1 : 0);
+        var daysNeeded = rules.SeriesLengths.Take(rounds).Sum();
+
+        if (daysNeeded > rules.PostseasonDays)
+        {
+            warnings.Add(new RuleFinding(
+                PostseasonNeedsMoreDaysCode,
+                $"This postseason's {rounds} round(s) need up to {daysNeeded} days if every series runs its full length, and the calendar reserves {rules.PostseasonDays}. A series that runs past the reserved days cannot be played and the advance that reaches it will be refused."));
+        }
     }
 
     /// <summary>

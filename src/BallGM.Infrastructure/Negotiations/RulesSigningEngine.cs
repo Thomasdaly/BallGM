@@ -3,6 +3,7 @@ using BallGM.Application.Negotiations;
 using BallGM.Domain.Common;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
+using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 using BallGM.Rules.Configuration;
 using BallGM.Rules.Signings;
@@ -27,9 +28,10 @@ public sealed class RulesSigningEngine : ISigningEngine
         Offer offer,
         LeagueSnapshot snapshot,
         TeamId teamId,
-        PlayerId playerId)
+        PlayerId playerId,
+        SeasonDay? day = null)
     {
-        var contextResult = BuildContext(snapshot, teamId, playerId);
+        var contextResult = BuildContext(snapshot, teamId, playerId, day);
         return contextResult.IsFailure
             ? DomainOperationResult<SigningAssessment>.Failure(contextResult.Errors.ToArray())
             : _validator.Validate(offer, contextResult.Value);
@@ -39,9 +41,10 @@ public sealed class RulesSigningEngine : ISigningEngine
         Offer offer,
         LeagueSnapshot snapshot,
         TeamId teamId,
-        PlayerId playerId)
+        PlayerId playerId,
+        SeasonDay? day = null)
     {
-        var contextResult = BuildContext(snapshot, teamId, playerId);
+        var contextResult = BuildContext(snapshot, teamId, playerId, day);
         if (contextResult.IsFailure)
         {
             return DomainOperationResult<SigningResult>.Failure(contextResult.Errors.ToArray());
@@ -78,7 +81,8 @@ public sealed class RulesSigningEngine : ISigningEngine
     private static DomainOperationResult<SigningContext> BuildContext(
         LeagueSnapshot snapshot,
         TeamId teamId,
-        PlayerId playerId)
+        PlayerId playerId,
+        SeasonDay? day = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(teamId);
@@ -137,6 +141,16 @@ public sealed class RulesSigningEngine : ISigningEngine
                 .ToArray());
         }
 
+        // The postseason rules travel with the signing because the eligibility cutoff is a rule
+        // about the day a signing happens, not about the money. A league whose postseason section is
+        // absent hands over None, which the validator reports as "no postseason" rather than as an
+        // eligible signing.
+        var postseasonResult = BuildPostseasonRules(snapshot);
+        if (postseasonResult.IsFailure)
+        {
+            return DomainOperationResult<SigningContext>.Failure(postseasonResult.Errors.ToArray());
+        }
+
         return DomainOperationResult<SigningContext>.Success(new SigningContext(
             snapshot.CurrentSeason,
             team,
@@ -145,6 +159,31 @@ public sealed class RulesSigningEngine : ISigningEngine
             snapshot.Ledger,
             configuration.RosterLimits,
             thresholdsResult.Value,
-            negotiationRulesResult.Value));
+            negotiationRulesResult.Value,
+            postseasonResult.Value,
+            day));
+    }
+
+    /// <summary>
+    /// This league's postseason format, or <see cref="PostseasonRules.None"/> where it holds none.
+    /// Built here rather than reached for, the same way the negotiation rules above are.
+    /// </summary>
+    internal static DomainOperationResult<PostseasonRules> BuildPostseasonRules(LeagueSnapshot snapshot)
+    {
+        if (snapshot.Configuration.Postseason is not { } postseason)
+        {
+            return DomainOperationResult<PostseasonRules>.Success(PostseasonRules.None);
+        }
+
+        var schedule = snapshot.Configuration.ResolvedSchedule;
+
+        return PostseasonRules.Create(
+            postseason.PostseasonDays,
+            postseason.QualifyingTeamsPerConference,
+            postseason.SeriesLengths,
+            postseason.HomeCourtSequence,
+            postseason.PlayoffEligibilityCutoffDay,
+            schedule.PreseasonDays + schedule.RegularSeasonDays,
+            includesFinal: !snapshot.League.Alignment.IsFlat);
     }
 }

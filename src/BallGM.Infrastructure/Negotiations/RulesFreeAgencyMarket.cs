@@ -122,6 +122,15 @@ public sealed class RulesFreeAgencyMarket : IFreeAgencyMarket
                 .ToArray());
         }
 
+        // The market judges its offers with the same validator the offer screen uses, so it has to
+        // hand that validator the same rules — the playoff eligibility cutoff included, or a signing
+        // made through the market would be checked against one fewer rule than a signing made by hand.
+        var postseasonResult = RulesSigningEngine.BuildPostseasonRules(snapshot);
+        if (postseasonResult.IsFailure)
+        {
+            return DomainOperationResult<MarketContext>.Failure(postseasonResult.Errors.ToArray());
+        }
+
         return DomainOperationResult<MarketContext>.Success(new MarketContext(
             snapshot.CurrentSeason,
             day,
@@ -133,6 +142,7 @@ public sealed class RulesFreeAgencyMarket : IFreeAgencyMarket
             configuration.RosterLimits,
             thresholdsResult.Value,
             negotiationRulesResult.Value,
-            random));
+            random,
+            postseasonResult.Value));
     }
 }

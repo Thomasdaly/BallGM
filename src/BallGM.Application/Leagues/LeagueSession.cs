@@ -216,7 +216,7 @@ public sealed partial class LeagueSession
             return DomainOperationResult<SigningAssessmentSummary>.Failure(offerResult.Errors.ToArray());
         }
 
-        var assessmentResult = _signingEngine.Assess(offerResult.Value, _snapshot, team.Id, player.Id);
+        var assessmentResult = _signingEngine.Assess(offerResult.Value, _snapshot, team.Id, player.Id, _seasonRun?.CurrentDay);
         return assessmentResult.IsFailure
             ? DomainOperationResult<SigningAssessmentSummary>.Failure(assessmentResult.Errors.ToArray())
             : DomainOperationResult<SigningAssessmentSummary>.Success(ToSummary(assessmentResult.Value, team.Name, player.FullName));
@@ -255,7 +255,7 @@ public sealed partial class LeagueSession
             return DomainOperationResult<SigningSubmission>.Failure(offerResult.Errors.ToArray());
         }
 
-        var executionResult = _signingEngine.Execute(offerResult.Value, _snapshot, team.Id, player.Id);
+        var executionResult = _signingEngine.Execute(offerResult.Value, _snapshot, team.Id, player.Id, _seasonRun?.CurrentDay);
         if (executionResult.IsFailure)
         {
             return DomainOperationResult<SigningSubmission>.Failure(executionResult.Errors.ToArray());

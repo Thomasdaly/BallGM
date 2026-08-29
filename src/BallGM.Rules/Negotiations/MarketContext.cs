@@ -38,7 +38,8 @@ public sealed record MarketContext(
     RosterSizeLimits RosterLimits,
     CapThresholds CapThresholds,
     NegotiationRules NegotiationRules,
-    IRandomSource Random)
+    IRandomSource Random,
+    PostseasonRules? PostseasonRules = null)
 {
     public Team? TeamFor(TeamId teamId)
     {
@@ -63,7 +64,9 @@ public sealed record MarketContext(
             Ledger,
             RosterLimits,
             CapThresholds,
-            NegotiationRules);
+            NegotiationRules,
+            PostseasonRules,
+            Day);
     }
 
     /// <summary>The players a team currently rosters, resolved from identifiers.</summary>
