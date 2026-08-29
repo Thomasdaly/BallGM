@@ -219,6 +219,81 @@ Offer expiry is measured in `NegotiationRules.OfferExpiryDays`, so the market ne
 `FreeAgencyBoardSummary` presents the market as one column per position, each carrying the team's own depth chart at that position alongside the best players available for it, plus whatever this team has on the table and whatever the player has countered with. A league-wide "best available" list answers who the best free agent is and nothing about whether this team needs one; a market a GM cannot read against their own squad is a market they cannot play.
 
 
+## The season: a calendar, a schedule, a table, and a bracket
+
+Milestone 7 gives the league a notion of *when*. Everything below it — a cap sheet, a trade, an offer — was previously expressed against a season year and, from 6b, a bare `SeasonDay` index. This is where those become a calendar a human can read and a schedule a league can play.
+
+### `SeasonEngine` lives in `BallGM.Simulation`, not in `BallGM.Rules`
+
+Every other rule-shaped thing in this codebase lives in `BallGM.Rules`, and the calendar builder, the schedule generator, the depth chart builder, the standings calculator and the postseason bracket builder all do. `BallGM.Simulation.Seasons.SeasonEngine` does not, for one reason: **it drives the match engine**, and `Rules` sits below `Simulation` in the dependency order. A `Rules` type that could play a game would need `Simulation` above it to reference downwards.
+
+So the engine owns **sequencing and nothing else** — which day it is, which day comes next, what falls inside an advance, and what to hand to which rule. Every rule it applies belongs to `Rules` and is testable without it. That is the same division of labour `TradeExecutor` keeps with `TradeValidator`, applied to a loop instead of a transaction.
+
+`BallGM.Simulation.Seasons.IMatchEngine` is the seam between the season's bookkeeping and the probabilistic model that decides who wins. Splitting them means the calendar can be advanced, tested, and proved deterministic without a single probability being involved. `UnplayedMatchEngine` is the implementation this build ships: it plays nothing and **says so** on the assessment rather than crashing, so a build with a calendar but no game model is a stated condition instead of a missing feature discovered at runtime.
+
+### Assess, advance, restore — the same shape as every other engine
+
+`SeasonEngine.Assess` works out what advancing *n* days would do and touches nothing, so an advance-date control can preview on every keystroke. `Advance` **re-assesses against the season as it stands** rather than trusting an assessment handed in, captures a restore point, walks the days one at a time, and puts the whole season back through `SeasonRun.RestoreTo` if any day fails.
+
+The rollback is not defensive tidiness. A half-advanced season has games played on days the league has not reached, which is precisely the state `SeasonRun.RecordResult` refuses — so a partial advance would leave the season in a shape its own invariants say cannot exist.
+
+`RestoreTo` takes no view on any rule, exactly as `Negotiation.RestoreTo` and `Team.RestoreRoster` do not: the state it restores was legal when it was left, and an undo that can be refused is not an undo. Time itself still only moves forwards — `AdvanceTo` refuses a day already passed, because a season that could rewind would replay games that already have results and double every record in the table.
+
+### `SeedMixer`: every game's seed is derived, never drawn in sequence
+
+`SeasonSeed` is the one number a season's randomness comes from, and **nothing draws from it directly**. Each consumer derives its own through `BallGM.Domain.Randomness.SeedMixer.Mix(seed, name)`: the fixture list from `"schedule"`, and each game from its own `GameId`.
+
+The alternative — one long random stream consumed game by game — was rejected because it makes a result depend on *how much randomness was consumed before it*. Simulating game 400 would then differ depending on whether it was the four-hundredth game of an uninterrupted run or the first thing simulated after a load, so a save resumed mid-season and a season advanced a week at a time would both diverge from the same seed. Deriving each game's seed from the season seed and the game's identifier removes the dependency entirely.
+
+This is also why `GameId` is **derived from the fixture's coordinates rather than minted with `SortableId.NewId()`** — the documented exception to the identifier rule in `docs/domain-language.md`. A minted identifier carries a timestamp and eighty bits of randomness, so two runs of one season would produce two different sets of game identifiers, and therefore two different sets of per-game seeds, and therefore different games. Every determinism guarantee in this milestone rests on that identifier being a function of the season, the day and the slot, and of nothing else.
+
+`SeedMixer` is pure integer arithmetic over the UTF-8 bytes of the name, with a final avalanche so that names differing in one byte do not produce neighbouring seeds — adjacent games would otherwise have visibly correlated random sequences.
+
+### The calendar maps onto the `SeasonDay` index; it does not replace it
+
+`SeasonDay` arrived in 6b, before there was a calendar, as the unit offer expiry is measured in. `LeagueCalendar` maps that index onto dates rather than superseding it, and the direction matters:
+
+- **Day 0 is the day the season opened, which is also the day the free-agency market opened.** That is what makes the mapping compatible with everything 6b already measures. The calendar arrived after the index and fits itself to the index.
+- **Nothing in the rules or the simulation reads the date side.** `DateOn` and `DayOn` exist for presentation and for a screen that lets a GM pick a date. A season advanced by dates would reproduce differently depending on which day of the week it started, and an offer that expired because a wall clock moved is exactly the failure `SeasonDay` was introduced to refuse.
+- **Phases are half-open ranges laid end to end**, validated at construction: a gap or an overlap is a structured failure at load rather than a crash on the first advance that reaches the hole. A phase configured as zero days long is left out entirely, so `Calendar.Has(SeasonPhase.Postseason)` is a straight answer to "does this league hold a postseason" rather than a length comparison every caller has to remember to make.
+
+The consequence worth stating: the in-season signing window and the playoff eligibility cutoff are both stated in the ruleset as **day indices**, not dates, and are compared against the same index a negotiation's expiry uses. One notion of elapsed time across the whole game.
+
+### A season in progress is session state, not league state
+
+`SeasonRun` is not on `LeagueSnapshot` — the same decision 6b took for `Negotiation`, for the same reason. A schedule in the snapshot would give every read model in the game an opinion about what day it is, and the cap sheet has no business knowing. `LeagueSession` holds the run beside the negotiations, and `ISeasonEngine` takes it as an argument.
+
+`SeasonEnvelope` carries **its own schema version**, independent of the ruleset's and of `LeagueSaveEnvelope`'s, and it already carries results, box scores and injury spells even though the build that introduced it plays no games — precisely so that the half of Milestone 7 which does play them adds no version at all. Loading replays every result through `RecordResult` and every advance through `AdvanceTo`, so a file claiming a game played on a day the league had not reached fails exactly the way it would have failed live.
+
+### The postseason bracket is drawn a round at a time
+
+`BallGM.Rules.Seasons.PostseasonBracketBuilder` seeds the bracket from `Standings` — league-wide in a flat league, per conference otherwise — and reports the fixtures each postseason day is due. It is a pure rule: no seed, no clock, no randomness. `SeasonEngine` asks it on every day it advances through and extends the schedule with whatever comes back.
+
+**Seeding reads the table's order; it never re-decides it.** The league's stated tie-break sequence was already applied once by `StandingsCalculator`, and every tie that fell through to the terminal key is already reported there. A second ordering inside the bracket builder would be a second rulebook. Where the *last qualifying place* was taken on an equal record, the seeding says so in its own warning — that is the one place in a table where the order changes who is in and who is out.
+
+**The bracket is drawn a round at a time and a game at a time, not laid out in full.** It has to be: round two's participants are unknown until round one is decided, and a best-of-seven that ends in five never played its last two games. A schedule holding fixtures that were never going to happen would make "games remaining" a lie and leave the season permanently short of complete.
+
+Three mechanics follow from that:
+
+- **Series in a round run in lockstep.** Game *n* of every live series in a round falls on the same day, so no team is asked to play twice in a day, and a series that ends early simply stops asking for days. The next round starts a full series length after the previous one began.
+- **A series is identified by its unordered pair of teams.** Two teams meet at most once in a single-elimination bracket — a rematch would mean both had come through the same series — so the round is not needed to tell one series from another.
+- **The higher seed is decided on league-wide standings position, not on conference seed number.** A final is contested between two teams who are both their conference's number one, and a conference seed cannot separate them. Inside a conference the two keys agree by construction, because both are read off the same ordered table.
+
+Home advantage comes from the league's stated `HomeCourtPattern` — `2-2-1-1-1` written the way leagues write it — so a league that plays `2-3-2` is not a league that needs a code change.
+
+A league whose `PostseasonRules` are `None` holds **no** postseason, which is a league rather than a misconfiguration: no postseason phase is built, the season ends when the regular season does, and the absence is a note on every assessment rather than a silence.
+
+### The playoff eligibility cutoff is applied at the signing
+
+`PostseasonRules.PlayoffEligibilityCutoffDay` is the last season day a player may be added and still appear in the postseason. It is enforced in `SigningValidator`, with the day travelling in from `LeagueSession`'s season through `ISigningEngine` onto `SigningContext`.
+
+It is a **warning, not a violation**. A league with a cutoff decides who may appear in the postseason, not who may be signed: a team signing cover for the last fortnight of a regular season is doing something legal and deliberate. What it must never be is silent, because a GM who signs on the wrong side of the cutoff has bought someone who cannot play in the games the signing was probably for.
+
+The three ways the check cannot fire — the league holds no postseason, the league states no cutoff, no season is under way in this session — are each reported as their own note. A check that never ran is otherwise indistinguishable from a check that ran and approved, which is the contract every other assessment in this codebase keeps.
+
+**Known gap.** The cutoff currently bites at the point of signing and is reported there; it does not yet keep an ineligible player out of a postseason *line-up*. Doing that needs the signing day to survive a save, which means either a field on `TransactionEntry` or a `SeasonEnvelope` version — neither of which belongs in the change that drew the bracket.
+
+
 ## Cross-cutting design decisions
 
 - Use identifiers rather than object graph persistence across every boundary.

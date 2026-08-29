@@ -114,24 +114,37 @@ UI: an offer screen with every signing route's verdict (6a, done), and the free-
 
 ## Milestone 7 — Calendar and game simulation
 
-- Schedule
-- team strength
-- line-ups/minutes
-- game outcomes
-- box-score statistics
-- fatigue and injuries
-- standings
-- postseason
+Splits along the seam `IMatchEngine` draws: **7a**, everything about a season that has no probability in it, and **7b**, the model that decides a game. The first half can be proved deterministic without a single random draw being involved, which is why it ships first.
+
+**7a (done):**
+
+- `LeagueCalendar` — phases as half-open day ranges laid end to end, mapped onto the `SeasonDay` index Milestone 6b already measures offer expiry in
+- `ScheduleGenerator` — a fixture list from the alignment and the ruleset's opponent weighting, reproducible from the season seed
+- `Standings` and the configured tie-break sequence, with every unresolved tie and every inapplicable tie-break reported
+- `DepthChartBuilder` — positional, deterministic, and reading the same positional vocabulary the Milestone 6b free-agency board does
+- `SeasonRun`, `SeasonEngine` and the `ISeasonEngine`/`RulesSeasonEngine` port pair; a versioned `SeasonEnvelope` save round trip
+- The postseason bracket: seeded from the table, drawn a round at a time, played through the same assess/advance/`RestoreTo` path, with `PostseasonRules.None` ending a season cleanly
+- The playoff eligibility cutoff, applied at the point of signing
+- UI: a season view with calendar/advance-date controls, the schedule, and a standings table
+
+**7b (next):**
+
+- team strength, minutes-driven game outcomes, and box-score statistics — the `IMatchEngine` this build ships as `UnplayedMatchEngine`
+- fatigue and injury generation (`InjurySpell` and `BoxScore` already exist and round-trip; nothing produces them yet)
+- **Bounded model terms** — every input to an outcome probability carries a named, tested bound. No single term may dominate a result.
+- UI: box scores
 
 From `docs/competitive-feature-review.md` §4 and §7, all of them ruleset data rather than code, and all cheaper now than retrofitted:
 
-- **Postseason format** — series length and home-court sequence configured, not fixed.
-- **Tie-break sequence** — an ordered list in the ruleset, with its own tests. A standings tie resolved by a rule the league never stated is the classic silent-wrong-answer bug.
-- **Bounded model terms** — every input to an outcome probability carries a named, tested bound. No single term may dominate a result.
-- **Positional depth chart** — needed for minutes allocation anyway, and reused by the M6 free-agency board.
-- **Short-term contracts** and the **in-season signing window**, which only become expressible once a calendar exists.
+- **Postseason format** — series length and home-court sequence configured, not fixed. *(Done: `PostseasonRules` and `HomeCourtPattern`.)*
+- **Tie-break sequence** — an ordered list in the ruleset, with its own tests. A standings tie resolved by a rule the league never stated is the classic silent-wrong-answer bug. *(Done: `TieBreakSequence`, and every tie that falls to the terminal key is reported.)*
+- **Bounded model terms** — every input to an outcome probability carries a named, tested bound. *(7b. `MinutesAllocationBounds` is the first of them.)*
+- **Positional depth chart** — needed for minutes allocation anyway, and reused by the M6 free-agency board. *(Done.)*
+- **Short-term contracts** and the **in-season signing window**, which only become expressible once a calendar exists. *(Expressible: both are ruleset fields at schema version 6, reported as unconfigured where a league states neither. Enforcement is 7b.)*
 
-UI: calendar/advance-date controls, box scores, and a standings view.
+The design decisions worth not re-deriving — why `SeasonEngine` sits in `BallGM.Simulation` rather than `BallGM.Rules`, the `SeedMixer` per-game seed derivation, the assess/advance/`RestoreTo` rollback shape, how `LeagueCalendar` maps onto `SeasonDay`, and how the bracket is drawn — are in `docs/architecture.md` → "The season: a calendar, a schedule, a table, and a bracket".
+
+The ruleset file moved to **schema version 6** here, which added the schedule section, the tie-break sequence, the postseason format, the in-season signing window, the eligibility cutoff, and short-term contracts. Optional by absence as version 4 established, but the version still moved: a version 5 reader handed a version 6 file would settle every standings tie by a rule the ruleset never mentioned.
 
 ## Milestone 8 — Player lifecycle
 
