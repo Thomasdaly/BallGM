@@ -105,9 +105,9 @@ public sealed class LeagueRulesetSerializerTests
     public void DeserializeReturnsStructuredFailureForARetainedRoundTheDraftDoesNotHave()
     {
         var serializer = new LeagueRulesetSerializer();
-        var envelopeJson = """
+        var envelopeJson = $$"""
             {
-              "schemaVersion": 5,
+              "schemaVersion": {{LeagueRuleset.CurrentSchemaVersion}},
               "name": "Broken Ruleset",
               "regularSeasonGameCount": 82,
               "minimumRosterPlayers": 12,
@@ -239,9 +239,9 @@ public sealed class LeagueRulesetSerializerTests
     public void DeserializeReturnsStructuredFailureForOutOfOrderCapThresholdsInsteadOfThrowing()
     {
         var serializer = new LeagueRulesetSerializer();
-        var envelopeJson = """
+        var envelopeJson = $$"""
             {
-              "schemaVersion": 5,
+              "schemaVersion": {{LeagueRuleset.CurrentSchemaVersion}},
               "name": "Broken Ruleset",
               "regularSeasonGameCount": 82,
               "minimumRosterPlayers": 12,
@@ -273,9 +273,9 @@ public sealed class LeagueRulesetSerializerTests
     public void DeserializeReturnsStructuredFailureForInvalidRosterLimitsInsteadOfThrowing()
     {
         var serializer = new LeagueRulesetSerializer();
-        var envelopeJson = """
+        var envelopeJson = $$"""
             {
-              "schemaVersion": 5,
+              "schemaVersion": {{LeagueRuleset.CurrentSchemaVersion}},
               "name": "Broken Ruleset",
               "regularSeasonGameCount": 82,
               "minimumRosterPlayers": 20,
