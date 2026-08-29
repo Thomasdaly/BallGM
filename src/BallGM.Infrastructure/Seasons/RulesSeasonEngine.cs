@@ -33,6 +33,7 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
     // that wants to inject its own results, or a tool that only cares about the calendar — but a
     // build that ships without a game model would be a build in which no season ever finishes.
     private readonly SeasonEngine _engine = new(matchEngine ?? new PossessionMatchEngine());
+    private readonly SeasonConclusion _seasonConclusion = new();
 
     public DomainOperationResult<SeasonStartOutcome> Start(LeagueSnapshot snapshot, DateOnly seasonStart, int seed)
     {
@@ -115,6 +116,35 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
                 build.Value.Chart,
                 build.Value.Warnings,
                 build.Value.Notes));
+    }
+
+    public DomainOperationResult<SeasonConclusionOutcome> ConcludeSeason(SeasonRun run, LeagueSnapshot snapshot)
+    {
+        var rulesetResult = BuildRuleset(snapshot);
+        if (rulesetResult.IsFailure)
+        {
+            return DomainOperationResult<SeasonConclusionOutcome>.Failure(rulesetResult.Errors.ToArray());
+        }
+
+        var teamNames = snapshot.Teams.ToDictionary(team => team.Id, team => team.Name);
+
+        var concluded = _seasonConclusion.Conclude(
+            snapshot.League,
+            teamNames,
+            snapshot.Teams,
+            snapshot.Players,
+            snapshot.Contracts,
+            run,
+            rulesetResult.Value.StandingsRules,
+            rulesetResult.Value.PostseasonRules);
+
+        return concluded.IsFailure
+            ? DomainOperationResult<SeasonConclusionOutcome>.Failure(concluded.Errors.ToArray())
+            : DomainOperationResult<SeasonConclusionOutcome>.Success(new SeasonConclusionOutcome(
+                concluded.Value.Entry,
+                concluded.Value.PlayersReleasedToFreeAgency,
+                concluded.Value.PlayersCreditedService,
+                concluded.Value.Notes));
     }
 
     private static SeasonAdvanceOutcome ToOutcome(SeasonAdvanceAssessment assessment, IReadOnlyList<GameResult> played) =>

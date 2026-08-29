@@ -205,7 +205,24 @@ public sealed class Team
         _playerIds.UnionWith(playerIds);
     }
 
-    public DomainOperationResult RemovePlayer(PlayerId playerId)
+    public DomainOperationResult RemovePlayer(PlayerId playerId) =>
+        RemovePlayerCore(playerId, enforceMinimum: true);
+
+    /// <summary>
+    /// Drops a player whose contract has run its course, without enforcing the roster minimum.
+    /// <para>
+    /// A voluntary release through <see cref="RemovePlayer"/> is a GM's choice, and the minimum is
+    /// there to stop a GM cutting a roster below what the league requires. A contract's natural
+    /// expiry at a season boundary is not that choice — it is the ordinary state of a team between
+    /// seasons, which <c>docs/domain-language.md</c> → "Team aggregate, on the roster minimum" is
+    /// explicit about: the minimum is an obligation to meet, not an invariant the roster can never
+    /// leave. The only caller is <c>BallGM.Rules.Seasons.SeasonConclusion</c>.
+    /// </para>
+    /// </summary>
+    public DomainOperationResult ReleaseExpiredPlayer(PlayerId playerId) =>
+        RemovePlayerCore(playerId, enforceMinimum: false);
+
+    private DomainOperationResult RemovePlayerCore(PlayerId playerId, bool enforceMinimum)
     {
         ArgumentNullException.ThrowIfNull(playerId);
 
@@ -217,7 +234,7 @@ public sealed class Team
                     $"Player '{playerId.Value}' is not on team '{Id.Value}'."));
         }
 
-        if (_playerIds.Count <= RosterLimits.MinimumPlayers)
+        if (enforceMinimum && _playerIds.Count <= RosterLimits.MinimumPlayers)
         {
             return DomainOperationResult.Failure(
                 new DomainError(

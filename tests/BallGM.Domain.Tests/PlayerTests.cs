@@ -137,6 +137,19 @@ public sealed class PlayerTests
         Assert.Equal("player.missing_birth_date", Assert.Single(result.Errors).Code);
     }
 
+    [Fact]
+    public void CompleteSeasonOfServiceIncrementsByOne()
+    {
+        var player = CreatePlayer();
+
+        var first = player.CompleteSeasonOfService();
+        var second = player.CompleteSeasonOfService();
+
+        Assert.True(first.IsSuccess);
+        Assert.True(second.IsSuccess);
+        Assert.Equal(6, player.SeasonsOfService);
+    }
+
     private static Player CreatePlayer()
     {
         return Player.Create(

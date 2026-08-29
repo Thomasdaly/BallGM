@@ -1,7 +1,22 @@
+using BallGM.Domain.Common;
+using BallGM.Domain.Players;
+using BallGM.Domain.Seasons;
+
 namespace BallGM.Application.Seasons;
 
 /// <summary>One thing the season rules had to say, formatted for a screen.</summary>
 public sealed record SeasonFindingLine(string RuleCode, string Explanation, string? TeamName);
+
+/// <summary>
+/// What concluding a finished season changed, in the shape the Application port hands back. Mirrors
+/// <c>BallGM.Rules.Seasons.ConcludedSeason</c> field for field — Application does not reference Rules,
+/// so the port's own type carries the same information rather than exposing the Rules-layer one.
+/// </summary>
+public sealed record SeasonConclusionOutcome(
+    SeasonHistoryEntry Entry,
+    IReadOnlyList<PlayerId> PlayersReleasedToFreeAgency,
+    int PlayersCreditedService,
+    IReadOnlyList<RuleFinding> Notes);
 
 /// <summary>One phase of the calendar, with both the day index and the date it maps onto.</summary>
 public sealed record CalendarPhaseLine(
@@ -174,4 +189,25 @@ public sealed record SeasonSummary(
     StandingsSummary Standings,
     IReadOnlyList<ScheduleDayLine> UpcomingDays,
     IReadOnlyList<SeasonFindingLine> Warnings,
+    IReadOnlyList<SeasonFindingLine> Notes);
+
+/// <summary>One team's line in a concluded season's archived table.</summary>
+public sealed record SeasonHistoryLine(
+    int Position,
+    string TeamId,
+    string TeamName,
+    int Wins,
+    int Losses,
+    int PointsFor,
+    int PointsAgainst);
+
+/// <summary>What concluding a season left behind, formatted for a screen.</summary>
+public sealed record SeasonConclusionSummary(
+    int ConcludedSeasonYear,
+    string? ChampionTeamId,
+    string? ChampionTeamName,
+    IReadOnlyList<SeasonHistoryLine> FinalStandings,
+    int PlayersReleasedToFreeAgency,
+    int PlayersCreditedService,
+    int NextSeasonYear,
     IReadOnlyList<SeasonFindingLine> Notes);

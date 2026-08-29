@@ -1,6 +1,7 @@
 using System.Globalization;
 using BallGM.Application.Seasons;
 using BallGM.Domain.Common;
+using BallGM.Domain.Leagues;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
@@ -28,6 +29,7 @@ public sealed partial class LeagueSession
     private const string NoSeasonCode = "league_session.no_season_in_progress";
     private const string SeasonAlreadyStartedCode = "league_session.season_already_started";
     private const string UnknownGameCode = "league_session.unknown_game";
+    private const string SeasonNotCompleteCode = "league_session.season_not_complete";
 
     private SeasonRun? _seasonRun;
 
@@ -91,6 +93,72 @@ public sealed partial class LeagueSession
         _seasonRun = run;
         return DomainOperationResult.Success;
     }
+
+    /// <summary>
+    /// Concludes a finished season: archives the champion and the final table, credits service time,
+    /// releases expired contracts back into the free-agent pool, and advances the league to the next
+    /// season year so <see cref="StartSeason"/> can be called again.
+    /// <para>
+    /// Refuses a season that has not reached its last day — the same "not reached yet" refusal
+    /// <see cref="AdvanceDays"/>'s underlying engine already applies to a single game — and refuses a
+    /// season already concluded through <c>League.RecordSeason</c>'s own check, surfaced here without
+    /// this session having mutated anything first.
+    /// </para>
+    /// </summary>
+    public DomainOperationResult<SeasonConclusionSummary> ConcludeSeason()
+    {
+        if (_snapshot is null)
+        {
+            return NotLoaded<SeasonConclusionSummary>();
+        }
+
+        if (_seasonRun is null)
+        {
+            return NoSeason<SeasonConclusionSummary>();
+        }
+
+        if (!_seasonRun.IsComplete)
+        {
+            return DomainOperationResult<SeasonConclusionSummary>.Failure(new DomainError(
+                SeasonNotCompleteCode,
+                $"Season {_seasonRun.Season.Year} has reached {_seasonRun.CurrentDay} of {_seasonRun.Calendar.LengthInDays} days and cannot be concluded until it is played out."));
+        }
+
+        var concludedResult = _seasonEngine.ConcludeSeason(_seasonRun, _snapshot);
+        if (concludedResult.IsFailure)
+        {
+            return DomainOperationResult<SeasonConclusionSummary>.Failure(concludedResult.Errors.ToArray());
+        }
+
+        var outcome = concludedResult.Value;
+        var teamNames = TeamNames(_snapshot);
+        var concludedYear = _seasonRun.Season.Year;
+
+        _snapshot = _snapshot with { CurrentSeason = new Season(concludedYear + 1) };
+        _seasonRun = null;
+
+        return DomainOperationResult<SeasonConclusionSummary>.Success(new SeasonConclusionSummary(
+            concludedYear,
+            outcome.Entry.ChampionTeamId?.Value,
+            outcome.Entry.ChampionTeamId is null
+                ? null
+                : teamNames.GetValueOrDefault(outcome.Entry.ChampionTeamId, outcome.Entry.ChampionTeamId.Value),
+            outcome.Entry.FinalStandings.Select(row => ToLine(row, teamNames)).ToList(),
+            outcome.PlayersReleasedToFreeAgency.Count,
+            outcome.PlayersCreditedService,
+            concludedYear + 1,
+            outcome.Notes.Select(finding => ToSeasonLine(finding, teamNames)).ToList()));
+    }
+
+    private static SeasonHistoryLine ToLine(SeasonHistoryTeamRecord row, IReadOnlyDictionary<TeamId, string> teamNames) =>
+        new(
+            row.Position,
+            row.TeamId.Value,
+            teamNames.GetValueOrDefault(row.TeamId, row.TeamId.Value),
+            row.Record.Wins,
+            row.Record.Losses,
+            row.PointsFor,
+            row.PointsAgainst);
 
     /// <summary>The season as it stands: where the calendar is, what the table says, and what is on next.</summary>
     public DomainOperationResult<SeasonSummary> Season()

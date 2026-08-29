@@ -471,7 +471,10 @@ public sealed partial class LeagueSession
 
     private static bool IsFreeAgent(Player player, LeagueSnapshot snapshot) =>
         !snapshot.Teams.Any(team => team.PlayerIds.Contains(player.Id)) &&
-        !snapshot.Contracts.Any(contract => !contract.IsTerminated && contract.PlayerId == player.Id);
+        !snapshot.Contracts.Any(contract =>
+            !contract.IsTerminated &&
+            contract.PlayerId == player.Id &&
+            contract.TermFor(snapshot.CurrentSeason) is not null);
 
     /// <summary>
     /// Turns a day index from a screen into the domain's own unit. Negative is a caller error rather

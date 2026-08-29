@@ -95,6 +95,10 @@ internal sealed class StubSeasonEngine : ISeasonEngine
         SeasonDay day) =>
         DomainOperationResult<DepthChartOutcome>.Success(new DepthChartOutcome(Domain.Seasons.DepthChart.Empty(teamId), [], []));
 
+    public DomainOperationResult<SeasonConclusionOutcome> ConcludeSeason(SeasonRun run, LeagueSnapshot snapshot) =>
+        DomainOperationResult<SeasonConclusionOutcome>.Success(new SeasonConclusionOutcome(
+            new SeasonHistoryEntry(run.Season, null, []), [], 0, []));
+
     private SeasonAdvanceOutcome Outcome(SeasonRun run, int days) =>
         new(
             run.CurrentDay.Index,

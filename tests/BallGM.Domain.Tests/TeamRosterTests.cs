@@ -160,6 +160,38 @@ public sealed class TeamRosterTests
         Assert.Equal("roster.initial_duplicate_players", error.Code);
     }
 
+    /// <summary>
+    /// A contract's natural expiry at a season boundary is not a GM's voluntary cut, and the roster
+    /// minimum obligation the ordinary release path enforces would refuse the exact state a season
+    /// boundary needs to reach.
+    /// </summary>
+    [Fact]
+    public void ReleaseExpiredPlayerDropsBelowTheRosterMinimumWithoutRefusing()
+    {
+        var playerId = new PlayerId("player-001");
+        var team = CreateTeam(
+            new RosterSizeLimits(minimumPlayers: 1, maximumPlayers: 2),
+            playerId);
+
+        var result = team.ReleaseExpiredPlayer(playerId);
+
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
+        Assert.DoesNotContain(playerId, team.PlayerIds);
+        Assert.Equal(0, team.RosterCount);
+    }
+
+    [Fact]
+    public void ReleaseExpiredPlayerRejectsPlayersNotOnRoster()
+    {
+        var playerId = new PlayerId("player-001");
+        var team = CreateTeam(new RosterSizeLimits(minimumPlayers: 0, maximumPlayers: 2));
+
+        var result = team.ReleaseExpiredPlayer(playerId);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("roster.player_not_on_team", Assert.Single(result.Errors).Code);
+    }
+
     private static Team CreateTeam(RosterSizeLimits rosterLimits, params PlayerId[] initialPlayers)
     {
         return Team.Create(

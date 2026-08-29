@@ -155,8 +155,12 @@ public sealed class GetLeagueOverviewQuery(
             .SelectMany(team => team.PlayerIds)
             .ToHashSet();
 
+        // Season-scoped: a contract that simply ran its course is not `IsTerminated` (that flag is
+        // only ever set by a release), so once the current season has moved past its last covered
+        // season, `TermFor` on it is null and it stops blocking free agency — no different from a
+        // released player, just without the dead-money history.
         var contractedPlayerIds = snapshot.Contracts
-            .Where(contract => !contract.IsTerminated)
+            .Where(contract => !contract.IsTerminated && contract.TermFor(snapshot.CurrentSeason) is not null)
             .Select(contract => contract.PlayerId)
             .ToHashSet();
 

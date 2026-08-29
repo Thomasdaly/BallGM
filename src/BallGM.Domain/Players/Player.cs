@@ -98,7 +98,7 @@ public sealed class Player
     /// minimum salary does not vary by service is a league where every veteran signs for the rookie
     /// minimum.
     /// </summary>
-    public int SeasonsOfService { get; }
+    public int SeasonsOfService { get; private set; }
 
     public Injury? CurrentInjury { get; private set; }
 
@@ -113,6 +113,19 @@ public sealed class Player
     {
         var age = asOf.Year - BirthDate.Year;
         return asOf < BirthDate.AddYears(age) ? age - 1 : age;
+    }
+
+    /// <summary>
+    /// Credits one completed season on a roster — the only way <see cref="SeasonsOfService"/> moves.
+    /// Called once per player, at season's end, for everyone a team's roster named through it; a
+    /// player who never earns it never ages off the rookie tier of any compensation scale that keys
+    /// off service. Always succeeds; returns a result for consistency with every other aggregate
+    /// mutator here, and so a future invariant can be added without a signature change.
+    /// </summary>
+    public DomainOperationResult CompleteSeasonOfService()
+    {
+        SeasonsOfService++;
+        return DomainOperationResult.Success;
     }
 
     public DomainOperationResult MarkInjured(Injury injury)

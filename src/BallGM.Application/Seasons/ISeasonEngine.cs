@@ -69,4 +69,11 @@ public interface ISeasonEngine
 
     /// <summary>The rotation a team would field on a given day.</summary>
     DomainOperationResult<DepthChartOutcome> DepthChart(SeasonRun run, LeagueSnapshot snapshot, TeamId teamId, SeasonDay day);
+
+    /// <summary>
+    /// Concludes a finished season: archives the champion and the final table, credits service time
+    /// to everyone who was rostered through it, and releases every contract whose last season has
+    /// elapsed back into the free-agent pool. Refuses a season that has not been played out.
+    /// </summary>
+    DomainOperationResult<SeasonConclusionOutcome> ConcludeSeason(SeasonRun run, LeagueSnapshot snapshot);
 }

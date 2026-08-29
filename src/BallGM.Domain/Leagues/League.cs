@@ -1,4 +1,5 @@
 using BallGM.Domain.Common;
+using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 
 namespace BallGM.Domain.Leagues;
@@ -11,8 +12,10 @@ public sealed class League
 {
     private const string DuplicateTeamCode = "league.duplicate_team_membership";
     private const string AlignmentTeamNotInLeagueCode = "league.alignment_team_not_in_league";
+    private const string SeasonAlreadyConcludedCode = "league.season_already_concluded";
 
     private readonly HashSet<TeamId> _teamIds;
+    private readonly List<SeasonHistoryEntry> _history = [];
 
     private League(LeagueId id, string name, IReadOnlyCollection<TeamId> teamIds, LeagueAlignment alignment)
     {
@@ -85,4 +88,27 @@ public sealed class League
     /// to say out loud rather than assume away.
     /// </summary>
     public LeagueAlignment Alignment { get; }
+
+    /// <summary>Every season this league has concluded, oldest first.</summary>
+    public IReadOnlyList<SeasonHistoryEntry> History => _history;
+
+    /// <summary>
+    /// Archives a concluded season. Refuses a second entry for a season year already recorded, which
+    /// is what makes concluding the same season twice a read-only refusal rather than a duplicate
+    /// archived table — see <c>BallGM.Rules.Seasons.SeasonConclusion</c>, the only caller.
+    /// </summary>
+    public DomainOperationResult RecordSeason(SeasonHistoryEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+
+        if (_history.Any(recorded => recorded.Season.Year == entry.Season.Year))
+        {
+            return DomainOperationResult.Failure(new DomainError(
+                SeasonAlreadyConcludedCode,
+                $"Season {entry.Season.Year} has already been concluded and archived in this league's history."));
+        }
+
+        _history.Add(entry);
+        return DomainOperationResult.Success;
+    }
 }
