@@ -114,7 +114,7 @@ UI: an offer screen with every signing route's verdict (6a, done), and the free-
 
 ## Milestone 7 — Calendar and game simulation
 
-Splits along the seam `IMatchEngine` draws: **7a**, everything about a season that has no probability in it, and **7b**, the model that decides a game. The first half can be proved deterministic without a single random draw being involved, which is why it ships first.
+Splits along the seam `IMatchEngine` draws: **7a**, everything about a season that has no probability in it, and **7b**, the model that decides a game. The first half can be proved deterministic without a single random draw being involved, which is why it shipped first. Both halves are now in.
 
 **7a (done):**
 
@@ -127,18 +127,22 @@ Splits along the seam `IMatchEngine` draws: **7a**, everything about a season th
 - The playoff eligibility cutoff, applied at the point of signing
 - UI: a season view with calendar/advance-date controls, the schedule, and a standings table
 
-**7b (next):**
+**7b (done, except its UI):**
 
-- team strength, minutes-driven game outcomes, and box-score statistics — the `IMatchEngine` this build ships as `UnplayedMatchEngine`
-- fatigue and injury generation (`InjurySpell` and `BoxScore` already exist and round-trip; nothing produces them yet)
-- **Bounded model terms** — every input to an outcome probability carries a named, tested bound. No single term may dominate a result.
-- UI: box scores
+- `PossessionMatchEngine` — team strength from the rotation, possession-by-possession outcomes, and box scores that are the game rather than a reconciliation of it
+- Home advantage, and fatigue from rest days computed off the schedule
+- Injury generation, handed back beside the result and turned into `InjurySpell`s by the sequencing layer
+- **Bounded model terms** — every input to an outcome probability carries a named, tested bound in `MatchModelBounds`, with `MatchModelBoundsTests` asserting the relationships between them
+- Calibration locked as seeded regression tests: scoring, margins, home advantage, mismatch, fatigue, and injury rate
+- Outstanding: **UI box scores**. `LeagueSession.BoxScore`/`BoxScoresOn` and `BoxScoreSummary` exist and are tested; no client view reads them yet.
+
+Two limitations are recorded rather than hidden, both from `PlayerRating` carrying a single `Overall`: leading scorers are flatter than a real league's, and so are rotation minutes. Both want the multi-attribute rating `PlayerRating` already anticipates — see `docs/architecture.md` → "The model is calibrated against the sport".
 
 From `docs/competitive-feature-review.md` §4 and §7, all of them ruleset data rather than code, and all cheaper now than retrofitted:
 
 - **Postseason format** — series length and home-court sequence configured, not fixed. *(Done: `PostseasonRules` and `HomeCourtPattern`.)*
 - **Tie-break sequence** — an ordered list in the ruleset, with its own tests. A standings tie resolved by a rule the league never stated is the classic silent-wrong-answer bug. *(Done: `TieBreakSequence`, and every tie that falls to the terminal key is reported.)*
-- **Bounded model terms** — every input to an outcome probability carries a named, tested bound. *(7b. `MinutesAllocationBounds` is the first of them.)*
+- **Bounded model terms** — every input to an outcome probability carries a named, tested bound. *(Done: `MatchModelBounds`, with `MinutesAllocationBounds` alongside it for the rotation.)*
 - **Positional depth chart** — needed for minutes allocation anyway, and reused by the M6 free-agency board. *(Done.)*
 - **Short-term contracts** and the **in-season signing window**, which only become expressible once a calendar exists. *(Expressible: both are ruleset fields at schema version 6, reported as unconfigured where a league states neither. Enforcement is 7b.)*
 

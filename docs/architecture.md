@@ -283,6 +283,33 @@ Home advantage comes from the league's stated `HomeCourtPattern` — `2-2-1-1-1`
 
 A league whose `PostseasonRules` are `None` holds **no** postseason, which is a league rather than a misconfiguration: no postseason phase is built, the season ends when the regular season does, and the absence is a note on every assessment rather than a silence.
 
+### The match engine plays possessions, not scores
+
+`BallGM.Simulation.Seasons.PossessionMatchEngine` is Milestone 7b: the model that decides who wins. It sits behind `IMatchEngine`, which is the seam 7a was built against, so nothing above it changed shape when it arrived.
+
+**Possessions rather than a score draw.** The cheap alternative is to draw a total for each side from a distribution around their strengths. It produces plausible final scores and is a third of the code — but there is nothing underneath the total to attribute to anybody, so the box score has to be invented afterwards and reconciled back to a number that was decided without it. Simulating possessions means the box score *is* the game: the totals are a sum rather than a target, `BoxScore.Create`'s "the lines must add up to the result" check can never fail by construction, and pace becomes a real property one league can differ from another on.
+
+**Every term is bounded and named in `MatchModelBounds`.** This is the answer to `docs/competitive-feature-review.md` §7, which records a competitor shipping an outcome probability that one input could dominate without a cap. Strength, home advantage, fatigue and usage each have a stated ceiling, and `MatchModelBoundsTests` asserts the relationships rather than just the values: no term may approach the base efficiency, home advantage must be worth less than being the better team, rest must be worth less than talent, and the strength cap must be *reachable* by a real mismatch — a bound nothing can hit is dead code, not a bound.
+
+**Integer arithmetic throughout.** Efficiencies are points per ten thousand possessions and probabilities are basis points, so nothing about a result depends on floating-point rounding and the same seed plays the same game on every platform. This is the same reasoning behind integer money and `TeamRecord`'s cross-multiplication, and it is not decorative here: the whole season's reproducibility rests on it.
+
+**Strength is relative, never absolute.** Only the *difference* between the two sides enters the efficiency, so a league rated 45 against 45 and one rated 90 against 90 are the same contest and produce the same scorelines. A model keyed on absolute rating would send one league to nothing and the other off the top of the scoreboard — and a modder shipping a data pack on their own rating scale would find the sport had stopped working.
+
+**Fatigue arrives as rest days, computed by the sequencing layer.** `MatchTeam.RestDays` is days since that team's previous game, worked out by `SeasonEngine` from the schedule. The model does not know what a calendar is and should not have to.
+
+**Injuries come back beside the result rather than being applied.** `MatchOutcome` carries `MatchInjury`, which counts a knock in *days*; `SeasonEngine` turns each one into an `InjurySpell` against the day the game was played on. Same division of labour as everywhere else — the model decides what happened, the sequencing layer decides when. The spell starts the day *after* the game, because the player finished the one they were hurt in; that is why their minutes are in its box score.
+
+`MatchSetup` carries `MatchTeam` — the rotation, the ratings behind it, and the rest — rather than a bare `DepthChart`, because a depth chart deliberately does not carry a rating and strength cannot be recovered from its minutes: those have already been clamped into the bounds a rotation runs inside, so a team of journeymen and a team of stars both allocate the same 240 minutes.
+
+### The model is calibrated against the sport, and the calibration is a test
+
+`MatchModelCalibrationTests` asserts what the model produces *on average* — team scores averaging 107 with a realistic spread, a mean margin near 14, home teams winning about 55%, an 85-rated side beating a 55-rated one about 87% of the time, a rested side gaining a few points of win probability against one on a back-to-back, and injuries running about 0.13 a game skewed short.
+
+Every run is seeded, so none of it is flaky: a failure means the model moved, never that the dice did. The bands are deliberately wide — this is a fictional league and the point is to stay inside the range a reader of the sport would recognise, not to reproduce a real one to the decimal. A tight band would fail on every legitimate tuning pass and teach whoever hit it to widen the band rather than to think.
+
+**Two known limitations, both traceable to a single-attribute rating.** A team's leading scorer averages about 23 rather than the 26 or so a real league produces, because usage is inferred from overall rating and minutes — there is no attribute that says how much of the offence runs through a player. Modelling that harder off `Overall` would make a great defensive centre his team's leading scorer, which is worse than the error it fixes. The same cause makes minutes flatter than a real rotation's. Both want a multi-attribute `PlayerRating`, which `PlayerRating` itself already anticipates.
+
+
 ### The playoff eligibility cutoff is applied at the signing
 
 `PostseasonRules.PlayoffEligibilityCutoffDay` is the last season day a player may be added and still appear in the postseason. It is enforced in `SigningValidator`, with the day travelling in from `LeagueSession`'s season through `ISigningEngine` onto `SigningContext`.
