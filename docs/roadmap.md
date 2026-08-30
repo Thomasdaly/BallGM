@@ -150,15 +150,15 @@ The design decisions worth not re-deriving — why `SeasonEngine` sits in `BallG
 
 The ruleset file moved to **schema version 6** here, which added the schedule section, the tie-break sequence, the postseason format, the in-season signing window, the eligibility cutoff, and short-term contracts. Optional by absence as version 4 established, but the version still moved: a version 5 reader handed a version 6 file would settle every standings tie by a rule the ruleset never mentioned.
 
-**7c-a (done), 7c-b outstanding:**
+**7c (done):**
 
-Splits the same way 6a/6b and 7a/7b did: **7c-a**, the season boundary — what happens when a season ends — and **7c-b**, the save game, which lands next.
+Splits the same way 6a/6b and 7a/7b did: **7c-a**, the season boundary — what happens when a season ends — and **7c-b**, the save game.
 
 **7c-a** — `SeasonConclusion` (`BallGM.Rules.Seasons`) turns a finished `SeasonRun` into the offseason: the champion (re-derived from the final table through `PostseasonBracketBuilder`, never stored mid-season) and the final table archived as a `SeasonHistoryEntry` on a new `League.History`; service time credited to every player a roster named through the season (`Player.CompleteSeasonOfService`); and every contract whose last season has elapsed released back onto the roster's free-agent pool (`Team.ReleaseExpiredPlayer`, which — unlike a voluntary release — does not enforce the roster minimum, because a short roster between seasons is the state free agency exists to fill). `LeagueSession.ConcludeSeason()` sequences it, refusing an unfinished season and a season already concluded, and advances the league to the next season year so `StartSeason` can be called again. A one-line fix to the free-agent predicate (`GetLeagueOverviewQuery`, `LeagueSession.Negotiations.IsFreeAgent`) makes an expired contract actually count as expired: it was checking `IsTerminated`, which only a release ever sets, so a contract that simply ran its course was invisible to it.
 
-The decisions worth not re-deriving — why concluding a season needs no rollback machinery, and why the champion is re-derived rather than stored — are in `docs/architecture.md` → "The season boundary".
+**7c-b** — a composed `SaveGameEnvelope` (`BallGM.Infrastructure.Saves`) that finally puts a played league on disk: teams, rosters, players, and the transaction ledger are newly serializable, and the ruleset, contracts, draft assets, the season in progress, and any in-flight negotiations are embedded exactly as their own existing serializers already produce and read them — replacing the placeholder `LeagueSaveEnvelope`. `LeagueSession` gains `Save()`/`LoadSave(...)` behind a new `ISaveGameStore` port, the same shape every other engine this session holds already uses. Determinism — save mid-season, reload, finish, and get the same champion and box scores as an uninterrupted run — is the acceptance test (`SaveGameDeterminismTests`), proved from one `Load()` of the fixture league rather than two, because `FixtureLeagueDataSource` mints fresh identifiers on every `Load()`.
 
-**Outstanding: 7c-b, the save game.** A played league — teams, rosters, players, the ledger — still cannot reach disk; `LeagueSaveEnvelope` remains the placeholder it has been since Milestone 0.
+The decisions worth not re-deriving — why concluding a season needs no rollback machinery, why the champion is re-derived rather than stored, and why the save embeds already-serialized text instead of nesting typed envelopes — are in `docs/architecture.md` → "The season boundary" and "The save game".
 
 ## Milestone 8 — Player lifecycle
 

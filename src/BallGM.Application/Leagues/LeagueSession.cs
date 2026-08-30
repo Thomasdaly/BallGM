@@ -1,6 +1,7 @@
 using BallGM.Application.Cap;
 using BallGM.Application.DraftAssets;
 using BallGM.Application.Negotiations;
+using BallGM.Application.Saves;
 using BallGM.Application.Trades;
 using BallGM.Domain.Cap;
 using BallGM.Domain.Common;
@@ -64,6 +65,7 @@ public sealed partial class LeagueSession
     private readonly ISigningEngine _signingEngine;
     private readonly IFreeAgencyMarket _freeAgencyMarket;
     private readonly Seasons.ISeasonEngine _seasonEngine;
+    private readonly ISaveGameStore _saveGameStore;
     private readonly IRandomSource _marketRandom;
     private readonly GetLeagueOverviewQuery _overviewQuery;
 
@@ -85,6 +87,7 @@ public sealed partial class LeagueSession
         ISigningEngine signingEngine,
         IFreeAgencyMarket freeAgencyMarket,
         Seasons.ISeasonEngine seasonEngine,
+        ISaveGameStore saveGameStore,
         int marketSeed = DefaultMarketSeed)
     {
         ArgumentNullException.ThrowIfNull(dataSource);
@@ -94,12 +97,14 @@ public sealed partial class LeagueSession
         ArgumentNullException.ThrowIfNull(signingEngine);
         ArgumentNullException.ThrowIfNull(freeAgencyMarket);
         ArgumentNullException.ThrowIfNull(seasonEngine);
+        ArgumentNullException.ThrowIfNull(saveGameStore);
 
         _dataSource = dataSource;
         _tradeEngine = tradeEngine;
         _signingEngine = signingEngine;
         _freeAgencyMarket = freeAgencyMarket;
         _seasonEngine = seasonEngine;
+        _saveGameStore = saveGameStore;
         _marketRandom = new SeededRandomSource(marketSeed);
         _overviewQuery = new GetLeagueOverviewQuery(dataSource, capLedger, draftAssetLedger, signingEngine);
     }

@@ -156,6 +156,38 @@ public sealed class TransactionLedgerTests
             "An event belonging to nobody."));
     }
 
+    [Fact]
+    public void Rehydrate_RestoresEntriesWithTheirOriginalIdentitiesAndOrder()
+    {
+        var original = new TransactionLedger(new SteppingTestClock(Start, TimeSpan.FromMinutes(5)));
+        var team = new TeamId(SortableId.NewId());
+        original.Record(TransactionKind.ContractSigned, Season2031, team, "First signing.");
+        original.Record(TransactionKind.PlayerReleased, Season2031, team, "A release.");
+
+        var rehydrated = TransactionLedger.Rehydrate(new SteppingTestClock(Start, TimeSpan.Zero), original.Entries);
+
+        Assert.True(rehydrated.IsSuccess);
+        Assert.Equal(original.Entries, rehydrated.Value.Entries);
+    }
+
+    [Fact]
+    public void Rehydrate_RefusesEntriesWhoseSequenceIsNotContiguousFromZero()
+    {
+        var team = new TeamId(SortableId.NewId());
+        var entries = new[]
+        {
+            new TransactionEntry(
+                new TransactionId(SortableId.NewId()), 0, Start, TransactionKind.ContractSigned, Season2031, team, null, null, null, "First."),
+            new TransactionEntry(
+                new TransactionId(SortableId.NewId()), 2, Start, TransactionKind.PlayerReleased, Season2031, team, null, null, null, "Second, but numbered third."),
+        };
+
+        var result = TransactionLedger.Rehydrate(new SteppingTestClock(Start, TimeSpan.Zero), entries);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("transaction_ledger.entries_out_of_sequence", Assert.Single(result.Errors).Code);
+    }
+
     private sealed class SteppingTestClock(DateTimeOffset start, TimeSpan step) : IClock
     {
         private long _reads;

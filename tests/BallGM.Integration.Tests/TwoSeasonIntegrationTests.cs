@@ -3,6 +3,7 @@ using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
 using BallGM.Infrastructure.Negotiations;
+using BallGM.Infrastructure.Saves;
 using BallGM.Infrastructure.Seasons;
 using BallGM.Infrastructure.Trades;
 
@@ -90,7 +91,8 @@ public sealed class TwoSeasonIntegrationTests
             new RulesTradeEngine(),
             new RulesSigningEngine(),
             new RulesFreeAgencyMarket(),
-            new RulesSeasonEngine());
+            new RulesSeasonEngine(),
+            new SaveGameSerializer());
 
         var result = session.Load();
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));

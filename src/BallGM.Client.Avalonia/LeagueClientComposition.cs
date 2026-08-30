@@ -4,6 +4,7 @@ using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
 using BallGM.Infrastructure.Negotiations;
+using BallGM.Infrastructure.Saves;
 using BallGM.Infrastructure.Seasons;
 using BallGM.Infrastructure.Trades;
 
@@ -30,7 +31,8 @@ internal static class LeagueClientComposition
             new RulesTradeEngine(),
             new RulesSigningEngine(),
             new RulesFreeAgencyMarket(),
-            new RulesSeasonEngine());
+            new RulesSeasonEngine(),
+            new SaveGameSerializer());
 
         var result = session.Load();
 

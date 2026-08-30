@@ -5,6 +5,7 @@ using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
 using BallGM.Infrastructure.Negotiations;
+using BallGM.Infrastructure.Saves;
 using BallGM.Infrastructure.Seasons;
 using BallGM.Infrastructure.Trades;
 
@@ -402,6 +403,7 @@ public sealed class FixtureFreeAgencyMarketTests
             new RulesSigningEngine(),
             new RulesFreeAgencyMarket(),
             new RulesSeasonEngine(),
+            new SaveGameSerializer(),
             seed);
 
         var result = session.Load();

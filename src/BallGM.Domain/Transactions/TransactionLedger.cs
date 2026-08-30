@@ -20,6 +20,8 @@ namespace BallGM.Domain.Transactions;
 /// </summary>
 public sealed class TransactionLedger
 {
+    private const string OutOfSequenceCode = "transaction_ledger.entries_out_of_sequence";
+
     private readonly List<TransactionEntry> _entries = [];
     private readonly IClock _clock;
 
@@ -27,6 +29,41 @@ public sealed class TransactionLedger
     {
         ArgumentNullException.ThrowIfNull(clock);
         _clock = clock;
+    }
+
+    /// <summary>
+    /// Rebuilds a ledger from entries a save already has fully formed — their own identifiers,
+    /// sequence numbers, and timestamps intact, unlike every other way onto this type, which mints
+    /// all three fresh. Refuses a file whose sequence is not exactly <c>0..N-1</c> in order, the same
+    /// way a save asserting an impossible history is refused everywhere else in this codebase: a
+    /// ledger is the audit trail everything else is explained against, so a corrupt one is refused at
+    /// the boundary rather than trusted and read from later.
+    /// <para>
+    /// <paramref name="clock"/> is for whatever this session appends next, not for anything already
+    /// in <paramref name="entries"/> — <see cref="TransactionEntry.Sequence"/>, not the timestamp, is
+    /// what everything else in the ledger orders by.
+    /// </para>
+    /// </summary>
+    public static DomainOperationResult<TransactionLedger> Rehydrate(IClock clock, IEnumerable<TransactionEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(clock);
+        ArgumentNullException.ThrowIfNull(entries);
+
+        var ordered = entries.ToList();
+
+        for (var index = 0; index < ordered.Count; index++)
+        {
+            if (ordered[index].Sequence != index)
+            {
+                return DomainOperationResult<TransactionLedger>.Failure(new DomainError(
+                    OutOfSequenceCode,
+                    $"Ledger entry at position {index} declares sequence {ordered[index].Sequence}. A ledger's entries must be numbered 0..{ordered.Count - 1} in order."));
+            }
+        }
+
+        var ledger = new TransactionLedger(clock);
+        ledger._entries.AddRange(ordered);
+        return DomainOperationResult<TransactionLedger>.Success(ledger);
     }
 
     /// <summary>

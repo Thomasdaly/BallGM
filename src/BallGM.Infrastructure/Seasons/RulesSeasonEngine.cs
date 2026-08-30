@@ -4,6 +4,7 @@ using BallGM.Domain.Common;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
+using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.Configuration;
 using BallGM.Rules.Seasons;
 using BallGM.Simulation.Seasons;
@@ -24,11 +25,6 @@ namespace BallGM.Infrastructure.Seasons;
 /// </summary>
 public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeasonEngine
 {
-    private const string InvalidScheduleRulesCode = "ruleset.invalid_schedule_rules";
-    private const string InvalidStandingsRulesCode = "ruleset.invalid_standings_rules";
-    private const string InvalidPostseasonRulesCode = "ruleset.invalid_postseason_rules";
-    private const string InvalidNegotiationRulesCode = "ruleset.invalid_negotiation_rules";
-
     // The real model by default. A caller may still hand in UnplayedMatchEngine — a standings test
     // that wants to inject its own results, or a tool that only cares about the calendar — but a
     // build that ships without a game model would be a build in which no season ever finishes.
@@ -120,7 +116,7 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
 
     public DomainOperationResult<SeasonConclusionOutcome> ConcludeSeason(SeasonRun run, LeagueSnapshot snapshot)
     {
-        var rulesetResult = BuildRuleset(snapshot);
+        var rulesetResult = snapshot.Configuration.ToRuleset(snapshot.League.Alignment.IsFlat);
         if (rulesetResult.IsFailure)
         {
             return DomainOperationResult<SeasonConclusionOutcome>.Failure(rulesetResult.Errors.ToArray());
@@ -168,7 +164,7 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
-        var rulesetResult = BuildRuleset(snapshot);
+        var rulesetResult = snapshot.Configuration.ToRuleset(snapshot.League.Alignment.IsFlat);
         if (rulesetResult.IsFailure)
         {
             return DomainOperationResult<SeasonContext>.Failure(rulesetResult.Errors.ToArray());
@@ -195,136 +191,4 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
             teams));
     }
 
-    private static DomainOperationResult<LeagueRuleset> BuildRuleset(LeagueSnapshot snapshot)
-    {
-        var configuration = snapshot.Configuration;
-        var schedule = configuration.ResolvedSchedule;
-
-        var thresholdsResult = CapThresholds.Create(
-            configuration.PayrollFloor,
-            configuration.SoftCap,
-            configuration.LuxuryTax,
-            configuration.FirstApron,
-            configuration.SecondApron,
-            configuration.HardCap);
-
-        if (thresholdsResult.IsFailure)
-        {
-            return DomainOperationResult<LeagueRuleset>.Failure(thresholdsResult.Errors.ToArray());
-        }
-
-        var scheduleRulesResult = ScheduleRules.Create(
-            schedule.PreseasonDays,
-            schedule.RegularSeasonDays,
-            schedule.OffseasonDays,
-            schedule.GamesVersusDivisionOpponent,
-            schedule.GamesVersusConferenceOpponent,
-            schedule.GamesVersusOtherConferenceOpponent);
-
-        if (scheduleRulesResult.IsFailure)
-        {
-            return Relabel<LeagueRuleset>(scheduleRulesResult.Errors, InvalidScheduleRulesCode);
-        }
-
-        var standingsRulesResult = StandingsRules.Create(configuration.ResolvedTieBreaks.Steps);
-        if (standingsRulesResult.IsFailure)
-        {
-            return Relabel<LeagueRuleset>(standingsRulesResult.Errors, InvalidStandingsRulesCode);
-        }
-
-        var postseasonRules = PostseasonRules.None;
-        if (configuration.Postseason is { } postseason)
-        {
-            var postseasonResult = PostseasonRules.Create(
-                postseason.PostseasonDays,
-                postseason.QualifyingTeamsPerConference,
-                postseason.SeriesLengths,
-                postseason.HomeCourtSequence,
-                postseason.PlayoffEligibilityCutoffDay,
-                schedule.PreseasonDays + schedule.RegularSeasonDays,
-                includesFinal: !snapshot.League.Alignment.IsFlat);
-
-            if (postseasonResult.IsFailure)
-            {
-                return Relabel<LeagueRuleset>(postseasonResult.Errors, InvalidPostseasonRulesCode);
-            }
-
-            postseasonRules = postseasonResult.Value;
-        }
-
-        var negotiation = configuration.Negotiation;
-
-        var ceilingResult = CompensationCeilingScale.Create(negotiation.CompensationCeilingTiers.Bands);
-        if (ceilingResult.IsFailure)
-        {
-            return Relabel<LeagueRuleset>(ceilingResult.Errors, InvalidNegotiationRulesCode);
-        }
-
-        var floorResult = CompensationFloorScale.Create(negotiation.CompensationFloorScale.Bands);
-        if (floorResult.IsFailure)
-        {
-            return Relabel<LeagueRuleset>(floorResult.Errors, InvalidNegotiationRulesCode);
-        }
-
-        var negotiationRulesResult = NegotiationRules.Create(
-            thresholdsResult.Value,
-            negotiation.MaximumContractSeasons,
-            negotiation.MaximumIncumbentContractSeasons,
-            negotiation.MaximumAnnualEscalationPercent,
-            negotiation.MaximumAnnualDeescalationPercent,
-            ceilingResult.Value,
-            floorResult.Value,
-            negotiation.StandardOverCapAllowance,
-            negotiation.StandardOverCapAllowanceUnavailableAbove,
-            negotiation.AllowanceMaySplitAcrossPlayers,
-            negotiation.MarketResolution,
-            negotiation.OfferExpiryDays,
-            negotiation.InSeasonSigningWindowOpensDay,
-            negotiation.InSeasonSigningWindowClosesDay,
-            negotiation.ShortTermContractDays);
-
-        if (negotiationRulesResult.IsFailure)
-        {
-            return Relabel<LeagueRuleset>(negotiationRulesResult.Errors, InvalidNegotiationRulesCode);
-        }
-
-        var draftRulesResult = DraftRules.Create(
-            configuration.DraftRoundCount,
-            configuration.DraftLotteryEnabled,
-            configuration.TradableFutureDraftHorizon,
-            configuration.RetainedRoundNumber,
-            configuration.RetainedRoundInterval);
-
-        if (draftRulesResult.IsFailure)
-        {
-            return DomainOperationResult<LeagueRuleset>.Failure(draftRulesResult.Errors.ToArray());
-        }
-
-        var tradeRulesResult = TradeRules.Create(
-            configuration.SalaryMatchPercent,
-            configuration.SalaryMatchAllowance,
-            configuration.InjuredPlayerTradeEligibility,
-            configuration.SecondApronBlocksSalaryIncrease);
-
-        if (tradeRulesResult.IsFailure)
-        {
-            return DomainOperationResult<LeagueRuleset>.Failure(tradeRulesResult.Errors.ToArray());
-        }
-
-        return DomainOperationResult<LeagueRuleset>.Success(new LeagueRuleset(
-            LeagueRuleset.CurrentSchemaVersion,
-            configuration.RulesetName,
-            configuration.RegularSeasonGameCount,
-            configuration.RosterLimits,
-            thresholdsResult.Value,
-            draftRulesResult.Value,
-            tradeRulesResult.Value,
-            negotiationRulesResult.Value,
-            scheduleRulesResult.Value,
-            standingsRulesResult.Value,
-            postseasonRules));
-    }
-
-    private static DomainOperationResult<T> Relabel<T>(IReadOnlyList<DomainError> errors, string code) =>
-        DomainOperationResult<T>.Failure(errors.Select(error => new DomainError(code, error.Message)).ToArray());
 }

@@ -150,7 +150,8 @@ public sealed class LeagueSessionTests
             engine,
             new StubSigningEngine(),
             new StubFreeAgencyMarket(),
-            new StubSeasonEngine());
+            new StubSeasonEngine(),
+            new StubSaveGameStore());
     }
 
     /// <summary>Two teams, one player each, one pick each — the smallest league a trade can happen in.</summary>

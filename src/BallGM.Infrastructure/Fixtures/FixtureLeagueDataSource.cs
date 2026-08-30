@@ -441,56 +441,7 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
             return DomainOperationResult<LeagueSnapshot>.Failure(draftAssetsResult.Errors.ToArray());
         }
 
-        var configuration = new LeagueConfiguration(
-            ruleset.Name,
-            ruleset.RegularSeasonGameCount,
-            ruleset.RosterLimits,
-            ruleset.CapThresholds.PayrollFloor,
-            ruleset.CapThresholds.SoftCap,
-            ruleset.CapThresholds.LuxuryTax,
-            ruleset.CapThresholds.FirstApron,
-            ruleset.CapThresholds.SecondApron,
-            ruleset.CapThresholds.HardCap,
-            ruleset.DraftRules.RoundCount,
-            ruleset.DraftRules.LotteryEnabled,
-            ruleset.DraftRules.TradableFutureDraftHorizon,
-            ruleset.DraftRules.RetainedRoundNumber,
-            ruleset.DraftRules.RetainedRoundInterval,
-            ruleset.TradeRules.SalaryMatchPercent,
-            ruleset.TradeRules.SalaryMatchAllowance,
-            ruleset.TradeRules.InjuredPlayerEligibility,
-            ruleset.TradeRules.SecondApronBlocksSalaryIncrease,
-            new NegotiationConfiguration(
-                ruleset.NegotiationRules.MaximumContractSeasons,
-                ruleset.NegotiationRules.MaximumIncumbentContractSeasons,
-                ruleset.NegotiationRules.MaximumAnnualEscalationPercent,
-                ruleset.NegotiationRules.MaximumAnnualDeescalationPercent,
-                ruleset.NegotiationRules.CompensationCeiling.Scale,
-                ruleset.NegotiationRules.CompensationFloor.Scale,
-                ruleset.NegotiationRules.StandardOverCapAllowance,
-                ruleset.NegotiationRules.StandardOverCapAllowanceUnavailableAbove,
-                ruleset.NegotiationRules.AllowanceMaySplitAcrossPlayers,
-                ruleset.NegotiationRules.MarketResolution,
-                ruleset.NegotiationRules.OfferExpiryDays,
-                ruleset.NegotiationRules.InSeasonSigningWindowOpensDay,
-                ruleset.NegotiationRules.InSeasonSigningWindowClosesDay,
-                ruleset.NegotiationRules.ShortTermContractDays),
-            new SeasonScheduleConfiguration(
-                ruleset.ScheduleRules.PreseasonDays,
-                ruleset.ScheduleRules.RegularSeasonDays,
-                ruleset.ScheduleRules.OffseasonDays,
-                ruleset.ScheduleRules.GamesVersusDivisionOpponent,
-                ruleset.ScheduleRules.GamesVersusConferenceOpponent,
-                ruleset.ScheduleRules.GamesVersusOtherConferenceOpponent),
-            ruleset.StandingsRules.TieBreaks,
-            ruleset.HasPostseason
-                ? new PostseasonConfiguration(
-                    ruleset.PostseasonRules.PostseasonDays,
-                    ruleset.PostseasonRules.QualifyingTeamsPerConference,
-                    ruleset.PostseasonRules.SeriesLengths,
-                    ruleset.PostseasonRules.HomeCourtSequence.ToString(),
-                    ruleset.PostseasonRules.PlayoffEligibilityCutoffDay)
-                : null);
+        var configuration = ruleset.ToConfiguration();
 
         return DomainOperationResult<LeagueSnapshot>.Success(
             new LeagueSnapshot(
