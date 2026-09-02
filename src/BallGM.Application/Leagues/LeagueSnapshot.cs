@@ -73,7 +73,8 @@ public sealed record LeagueConfiguration(
     DraftClassConfiguration? DraftClass = null,
     IReadOnlyList<int>? DraftLotteryWeights = null,
     DevelopmentConfiguration? Development = null,
-    RetirementConfiguration? Retirement = null)
+    RetirementConfiguration? Retirement = null,
+    IReadOnlyList<AwardDefinition>? Awards = null)
 {
     /// <summary>Whether this league configures any threshold at all.</summary>
     public bool IsUncapped =>
@@ -110,7 +111,17 @@ public sealed record LeagueConfiguration(
 
     /// <summary>Whether this league retires players by age at all.</summary>
     public bool HasRetirement => Retirement is not null;
+
+    /// <summary>Whether this league hands out any awards at all.</summary>
+    public bool HasAwards => Awards is { Count: > 0 };
 }
+
+/// <summary>
+/// One award this league hands out, in the shape the Application layer carries it — a code, a display
+/// name, and the counting stat it is decided by, named rather than an opaque number so a screen can
+/// render it without knowing the rules layer's enum.
+/// </summary>
+public sealed record AwardDefinition(string Code, string Name, string StatBasis);
 
 /// <summary>
 /// How a player's rating moves with age, one season at a time, in the shape the Application layer

@@ -30,6 +30,8 @@ internal static class LeagueConfigurationMapper
     private const string LotteryOddsWithoutLotteryCode = "ruleset.lottery_odds_without_lottery_enabled";
     private const string InvalidDevelopmentRulesCode = "ruleset.invalid_development_rules";
     private const string InvalidRetirementRulesCode = "ruleset.invalid_retirement_rules";
+    private const string InvalidAwardRulesCode = "ruleset.invalid_award_rules";
+    private const string UnknownAwardStatBasisCode = "ruleset.unknown_award_stat_basis";
 
     /// <summary>
     /// Rebuilds the rules-layer ruleset from the Application-facing configuration. The configuration
@@ -246,6 +248,31 @@ internal static class LeagueConfigurationMapper
             retirementRules = retirementRulesResult.Value;
         }
 
+        var awardRules = AwardRules.None;
+        if (configuration.Awards is { Count: > 0 } awards)
+        {
+            var parsedAwards = new List<Rules.Configuration.AwardDefinition>(awards.Count);
+            foreach (var award in awards)
+            {
+                if (!Enum.TryParse<AwardStatBasis>(award.StatBasis, out var statBasis))
+                {
+                    return DomainOperationResult<LeagueRuleset>.Failure(new DomainError(
+                        UnknownAwardStatBasisCode,
+                        $"Award '{award.Code}' names stat basis '{award.StatBasis}', which this build does not know."));
+                }
+
+                parsedAwards.Add(new Rules.Configuration.AwardDefinition(award.Code, award.Name, statBasis));
+            }
+
+            var awardRulesResult = AwardRules.Create(parsedAwards);
+            if (awardRulesResult.IsFailure)
+            {
+                return Relabel<LeagueRuleset>(awardRulesResult.Errors, InvalidAwardRulesCode);
+            }
+
+            awardRules = awardRulesResult.Value;
+        }
+
         return DomainOperationResult<LeagueRuleset>.Success(new LeagueRuleset(
             LeagueRuleset.CurrentSchemaVersion,
             configuration.RulesetName,
@@ -262,7 +289,8 @@ internal static class LeagueConfigurationMapper
             scoutingRules,
             draftLotteryRules,
             developmentRules,
-            retirementRules));
+            retirementRules,
+            awardRules));
     }
 
     /// <summary>
@@ -348,6 +376,11 @@ internal static class LeagueConfigurationMapper
                     ruleset.RetirementRules.MinimumVoluntaryAge,
                     ruleset.RetirementRules.MandatoryRetirementAge,
                     ruleset.RetirementRules.VoluntaryOddsByAge)
+                : null,
+            ruleset.AwardRules.IsConfigured
+                ? ruleset.AwardRules.Awards
+                    .Select(award => new Application.Leagues.AwardDefinition(award.Code, award.Name, award.StatBasis.ToString()))
+                    .ToList()
                 : null);
     }
 

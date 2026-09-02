@@ -104,7 +104,10 @@ public sealed class LeagueRulesetSerializer
             ruleset.DevelopmentRules.IsConfigured ? ruleset.DevelopmentRules.VarianceRange : null,
             ruleset.RetirementRules.IsConfigured ? ruleset.RetirementRules.MinimumVoluntaryAge : null,
             ruleset.RetirementRules.IsConfigured ? ruleset.RetirementRules.MandatoryRetirementAge : null,
-            ruleset.RetirementRules.IsConfigured ? ToAgeCurveBands(ruleset.RetirementRules.VoluntaryOddsByAge) : null);
+            ruleset.RetirementRules.IsConfigured ? ToAgeCurveBands(ruleset.RetirementRules.VoluntaryOddsByAge) : null,
+            ruleset.AwardRules.IsConfigured
+                ? ruleset.AwardRules.Awards.Select(award => new AwardEnvelope(award.Code, award.Name, award.StatBasis.ToString())).ToList()
+                : null);
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -277,6 +280,12 @@ public sealed class LeagueRulesetSerializer
                 return DomainOperationResult<LeagueRuleset>.Failure(retirementRulesResult.Errors.ToArray());
             }
 
+            var awardRulesResult = BuildAwardRules(envelope);
+            if (awardRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(awardRulesResult.Errors.ToArray());
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
@@ -293,7 +302,8 @@ public sealed class LeagueRulesetSerializer
                 scoutingRulesResult.Value,
                 draftLotteryRulesResult.Value,
                 developmentRulesResult.Value,
-                retirementRulesResult.Value);
+                retirementRulesResult.Value,
+                awardRulesResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
@@ -468,6 +478,30 @@ public sealed class LeagueRulesetSerializer
             envelope.RetirementMinimumVoluntaryAge ?? 0,
             envelope.RetirementMandatoryAge ?? 0,
             ToAgeCurveScale(envelope.RetirementVoluntaryOddsByAge));
+    }
+
+    /// <summary>Maps the award section, absent in full for a league that hands out no awards.</summary>
+    private static DomainOperationResult<AwardRules> BuildAwardRules(LeagueRulesetEnvelope envelope)
+    {
+        if (envelope.Awards is null)
+        {
+            return DomainOperationResult<AwardRules>.Success(AwardRules.None);
+        }
+
+        var awards = new List<AwardDefinition>(envelope.Awards.Count);
+        foreach (var award in envelope.Awards)
+        {
+            if (!Enum.TryParse<AwardStatBasis>(award.StatBasis, out var statBasis))
+            {
+                return DomainOperationResult<AwardRules>.Failure(new DomainError(
+                    InvalidFieldCode,
+                    $"Award '{award.Code}' names stat basis '{award.StatBasis}', which this build does not know."));
+            }
+
+            awards.Add(new AwardDefinition(award.Code, award.Name, statBasis));
+        }
+
+        return AwardRules.Create(awards);
     }
 
     private static BandedScale ToAgeCurveScale(IReadOnlyList<AgeCurveBandEnvelope>? bands) =>

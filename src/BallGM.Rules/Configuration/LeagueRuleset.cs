@@ -71,7 +71,14 @@ public sealed record LeagueRuleset
     /// 7 reader handed a version 8 file would ignore a stated development curve or retirement age and
     /// run a league where nobody ages or retires, in a league that had described otherwise.
     /// </remarks>
-    public const int CurrentSchemaVersion = 8;
+    /// <remarks>
+    /// Version 9 added the award set: which awards this league hands out, and which stat each is
+    /// decided by. Optional by absence exactly as every earlier version — a league stating none hands
+    /// out no awards at all, a real league shape rather than a missing rule. The version moved because
+    /// a version 8 reader handed a version 9 file would ignore a stated award list and run a league
+    /// with none, in a league that had described one.
+    /// </remarks>
+    public const int CurrentSchemaVersion = 9;
 
     public LeagueRuleset(
         int schemaVersion,
@@ -89,7 +96,8 @@ public sealed record LeagueRuleset
         ScoutingRules? scoutingRules = null,
         DraftLotteryRules? draftLotteryRules = null,
         DevelopmentRules? developmentRules = null,
-        RetirementRules? retirementRules = null)
+        RetirementRules? retirementRules = null,
+        AwardRules? awardRules = null)
     {
         if (schemaVersion <= 0)
         {
@@ -128,6 +136,7 @@ public sealed record LeagueRuleset
         DraftLotteryRules = draftLotteryRules ?? DraftLotteryRules.None;
         DevelopmentRules = developmentRules ?? DevelopmentRules.None;
         RetirementRules = retirementRules ?? RetirementRules.None;
+        AwardRules = awardRules ?? AwardRules.None;
     }
 
     public int SchemaVersion { get; }
@@ -181,4 +190,7 @@ public sealed record LeagueRuleset
 
     /// <summary>When a player's career ends, or <see cref="Configuration.RetirementRules.None"/>.</summary>
     public RetirementRules RetirementRules { get; }
+
+    /// <summary>The award set, or <see cref="Configuration.AwardRules.None"/> in a league that hands out none.</summary>
+    public AwardRules AwardRules { get; }
 }

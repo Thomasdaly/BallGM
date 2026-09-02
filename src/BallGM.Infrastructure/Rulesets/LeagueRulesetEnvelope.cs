@@ -75,7 +75,8 @@ public sealed record LeagueRulesetEnvelope
         int? developmentVarianceRange = null,
         int? retirementMinimumVoluntaryAge = null,
         int? retirementMandatoryAge = null,
-        IReadOnlyList<AgeCurveBandEnvelope>? retirementVoluntaryOddsByAge = null)
+        IReadOnlyList<AgeCurveBandEnvelope>? retirementVoluntaryOddsByAge = null,
+        IReadOnlyList<AwardEnvelope>? awards = null)
     {
         SchemaVersion = schemaVersion;
         Name = name;
@@ -139,6 +140,7 @@ public sealed record LeagueRulesetEnvelope
         RetirementMinimumVoluntaryAge = retirementMinimumVoluntaryAge;
         RetirementMandatoryAge = retirementMandatoryAge;
         RetirementVoluntaryOddsByAge = retirementVoluntaryOddsByAge;
+        Awards = awards;
     }
 
     public int SchemaVersion { get; }
@@ -326,6 +328,9 @@ public sealed record LeagueRulesetEnvelope
 
     /// <summary>Chance of voluntary retirement that season, out of 10,000, keyed by age.</summary>
     public IReadOnlyList<AgeCurveBandEnvelope>? RetirementVoluntaryOddsByAge { get; }
+
+    /// <summary>The award set. Absent means this league hands out no awards at all.</summary>
+    public IReadOnlyList<AwardEnvelope>? Awards { get; }
 }
 
 /// <summary>
@@ -351,3 +356,6 @@ public sealed record ScoutingInvestmentBandEnvelope(long MinimumInvestedPoints, 
 /// Shared shape for the development growth/decline curves and the retirement odds-by-age table.
 /// </summary>
 public sealed record AgeCurveBandEnvelope(long MinimumAge, long Value);
+
+/// <summary>One award: its code, its display name, and the stat basis name it is decided by.</summary>
+public sealed record AwardEnvelope(string Code, string Name, string StatBasis);
