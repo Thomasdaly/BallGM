@@ -50,7 +50,19 @@ public sealed record LeagueRuleset
     /// tie-break sequence in a league that stated one, and settle every tie by a rule the ruleset
     /// never mentioned. That is the exact failure this gate exists to refuse.
     /// </remarks>
-    public const int CurrentSchemaVersion = 6;
+    /// <remarks>
+    /// Version 7 is Milestone 8's whole ruleset surface: the draft-class generator (class size, the
+    /// true-rating spread, and the age prospects enter at), the scouting model (base confidence, the
+    /// zero-confidence range width, and the investment-to-confidence table), and the draft lottery's
+    /// weighting table. Optional by absence exactly as every earlier version — a league stating none
+    /// of it generates no classes of its own, models no scouting uncertainty, and runs a lottery in
+    /// plain reverse-standings order if it enables one with no odds stated at all, which is refused
+    /// rather than defaulted (see <c>LeagueConfigurationMapper</c>). The version moved because a
+    /// version 6 reader handed a version 7 file would ignore a stated rating spread or lottery
+    /// weighting and either generate nothing or draw uniformly, in a league that had described
+    /// something more specific — the same class of silent gap every version bump here exists to close.
+    /// </remarks>
+    public const int CurrentSchemaVersion = 7;
 
     public LeagueRuleset(
         int schemaVersion,
@@ -63,7 +75,10 @@ public sealed record LeagueRuleset
         NegotiationRules negotiationRules,
         ScheduleRules? scheduleRules = null,
         StandingsRules? standingsRules = null,
-        PostseasonRules? postseasonRules = null)
+        PostseasonRules? postseasonRules = null,
+        DraftClassRules? draftClassRules = null,
+        ScoutingRules? scoutingRules = null,
+        DraftLotteryRules? draftLotteryRules = null)
     {
         if (schemaVersion <= 0)
         {
@@ -97,6 +112,9 @@ public sealed record LeagueRuleset
         ScheduleRules = scheduleRules ?? ScheduleRules.Minimal;
         StandingsRules = standingsRules ?? StandingsRules.None;
         PostseasonRules = postseasonRules ?? PostseasonRules.None;
+        DraftClassRules = draftClassRules ?? DraftClassRules.None;
+        ScoutingRules = scoutingRules ?? ScoutingRules.None;
+        DraftLotteryRules = draftLotteryRules ?? DraftLotteryRules.None;
     }
 
     public int SchemaVersion { get; }
@@ -135,4 +153,13 @@ public sealed record LeagueRuleset
 
     /// <summary>Whether this league plays a postseason at all.</summary>
     public bool HasPostseason => PostseasonRules.IsConfigured;
+
+    /// <summary>How this league's own draft classes are procedurally generated, or <see cref="Configuration.DraftClassRules.None"/>.</summary>
+    public DraftClassRules DraftClassRules { get; }
+
+    /// <summary>How much of a prospect's true rating scouting reveals, or <see cref="Configuration.ScoutingRules.None"/>.</summary>
+    public ScoutingRules ScoutingRules { get; }
+
+    /// <summary>The draft lottery's weighting table, or <see cref="Configuration.DraftLotteryRules.None"/>.</summary>
+    public DraftLotteryRules DraftLotteryRules { get; }
 }

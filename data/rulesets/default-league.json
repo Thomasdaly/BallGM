@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "name": "Continental Basketball Association — Standard Rules",
   "regularSeasonGameCount": 78,
   "minimumRosterPlayers": 12,
@@ -12,6 +12,7 @@
   "hardCap": 205000000,
   "draftRoundCount": 2,
   "draftLotteryEnabled": true,
+  "draftLotteryWeights": [140, 140, 140, 125],
   "tradableFutureDraftHorizon": 5,
   "retainedRoundNumber": 1,
   "retainedRoundInterval": 2,

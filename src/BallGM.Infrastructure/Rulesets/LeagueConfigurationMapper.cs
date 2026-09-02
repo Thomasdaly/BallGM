@@ -23,6 +23,11 @@ internal static class LeagueConfigurationMapper
     private const string InvalidStandingsRulesCode = "ruleset.invalid_standings_rules";
     private const string InvalidPostseasonRulesCode = "ruleset.invalid_postseason_rules";
     private const string InvalidNegotiationRulesCode = "ruleset.invalid_negotiation_rules";
+    private const string InvalidDraftClassRulesCode = "ruleset.invalid_draft_class_rules";
+    private const string InvalidScoutingRulesCode = "ruleset.invalid_scouting_rules";
+    private const string InvalidDraftLotteryRulesCode = "ruleset.invalid_draft_lottery_rules";
+    private const string LotteryEnabledWithoutOddsCode = "ruleset.lottery_enabled_without_odds";
+    private const string LotteryOddsWithoutLotteryCode = "ruleset.lottery_odds_without_lottery_enabled";
 
     /// <summary>
     /// Rebuilds the rules-layer ruleset from the Application-facing configuration. The configuration
@@ -152,6 +157,59 @@ internal static class LeagueConfigurationMapper
             return DomainOperationResult<LeagueRuleset>.Failure(tradeRulesResult.Errors.ToArray());
         }
 
+        var draftClassRules = DraftClassRules.None;
+        var scoutingRules = ScoutingRules.None;
+
+        if (configuration.DraftClass is { } draftClass)
+        {
+            var draftClassRulesResult = DraftClassRules.Create(
+                draftClass.ClassSize,
+                draftClass.MinimumRating,
+                draftClass.MaximumRating,
+                draftClass.ProspectAgeYears);
+
+            if (draftClassRulesResult.IsFailure)
+            {
+                return Relabel<LeagueRuleset>(draftClassRulesResult.Errors, InvalidDraftClassRulesCode);
+            }
+
+            draftClassRules = draftClassRulesResult.Value;
+
+            var scoutingRulesResult = ScoutingRules.Create(
+                draftClass.ScoutingBaseConfidence,
+                draftClass.ScoutingMaxRangeWidth,
+                draftClass.ScoutingInvestmentConfidence);
+
+            if (scoutingRulesResult.IsFailure)
+            {
+                return Relabel<LeagueRuleset>(scoutingRulesResult.Errors, InvalidScoutingRulesCode);
+            }
+
+            scoutingRules = scoutingRulesResult.Value;
+        }
+
+        var draftLotteryRulesResult = DraftLotteryRules.Create(configuration.DraftLotteryWeights ?? []);
+        if (draftLotteryRulesResult.IsFailure)
+        {
+            return Relabel<LeagueRuleset>(draftLotteryRulesResult.Errors, InvalidDraftLotteryRulesCode);
+        }
+
+        var draftLotteryRules = draftLotteryRulesResult.Value;
+
+        if (draftRulesResult.Value.LotteryEnabled && !draftLotteryRules.IsConfigured)
+        {
+            return DomainOperationResult<LeagueRuleset>.Failure(new DomainError(
+                LotteryEnabledWithoutOddsCode,
+                "This ruleset enables the draft lottery but states no lottery weights. State the weighting table, or disable the lottery."));
+        }
+
+        if (!draftRulesResult.Value.LotteryEnabled && draftLotteryRules.IsConfigured)
+        {
+            return DomainOperationResult<LeagueRuleset>.Failure(new DomainError(
+                LotteryOddsWithoutLotteryCode,
+                "This ruleset states draft lottery weights but has not enabled the lottery. Enable it, or remove the weighting table."));
+        }
+
         return DomainOperationResult<LeagueRuleset>.Success(new LeagueRuleset(
             LeagueRuleset.CurrentSchemaVersion,
             configuration.RulesetName,
@@ -163,7 +221,10 @@ internal static class LeagueConfigurationMapper
             negotiationRulesResult.Value,
             scheduleRulesResult.Value,
             standingsRulesResult.Value,
-            postseasonRules));
+            postseasonRules,
+            draftClassRules,
+            scoutingRules,
+            draftLotteryRules));
     }
 
     /// <summary>
@@ -224,7 +285,18 @@ internal static class LeagueConfigurationMapper
                     ruleset.PostseasonRules.SeriesLengths,
                     ruleset.PostseasonRules.HomeCourtSequence.ToString(),
                     ruleset.PostseasonRules.PlayoffEligibilityCutoffDay)
-                : null);
+                : null,
+            ruleset.DraftClassRules.IsConfigured
+                ? new DraftClassConfiguration(
+                    ruleset.DraftClassRules.ClassSize,
+                    ruleset.DraftClassRules.MinimumRating,
+                    ruleset.DraftClassRules.MaximumRating,
+                    ruleset.DraftClassRules.ProspectAgeYears,
+                    ruleset.ScoutingRules.BaseConfidence,
+                    ruleset.ScoutingRules.MaxRangeWidth,
+                    ruleset.ScoutingRules.InvestmentConfidence)
+                : null,
+            ruleset.DraftLotteryRules.IsConfigured ? ruleset.DraftLotteryRules.Weights : null);
     }
 
     private static DomainOperationResult<T> Relabel<T>(IReadOnlyList<DomainError> errors, string code) =>

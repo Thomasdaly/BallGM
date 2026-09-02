@@ -171,7 +171,9 @@ The decisions worth not re-deriving — why concluding a season needs no rollbac
 
 The lottery lands here, and it lands **configurable** — a weighting table in the ruleset, not an algorithm in code, even for the first version. Same for the **award set**: which awards exist and how they are voted is data, because a modded league that has no defensive award should not need a code change. Player biography (birthplace, prior programme, draft class) is added with career history, since `docs/competitive-feature-review.md` §2 seeds relationships from it.
 
-UI: draft-class scouting view and a draft-day screen.
+**Draft classes, scouting uncertainty, and the lottery landed first** (ruleset schema version 7) — see `docs/architecture.md` → "Draft classes, scouting, and the lottery" for what shipped and the decisions worth not re-deriving. Development, ageing, retirement, records/history, and awards are still outstanding, tracked in that same section as follow-up work rather than assumed done.
+
+UI: draft-class scouting view and a draft-day screen. Neither has landed yet — the rules-layer pieces above have no client surface, and remain callable only from tests and (once wired) `LeagueSession`.
 
 ## Milestone 9 — AI front offices
 

@@ -88,7 +88,15 @@ public sealed class LeagueRulesetSerializer
             ruleset.HasPostseason ? ruleset.PostseasonRules.PlayoffEligibilityCutoffDay : null,
             ruleset.NegotiationRules.InSeasonSigningWindowOpensDay,
             ruleset.NegotiationRules.InSeasonSigningWindowClosesDay,
-            ruleset.NegotiationRules.ShortTermContractDays);
+            ruleset.NegotiationRules.ShortTermContractDays,
+            ruleset.DraftClassRules.IsConfigured ? ruleset.DraftClassRules.ClassSize : null,
+            ruleset.DraftClassRules.IsConfigured ? ruleset.DraftClassRules.MinimumRating : null,
+            ruleset.DraftClassRules.IsConfigured ? ruleset.DraftClassRules.MaximumRating : null,
+            ruleset.DraftClassRules.IsConfigured ? ruleset.DraftClassRules.ProspectAgeYears : null,
+            ruleset.DraftClassRules.IsConfigured ? ruleset.ScoutingRules.BaseConfidence : null,
+            ruleset.DraftClassRules.IsConfigured ? ruleset.ScoutingRules.MaxRangeWidth : null,
+            ruleset.DraftClassRules.IsConfigured ? ToScoutingBands(ruleset.ScoutingRules.InvestmentConfidence) : null,
+            ruleset.DraftLotteryRules.IsConfigured ? ruleset.DraftLotteryRules.Weights.ToList() : null);
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -212,6 +220,43 @@ public sealed class LeagueRulesetSerializer
                 return DomainOperationResult<LeagueRuleset>.Failure(postseasonRulesResult.Errors.ToArray());
             }
 
+            var draftClassRulesResult = BuildDraftClassRules(envelope);
+            if (draftClassRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(draftClassRulesResult.Errors.ToArray());
+            }
+
+            var scoutingRulesResult = ScoutingRules.Create(
+                envelope.ScoutingBaseConfidence ?? ScoutingRules.None.BaseConfidence,
+                envelope.ScoutingMaxRangeWidth ?? 0,
+                BandedScale.Create(
+                    envelope.ScoutingInvestmentConfidence?.Select(band => new ScaleBand(band.MinimumInvestedPoints, band.ConfidenceBonus))).Value);
+
+            if (scoutingRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(scoutingRulesResult.Errors.ToArray());
+            }
+
+            var draftLotteryRulesResult = DraftLotteryRules.Create(envelope.DraftLotteryWeights ?? []);
+            if (draftLotteryRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(draftLotteryRulesResult.Errors.ToArray());
+            }
+
+            if (draftRulesResult.Value.LotteryEnabled && !draftLotteryRulesResult.Value.IsConfigured)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(new DomainError(
+                    InvalidFieldCode,
+                    "This ruleset enables the draft lottery but states no lottery weights. State the weighting table, or disable the lottery."));
+            }
+
+            if (!draftRulesResult.Value.LotteryEnabled && draftLotteryRulesResult.Value.IsConfigured)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(new DomainError(
+                    InvalidFieldCode,
+                    "This ruleset states draft lottery weights but has not enabled the lottery. Enable it, or remove the weighting table."));
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
@@ -223,7 +268,10 @@ public sealed class LeagueRulesetSerializer
                 negotiationRulesResult.Value,
                 scheduleRulesResult.Value,
                 standingsRulesResult.Value,
-                postseasonRulesResult.Value);
+                postseasonRulesResult.Value,
+                draftClassRulesResult.Value,
+                scoutingRulesResult.Value,
+                draftLotteryRulesResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
@@ -327,6 +375,37 @@ public sealed class LeagueRulesetSerializer
             envelope.PlayoffEligibilityCutoffDay,
             scheduleRules.PreseasonDays + scheduleRules.RegularSeasonDays);
     }
+
+    /// <summary>
+    /// Maps the draft-class section, absent in full for a league that generates no classes of its
+    /// own. A file naming one field of it and not the rest has described a generator nobody can run,
+    /// so the missing pieces are reported by <see cref="DraftClassRules.Create"/> rather than filled
+    /// in with a default this build invented.
+    /// </summary>
+    private static DomainOperationResult<DraftClassRules> BuildDraftClassRules(LeagueRulesetEnvelope envelope)
+    {
+        var statesNothing =
+            envelope.DraftClassSize is null &&
+            envelope.DraftClassMinimumRating is null &&
+            envelope.DraftClassMaximumRating is null &&
+            envelope.DraftClassProspectAgeYears is null;
+
+        if (statesNothing)
+        {
+            return DomainOperationResult<DraftClassRules>.Success(DraftClassRules.None);
+        }
+
+        return DraftClassRules.Create(
+            envelope.DraftClassSize ?? 0,
+            envelope.DraftClassMinimumRating ?? 0,
+            envelope.DraftClassMaximumRating ?? 0,
+            envelope.DraftClassProspectAgeYears ?? 0);
+    }
+
+    private static IReadOnlyList<ScoutingInvestmentBandEnvelope>? ToScoutingBands(BandedScale investmentConfidence) =>
+        investmentConfidence.IsEmpty
+            ? null
+            : investmentConfidence.Bands.Select(band => new ScoutingInvestmentBandEnvelope(band.MinimumKey, band.Value)).ToList();
 
     private static IReadOnlyList<CompensationCeilingTierEnvelope>? ToCeilingTiers(CompensationCeilingScale ceiling) =>
         ceiling.IsConfigured

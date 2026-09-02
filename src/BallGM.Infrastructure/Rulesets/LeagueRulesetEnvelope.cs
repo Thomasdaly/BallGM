@@ -59,7 +59,15 @@ public sealed record LeagueRulesetEnvelope
         int? playoffEligibilityCutoffDay = null,
         int? inSeasonSigningWindowOpensDay = null,
         int? inSeasonSigningWindowClosesDay = null,
-        int? shortTermContractDays = null)
+        int? shortTermContractDays = null,
+        int? draftClassSize = null,
+        int? draftClassMinimumRating = null,
+        int? draftClassMaximumRating = null,
+        int? draftClassProspectAgeYears = null,
+        int? scoutingBaseConfidence = null,
+        int? scoutingMaxRangeWidth = null,
+        IReadOnlyList<ScoutingInvestmentBandEnvelope>? scoutingInvestmentConfidence = null,
+        IReadOnlyList<int>? draftLotteryWeights = null)
     {
         SchemaVersion = schemaVersion;
         Name = name;
@@ -107,6 +115,14 @@ public sealed record LeagueRulesetEnvelope
         InSeasonSigningWindowOpensDay = inSeasonSigningWindowOpensDay;
         InSeasonSigningWindowClosesDay = inSeasonSigningWindowClosesDay;
         ShortTermContractDays = shortTermContractDays;
+        DraftClassSize = draftClassSize;
+        DraftClassMinimumRating = draftClassMinimumRating;
+        DraftClassMaximumRating = draftClassMaximumRating;
+        DraftClassProspectAgeYears = draftClassProspectAgeYears;
+        ScoutingBaseConfidence = scoutingBaseConfidence;
+        ScoutingMaxRangeWidth = scoutingMaxRangeWidth;
+        ScoutingInvestmentConfidence = scoutingInvestmentConfidence;
+        DraftLotteryWeights = draftLotteryWeights;
     }
 
     public int SchemaVersion { get; }
@@ -246,6 +262,30 @@ public sealed record LeagueRulesetEnvelope
 
     /// <summary>How long a short-term contract runs, in days. Absent in a league that has no such contract.</summary>
     public int? ShortTermContractDays { get; }
+
+    /// <summary>How many prospects a generated draft class contains. The whole draft-class section is absent where this league generates none of its own.</summary>
+    public int? DraftClassSize { get; }
+
+    /// <summary>The lowest true rating a generated prospect may carry.</summary>
+    public int? DraftClassMinimumRating { get; }
+
+    /// <summary>The highest true rating a generated prospect may carry.</summary>
+    public int? DraftClassMaximumRating { get; }
+
+    /// <summary>The age, in completed years, every generated prospect enters the draft at.</summary>
+    public int? DraftClassProspectAgeYears { get; }
+
+    /// <summary>Confidence (0-100) in a prospect nobody has scouted yet.</summary>
+    public int? ScoutingBaseConfidence { get; }
+
+    /// <summary>The width of the scouting range at zero confidence. Zero means this league models no scouting uncertainty.</summary>
+    public int? ScoutingMaxRangeWidth { get; }
+
+    /// <summary>Additional confidence bought by scouting investment, keyed by points invested.</summary>
+    public IReadOnlyList<ScoutingInvestmentBandEnvelope>? ScoutingInvestmentConfidence { get; }
+
+    /// <summary>The draft lottery's weighted-draw odds, worst team first. Absent means this league states no odds.</summary>
+    public IReadOnlyList<int>? DraftLotteryWeights { get; }
 }
 
 /// <summary>
@@ -259,3 +299,9 @@ public sealed record CompensationCeilingTierEnvelope(long MinimumSeasonsOfServic
 /// salary in smallest units that applies from there up.
 /// </summary>
 public sealed record CompensationFloorBandEnvelope(long MinimumSeasonsOfService, long Amount);
+
+/// <summary>
+/// One row of the scouting investment table: the lowest number of invested points it covers, and the
+/// confidence bonus that applies from there up.
+/// </summary>
+public sealed record ScoutingInvestmentBandEnvelope(long MinimumInvestedPoints, long ConfidenceBonus);

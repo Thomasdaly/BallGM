@@ -214,6 +214,7 @@ public sealed class FixtureLeagueDataSourceTests
               "hardCap": 205000000,
               "draftRoundCount": 2,
               "draftLotteryEnabled": true,
+              "draftLotteryWeights": [140, 125],
               "tradableFutureDraftHorizon": 5,
               "retainedRoundNumber": 1,
               "retainedRoundInterval": 2,

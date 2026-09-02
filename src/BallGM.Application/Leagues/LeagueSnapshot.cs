@@ -69,7 +69,9 @@ public sealed record LeagueConfiguration(
     NegotiationConfiguration Negotiation,
     SeasonScheduleConfiguration? Schedule = null,
     TieBreakSequence? StandingsTieBreaks = null,
-    PostseasonConfiguration? Postseason = null)
+    PostseasonConfiguration? Postseason = null,
+    DraftClassConfiguration? DraftClass = null,
+    IReadOnlyList<int>? DraftLotteryWeights = null)
 {
     /// <summary>Whether this league configures any threshold at all.</summary>
     public bool IsUncapped =>
@@ -91,6 +93,40 @@ public sealed record LeagueConfiguration(
 
     /// <summary>Whether this league holds a postseason at all.</summary>
     public bool HasPostseason => Postseason is not null;
+
+    /// <summary>Whether this league procedurally generates its own draft classes.</summary>
+    public bool GeneratesDraftClasses => DraftClass is not null;
+
+    /// <summary>
+    /// Whether this league states draft lottery odds. Independent of <see cref="DraftClass"/> — a
+    /// league can run the lottery over classes a data pack supplies without generating its own.
+    /// </summary>
+    public bool HasDraftLotteryWeights => DraftLotteryWeights is { Count: > 0 };
+}
+
+/// <summary>
+/// How this league procedurally builds its own draft classes: how many prospects, the true-rating
+/// spread they are drawn from, the age they enter at, and how scouting narrows what a team knows
+/// about one. Absent means this league generates no classes of its own — a draft-class playlist
+/// (Milestone 10) or simply no draft — the same "absence is a real configuration" reading every other
+/// optional section here uses. Grouped the way <see cref="NegotiationConfiguration"/> is: one section
+/// of the ruleset file, and a GM setting up a league's draft asks about all of it at once.
+/// <para>
+/// The draft lottery's weighting table travels separately, as <see cref="LeagueConfiguration.DraftLotteryWeights"/>,
+/// because it is independently optional: a league can run a weighted lottery over a draft class a data
+/// pack supplies without configuring this generator at all.
+/// </para>
+/// </summary>
+public sealed record DraftClassConfiguration(
+    int ClassSize,
+    int MinimumRating,
+    int MaximumRating,
+    int ProspectAgeYears,
+    int ScoutingBaseConfidence,
+    int ScoutingMaxRangeWidth,
+    BandedScale ScoutingInvestmentConfidence)
+{
+    public bool HasScoutingModel => ScoutingMaxRangeWidth > 0;
 }
 
 /// <summary>

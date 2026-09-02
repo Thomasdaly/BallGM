@@ -42,12 +42,13 @@ public sealed class LeagueRulesetSerializerTests
                 standardOverCapAllowanceUnavailableAbove: CapThresholdKind.FirstApron,
                 allowanceMaySplitAcrossPlayers: true,
                 MarketResolutionMode.ResolutionPoint,
-                offerExpiryDays: 3).Value);
+                offerExpiryDays: 3).Value,
+            draftLotteryRules: DraftLotteryRules.Create([140, 125]).Value);
 
         var json = serializer.Serialize(ruleset);
         var result = serializer.Deserialize(json);
 
-        Assert.True(result.IsSuccess);
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
         Assert.Equal(ruleset.Name, result.Value.Name);
         Assert.Equal(ruleset.RegularSeasonGameCount, result.Value.RegularSeasonGameCount);
         Assert.Equal(ruleset.RosterLimits.MaximumPlayers, result.Value.RosterLimits.MaximumPlayers);
