@@ -67,7 +67,15 @@ public sealed record LeagueRulesetEnvelope
         int? scoutingBaseConfidence = null,
         int? scoutingMaxRangeWidth = null,
         IReadOnlyList<ScoutingInvestmentBandEnvelope>? scoutingInvestmentConfidence = null,
-        IReadOnlyList<int>? draftLotteryWeights = null)
+        IReadOnlyList<int>? draftLotteryWeights = null,
+        int? developmentPeakAgeStart = null,
+        int? developmentPeakAgeEnd = null,
+        IReadOnlyList<AgeCurveBandEnvelope>? developmentGrowthCurve = null,
+        IReadOnlyList<AgeCurveBandEnvelope>? developmentDeclineCurve = null,
+        int? developmentVarianceRange = null,
+        int? retirementMinimumVoluntaryAge = null,
+        int? retirementMandatoryAge = null,
+        IReadOnlyList<AgeCurveBandEnvelope>? retirementVoluntaryOddsByAge = null)
     {
         SchemaVersion = schemaVersion;
         Name = name;
@@ -123,6 +131,14 @@ public sealed record LeagueRulesetEnvelope
         ScoutingMaxRangeWidth = scoutingMaxRangeWidth;
         ScoutingInvestmentConfidence = scoutingInvestmentConfidence;
         DraftLotteryWeights = draftLotteryWeights;
+        DevelopmentPeakAgeStart = developmentPeakAgeStart;
+        DevelopmentPeakAgeEnd = developmentPeakAgeEnd;
+        DevelopmentGrowthCurve = developmentGrowthCurve;
+        DevelopmentDeclineCurve = developmentDeclineCurve;
+        DevelopmentVarianceRange = developmentVarianceRange;
+        RetirementMinimumVoluntaryAge = retirementMinimumVoluntaryAge;
+        RetirementMandatoryAge = retirementMandatoryAge;
+        RetirementVoluntaryOddsByAge = retirementVoluntaryOddsByAge;
     }
 
     public int SchemaVersion { get; }
@@ -286,6 +302,30 @@ public sealed record LeagueRulesetEnvelope
 
     /// <summary>The draft lottery's weighted-draw odds, worst team first. Absent means this league states no odds.</summary>
     public IReadOnlyList<int>? DraftLotteryWeights { get; }
+
+    /// <summary>The first age a player is at their peak. The whole development section is absent where this league models no ageing.</summary>
+    public int? DevelopmentPeakAgeStart { get; }
+
+    /// <summary>The last age a player is at their peak.</summary>
+    public int? DevelopmentPeakAgeEnd { get; }
+
+    /// <summary>Rating points gained that season, keyed by age, below the peak range.</summary>
+    public IReadOnlyList<AgeCurveBandEnvelope>? DevelopmentGrowthCurve { get; }
+
+    /// <summary>Rating points lost that season, keyed by age, above the peak range.</summary>
+    public IReadOnlyList<AgeCurveBandEnvelope>? DevelopmentDeclineCurve { get; }
+
+    /// <summary>The seeded variance range applied on top of the curve each season.</summary>
+    public int? DevelopmentVarianceRange { get; }
+
+    /// <summary>The first age voluntary retirement may be drawn for. The whole retirement section is absent where this league models none.</summary>
+    public int? RetirementMinimumVoluntaryAge { get; }
+
+    /// <summary>The age retirement becomes certain rather than drawn. Absent or zero means no such age is set.</summary>
+    public int? RetirementMandatoryAge { get; }
+
+    /// <summary>Chance of voluntary retirement that season, out of 10,000, keyed by age.</summary>
+    public IReadOnlyList<AgeCurveBandEnvelope>? RetirementVoluntaryOddsByAge { get; }
 }
 
 /// <summary>
@@ -305,3 +345,9 @@ public sealed record CompensationFloorBandEnvelope(long MinimumSeasonsOfService,
 /// confidence bonus that applies from there up.
 /// </summary>
 public sealed record ScoutingInvestmentBandEnvelope(long MinimumInvestedPoints, long ConfidenceBonus);
+
+/// <summary>
+/// One row of an age-keyed table: the lowest age it covers, and the value that applies from there up.
+/// Shared shape for the development growth/decline curves and the retirement odds-by-age table.
+/// </summary>
+public sealed record AgeCurveBandEnvelope(long MinimumAge, long Value);

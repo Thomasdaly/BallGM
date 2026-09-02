@@ -71,7 +71,9 @@ public sealed record LeagueConfiguration(
     TieBreakSequence? StandingsTieBreaks = null,
     PostseasonConfiguration? Postseason = null,
     DraftClassConfiguration? DraftClass = null,
-    IReadOnlyList<int>? DraftLotteryWeights = null)
+    IReadOnlyList<int>? DraftLotteryWeights = null,
+    DevelopmentConfiguration? Development = null,
+    RetirementConfiguration? Retirement = null)
 {
     /// <summary>Whether this league configures any threshold at all.</summary>
     public bool IsUncapped =>
@@ -102,7 +104,34 @@ public sealed record LeagueConfiguration(
     /// league can run the lottery over classes a data pack supplies without generating its own.
     /// </summary>
     public bool HasDraftLotteryWeights => DraftLotteryWeights is { Count: > 0 };
+
+    /// <summary>Whether this league ages player ratings over time.</summary>
+    public bool HasDevelopmentCurve => Development is not null;
+
+    /// <summary>Whether this league retires players by age at all.</summary>
+    public bool HasRetirement => Retirement is not null;
 }
+
+/// <summary>
+/// How a player's rating moves with age, one season at a time, in the shape the Application layer
+/// carries it. Absent means this league models no ageing: every player's rating stays exactly where
+/// it started, a real league shape (a roster frozen exactly as drafted) rather than a missing rule.
+/// </summary>
+public sealed record DevelopmentConfiguration(
+    int PeakAgeStart,
+    int PeakAgeEnd,
+    BandedScale GrowthCurve,
+    BandedScale DeclineCurve,
+    int VarianceRange);
+
+/// <summary>
+/// When a player's career ends, in the shape the Application layer carries it. Absent means this
+/// league never retires a player by age.
+/// </summary>
+public sealed record RetirementConfiguration(
+    int MinimumVoluntaryAge,
+    int MandatoryRetirementAge,
+    BandedScale VoluntaryOddsByAge);
 
 /// <summary>
 /// How this league procedurally builds its own draft classes: how many prospects, the true-rating

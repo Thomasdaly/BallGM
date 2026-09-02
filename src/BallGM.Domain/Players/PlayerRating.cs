@@ -24,4 +24,12 @@ public sealed record PlayerRating
     }
 
     public int Overall { get; }
+
+    /// <summary>
+    /// A new rating <paramref name="delta"/> points from this one, clamped to the scale rather than
+    /// throwing at an extreme — the growth and decline a development curve applies are unbounded by
+    /// construction, and a prospect already at 100 ageing past their peak should decline normally
+    /// rather than the clamp becoming the caller's problem.
+    /// </summary>
+    public PlayerRating Adjust(int delta) => new(Math.Clamp(Overall + delta, MinimumOverall, MaximumOverall));
 }

@@ -96,7 +96,15 @@ public sealed class LeagueRulesetSerializer
             ruleset.DraftClassRules.IsConfigured ? ruleset.ScoutingRules.BaseConfidence : null,
             ruleset.DraftClassRules.IsConfigured ? ruleset.ScoutingRules.MaxRangeWidth : null,
             ruleset.DraftClassRules.IsConfigured ? ToScoutingBands(ruleset.ScoutingRules.InvestmentConfidence) : null,
-            ruleset.DraftLotteryRules.IsConfigured ? ruleset.DraftLotteryRules.Weights.ToList() : null);
+            ruleset.DraftLotteryRules.IsConfigured ? ruleset.DraftLotteryRules.Weights.ToList() : null,
+            ruleset.DevelopmentRules.IsConfigured ? ruleset.DevelopmentRules.PeakAgeStart : null,
+            ruleset.DevelopmentRules.IsConfigured ? ruleset.DevelopmentRules.PeakAgeEnd : null,
+            ruleset.DevelopmentRules.IsConfigured ? ToAgeCurveBands(ruleset.DevelopmentRules.GrowthCurve) : null,
+            ruleset.DevelopmentRules.IsConfigured ? ToAgeCurveBands(ruleset.DevelopmentRules.DeclineCurve) : null,
+            ruleset.DevelopmentRules.IsConfigured ? ruleset.DevelopmentRules.VarianceRange : null,
+            ruleset.RetirementRules.IsConfigured ? ruleset.RetirementRules.MinimumVoluntaryAge : null,
+            ruleset.RetirementRules.IsConfigured ? ruleset.RetirementRules.MandatoryRetirementAge : null,
+            ruleset.RetirementRules.IsConfigured ? ToAgeCurveBands(ruleset.RetirementRules.VoluntaryOddsByAge) : null);
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -257,6 +265,18 @@ public sealed class LeagueRulesetSerializer
                     "This ruleset states draft lottery weights but has not enabled the lottery. Enable it, or remove the weighting table."));
             }
 
+            var developmentRulesResult = BuildDevelopmentRules(envelope);
+            if (developmentRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(developmentRulesResult.Errors.ToArray());
+            }
+
+            var retirementRulesResult = BuildRetirementRules(envelope);
+            if (retirementRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(retirementRulesResult.Errors.ToArray());
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
@@ -271,7 +291,9 @@ public sealed class LeagueRulesetSerializer
                 postseasonRulesResult.Value,
                 draftClassRulesResult.Value,
                 scoutingRulesResult.Value,
-                draftLotteryRulesResult.Value);
+                draftLotteryRulesResult.Value,
+                developmentRulesResult.Value,
+                retirementRulesResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
@@ -401,6 +423,58 @@ public sealed class LeagueRulesetSerializer
             envelope.DraftClassMaximumRating ?? 0,
             envelope.DraftClassProspectAgeYears ?? 0);
     }
+
+    /// <summary>
+    /// Maps the development section, absent in full for a league that models no ageing. A file naming
+    /// the peak range without a curve, or a curve without the range, has described a curve nobody can
+    /// evaluate, so the gap is reported by <see cref="DevelopmentRules.Create"/> rather than filled in.
+    /// </summary>
+    private static DomainOperationResult<DevelopmentRules> BuildDevelopmentRules(LeagueRulesetEnvelope envelope)
+    {
+        var statesNothing =
+            envelope.DevelopmentPeakAgeStart is null &&
+            envelope.DevelopmentPeakAgeEnd is null &&
+            envelope.DevelopmentGrowthCurve is null &&
+            envelope.DevelopmentDeclineCurve is null &&
+            envelope.DevelopmentVarianceRange is null;
+
+        if (statesNothing)
+        {
+            return DomainOperationResult<DevelopmentRules>.Success(DevelopmentRules.None);
+        }
+
+        return DevelopmentRules.Create(
+            envelope.DevelopmentPeakAgeStart ?? 0,
+            envelope.DevelopmentPeakAgeEnd ?? 0,
+            ToAgeCurveScale(envelope.DevelopmentGrowthCurve),
+            ToAgeCurveScale(envelope.DevelopmentDeclineCurve),
+            envelope.DevelopmentVarianceRange ?? 0);
+    }
+
+    /// <summary>Maps the retirement section, absent in full for a league that models no retirement.</summary>
+    private static DomainOperationResult<RetirementRules> BuildRetirementRules(LeagueRulesetEnvelope envelope)
+    {
+        var statesNothing =
+            envelope.RetirementMinimumVoluntaryAge is null &&
+            envelope.RetirementMandatoryAge is null &&
+            envelope.RetirementVoluntaryOddsByAge is null;
+
+        if (statesNothing)
+        {
+            return DomainOperationResult<RetirementRules>.Success(RetirementRules.None);
+        }
+
+        return RetirementRules.Create(
+            envelope.RetirementMinimumVoluntaryAge ?? 0,
+            envelope.RetirementMandatoryAge ?? 0,
+            ToAgeCurveScale(envelope.RetirementVoluntaryOddsByAge));
+    }
+
+    private static BandedScale ToAgeCurveScale(IReadOnlyList<AgeCurveBandEnvelope>? bands) =>
+        BandedScale.Create(bands?.Select(band => new ScaleBand(band.MinimumAge, band.Value))).Value;
+
+    private static IReadOnlyList<AgeCurveBandEnvelope>? ToAgeCurveBands(BandedScale scale) =>
+        scale.IsEmpty ? null : scale.Bands.Select(band => new AgeCurveBandEnvelope(band.MinimumKey, band.Value)).ToList();
 
     private static IReadOnlyList<ScoutingInvestmentBandEnvelope>? ToScoutingBands(BandedScale investmentConfidence) =>
         investmentConfidence.IsEmpty

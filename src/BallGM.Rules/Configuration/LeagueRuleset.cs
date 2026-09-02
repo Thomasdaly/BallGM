@@ -62,7 +62,16 @@ public sealed record LeagueRuleset
     /// weighting and either generate nothing or draw uniformly, in a league that had described
     /// something more specific — the same class of silent gap every version bump here exists to close.
     /// </remarks>
-    public const int CurrentSchemaVersion = 7;
+    /// <remarks>
+    /// Version 8 added the rest of Milestone 8's rule-driven mechanics: the development/ageing curve
+    /// (peak age range, growth and decline tables, variance) and retirement (minimum voluntary age,
+    /// mandatory age, voluntary odds by age). Optional by absence exactly as every earlier version — a
+    /// league stating neither section models no ageing and no retirement, which is a real league (a
+    /// roster frozen exactly as drafted) rather than an omission. The version moved because a version
+    /// 7 reader handed a version 8 file would ignore a stated development curve or retirement age and
+    /// run a league where nobody ages or retires, in a league that had described otherwise.
+    /// </remarks>
+    public const int CurrentSchemaVersion = 8;
 
     public LeagueRuleset(
         int schemaVersion,
@@ -78,7 +87,9 @@ public sealed record LeagueRuleset
         PostseasonRules? postseasonRules = null,
         DraftClassRules? draftClassRules = null,
         ScoutingRules? scoutingRules = null,
-        DraftLotteryRules? draftLotteryRules = null)
+        DraftLotteryRules? draftLotteryRules = null,
+        DevelopmentRules? developmentRules = null,
+        RetirementRules? retirementRules = null)
     {
         if (schemaVersion <= 0)
         {
@@ -115,6 +126,8 @@ public sealed record LeagueRuleset
         DraftClassRules = draftClassRules ?? DraftClassRules.None;
         ScoutingRules = scoutingRules ?? ScoutingRules.None;
         DraftLotteryRules = draftLotteryRules ?? DraftLotteryRules.None;
+        DevelopmentRules = developmentRules ?? DevelopmentRules.None;
+        RetirementRules = retirementRules ?? RetirementRules.None;
     }
 
     public int SchemaVersion { get; }
@@ -162,4 +175,10 @@ public sealed record LeagueRuleset
 
     /// <summary>The draft lottery's weighting table, or <see cref="Configuration.DraftLotteryRules.None"/>.</summary>
     public DraftLotteryRules DraftLotteryRules { get; }
+
+    /// <summary>How a player's rating moves with age, or <see cref="Configuration.DevelopmentRules.None"/>.</summary>
+    public DevelopmentRules DevelopmentRules { get; }
+
+    /// <summary>When a player's career ends, or <see cref="Configuration.RetirementRules.None"/>.</summary>
+    public RetirementRules RetirementRules { get; }
 }

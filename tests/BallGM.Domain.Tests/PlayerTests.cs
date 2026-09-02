@@ -88,6 +88,66 @@ public sealed class PlayerTests
         Assert.Equal("player.not_injured", error.Code);
     }
 
+    [Fact]
+    public void DevelopReplacesTheRating()
+    {
+        var player = CreatePlayer();
+
+        var result = player.Develop(new PlayerRating(overall: 60));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(60, player.Rating.Overall);
+    }
+
+    [Fact]
+    public void RetireFlagsThePlayerAsRetired()
+    {
+        var player = CreatePlayer();
+
+        var result = player.Retire();
+
+        Assert.True(result.IsSuccess);
+        Assert.True(player.IsRetired);
+    }
+
+    [Fact]
+    public void RetireRejectsWhenAlreadyRetired()
+    {
+        var player = CreatePlayer();
+        player.Retire();
+
+        var result = player.Retire();
+
+        Assert.True(result.IsFailure);
+        Assert.Equal("player.already_retired", Assert.Single(result.Errors).Code);
+    }
+
+    [Fact]
+    public void CreateDefaultsToAnUnknownBiographyAndNotRetired()
+    {
+        var player = CreatePlayer();
+
+        Assert.False(player.IsRetired);
+        Assert.False(player.Biography.WasDrafted);
+    }
+
+    [Fact]
+    public void CreateAcceptsABiography()
+    {
+        var result = Player.Create(
+            new PlayerId("player-001"),
+            "Fictional Forward",
+            Position.SmallForward,
+            new PlayerRating(overall: 75),
+            new DateOnly(2000, 6, 15),
+            seasonsOfService: 4,
+            biography: new PlayerBiography("Harbourline", "Verdanmoor Institute", 2018, 1, 4));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Harbourline", result.Value.Biography.Birthplace);
+        Assert.True(result.Value.Biography.WasDrafted);
+    }
+
     /// <summary>
     /// Age is measured against a supplied date rather than the wall clock, so this assertion cannot
     /// start failing on the player's birthday.

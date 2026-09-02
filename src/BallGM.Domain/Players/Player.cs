@@ -19,6 +19,7 @@ public sealed class Player
     private const string NotInjuredCode = "player.not_injured";
     private const string MissingBirthDateCode = "player.missing_birth_date";
     private const string NegativeServiceCode = "player.negative_seasons_of_service";
+    private const string AlreadyRetiredCode = "player.already_retired";
 
     private Player(
         PlayerId id,
@@ -27,7 +28,9 @@ public sealed class Player
         PlayerRating rating,
         DateOnly birthDate,
         int seasonsOfService,
-        Injury? currentInjury)
+        Injury? currentInjury,
+        PlayerBiography biography,
+        bool isRetired)
     {
         Id = id;
         FullName = fullName;
@@ -36,6 +39,8 @@ public sealed class Player
         BirthDate = birthDate;
         SeasonsOfService = seasonsOfService;
         CurrentInjury = currentInjury;
+        Biography = biography;
+        IsRetired = isRetired;
     }
 
     /// <summary>
@@ -50,7 +55,9 @@ public sealed class Player
         PlayerRating rating,
         DateOnly birthDate,
         int seasonsOfService,
-        Injury? currentInjury = null)
+        Injury? currentInjury = null,
+        PlayerBiography? biography = null,
+        bool isRetired = false)
     {
         ArgumentNullException.ThrowIfNull(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(fullName);
@@ -80,7 +87,16 @@ public sealed class Player
         return errors.Count > 0
             ? DomainOperationResult<Player>.Failure(errors.ToArray())
             : DomainOperationResult<Player>.Success(
-                new Player(id, fullName, position, rating, birthDate, seasonsOfService, currentInjury));
+                new Player(
+                    id,
+                    fullName,
+                    position,
+                    rating,
+                    birthDate,
+                    seasonsOfService,
+                    currentInjury,
+                    biography ?? PlayerBiography.Unknown,
+                    isRetired));
     }
 
     public PlayerId Id { get; }
@@ -89,9 +105,15 @@ public sealed class Player
 
     public Position Position { get; }
 
-    public PlayerRating Rating { get; }
+    public PlayerRating Rating { get; private set; }
 
     public DateOnly BirthDate { get; }
+
+    /// <summary>Where this player came from, and which draft — if any — brought them in.</summary>
+    public PlayerBiography Biography { get; }
+
+    /// <summary>Whether this player has retired. A retired player is not removed — see <see cref="Retire"/>.</summary>
+    public bool IsRetired { get; private set; }
 
     /// <summary>
     /// Completed seasons on a roster. The key every compensation tier table reads: a league whose
@@ -125,6 +147,37 @@ public sealed class Player
     public DomainOperationResult CompleteSeasonOfService()
     {
         SeasonsOfService++;
+        return DomainOperationResult.Success;
+    }
+
+    /// <summary>
+    /// Replaces this player's rating — the only way <see cref="Rating"/> moves. Called once per player
+    /// per season by <c>BallGM.Rules.Development.PlayerDevelopmentModel</c>, which decides the new
+    /// value; this method only ever applies it, the same division of labour every other rule-driven
+    /// mutation in this codebase keeps between the aggregate and the rules layer that decided it.
+    /// Always succeeds; returns a result for consistency with the rest of this aggregate's mutators.
+    /// </summary>
+    public DomainOperationResult Develop(PlayerRating newRating)
+    {
+        ArgumentNullException.ThrowIfNull(newRating);
+        Rating = newRating;
+        return DomainOperationResult.Success;
+    }
+
+    /// <summary>
+    /// Ends this player's playing career. A retired player is not removed from the league — their
+    /// record and their career history stay exactly as reachable as an active player's — so this only
+    /// flips the flag rather than tearing down any reference to them.
+    /// </summary>
+    public DomainOperationResult Retire()
+    {
+        if (IsRetired)
+        {
+            return DomainOperationResult.Failure(
+                new DomainError(AlreadyRetiredCode, $"Player '{Id.Value}' has already retired."));
+        }
+
+        IsRetired = true;
         return DomainOperationResult.Success;
     }
 

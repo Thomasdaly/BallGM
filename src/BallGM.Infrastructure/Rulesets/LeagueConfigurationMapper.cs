@@ -28,6 +28,8 @@ internal static class LeagueConfigurationMapper
     private const string InvalidDraftLotteryRulesCode = "ruleset.invalid_draft_lottery_rules";
     private const string LotteryEnabledWithoutOddsCode = "ruleset.lottery_enabled_without_odds";
     private const string LotteryOddsWithoutLotteryCode = "ruleset.lottery_odds_without_lottery_enabled";
+    private const string InvalidDevelopmentRulesCode = "ruleset.invalid_development_rules";
+    private const string InvalidRetirementRulesCode = "ruleset.invalid_retirement_rules";
 
     /// <summary>
     /// Rebuilds the rules-layer ruleset from the Application-facing configuration. The configuration
@@ -210,6 +212,40 @@ internal static class LeagueConfigurationMapper
                 "This ruleset states draft lottery weights but has not enabled the lottery. Enable it, or remove the weighting table."));
         }
 
+        var developmentRules = DevelopmentRules.None;
+        if (configuration.Development is { } development)
+        {
+            var developmentRulesResult = DevelopmentRules.Create(
+                development.PeakAgeStart,
+                development.PeakAgeEnd,
+                development.GrowthCurve,
+                development.DeclineCurve,
+                development.VarianceRange);
+
+            if (developmentRulesResult.IsFailure)
+            {
+                return Relabel<LeagueRuleset>(developmentRulesResult.Errors, InvalidDevelopmentRulesCode);
+            }
+
+            developmentRules = developmentRulesResult.Value;
+        }
+
+        var retirementRules = RetirementRules.None;
+        if (configuration.Retirement is { } retirement)
+        {
+            var retirementRulesResult = RetirementRules.Create(
+                retirement.MinimumVoluntaryAge,
+                retirement.MandatoryRetirementAge,
+                retirement.VoluntaryOddsByAge);
+
+            if (retirementRulesResult.IsFailure)
+            {
+                return Relabel<LeagueRuleset>(retirementRulesResult.Errors, InvalidRetirementRulesCode);
+            }
+
+            retirementRules = retirementRulesResult.Value;
+        }
+
         return DomainOperationResult<LeagueRuleset>.Success(new LeagueRuleset(
             LeagueRuleset.CurrentSchemaVersion,
             configuration.RulesetName,
@@ -224,7 +260,9 @@ internal static class LeagueConfigurationMapper
             postseasonRules,
             draftClassRules,
             scoutingRules,
-            draftLotteryRules));
+            draftLotteryRules,
+            developmentRules,
+            retirementRules));
     }
 
     /// <summary>
@@ -296,7 +334,21 @@ internal static class LeagueConfigurationMapper
                     ruleset.ScoutingRules.MaxRangeWidth,
                     ruleset.ScoutingRules.InvestmentConfidence)
                 : null,
-            ruleset.DraftLotteryRules.IsConfigured ? ruleset.DraftLotteryRules.Weights : null);
+            ruleset.DraftLotteryRules.IsConfigured ? ruleset.DraftLotteryRules.Weights : null,
+            ruleset.DevelopmentRules.IsConfigured
+                ? new DevelopmentConfiguration(
+                    ruleset.DevelopmentRules.PeakAgeStart,
+                    ruleset.DevelopmentRules.PeakAgeEnd,
+                    ruleset.DevelopmentRules.GrowthCurve,
+                    ruleset.DevelopmentRules.DeclineCurve,
+                    ruleset.DevelopmentRules.VarianceRange)
+                : null,
+            ruleset.RetirementRules.IsConfigured
+                ? new RetirementConfiguration(
+                    ruleset.RetirementRules.MinimumVoluntaryAge,
+                    ruleset.RetirementRules.MandatoryRetirementAge,
+                    ruleset.RetirementRules.VoluntaryOddsByAge)
+                : null);
     }
 
     private static DomainOperationResult<T> Relabel<T>(IReadOnlyList<DomainError> errors, string code) =>
