@@ -33,11 +33,12 @@ public sealed class TwoSeasonIntegrationTests
         Assert.False(session.HasSeason, "Concluding a season should leave none in progress.");
 
         var released = conclusion.Value.PlayersReleasedToFreeAgency;
+        var autoSigned = conclusion.Value.PlayersAutoSigned;
 
         var overviewAfter = session.Overview().Value;
         Assert.Equal(conclusion.Value.NextSeasonYear, overviewAfter.SeasonYear);
-        Assert.Equal(rosteredBefore - released, overviewAfter.Teams.Sum(team => team.RosterCount));
-        Assert.Equal(freeAgentsBefore + released, overviewAfter.FreeAgents.Players.Count);
+        Assert.Equal(rosteredBefore - released + autoSigned, overviewAfter.Teams.Sum(team => team.RosterCount));
+        Assert.Equal(freeAgentsBefore + released - autoSigned, overviewAfter.FreeAgents.Players.Count);
 
         var started = session.StartSeason(seed: 2032);
         Assert.True(started.IsSuccess, string.Join("; ", started.Errors.Select(error => error.Message)));

@@ -210,4 +210,5 @@ public sealed record SeasonConclusionSummary(
     int PlayersReleasedToFreeAgency,
     int PlayersCreditedService,
     int NextSeasonYear,
+    int PlayersAutoSigned,
     IReadOnlyList<SeasonFindingLine> Notes);

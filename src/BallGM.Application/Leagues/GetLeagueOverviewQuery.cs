@@ -381,7 +381,10 @@ public sealed class GetLeagueOverviewQuery(
     {
         var roster = new List<RosterSpot>();
         var contractsByPlayer = snapshot.Contracts
-            .Where(contract => contract.TeamId == team.Id && !contract.IsTerminated)
+            .Where(contract =>
+                contract.TeamId == team.Id &&
+                !contract.IsTerminated &&
+                contract.TermFor(snapshot.CurrentSeason) is not null)
             .ToDictionary(contract => contract.PlayerId);
 
         foreach (var playerId in team.PlayerIds)

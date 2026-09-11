@@ -37,9 +37,18 @@ public sealed record SigningContext(
     /// </summary>
     public bool IsIncumbentTeam => Team.PlayerIds.Contains(Player.Id);
 
-    /// <summary>The live contract the player is already on, if any.</summary>
+    /// <summary>
+    /// The live contract the player is already on, if any. "Live" means it is not terminated
+    /// <em>and</em> its terms actually cover <see cref="CurrentSeason"/> — a contract whose last
+    /// season already passed was never terminated (that is what <see cref="Contract.Terminate"/> is
+    /// for: an early release, not a natural expiry) but still must not read as "under contract"
+    /// forever, or nobody whose deal simply ran out could ever be signed again by anyone.
+    /// </summary>
     public Contract? ExistingContract =>
-        Contracts.FirstOrDefault(contract => contract.PlayerId == Player.Id && !contract.IsTerminated);
+        Contracts.FirstOrDefault(contract =>
+            contract.PlayerId == Player.Id &&
+            !contract.IsTerminated &&
+            contract.TermFor(CurrentSeason) is not null);
 
     public bool IsFreeAgent => ExistingContract is null;
 

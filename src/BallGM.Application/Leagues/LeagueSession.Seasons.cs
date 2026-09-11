@@ -1,6 +1,7 @@
 using System.Globalization;
 using BallGM.Application.Seasons;
 using BallGM.Domain.Common;
+using BallGM.Domain.Contracts;
 using BallGM.Domain.Leagues;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
@@ -137,6 +138,8 @@ public sealed partial class LeagueSession
         _snapshot = _snapshot with { CurrentSeason = new Season(concludedYear + 1) };
         _seasonRun = null;
 
+        var autoSigned = AutoResignToRosterFloor();
+
         return DomainOperationResult<SeasonConclusionSummary>.Success(new SeasonConclusionSummary(
             concludedYear,
             outcome.Entry.ChampionTeamId?.Value,
@@ -147,7 +150,68 @@ public sealed partial class LeagueSession
             outcome.PlayersReleasedToFreeAgency.Count,
             outcome.PlayersCreditedService,
             concludedYear + 1,
+            autoSigned,
             outcome.Notes.Select(finding => ToSeasonLine(finding, teamNames)).ToList()));
+    }
+
+    /// <summary>
+    /// Fills every team back up to its configured roster minimum from the pool of unsigned free
+    /// agents, on a one-season minimum-salary offer. Nothing in this codebase runs an AI general
+    /// manager yet (Milestone 9), so this is deliberately not one: no bidding, no team preference, no
+    /// randomness — just the highest-rated free agent available, taken in team-id order, until the
+    /// roster minimum is met or the pool runs out. Its only job is to stop a chained season-over-season
+    /// run from finding a team it cannot field, which nothing upstream of this milestone currently
+    /// prevents.
+    /// </summary>
+    private int AutoResignToRosterFloor()
+    {
+        if (_snapshot is null)
+        {
+            return 0;
+        }
+
+        var signedCount = 0;
+
+        foreach (var team in _snapshot.Teams.OrderBy(candidate => candidate.Id.Value, StringComparer.Ordinal))
+        {
+            var skipped = new HashSet<string>(StringComparer.Ordinal);
+
+            while (team.PlayerIds.Count < team.RosterLimits.MinimumPlayers)
+            {
+                var candidate = _snapshot.Players
+                    .Where(player => !skipped.Contains(player.Id.Value) && IsFreeAgent(player, _snapshot))
+                    .OrderByDescending(player => player.Rating.Overall)
+                    .ThenBy(player => player.Id.Value, StringComparer.Ordinal)
+                    .FirstOrDefault();
+
+                if (candidate is null)
+                {
+                    break;
+                }
+
+                var floor = _signingEngine.LimitsFor(_snapshot, candidate.SeasonsOfService).Minimum ?? Money.Zero;
+                var terms = new List<ContractSeasonTerm> { new(_snapshot.CurrentSeason, floor, floor) };
+
+                var offerResult = Offer.Create(new OfferId(SortableId.NewId()), team.Id, candidate.Id, terms);
+                if (offerResult.IsFailure)
+                {
+                    skipped.Add(candidate.Id.Value);
+                    continue;
+                }
+
+                var executionResult = _signingEngine.Execute(offerResult.Value, _snapshot, team.Id, candidate.Id);
+                if (executionResult.IsFailure)
+                {
+                    skipped.Add(candidate.Id.Value);
+                    continue;
+                }
+
+                _snapshot = _snapshot with { Contracts = [.. _snapshot.Contracts, executionResult.Value.Contract] };
+                signedCount++;
+            }
+        }
+
+        return signedCount;
     }
 
     private static SeasonHistoryLine ToLine(SeasonHistoryTeamRecord row, IReadOnlyDictionary<TeamId, string> teamNames) =>
