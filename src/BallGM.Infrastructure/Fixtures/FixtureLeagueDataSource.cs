@@ -74,16 +74,22 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
     /// measured this league's season-to-season win-percentage spread (<c>sd_team_win_pct</c>) at
     /// 0.087 against a target band of 0.135-0.165 for a modern-NBA-shaped league — a six-team
     /// vertical-slice fixture whose rosters were all close in overall quality, not an engine defect.
-    /// This spread was tuned empirically against the real <c>PossessionMatchEngine</c> (1,000 seeded
-    /// seasons, <c>n=6,000</c> team-seasons) rather than derived analytically, because the response is
-    /// not perfectly linear near the rating clamp and the audit's own roster-mean-Overall-vs-win%
-    /// regression only carried an R² of 0.577 — not solid enough to trust a first-principles scale
-    /// factor. Measured result at this spread: sd_team_win_pct ≈ 0.152, inside the band. Re-measure
-    /// with `/sim-regress` before changing it again; a plausible-looking scale factor is not the same
-    /// as a measured one.
+    /// This spread was tuned empirically against the real <c>PossessionMatchEngine</c> rather than
+    /// derived analytically, because the response is not perfectly linear near the rating clamp and
+    /// the audit's own roster-mean-Overall-vs-win% regression only carried an R² of 0.577 — not solid
+    /// enough to trust a first-principles scale factor.
+    /// </para>
+    /// <para>
+    /// Nudged again (<c>[14, 6, 0, -4, -11, -18]</c> → this) for P-6: <c>sd_team_win_pct</c> alone was
+    /// already in band (≈0.141), but <c>noll_scully</c> — <c>sd_observed / (0.5/sqrt(78))</c>, this
+    /// league's actual 78-game season, not the 82 a real-NBA-shaped formula defaults to — landed at
+    /// 2.491, a hair under its 2.50 floor. A small widening was enough: measured at this spread
+    /// (n=6,000 team-seasons), sd_team_win_pct ≈ 0.147, noll_scully ≈ 2.60, talent_share_of_var ≈
+    /// 0.85 — all three in band together. Re-measure with `/sim-regress` before changing it again; a
+    /// plausible-looking scale factor is not the same as a measured one.
     /// </para>
     /// </summary>
-    private static readonly int[] TeamStrengthOffsets = [14, 6, 0, -4, -11, -18];
+    private static readonly int[] TeamStrengthOffsets = [15, 6, 0, -4, -12, -19];
 
     private static readonly string[] GivenNames =
     [
