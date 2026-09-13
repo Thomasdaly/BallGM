@@ -6,14 +6,20 @@ public sealed record CalendarPhaseEnvelope(string Phase, int StartDay, int EndDa
 /// <summary>One saved fixture. The identifier is stored rather than recomputed, so a file that disagrees with its own coordinates fails the replay instead of being silently corrected.</summary>
 public sealed record FixtureEnvelope(string GameId, int Day, string HomeTeamId, string AwayTeamId, string Phase);
 
-/// <summary>One player's saved line.</summary>
+/// <summary>
+/// One player's saved line. <c>Rebounds</c> is not stored — it is derived from
+/// <see cref="OffensiveRebounds"/>/<see cref="DefensiveRebounds"/>, the same "re-derived, never
+/// stored" reading the rest of this save format gives a value computable from state already held.
+/// </summary>
 public sealed record PlayerStatLineEnvelope(
     string PlayerId,
     string TeamId,
     int Minutes,
     int Points,
-    int Rebounds,
+    int OffensiveRebounds,
+    int DefensiveRebounds,
     int Assists,
+    int UsagePercent,
     bool Started);
 
 /// <summary>One saved result. <c>BoxScore</c> is absent for a result recorded without player lines.</summary>
@@ -49,8 +55,15 @@ public sealed record SeasonEnvelope
     /// though the build that introduced it plays no games, precisely so that the half of Milestone 7
     /// which does play them adds no version at all — a save format that changed the moment the
     /// simulation arrived would have been a format designed for the wrong thing.
+    /// <para>
+    /// Version 2 replaces <c>PlayerStatLineEnvelope</c>'s single <c>Rebounds</c> with the
+    /// offensive/defensive split the engine already computed internally, and adds <c>UsagePercent</c>
+    /// — both newly exposed, not newly modeled. A version-1 save cannot state the split, so it is
+    /// refused outright rather than guessed at on load; no production save existed before this version
+    /// moved.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     public SeasonEnvelope(
         int schemaVersion,

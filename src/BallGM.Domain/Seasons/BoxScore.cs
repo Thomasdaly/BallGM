@@ -8,6 +8,12 @@ namespace BallGM.Domain.Seasons;
 /// One player's line in one game. Minutes are carried alongside the counting statistics because a
 /// box score that does not say how long someone was on the floor cannot explain any of the rest of
 /// it — and minutes are what fatigue accrues against.
+/// <para>
+/// <see cref="OffensiveRebounds"/> and <see cref="DefensiveRebounds"/> are the stored figures;
+/// <see cref="Rebounds"/> is derived from them rather than stored separately, the same "re-derived,
+/// never stored" reading <c>PlayerRating.Overall</c> already gives a value computable from state
+/// already held — a combined total and its own split could otherwise silently disagree.
+/// </para>
 /// </summary>
 public sealed record PlayerStatLine
 {
@@ -16,8 +22,10 @@ public sealed record PlayerStatLine
         TeamId teamId,
         int minutes,
         int points,
-        int rebounds,
+        int offensiveRebounds,
+        int defensiveRebounds,
         int assists,
+        int usagePercent,
         bool started)
     {
         ArgumentNullException.ThrowIfNull(playerId);
@@ -25,15 +33,23 @@ public sealed record PlayerStatLine
 
         ThrowIfNegative(minutes, nameof(minutes));
         ThrowIfNegative(points, nameof(points));
-        ThrowIfNegative(rebounds, nameof(rebounds));
+        ThrowIfNegative(offensiveRebounds, nameof(offensiveRebounds));
+        ThrowIfNegative(defensiveRebounds, nameof(defensiveRebounds));
         ThrowIfNegative(assists, nameof(assists));
+
+        if (usagePercent < 0 || usagePercent > 100)
+        {
+            throw new ArgumentOutOfRangeException(nameof(usagePercent), usagePercent, "Usage share must be between 0 and 100.");
+        }
 
         PlayerId = playerId;
         TeamId = teamId;
         Minutes = minutes;
         Points = points;
-        Rebounds = rebounds;
+        OffensiveRebounds = offensiveRebounds;
+        DefensiveRebounds = defensiveRebounds;
         Assists = assists;
+        UsagePercent = usagePercent;
         Started = started;
     }
 
@@ -45,9 +61,23 @@ public sealed record PlayerStatLine
 
     public int Points { get; }
 
-    public int Rebounds { get; }
+    public int OffensiveRebounds { get; }
+
+    public int DefensiveRebounds { get; }
+
+    /// <summary>The combined board total everything outside the rebound split still reads.</summary>
+    public int Rebounds => OffensiveRebounds + DefensiveRebounds;
 
     public int Assists { get; }
+
+    /// <summary>
+    /// This player's share of their team's shots, 0-100. Every team's lines sum to exactly 100 —
+    /// enforced by <see cref="BoxScore.Create"/>, the same way team points are enforced to sum to the
+    /// final score — because a usage share that does not add up to a whole team is not usable by
+    /// anything that reads it. Per game, not per lineup-stint: nothing in this engine tracks a
+    /// possession's five-man unit separately from the game it belongs to.
+    /// </summary>
+    public int UsagePercent { get; }
 
     public bool Started { get; }
 
@@ -69,6 +99,7 @@ public sealed class BoxScore
 {
     private const string PointsDoNotMatchCode = "box_score.points_do_not_match_result";
     private const string UnknownTeamCode = "box_score.line_for_team_not_playing";
+    private const string UsagePercentDoesNotSumToWholeCode = "box_score.usage_percent_does_not_sum_to_whole";
 
     private readonly List<PlayerStatLine> _lines;
 
@@ -81,9 +112,11 @@ public sealed class BoxScore
     }
 
     /// <summary>
-    /// Builds a box score, refusing lines from a team that is not in the game and refusing totals
-    /// that disagree with the stated result. The second check is the point of the type: a game whose
-    /// final score and whose player points differ is a bug the standings would inherit silently.
+    /// Builds a box score, refusing lines from a team that is not in the game, refusing totals that
+    /// disagree with the stated result, and refusing a team whose usage shares do not sum to exactly
+    /// 100 (a team with no lines at all is not checked — there is nothing to sum). The points check is
+    /// the original point of the type: a game whose final score and whose player points differ is a
+    /// bug the standings would inherit silently. Usage is the same shape of bug one level down.
     /// </summary>
     public static DomainOperationResult<BoxScore> Create(
         GameId gameId,
@@ -121,6 +154,23 @@ public sealed class BoxScore
             errors.Add(new DomainError(
                 PointsDoNotMatchCode,
                 $"Game '{gameId.Value}' finished {homePoints}-{awayPoints} but its player lines add up to {homeLineTotal}-{awayLineTotal}."));
+        }
+
+        foreach (var teamId in new[] { homeTeamId, awayTeamId })
+        {
+            var teamLines = supplied.Where(line => line.TeamId == teamId).ToList();
+            if (teamLines.Count == 0)
+            {
+                continue;
+            }
+
+            var usageTotal = teamLines.Sum(line => line.UsagePercent);
+            if (usageTotal != 100)
+            {
+                errors.Add(new DomainError(
+                    UsagePercentDoesNotSumToWholeCode,
+                    $"Team '{teamId.Value}' in game '{gameId.Value}' has usage shares summing to {usageTotal}, not 100."));
+            }
         }
 
         return errors.Count > 0

@@ -222,8 +222,10 @@ public sealed class SeasonSerializer
                         new TeamId(line.TeamId),
                         line.Minutes,
                         line.Points,
-                        line.Rebounds,
+                        line.OffensiveRebounds,
+                        line.DefensiveRebounds,
                         line.Assists,
+                        line.UsagePercent,
                         line.Started)));
 
                 if (boxScoreResult.IsFailure)
@@ -259,8 +261,10 @@ public sealed class SeasonSerializer
                         line.TeamId.Value,
                         line.Minutes,
                         line.Points,
-                        line.Rebounds,
+                        line.OffensiveRebounds,
+                        line.DefensiveRebounds,
                         line.Assists,
+                        line.UsagePercent,
                         line.Started))
                     .ToList());
 }

@@ -157,6 +157,33 @@ public sealed class PossessionMatchEngineTests
         Assert.All(lines, line => Assert.True(line.Minutes > 0));
     }
 
+    [Fact]
+    public void UsagePercentSumsToExactlyOneHundredPerTeamPerGame()
+    {
+        foreach (var outcome in MatchTestFixtures.PlayMany(300))
+        {
+            var boxScore = outcome.Result.BoxScore!;
+
+            Assert.Equal(100, boxScore.LinesFor(outcome.Result.HomeTeamId).Sum(line => line.UsagePercent));
+            Assert.Equal(100, boxScore.LinesFor(outcome.Result.AwayTeamId).Sum(line => line.UsagePercent));
+        }
+    }
+
+    [Fact]
+    public void OffensiveAndDefensiveReboundsAreARealSplitNotAConstantOnOneSide()
+    {
+        // Both categories are real rebound sources (a side's own misses, and its opponent's), so
+        // across many games neither should sit at zero — a split that never varies would be the
+        // merged total wearing two field names.
+        var lines = MatchTestFixtures.PlayMany(300)
+            .SelectMany(outcome => outcome.Result.BoxScore!.Lines)
+            .ToList();
+
+        Assert.Contains(lines, line => line.OffensiveRebounds > 0);
+        Assert.Contains(lines, line => line.DefensiveRebounds > 0);
+        Assert.All(lines, line => Assert.Equal(line.OffensiveRebounds + line.DefensiveRebounds, line.Rebounds));
+    }
+
     private static int MinutesOnFloorForStarters(MatchSetup setup) =>
         setup.Home.Rotation.Slots.Count(slot => slot.IsStarter);
 

@@ -207,16 +207,25 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// Rebounds and assists, counted off the possessions that actually happened rather than drawn
     /// independently. A box score whose rebounds bore no relation to its misses would be two accounts
     /// of one game.
+    /// <para>
+    /// Offensive and defensive boards were always two separate counts here — <paramref name="side"/>'s
+    /// own misses feed one share, <paramref name="opponent"/>'s misses feed the other — this just stops
+    /// merging them into one number before <c>ToStatLines</c> reads it.
+    /// </para>
     /// </summary>
     private static void FinishSide(Side side, Side opponent, IRandomSource random)
     {
-        var rebounds =
-            (opponent.Misses * MatchModelBounds.DefensiveReboundShare / MatchModelBounds.ProbabilityScale) +
-            (side.Misses * MatchModelBounds.OffensiveReboundShare / MatchModelBounds.ProbabilityScale);
+        var defensiveRebounds = opponent.Misses * MatchModelBounds.DefensiveReboundShare / MatchModelBounds.ProbabilityScale;
+        var offensiveRebounds = side.Misses * MatchModelBounds.OffensiveReboundShare / MatchModelBounds.ProbabilityScale;
 
-        for (var index = 0; index < rebounds; index++)
+        for (var index = 0; index < defensiveRebounds; index++)
         {
-            side.ReboundsBy[side.PickBy(side.ReboundWeights, random)]++;
+            side.DefensiveReboundsBy[side.PickBy(side.ReboundWeights, random)]++;
+        }
+
+        for (var index = 0; index < offensiveRebounds; index++)
+        {
+            side.OffensiveReboundsBy[side.PickBy(side.ReboundWeights, random)]++;
         }
 
         var assists = side.MadeFieldGoals * MatchModelBounds.AssistShareOfMadeFieldGoals / MatchModelBounds.ProbabilityScale;
@@ -320,7 +329,8 @@ public sealed class PossessionMatchEngine : IMatchEngine
             Minutes = Players.Select(slot => slot.Minutes).ToArray();
             Overalls = Players.Select(slot => team.OverallOf(slot.PlayerId) ?? 0).ToArray();
             PointsBy = new int[count];
-            ReboundsBy = new int[count];
+            OffensiveReboundsBy = new int[count];
+            DefensiveReboundsBy = new int[count];
             AssistsBy = new int[count];
 
             var playedMinutes = Minutes.Sum();
@@ -368,7 +378,9 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         public int[] PointsBy { get; }
 
-        public int[] ReboundsBy { get; }
+        public int[] OffensiveReboundsBy { get; }
+
+        public int[] DefensiveReboundsBy { get; }
 
         public int[] AssistsBy { get; }
 
@@ -417,15 +429,60 @@ public sealed class PossessionMatchEngine : IMatchEngine
             return weights.Count - 1;
         }
 
-        public IEnumerable<PlayerStatLine> ToStatLines() =>
-            Enumerable.Range(0, Players.Count).Select(index => new PlayerStatLine(
+        public IEnumerable<PlayerStatLine> ToStatLines()
+        {
+            var usagePercent = ApportionToHundred(UsageWeights);
+
+            return Enumerable.Range(0, Players.Count).Select(index => new PlayerStatLine(
                 Players[index].PlayerId,
                 TeamId,
                 Minutes[index],
                 PointsBy[index],
-                ReboundsBy[index],
+                OffensiveReboundsBy[index],
+                DefensiveReboundsBy[index],
                 AssistsBy[index],
+                usagePercent[index],
                 Players[index].IsStarter));
+        }
+
+        /// <summary>
+        /// Turns a set of weights into whole percentage points that sum to exactly 100 — the largest-
+        /// remainder method: floor every share, then hand the leftover points, one each, to the shares
+        /// with the largest fractional part. Flooring alone always leaves a shortfall (it never leaves
+        /// a surplus), so this never has more whole points to place than shares to place them on.
+        /// </summary>
+        private static int[] ApportionToHundred(IReadOnlyList<int> weights)
+        {
+            var count = weights.Count;
+            var total = weights.Sum();
+
+            if (total <= 0)
+            {
+                return new int[count];
+            }
+
+            var shares = new int[count];
+            var remainders = new int[count];
+
+            for (var index = 0; index < count; index++)
+            {
+                var scaled = weights[index] * 100;
+                shares[index] = scaled / total;
+                remainders[index] = scaled - (shares[index] * total);
+            }
+
+            var leftover = 100 - shares.Sum();
+
+            foreach (var index in Enumerable.Range(0, count)
+                .OrderByDescending(candidate => remainders[candidate])
+                .ThenBy(candidate => candidate)
+                .Take(leftover))
+            {
+                shares[index]++;
+            }
+
+            return shares;
+        }
 
         /// <summary>
         /// Who gets the ball off the rim. Positional rather than rating-driven: a great point guard
