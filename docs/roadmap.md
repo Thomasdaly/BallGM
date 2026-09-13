@@ -192,6 +192,8 @@ UI: draft-class scouting view and a draft-day screen. Neither has landed yet —
 - draft decisions
 - explainable decisions and diagnostics
 
+**The first three of the list above landed first**, as a pure assessment slice with no consumer yet — `CompetitiveDirection`/`ValuationContribution`/`PlayerValuation`/`PickValuation`/`RosterNeedsAssessment` in `BallGM.Domain.AI`, `OrganisationalDirectionClassifier`/`AssetValuationModel`/`RosterNeedsCalculator` in `BallGM.Rules.AI`. No port, no `LeagueSession` wiring, no ruleset or save-schema change — see `docs/architecture.md` → "Front-office assessment: direction, valuation, and needs" for what shipped and the decisions worth not re-deriving. Trade targeting, free-agent targeting, and draft decisions — each a consumer of this assessment — remain unbuilt, as do the naive placeholders this milestone will eventually replace (`AutoResignToRosterFloor`, `DraftDay`'s best-prospect-left selection).
+
 Also here, from `docs/competitive-feature-review.md` §1 and §3, because each needs an AI counterparty to mean anything:
 
 - **Cash as a tradeable asset** — a fourth `TradeAssetMovement` kind with a per-season allowance in `TradeRules`. This is how a team buys a pick, and its absence is why AI trade markets feel thin.
