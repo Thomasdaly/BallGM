@@ -14,6 +14,13 @@ namespace BallGM.Domain.Seasons;
 /// never stored" reading <c>PlayerRating.Overall</c> already gives a value computable from state
 /// already held — a combined total and its own split could otherwise silently disagree.
 /// </para>
+/// <para>
+/// <see cref="Points"/> is checked against <see cref="FieldGoalsMade"/>/<see cref="ThreePointsMade"/>/
+/// <see cref="FreeThrowsMade"/> at construction — <c>Points == 2×(FGM−3PM) + 3×3PM + FTM</c> — because
+/// every figure it needs is already on this same line: a scoring total that disagreed with its own
+/// shooting line would be a bug this type could have refused to hold. Attempts-vs-makes and
+/// threes-vs-field-goals are checked the same way, for the same reason.
+/// </para>
 /// </summary>
 public sealed record PlayerStatLine
 {
@@ -26,6 +33,12 @@ public sealed record PlayerStatLine
         int defensiveRebounds,
         int assists,
         int usagePercent,
+        int fieldGoalsAttempted,
+        int fieldGoalsMade,
+        int threePointsAttempted,
+        int threePointsMade,
+        int freeThrowsAttempted,
+        int freeThrowsMade,
         bool started)
     {
         ArgumentNullException.ThrowIfNull(playerId);
@@ -36,10 +49,44 @@ public sealed record PlayerStatLine
         ThrowIfNegative(offensiveRebounds, nameof(offensiveRebounds));
         ThrowIfNegative(defensiveRebounds, nameof(defensiveRebounds));
         ThrowIfNegative(assists, nameof(assists));
+        ThrowIfNegative(fieldGoalsAttempted, nameof(fieldGoalsAttempted));
+        ThrowIfNegative(fieldGoalsMade, nameof(fieldGoalsMade));
+        ThrowIfNegative(threePointsAttempted, nameof(threePointsAttempted));
+        ThrowIfNegative(threePointsMade, nameof(threePointsMade));
+        ThrowIfNegative(freeThrowsAttempted, nameof(freeThrowsAttempted));
+        ThrowIfNegative(freeThrowsMade, nameof(freeThrowsMade));
 
         if (usagePercent < 0 || usagePercent > 100)
         {
             throw new ArgumentOutOfRangeException(nameof(usagePercent), usagePercent, "Usage share must be between 0 and 100.");
+        }
+
+        if (fieldGoalsMade > fieldGoalsAttempted)
+        {
+            throw new ArgumentOutOfRangeException(nameof(fieldGoalsMade), fieldGoalsMade, "A player cannot make more field goals than they attempted.");
+        }
+
+        if (threePointsAttempted > fieldGoalsAttempted)
+        {
+            throw new ArgumentOutOfRangeException(nameof(threePointsAttempted), threePointsAttempted, "Three-point attempts cannot exceed total field-goal attempts.");
+        }
+
+        if (threePointsMade > threePointsAttempted)
+        {
+            throw new ArgumentOutOfRangeException(nameof(threePointsMade), threePointsMade, "A player cannot make more threes than they attempted.");
+        }
+
+        if (freeThrowsMade > freeThrowsAttempted)
+        {
+            throw new ArgumentOutOfRangeException(nameof(freeThrowsMade), freeThrowsMade, "A player cannot make more free throws than they attempted.");
+        }
+
+        var pointsFromShooting = (2 * (fieldGoalsMade - threePointsMade)) + (3 * threePointsMade) + freeThrowsMade;
+        if (points != pointsFromShooting)
+        {
+            throw new ArgumentException(
+                $"Points ({points}) must equal 2×(FGM−3PM) + 3×3PM + FTM ({pointsFromShooting}).",
+                nameof(points));
         }
 
         PlayerId = playerId;
@@ -50,6 +97,12 @@ public sealed record PlayerStatLine
         DefensiveRebounds = defensiveRebounds;
         Assists = assists;
         UsagePercent = usagePercent;
+        FieldGoalsAttempted = fieldGoalsAttempted;
+        FieldGoalsMade = fieldGoalsMade;
+        ThreePointsAttempted = threePointsAttempted;
+        ThreePointsMade = threePointsMade;
+        FreeThrowsAttempted = freeThrowsAttempted;
+        FreeThrowsMade = freeThrowsMade;
         Started = started;
     }
 
@@ -78,6 +131,18 @@ public sealed record PlayerStatLine
     /// possession's five-man unit separately from the game it belongs to.
     /// </summary>
     public int UsagePercent { get; }
+
+    public int FieldGoalsAttempted { get; }
+
+    public int FieldGoalsMade { get; }
+
+    public int ThreePointsAttempted { get; }
+
+    public int ThreePointsMade { get; }
+
+    public int FreeThrowsAttempted { get; }
+
+    public int FreeThrowsMade { get; }
 
     public bool Started { get; }
 

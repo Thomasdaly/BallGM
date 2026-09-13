@@ -289,8 +289,8 @@ public sealed class GameResultTests
             100,
             98,
             [
-                new PlayerStatLine(new PlayerId("P1"), home, 30, 40, 2, 3, 3, 100, true),
-                new PlayerStatLine(new PlayerId("P2"), away, 30, 98, 1, 3, 2, 100, true),
+                new PlayerStatLine(new PlayerId("P1"), home, 30, 40, 2, 3, 3, 100, 0, 0, 0, 0, 40, 40, true),
+                new PlayerStatLine(new PlayerId("P2"), away, 30, 98, 1, 3, 2, 100, 0, 0, 0, 0, 98, 98, true),
             ]);
 
         Assert.True(result.IsFailure);

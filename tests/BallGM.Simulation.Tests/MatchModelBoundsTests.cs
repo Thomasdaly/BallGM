@@ -45,19 +45,21 @@ public sealed class MatchModelBoundsTests
     }
 
     [Fact]
-    public void EveryScoringRateTheEfficiencyTermsCanProduceStaysInsideTheStatedRange()
+    public void EveryFieldGoalPercentageTheEfficiencyTermsCanProduceStaysInsideTheStatedRange()
     {
         var widest = MatchModelBounds.MaximumStrengthEfficiencySwing +
             MatchModelBounds.HomeCourtEfficiencyBonus +
             MatchModelBounds.MaximumFatiguePenalty;
 
-        var highest = Rate(MatchModelBounds.BaseOffensiveEfficiency + widest);
-        var lowest = Rate(MatchModelBounds.BaseOffensiveEfficiency - widest);
+        var (highestFg2, highestFg3) = Percentages(MatchModelBounds.BaseOffensiveEfficiency + widest);
+        var (lowestFg2, lowestFg3) = Percentages(MatchModelBounds.BaseOffensiveEfficiency - widest);
 
         // The clamp is the backstop, not the mechanism: the terms alone should already land inside
         // it, so the clamp only ever catches a future tuning mistake.
-        Assert.InRange(highest, MatchModelBounds.MinimumScoringRate, MatchModelBounds.MaximumScoringRate);
-        Assert.InRange(lowest, MatchModelBounds.MinimumScoringRate, MatchModelBounds.MaximumScoringRate);
+        Assert.InRange(highestFg2, MatchModelBounds.MinimumFieldGoalPercentage, MatchModelBounds.MaximumFieldGoalPercentage);
+        Assert.InRange(highestFg3, MatchModelBounds.MinimumFieldGoalPercentage, MatchModelBounds.MaximumFieldGoalPercentage);
+        Assert.InRange(lowestFg2, MatchModelBounds.MinimumFieldGoalPercentage, MatchModelBounds.MaximumFieldGoalPercentage);
+        Assert.InRange(lowestFg3, MatchModelBounds.MinimumFieldGoalPercentage, MatchModelBounds.MaximumFieldGoalPercentage);
     }
 
     [Fact]
@@ -94,7 +96,7 @@ public sealed class MatchModelBoundsTests
             "A missed shot cannot be rebounded more than once.");
 
         Assert.InRange(MatchModelBounds.AssistShareOfMadeFieldGoals, 1, MatchModelBounds.ProbabilityScale);
-        Assert.InRange(MatchModelBounds.ThreePointShareOfScores, 1, MatchModelBounds.ProbabilityScale);
+        Assert.InRange(MatchModelBounds.ThreePointAttemptShare, 1, MatchModelBounds.ProbabilityScale);
     }
 
     [Fact]
@@ -116,9 +118,22 @@ public sealed class MatchModelBoundsTests
             $"A full-minutes player's per-game injury risk is {MatchModelBounds.InjuryChancePerFullGame} basis points.");
     }
 
-    private static int Rate(int efficiency) => Math.Clamp(
-        efficiency * MatchModelBounds.ProbabilityScale /
-            ((2 * MatchModelBounds.ProbabilityScale) + MatchModelBounds.ThreePointShareOfScores),
-        MatchModelBounds.MinimumScoringRate,
-        MatchModelBounds.MaximumScoringRate);
+    private static (int Fg2Percent, int Fg3Percent) Percentages(int efficiency)
+    {
+        var delta = efficiency - MatchModelBounds.BaseOffensiveEfficiency;
+        var swing = delta * MatchModelBounds.FieldGoalPercentSwingAtMaximumStrength /
+            MatchModelBounds.MaximumStrengthEfficiencySwing;
+
+        var fg2 = Math.Clamp(
+            MatchModelBounds.BaseTwoPointPercentage + swing,
+            MatchModelBounds.MinimumFieldGoalPercentage,
+            MatchModelBounds.MaximumFieldGoalPercentage);
+
+        var fg3 = Math.Clamp(
+            MatchModelBounds.BaseThreePointPercentage + swing,
+            MatchModelBounds.MinimumFieldGoalPercentage,
+            MatchModelBounds.MaximumFieldGoalPercentage);
+
+        return (fg2, fg3);
+    }
 }

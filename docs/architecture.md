@@ -341,9 +341,51 @@ Every run is seeded, so none of it is flaky: a failure means the model moved, ne
 
 `PlayerRating` did become multi-attribute (Height/Speed/Strength/Passing/LateralQuickness, see "Draft classes, scouting, and the lottery" below for the generator-side detail), but **the match engine still reads only the derived `Overall` int** — `Side.Strength`/`Side.UsageWeights` in `PossessionMatchEngine` are unchanged, and both limitations above live entirely inside that formula. Fixing them for real needs the match engine wired to read multiple attributes for offense/defense/usage separately, which touches the locked `MatchModelCalibrationTests` and needs its own empirical recalibration pass — a deliberate, larger, later step, not attempted alongside the rating expansion itself. What the rating expansion *did* fix is the generator-side anti-pattern the sim audit named: a population of generated players now has a real, non-trivial attribute covariance structure (`first_pc_variance_share` ≈ 0.45, not a trivial 100%) rather than being "a scalar overall in a trench coat."
 
-**The box score exposes two things the engine already computed and used to merge or discard.** `Side.FinishSide` always derived rebounds from two separate shares — `DefensiveReboundShare` (74% of the opponent's misses) and `OffensiveReboundShare` (24% of the side's own misses) — before summing them into one counter; `Side.UsageWeights` always existed as the exact per-player shot-share the engine draws a scorer from. `PlayerStatLine` now carries `OffensiveRebounds`/`DefensiveRebounds` (`Rebounds` is derived, the same "re-derived, never stored" move `PlayerRating.Overall` just went through) and a whole-percent `UsagePercent`, apportioned by the largest-remainder method so a team's shares sum to exactly 100 — enforced at `BoxScore.Create`, the same shape as its existing points-must-match-the-final-score check. **No new randomness, no change to the scoring or margin formula** — this is why `MatchModelCalibrationTests` needed no recalibration and got none. What still does not exist anywhere in the engine: shot attempts, field-goal percentage, free throws, turnovers, steals, blocks, or fouls. `PlayPeriod` is still one binary score/miss draw off a game-long efficiency scalar, with a fixed global 35% three-point share independent of team or player — building those for real is a distinct, later, much larger patch (a new possession-resolution model, its own multi-target calibration pass), not attempted here.
+**The box score exposes two things the engine already computed and used to merge or discard.** `Side.FinishSide` always derived rebounds from two separate shares — `DefensiveReboundShare` (74% of the opponent's misses) and `OffensiveReboundShare` (24% of the side's own misses) — before summing them into one counter; `Side.UsageWeights` always existed as the exact per-player shot-share the engine draws a scorer from. `PlayerStatLine` now carries `OffensiveRebounds`/`DefensiveRebounds` (`Rebounds` is derived, the same "re-derived, never stored" move `PlayerRating.Overall` just went through) and a whole-percent `UsagePercent`, apportioned by the largest-remainder method so a team's shares sum to exactly 100 — enforced at `BoxScore.Create`, the same shape as its existing points-must-match-the-final-score check. **No new randomness, no change to the scoring or margin formula** — this is why `MatchModelCalibrationTests` needed no recalibration and got none, for this specific change. (Shot attempts and free throws, described next, were a separate, later change that did need one.)
 
 Save schema note: `SeasonEnvelope` (`src/BallGM.Infrastructure/Seasons/SeasonEnvelope.cs`) moved 1 → 2 for the reshaped `PlayerStatLineEnvelope`; a version-1 save is refused, not migrated, the same policy `SaveGameEnvelope` adopted for the `PlayerRating` change.
+
+### Real shot attempts, free throws, and the ortg/margin retune
+
+`PlayPeriod` no longer decides a possession with one binary score/miss draw off a blended scoring
+rate. It now: draws whether the possession even reaches a shot at all
+(`MatchModelBounds.FieldGoalAttemptRate` — the unmodeled, unexposed stand-in for a turnover; nothing
+in the frozen `sim-regress` suite needs a turnover rate, only a way for "possessions" and "shots" to be
+two different numbers, the way they are in real basketball); if it does, draws a shot type
+(`ThreePointAttemptShare`, applied to *attempts* now rather than only to makes — the direct answer to
+`fg3a_per_fga`); draws make/miss against an efficiency-adjusted field-goal percentage
+(`BaseTwoPointPercentage`/`BaseThreePointPercentage`, shifted by the same strength/home/fatigue term
+that used to move the old scoring rate, via `FieldGoalPercentSwingAtMaximumStrength`); and, on a miss
+or a make, may draw a shooting foul or an and-one (`ShootingFoulChanceOnMiss`/`AndOneChanceOnMake`),
+running a real free-throw trip at `FreeThrowPercentage`. Only a missed *final* free throw of a trip
+re-joins the reboundable-miss pool — a made one is a dead ball. `PlayerStatLine` gained
+`FieldGoalsAttempted`/`FieldGoalsMade`/`ThreePointsAttempted`/`ThreePointsMade`/
+`FreeThrowsAttempted`/`FreeThrowsMade`, and `Points == 2×(FGM−3PM) + 3×3PM + FTM` is now enforced at
+construction — battery 1.1 is a real, checked invariant, not a trivially-true one.
+
+**`BaseOffensiveEfficiency` retuned 10,800 → 11,500** — the sim audit's own `ortg` target, unreachable
+under the old mechanism no matter how its one dial was turned, and squarely what "P-5" (the retune
+`suite.md` sequenced after the shot mechanics) was for.
+
+**The audit's own margin finding reversed direction, and needed a new mechanism, not just a dial.**
+The audit measured `sd_game_margin` too *high* (17.44 vs target 13.5) under the old single-draw
+mechanic. The naive expectation was that adding *more* per-possession draws (attempt, type, make/miss,
+foul, FT) would compound variance further — instead it measured *lower* (≈10.4): real shooting
+variance is correlated within a game (a team is hot or cold for the whole night, not shot to shot
+independently), and splitting one draw into several independent smaller ones removed that
+correlation rather than adding to it. `MatchModelBounds.GameShootingVarianceRange` — one shared draw
+per side per `PlayPeriod` call, applied identically to both field-goal percentages for that whole
+period — reintroduces it deliberately, tuned by direct measurement rather than derived (500 through
+900 tried; 850 landed `sd_game_margin` ≈13.45-13.5, in band). This produces a genuinely fatter tail
+than the old mechanism had, which is why two `MatchModelCalibrationTests` bands moved (mean margin
+ceiling 17→19, top-of-range score 142→145) — both were tuned against the old mechanism the audit had
+already flagged as wrong, never against real basketball data directly, so moving them is the retune
+itself, not a convenience widening; the test file's own doc comment says so.
+
+**Explicitly still out of scope**: turnovers, steals, blocks, and personal fouls have no mechanism —
+`tov_pct`/`stl_per_game`/`blk_per_game`/`pf_per_game` stay untestable. None of the frozen `sim-regress`
+rows need them. Save schema (`SeasonEnvelope`) moved 2 → 3 for the six new fields; refused, not
+migrated, same policy as every version move so far.
 
 ### The playoff eligibility cutoff is applied at the signing
 

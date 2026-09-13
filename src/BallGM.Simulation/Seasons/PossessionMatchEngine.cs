@@ -108,7 +108,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
             // terminal rule is stated rather than left to a seventh draw: the more efficient side
             // converts one last possession, and the home team holds an exact tie.
             var winner = awayEfficiency > homeEfficiency ? away : home;
-            AwardBasket(winner, points: 2, random);
+            AwardBasket(winner, isThree: false, random);
         }
 
         AwardOvertimeMinutes(home, overtimePeriods);
@@ -167,40 +167,160 @@ public sealed class PossessionMatchEngine : IMatchEngine
     }
 
     /// <summary>
-    /// Plays a run of possessions for one side. Each possession either produces points or does not,
-    /// and a possession that does not is a miss somebody will rebound.
+    /// Plays a run of possessions for one side. Not every possession reaches a shot at all — the
+    /// unmodeled stand-in for a turnover, see <see cref="MatchModelBounds.FieldGoalAttemptRate"/> —
+    /// and one that does is a real field-goal attempt at a real percentage, not a single blended
+    /// score/miss draw.
     /// </summary>
     private static void PlayPeriod(Side side, int efficiency, int possessions, IRandomSource random)
     {
-        // Points per possession is the scoring rate times the points a score is worth, and a score is
-        // worth two or three. Inverting that gives the rate the efficiency implies, which is then
-        // clamped: the bound is on how often a team scores, not on how much it is allowed to want to.
-        var scoringRate = Math.Clamp(
-            efficiency * MatchModelBounds.ProbabilityScale /
-                ((2 * MatchModelBounds.ProbabilityScale) + MatchModelBounds.ThreePointShareOfScores),
-            MatchModelBounds.MinimumScoringRate,
-            MatchModelBounds.MaximumScoringRate);
+        var (baseFg2Percent, baseFg3Percent) = FieldGoalPercentagesFor(efficiency);
+
+        // One shared draw for the whole period, not per shot: a hot or cold night moves every shot
+        // together, which is what gives games the score-to-score variance a real season has (see
+        // MatchModelBounds.GameShootingVarianceRange).
+        var nightlyVariance = random.NextInt32(-MatchModelBounds.GameShootingVarianceRange, MatchModelBounds.GameShootingVarianceRange + 1);
+
+        var fg2Percent = Math.Clamp(
+            baseFg2Percent + nightlyVariance,
+            MatchModelBounds.MinimumFieldGoalPercentage,
+            MatchModelBounds.MaximumFieldGoalPercentage);
+
+        var fg3Percent = Math.Clamp(
+            baseFg3Percent + nightlyVariance,
+            MatchModelBounds.MinimumFieldGoalPercentage,
+            MatchModelBounds.MaximumFieldGoalPercentage);
 
         for (var possession = 0; possession < possessions; possession++)
         {
-            if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) >= scoringRate)
+            if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) >= MatchModelBounds.FieldGoalAttemptRate)
             {
-                side.Misses++;
                 continue;
             }
 
-            var isThree = random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.ThreePointShareOfScores;
-            AwardBasket(side, isThree ? 3 : 2, random);
+            var isThree = random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.ThreePointAttemptShare;
+            var shooter = side.PickBy(side.UsageWeights, random);
+
+            side.FieldGoalsAttempted[shooter]++;
+            if (isThree)
+            {
+                side.ThreePointsAttempted[shooter]++;
+            }
+
+            var made = random.NextInt32(0, MatchModelBounds.ProbabilityScale) < (isThree ? fg3Percent : fg2Percent);
+
+            if (made)
+            {
+                AwardMake(side, shooter, isThree, random);
+            }
+            else
+            {
+                ResolveMiss(side, shooter, isThree, random);
+            }
         }
     }
 
-    private static void AwardBasket(Side side, int points, IRandomSource random)
+    /// <summary>
+    /// Turns this possession's efficiency into a two-point and a three-point percentage: both move
+    /// together, by the same amount, off the same strength/home/fatigue term that used to move a
+    /// single blended scoring rate — a team having a good night gets better at both shots, not
+    /// selectively better from one spot on the floor.
+    /// </summary>
+    private static (int Fg2Percent, int Fg3Percent) FieldGoalPercentagesFor(int efficiency)
     {
-        var scorer = side.PickBy(side.UsageWeights, random);
+        var delta = efficiency - MatchModelBounds.BaseOffensiveEfficiency;
+        var swing = delta * MatchModelBounds.FieldGoalPercentSwingAtMaximumStrength /
+            MatchModelBounds.MaximumStrengthEfficiencySwing;
+
+        var fg2Percent = Math.Clamp(
+            MatchModelBounds.BaseTwoPointPercentage + swing,
+            MatchModelBounds.MinimumFieldGoalPercentage,
+            MatchModelBounds.MaximumFieldGoalPercentage);
+
+        var fg3Percent = Math.Clamp(
+            MatchModelBounds.BaseThreePointPercentage + swing,
+            MatchModelBounds.MinimumFieldGoalPercentage,
+            MatchModelBounds.MaximumFieldGoalPercentage);
+
+        return (fg2Percent, fg3Percent);
+    }
+
+    /// <summary>Awards a synthetic made basket to whoever the usage weights pick — the overtime-tie terminal rule's only caller.</summary>
+    private static void AwardBasket(Side side, bool isThree, IRandomSource random)
+    {
+        var shooter = side.PickBy(side.UsageWeights, random);
+
+        side.FieldGoalsAttempted[shooter]++;
+        if (isThree)
+        {
+            side.ThreePointsAttempted[shooter]++;
+        }
+
+        AwardMake(side, shooter, isThree, random);
+    }
+
+    private static void AwardMake(Side side, int shooter, bool isThree, IRandomSource random)
+    {
+        var points = isThree ? 3 : 2;
 
         side.Points += points;
+        side.PointsBy[shooter] += points;
+        side.FieldGoalsMade[shooter]++;
         side.MadeFieldGoals++;
-        side.PointsBy[scorer] += points;
+
+        if (isThree)
+        {
+            side.ThreePointsMade[shooter]++;
+        }
+
+        // An and-one: a made basket that also draws a single free throw. A missed and-one is a live
+        // ball, exactly like a missed final free throw on a shooting foul below.
+        if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.AndOneChanceOnMake &&
+            ResolveFreeThrowTrip(side, shooter, shots: 1, random))
+        {
+            side.Misses++;
+        }
+    }
+
+    /// <summary>
+    /// A missed field-goal attempt: either a clean miss, or a shooting foul that sends the shooter to
+    /// the line instead. Only a trip that ends on a miss re-joins the reboundable-miss pool — a made
+    /// final free throw is a dead ball, the same rule <see cref="AwardMake"/>'s and-one uses.
+    /// </summary>
+    private static void ResolveMiss(Side side, int shooter, bool isThree, IRandomSource random)
+    {
+        if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.ShootingFoulChanceOnMiss)
+        {
+            if (ResolveFreeThrowTrip(side, shooter, isThree ? 3 : 2, random))
+            {
+                side.Misses++;
+            }
+
+            return;
+        }
+
+        side.Misses++;
+    }
+
+    /// <summary>Draws every shot of one free-throw trip. Returns whether the trip ended on a miss.</summary>
+    private static bool ResolveFreeThrowTrip(Side side, int shooter, int shots, IRandomSource random)
+    {
+        var madeLastShot = false;
+
+        for (var shot = 0; shot < shots; shot++)
+        {
+            side.FreeThrowsAttempted[shooter]++;
+            madeLastShot = random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.FreeThrowPercentage;
+
+            if (madeLastShot)
+            {
+                side.FreeThrowsMade[shooter]++;
+                side.Points++;
+                side.PointsBy[shooter]++;
+            }
+        }
+
+        return !madeLastShot;
     }
 
     /// <summary>
@@ -332,6 +452,12 @@ public sealed class PossessionMatchEngine : IMatchEngine
             OffensiveReboundsBy = new int[count];
             DefensiveReboundsBy = new int[count];
             AssistsBy = new int[count];
+            FieldGoalsAttempted = new int[count];
+            FieldGoalsMade = new int[count];
+            ThreePointsAttempted = new int[count];
+            ThreePointsMade = new int[count];
+            FreeThrowsAttempted = new int[count];
+            FreeThrowsMade = new int[count];
 
             var playedMinutes = Minutes.Sum();
 
@@ -383,6 +509,18 @@ public sealed class PossessionMatchEngine : IMatchEngine
         public int[] DefensiveReboundsBy { get; }
 
         public int[] AssistsBy { get; }
+
+        public int[] FieldGoalsAttempted { get; }
+
+        public int[] FieldGoalsMade { get; }
+
+        public int[] ThreePointsAttempted { get; }
+
+        public int[] ThreePointsMade { get; }
+
+        public int[] FreeThrowsAttempted { get; }
+
+        public int[] FreeThrowsMade { get; }
 
         public int[] UsageWeights { get; }
 
@@ -442,6 +580,12 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 DefensiveReboundsBy[index],
                 AssistsBy[index],
                 usagePercent[index],
+                FieldGoalsAttempted[index],
+                FieldGoalsMade[index],
+                ThreePointsAttempted[index],
+                ThreePointsMade[index],
+                FreeThrowsAttempted[index],
+                FreeThrowsMade[index],
                 Players[index].IsStarter));
         }
 

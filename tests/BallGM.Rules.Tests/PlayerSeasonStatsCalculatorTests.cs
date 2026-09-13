@@ -67,8 +67,14 @@ public sealed class PlayerSeasonStatsCalculatorTests
             homePoints,
             awayPoints,
             [
-                new PlayerStatLine(HomeStar, Home, minutes: 20, points: homeStarPoints, offensiveRebounds: 1, defensiveRebounds: 2, assists: 2, usagePercent: 100, started: true),
-                new PlayerStatLine(AwayStar, Away, minutes: 18, points: awayStarPoints, offensiveRebounds: 1, defensiveRebounds: 3, assists: 1, usagePercent: 100, started: true),
+                new PlayerStatLine(
+                    HomeStar, Home, minutes: 20, points: homeStarPoints, offensiveRebounds: 1, defensiveRebounds: 2,
+                    assists: 2, usagePercent: 100, fieldGoalsAttempted: 0, fieldGoalsMade: 0, threePointsAttempted: 0,
+                    threePointsMade: 0, freeThrowsAttempted: homeStarPoints, freeThrowsMade: homeStarPoints, started: true),
+                new PlayerStatLine(
+                    AwayStar, Away, minutes: 18, points: awayStarPoints, offensiveRebounds: 1, defensiveRebounds: 3,
+                    assists: 1, usagePercent: 100, fieldGoalsAttempted: 0, fieldGoalsMade: 0, threePointsAttempted: 0,
+                    threePointsMade: 0, freeThrowsAttempted: awayStarPoints, freeThrowsMade: awayStarPoints, started: true),
             ]).Value;
 
         return GameResult.Create(fixture, homePoints, awayPoints, boxScore).Value;

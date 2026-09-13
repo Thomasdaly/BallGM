@@ -16,11 +16,31 @@ public sealed class BoxScoreTests
     [Fact]
     public void ReboundsIsTheSumOfTheOffensiveAndDefensiveSplit()
     {
-        var line = new PlayerStatLine(
-            new PlayerId("P1"), Home, minutes: 30, points: 10,
-            offensiveRebounds: 3, defensiveRebounds: 5, assists: 2, usagePercent: 100, started: true);
+        var line = Line(new PlayerId("P1"), Home, minutes: 30, points: 10, offensiveRebounds: 3, defensiveRebounds: 5, assists: 2, usagePercent: 100);
 
         Assert.Equal(8, line.Rebounds);
+    }
+
+    [Fact]
+    public void PointsMustEqualTheShootingLineItWasScoredWith()
+    {
+        Assert.Throws<ArgumentException>(() => new PlayerStatLine(
+            new PlayerId("P1"), Home, minutes: 20, points: 10, offensiveRebounds: 0, defensiveRebounds: 0,
+            assists: 0, usagePercent: 100, fieldGoalsAttempted: 4, fieldGoalsMade: 4, threePointsAttempted: 0,
+            threePointsMade: 0, freeThrowsAttempted: 0, freeThrowsMade: 0, started: true));
+    }
+
+    [Fact]
+    public void ASingleThreePointMakeAndAnAndOneAddUpCorrectly()
+    {
+        // 1 three (3), plus a separate and-one trip on a two (2 + 1) = 6 points from 2 FGA (1 make of
+        // each type) and 1 FTA made.
+        var line = new PlayerStatLine(
+            new PlayerId("P1"), Home, minutes: 20, points: 6, offensiveRebounds: 0, defensiveRebounds: 0,
+            assists: 0, usagePercent: 100, fieldGoalsAttempted: 2, fieldGoalsMade: 2, threePointsAttempted: 1,
+            threePointsMade: 1, freeThrowsAttempted: 1, freeThrowsMade: 1, started: true);
+
+        Assert.Equal(6, line.Points);
     }
 
     [Fact]
@@ -30,9 +50,9 @@ public sealed class BoxScoreTests
             homePoints: 10,
             awayPoints: 5,
             [
-                new PlayerStatLine(new PlayerId("H1"), Home, 20, 6, 1, 1, 1, 60, true),
-                new PlayerStatLine(new PlayerId("H2"), Home, 20, 4, 1, 1, 1, 40, true),
-                new PlayerStatLine(new PlayerId("A1"), Away, 20, 5, 1, 1, 1, 100, true),
+                Line(new PlayerId("H1"), Home, 20, 6, 1, 1, 1, 60),
+                Line(new PlayerId("H2"), Home, 20, 4, 1, 1, 1, 40),
+                Line(new PlayerId("A1"), Away, 20, 5, 1, 1, 1, 100),
             ]);
 
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
@@ -45,9 +65,9 @@ public sealed class BoxScoreTests
             homePoints: 10,
             awayPoints: 5,
             [
-                new PlayerStatLine(new PlayerId("H1"), Home, 20, 6, 1, 1, 1, 60, true),
-                new PlayerStatLine(new PlayerId("H2"), Home, 20, 4, 1, 1, 1, 30, true),
-                new PlayerStatLine(new PlayerId("A1"), Away, 20, 5, 1, 1, 1, 100, true),
+                Line(new PlayerId("H1"), Home, 20, 6, 1, 1, 1, 60),
+                Line(new PlayerId("H2"), Home, 20, 4, 1, 1, 1, 30),
+                Line(new PlayerId("A1"), Away, 20, 5, 1, 1, 1, 100),
             ]);
 
         Assert.True(result.IsFailure);
@@ -63,7 +83,7 @@ public sealed class BoxScoreTests
             homePoints: 5,
             awayPoints: 0,
             [
-                new PlayerStatLine(new PlayerId("H1"), Home, 20, 5, 1, 1, 1, 100, true),
+                Line(new PlayerId("H1"), Home, 20, 5, 1, 1, 1, 100),
             ]);
 
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
@@ -72,4 +92,17 @@ public sealed class BoxScoreTests
     private static DomainOperationResult<BoxScore> Build(
         int homePoints, int awayPoints, IEnumerable<PlayerStatLine> lines) =>
         BoxScore.Create(GameId.For(Season, SeasonDay.Opening, 0), Home, Away, homePoints, awayPoints, lines);
+
+    /// <summary>
+    /// A line whose shooting composition does not matter to the test that builds it — every point
+    /// comes from an (unrealistic but internally consistent) run of free throws, so the caller only
+    /// has to state the one figure it actually cares about.
+    /// </summary>
+    private static PlayerStatLine Line(
+        PlayerId playerId, TeamId teamId, int minutes, int points, int offensiveRebounds, int defensiveRebounds,
+        int assists, int usagePercent) =>
+        new(
+            playerId, teamId, minutes, points, offensiveRebounds, defensiveRebounds, assists, usagePercent,
+            fieldGoalsAttempted: 0, fieldGoalsMade: 0, threePointsAttempted: 0, threePointsMade: 0,
+            freeThrowsAttempted: points, freeThrowsMade: points, started: true);
 }

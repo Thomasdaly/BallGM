@@ -226,6 +226,12 @@ public sealed class SeasonSerializer
                         line.DefensiveRebounds,
                         line.Assists,
                         line.UsagePercent,
+                        line.FieldGoalsAttempted,
+                        line.FieldGoalsMade,
+                        line.ThreePointsAttempted,
+                        line.ThreePointsMade,
+                        line.FreeThrowsAttempted,
+                        line.FreeThrowsMade,
                         line.Started)));
 
                 if (boxScoreResult.IsFailure)
@@ -265,6 +271,12 @@ public sealed class SeasonSerializer
                         line.DefensiveRebounds,
                         line.Assists,
                         line.UsagePercent,
+                        line.FieldGoalsAttempted,
+                        line.FieldGoalsMade,
+                        line.ThreePointsAttempted,
+                        line.ThreePointsMade,
+                        line.FreeThrowsAttempted,
+                        line.FreeThrowsMade,
                         line.Started))
                     .ToList());
 }

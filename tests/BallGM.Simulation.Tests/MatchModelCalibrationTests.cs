@@ -17,6 +17,18 @@ namespace BallGM.Simulation.Tests;
 /// recognise. A tight band here would fail on every legitimate tuning pass and teach whoever hit it
 /// to widen the band rather than to think.
 /// </para>
+/// <para>
+/// <b>Two of these bands moved for the shot-attempt/free-throw retune (P-5).</b> The top of the score
+/// range and the margin mean were tuned against the old single blended make/miss draw, which the sim
+/// audit measured as producing <em>less</em> game-to-game scoring variance than real basketball
+/// (<c>sd_game_margin</c> too low) despite that draw's own tails looking thin-and-even. Splitting one
+/// draw into several smaller ones (attempt, shot type, make/miss, foul) actually reduced variance
+/// further, so a per-game correlated shooting-variance term was added — see
+/// <c>MatchModelBounds.GameShootingVarianceRange</c> — deliberately fat-tailed the way real shooting
+/// nights are, which moves these two bands' top ends, not their middles. This is the retune the
+/// sim-audit's own <c>sd_game_margin</c> target drove, not a convenience widening to make a failure
+/// disappear.
+/// </para>
 /// </summary>
 public sealed class MatchModelCalibrationTests
 {
@@ -32,9 +44,10 @@ public sealed class MatchModelCalibrationTests
         Assert.InRange(scores[scores.Length / 2], 95, 120);
 
         // The tails matter as much as the middle: a model with a realistic mean and no shape puts
-        // 40-point and 190-point games on the schedule.
+        // 40-point and 190-point games on the schedule. The top of this band moved for the P-5
+        // shooting-variance retune (see the type doc comment).
         Assert.InRange(scores[scores.Length / 20], 78, 100);
-        Assert.InRange(scores[scores.Length * 19 / 20], 118, 142);
+        Assert.InRange(scores[scores.Length * 19 / 20], 118, 145);
     }
 
     [Fact]
@@ -45,7 +58,8 @@ public sealed class MatchModelCalibrationTests
             .OrderBy(margin => margin)
             .ToArray();
 
-        Assert.InRange(margins.Average(), 9, 17);
+        // The top of this band moved for the P-5 shooting-variance retune (see the type doc comment).
+        Assert.InRange(margins.Average(), 9, 19);
 
         // Close games have to be common enough that a season has drama in it.
         var withinFive = margins.Count(margin => margin <= 5) * 100.0 / margins.Length;

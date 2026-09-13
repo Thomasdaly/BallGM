@@ -20,6 +20,12 @@ public sealed record PlayerStatLineEnvelope(
     int DefensiveRebounds,
     int Assists,
     int UsagePercent,
+    int FieldGoalsAttempted,
+    int FieldGoalsMade,
+    int ThreePointsAttempted,
+    int ThreePointsMade,
+    int FreeThrowsAttempted,
+    int FreeThrowsMade,
     bool Started);
 
 /// <summary>One saved result. <c>BoxScore</c> is absent for a result recorded without player lines.</summary>
@@ -62,8 +68,15 @@ public sealed record SeasonEnvelope
     /// refused outright rather than guessed at on load; no production save existed before this version
     /// moved.
     /// </para>
+    /// <para>
+    /// Version 3 adds real shot attempts and free throws — <c>FieldGoalsAttempted</c>/
+    /// <c>FieldGoalsMade</c>/<c>ThreePointsAttempted</c>/<c>ThreePointsMade</c>/
+    /// <c>FreeThrowsAttempted</c>/<c>FreeThrowsMade</c> — the first genuinely new mechanic this
+    /// envelope has carried rather than an existing one newly exposed. Refused, not migrated, same
+    /// policy as the version before it.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     public SeasonEnvelope(
         int schemaVersion,
