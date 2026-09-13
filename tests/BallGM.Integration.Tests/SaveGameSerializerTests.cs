@@ -92,14 +92,14 @@ public sealed class SaveGameSerializerTests
     {
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
 
-        Assert.Contains("\"schemaVersion\": 1", saved.Value, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": 2", saved.Value, StringComparison.Ordinal);
     }
 
     [Fact]
     public void SaveFromAFutureSchema_ExplainsItselfInsteadOfLoadingHalfOfIt()
     {
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
-        var mutated = saved.Value.Replace("\"schemaVersion\": 1", "\"schemaVersion\": 99", StringComparison.Ordinal);
+        var mutated = saved.Value.Replace("\"schemaVersion\": 2", "\"schemaVersion\": 99", StringComparison.Ordinal);
 
         var result = _serializer.Load(mutated);
 

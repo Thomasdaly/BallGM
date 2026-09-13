@@ -1,5 +1,6 @@
 using BallGM.Application.Leagues;
 using BallGM.Domain.Common;
+using BallGM.Domain.Leagues;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
@@ -76,4 +77,18 @@ public interface ISeasonEngine
     /// elapsed back into the free-agent pool. Refuses a season that has not been played out.
     /// </summary>
     DomainOperationResult<SeasonConclusionOutcome> ConcludeSeason(SeasonRun run, LeagueSnapshot snapshot);
+
+    /// <summary>
+    /// Runs this league's draft for <paramref name="draftSeason"/>: generates a class from this
+    /// league's own configured generator, draws the lottery over <paramref name="finalStandings"/>,
+    /// and turns each selection into a new player assigned to whichever team currently controls that
+    /// pick. Returns no selections, with an explanatory note rather than a failure, in a league that
+    /// holds no draft or generates no classes of its own — the same "absence is a real configuration"
+    /// reading every other optional rule in this port carries.
+    /// </summary>
+    DomainOperationResult<SeasonDraftOutcome> RunDraft(
+        LeagueSnapshot snapshot,
+        IReadOnlyList<SeasonHistoryTeamRecord> finalStandings,
+        Season draftSeason,
+        int seed);
 }

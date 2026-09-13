@@ -18,13 +18,19 @@ public sealed record TeamEnvelope(
 /// Serialization shape for one <c>Player</c>: identity, position, rating, and the two temporal facts
 /// every negotiation rule keys off. <see cref="BirthDate"/> travels as <c>yyyy-MM-dd</c> rather than
 /// a stored age, for the same reason <c>Player</c> itself carries a birth date rather than an age —
-/// an age is only true until the calendar moves.
+/// an age is only true until the calendar moves. The five rating attributes travel individually;
+/// <c>PlayerRating.Overall</c> is derived and never stored, the same "re-derived, never stored"
+/// reading the rest of this save format gives a value computed from state already on the envelope.
 /// </summary>
 public sealed record PlayerEnvelope(
     string PlayerId,
     string FullName,
     string Position,
-    int Overall,
+    int Height,
+    int Speed,
+    int Strength,
+    int Passing,
+    int LateralQuickness,
     string BirthDate,
     int SeasonsOfService,
     string? InjuryDescription);

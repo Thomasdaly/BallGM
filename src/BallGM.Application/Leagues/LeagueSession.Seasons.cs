@@ -134,10 +134,12 @@ public sealed partial class LeagueSession
         var outcome = concludedResult.Value;
         var teamNames = TeamNames(_snapshot);
         var concludedYear = _seasonRun.Season.Year;
+        var seasonSeed = _seasonRun.Seed;
 
         _snapshot = _snapshot with { CurrentSeason = new Season(concludedYear + 1) };
         _seasonRun = null;
 
+        var (drafted, unrostered, draftNotes) = RunDraft(outcome.Entry.FinalStandings, seasonSeed.For("draft"));
         var autoSigned = AutoResignToRosterFloor();
 
         return DomainOperationResult<SeasonConclusionSummary>.Success(new SeasonConclusionSummary(
@@ -150,8 +152,72 @@ public sealed partial class LeagueSession
             outcome.PlayersReleasedToFreeAgency.Count,
             outcome.PlayersCreditedService,
             concludedYear + 1,
+            drafted,
+            unrostered,
             autoSigned,
-            outcome.Notes.Select(finding => ToSeasonLine(finding, teamNames)).ToList()));
+            outcome.Notes.Concat(draftNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList()));
+    }
+
+    /// <summary>
+    /// Runs this league's draft for the season just opened by <see cref="ConcludeSeason"/>'s year
+    /// bump, and signs every selection to a one-season minimum-salary contract — the same
+    /// placeholder <see cref="AutoResignToRosterFloor"/> uses, because no rookie-scale contract
+    /// exists yet either. Deliberately best-effort: a selection this session cannot sign (most often
+    /// a team already carrying its roster maximum, since nothing here waives anyone to make room) is
+    /// reported in <see cref="Unrostered"/> and left exactly as generated — a real <see cref="Player"/>
+    /// this league now knows about, undrafted in every sense but the paperwork, sitting in the
+    /// free-agent pool the same as anyone else nobody has signed. There is no "draft rights" concept
+    /// yet for that difference to mean anything. Best-effort for the same reason
+    /// <see cref="AutoResignToRosterFloor"/> is: an unattended chained run must survive a single bad
+    /// selection rather than failing the whole conclusion.
+    /// </summary>
+    private (int Drafted, int Unrostered, IReadOnlyList<RuleFinding> Notes) RunDraft(
+        IReadOnlyList<SeasonHistoryTeamRecord> finalStandings,
+        int seed)
+    {
+        if (_snapshot is null)
+        {
+            return (0, 0, []);
+        }
+
+        var draftResult = _seasonEngine.RunDraft(_snapshot, finalStandings, _snapshot.CurrentSeason, seed);
+        if (draftResult.IsFailure)
+        {
+            return (0, 0, draftResult.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList());
+        }
+
+        var draftedCount = 0;
+        var unrosteredCount = 0;
+        var notes = new List<RuleFinding>(draftResult.Value.Notes);
+
+        foreach (var selection in draftResult.Value.Selections)
+        {
+            _snapshot = _snapshot with { Players = [.. _snapshot.Players, selection.Player] };
+
+            var floor = _signingEngine.LimitsFor(_snapshot, selection.Player.SeasonsOfService).Minimum ?? Money.Zero;
+            var terms = new List<ContractSeasonTerm> { new(_snapshot.CurrentSeason, floor, floor) };
+
+            var offerResult = Offer.Create(new OfferId(SortableId.NewId()), selection.TeamId, selection.Player.Id, terms);
+            if (offerResult.IsFailure)
+            {
+                unrosteredCount++;
+                notes.AddRange(offerResult.Errors.Select(error => new RuleFinding(error.Code, $"{selection.Player.FullName} (round {selection.Round}, pick {selection.SelectionNumber}): {error.Message}")));
+                continue;
+            }
+
+            var executionResult = _signingEngine.Execute(offerResult.Value, _snapshot, selection.TeamId, selection.Player.Id);
+            if (executionResult.IsFailure)
+            {
+                unrosteredCount++;
+                notes.AddRange(executionResult.Errors.Select(error => new RuleFinding(error.Code, $"{selection.Player.FullName} (round {selection.Round}, pick {selection.SelectionNumber}) could not be rostered and stays a free agent: {error.Message}")));
+                continue;
+            }
+
+            _snapshot = _snapshot with { Contracts = [.. _snapshot.Contracts, executionResult.Value.Contract] };
+            draftedCount++;
+        }
+
+        return (draftedCount, unrosteredCount, notes);
     }
 
     /// <summary>

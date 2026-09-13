@@ -5,11 +5,13 @@ using BallGM.Domain.DraftAssets;
 using BallGM.Domain.Franchises;
 using BallGM.Domain.Leagues;
 using BallGM.Domain.Players;
+using BallGM.Domain.Randomness;
 using BallGM.Domain.Teams;
 using BallGM.Domain.Transactions;
 using BallGM.Infrastructure.Rulesets;
 using BallGM.Infrastructure.Time;
 using BallGM.Rules.Configuration;
+using BallGM.Rules.Players;
 
 namespace BallGM.Infrastructure.Fixtures;
 
@@ -65,8 +67,23 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
         "Bellringers",
     ];
 
-    /// <summary>Team quality offsets, so the league reads as contenders and rebuilders rather than clones.</summary>
-    private static readonly int[] TeamStrengthOffsets = [6, 3, 0, -2, -5, -8];
+    /// <summary>
+    /// Team quality offsets, so the league reads as contenders and rebuilders rather than clones.
+    /// <para>
+    /// Widened from an earlier, tighter spread (<c>[6, 3, 0, -2, -5, -8]</c>) once the sim audit
+    /// measured this league's season-to-season win-percentage spread (<c>sd_team_win_pct</c>) at
+    /// 0.087 against a target band of 0.135-0.165 for a modern-NBA-shaped league — a six-team
+    /// vertical-slice fixture whose rosters were all close in overall quality, not an engine defect.
+    /// This spread was tuned empirically against the real <c>PossessionMatchEngine</c> (1,000 seeded
+    /// seasons, <c>n=6,000</c> team-seasons) rather than derived analytically, because the response is
+    /// not perfectly linear near the rating clamp and the audit's own roster-mean-Overall-vs-win%
+    /// regression only carried an R² of 0.577 — not solid enough to trust a first-principles scale
+    /// factor. Measured result at this spread: sd_team_win_pct ≈ 0.152, inside the band. Re-measure
+    /// with `/sim-regress` before changing it again; a plausible-looking scale factor is not the same
+    /// as a measured one.
+    /// </para>
+    /// </summary>
+    private static readonly int[] TeamStrengthOffsets = [14, 6, 0, -4, -11, -18];
 
     private static readonly string[] GivenNames =
     [
@@ -776,10 +793,20 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
 
         // A deterministic wobble, so two teams with the same strength offset are not rating-identical.
         var wobble = (((teamIndex * 7) + (slot * 13)) % 5) - 2;
-        var overall = Math.Clamp(
+        var target = Math.Clamp(
             OverallForSlot(slot) + strength + wobble,
             PlayerRating.MinimumOverall + 30,
             PlayerRating.MaximumOverall);
+
+        // Deterministic per player rather than threaded through as a seed: this fixture has never
+        // carried a simulation seed of its own (every roster figure here is hand-arithmetic on
+        // teamIndex/slot), and a five-attribute profile needs the same fixed-per-load reproducibility
+        // the rest of this method already has. `RatingProfileGenerator` reads no other state, so a
+        // seed derived purely from this player's own index reproduces the identical profile on every
+        // load, exactly like every other figure `CreatePlayer` computes.
+        var profileRandom = new SeededRandomSource(SeedMixer.Mix(leagueWidePlayerIndex, "rating-profile"));
+        var rating = RatingProfileGenerator.Generate(
+            target, PlayerRating.MinimumOverall + 30, PlayerRating.MaximumOverall, profileRandom);
 
         var injury = ScriptedInjuries.TryGetValue((teamIndex, slot), out var description)
             ? new Injury(description)
@@ -795,7 +822,7 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
             new PlayerId(SortableId.NewId()),
             fullName,
             RosterPositionPlan[(slot + (teamIndex * 2)) % RosterPositionPlan.Length],
-            new PlayerRating(overall),
+            rating,
             BirthDateForAge(age, leagueWidePlayerIndex),
             seasonsOfService,
             injury);

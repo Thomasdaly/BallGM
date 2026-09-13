@@ -4,6 +4,7 @@ using BallGM.Domain.Leagues;
 using BallGM.Domain.Players;
 using BallGM.Domain.Randomness;
 using BallGM.Rules.Configuration;
+using BallGM.Rules.Players;
 
 namespace BallGM.Rules.Draft;
 
@@ -14,13 +15,16 @@ namespace BallGM.Rules.Draft;
 /// follows for the regular season. Deterministic: the same rules and the same <see cref="IRandomSource"/>
 /// state produce the same class, on every platform and every run.
 /// <para>
-/// A prospect's true rating is the average of two draws inside <see cref="DraftClassRules.MinimumRating"/>
+/// A prospect's talent is the average of two draws inside <see cref="DraftClassRules.MinimumRating"/>
 /// and <see cref="DraftClassRules.MaximumRating"/> rather than one uniform draw, so most classes cluster
 /// mid-range and a prospect at the very top or bottom of the stated spread stays rare — a shape a
-/// single uniform draw does not have. Position is assigned round-robin across the five positions
-/// rather than drawn, so a class of any size still fields a roughly even spread rather than risking an
-/// all-guard class on an unlucky seed; the position generation itself is exactly as configurable as
-/// that decision needs to be, which is not at all, until a league wants to weight it.
+/// single uniform draw does not have. <see cref="RatingProfileGenerator"/> turns that one number into
+/// a real five-attribute <see cref="PlayerRating"/>, clamped to the same stated band, rather than the
+/// class fielding ninety-odd prospects who are all just one number wearing a name. Position is
+/// assigned round-robin across the five positions rather than drawn, so a class of any size still
+/// fields a roughly even spread rather than risking an all-guard class on an unlucky seed; the
+/// position generation itself is exactly as configurable as that decision needs to be, which is not
+/// at all, until a league wants to weight it.
 /// </para>
 /// </summary>
 public static class ProspectGenerator
@@ -52,7 +56,8 @@ public static class ProspectGenerator
         for (var index = 0; index < rules.ClassSize; index++)
         {
             var position = positions[index % positions.Length];
-            var overall = GenerateOverall(rules, random);
+            var talent = GenerateTalent(rules, random);
+            var rating = RatingProfileGenerator.Generate(talent, rules.MinimumRating, rules.MaximumRating, random);
             var name = ProspectNameBank.NextName(random);
 
             var prospectResult = Prospect.Create(
@@ -60,7 +65,7 @@ public static class ProspectGenerator
                 name,
                 position,
                 birthDate,
-                new PlayerRating(overall));
+                rating);
 
             if (prospectResult.IsFailure)
             {
@@ -73,7 +78,7 @@ public static class ProspectGenerator
         return DraftClass.Create(id, draftSeason, prospects);
     }
 
-    private static int GenerateOverall(DraftClassRules rules, IRandomSource random)
+    private static int GenerateTalent(DraftClassRules rules, IRandomSource random)
     {
         var first = random.NextInt32(rules.MinimumRating, rules.MaximumRating + 1);
         var second = random.NextInt32(rules.MinimumRating, rules.MaximumRating + 1);

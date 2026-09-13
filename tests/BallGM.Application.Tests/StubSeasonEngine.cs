@@ -1,6 +1,7 @@
 using BallGM.Application.Leagues;
 using BallGM.Application.Seasons;
 using BallGM.Domain.Common;
+using BallGM.Domain.Leagues;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
@@ -98,6 +99,13 @@ internal sealed class StubSeasonEngine : ISeasonEngine
     public DomainOperationResult<SeasonConclusionOutcome> ConcludeSeason(SeasonRun run, LeagueSnapshot snapshot) =>
         DomainOperationResult<SeasonConclusionOutcome>.Success(new SeasonConclusionOutcome(
             new SeasonHistoryEntry(run.Season, null, []), [], 0, []));
+
+    public DomainOperationResult<SeasonDraftOutcome> RunDraft(
+        LeagueSnapshot snapshot,
+        IReadOnlyList<SeasonHistoryTeamRecord> finalStandings,
+        Season draftSeason,
+        int seed) =>
+        DomainOperationResult<SeasonDraftOutcome>.Success(new SeasonDraftOutcome(draftSeason.Year, [], []));
 
     private SeasonAdvanceOutcome Outcome(SeasonRun run, int days) =>
         new(

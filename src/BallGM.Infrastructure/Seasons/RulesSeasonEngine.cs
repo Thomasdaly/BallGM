@@ -1,11 +1,15 @@
 using BallGM.Application.Leagues;
 using BallGM.Application.Seasons;
 using BallGM.Domain.Common;
+using BallGM.Domain.Leagues;
 using BallGM.Domain.Negotiations;
+using BallGM.Domain.Players;
+using BallGM.Domain.Randomness;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.Configuration;
+using BallGM.Rules.Draft;
 using BallGM.Rules.Seasons;
 using BallGM.Simulation.Seasons;
 
@@ -30,6 +34,7 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
     // build that ships without a game model would be a build in which no season ever finishes.
     private readonly SeasonEngine _engine = new(matchEngine ?? new PossessionMatchEngine());
     private readonly SeasonConclusion _seasonConclusion = new();
+    private readonly DraftDay _draftDay = new();
 
     public DomainOperationResult<SeasonStartOutcome> Start(LeagueSnapshot snapshot, DateOnly seasonStart, int seed)
     {
@@ -141,6 +146,61 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
                 concluded.Value.PlayersReleasedToFreeAgency,
                 concluded.Value.PlayersCreditedService,
                 concluded.Value.Notes));
+    }
+
+    public DomainOperationResult<SeasonDraftOutcome> RunDraft(
+        LeagueSnapshot snapshot,
+        IReadOnlyList<SeasonHistoryTeamRecord> finalStandings,
+        Season draftSeason,
+        int seed)
+    {
+        var rulesetResult = snapshot.Configuration.ToRuleset(snapshot.League.Alignment.IsFlat);
+        if (rulesetResult.IsFailure)
+        {
+            return DomainOperationResult<SeasonDraftOutcome>.Failure(rulesetResult.Errors.ToArray());
+        }
+
+        var ruleset = rulesetResult.Value;
+        var random = new SeededRandomSource(seed);
+
+        var dayResult = _draftDay.Run(
+            draftSeason,
+            finalStandings,
+            snapshot.Teams,
+            snapshot.DraftAssets,
+            ruleset.DraftRules,
+            ruleset.DraftClassRules,
+            ruleset.DraftLotteryRules,
+            random);
+
+        if (dayResult.IsFailure)
+        {
+            return DomainOperationResult<SeasonDraftOutcome>.Failure(dayResult.Errors.ToArray());
+        }
+
+        var notes = new List<RuleFinding>(dayResult.Value.Notes);
+        var drafted = new List<DraftedPlayer>();
+
+        foreach (var selection in dayResult.Value.Selections)
+        {
+            var playerResult = Player.Create(
+                new PlayerId(SortableId.NewId()),
+                selection.Prospect.FullName,
+                selection.Prospect.Position,
+                selection.Prospect.TrueRating,
+                selection.Prospect.BirthDate,
+                seasonsOfService: 0);
+
+            if (playerResult.IsFailure)
+            {
+                notes.AddRange(playerResult.Errors.Select(error => new RuleFinding(error.Code, error.Message)));
+                continue;
+            }
+
+            drafted.Add(new DraftedPlayer(selection.TeamId, playerResult.Value, selection.Round, selection.SelectionNumber));
+        }
+
+        return DomainOperationResult<SeasonDraftOutcome>.Success(new SeasonDraftOutcome(draftSeason.Year, drafted, notes));
     }
 
     private static SeasonAdvanceOutcome ToOutcome(SeasonAdvanceAssessment assessment, IReadOnlyList<GameResult> played) =>

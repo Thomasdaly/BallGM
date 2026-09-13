@@ -1,11 +1,26 @@
 using BallGM.Domain.Common;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
+using BallGM.Domain.Teams;
 
 namespace BallGM.Application.Seasons;
 
 /// <summary>One thing the season rules had to say, formatted for a screen.</summary>
 public sealed record SeasonFindingLine(string RuleCode, string Explanation, string? TeamName);
+
+/// <summary>One prospect turned into a player by the draft, and the team that selected them.</summary>
+public sealed record DraftedPlayer(TeamId TeamId, Player Player, int Round, int SelectionNumber);
+
+/// <summary>
+/// What one draft did, in the shape the Application port hands back. Mirrors
+/// <c>BallGM.Rules.Draft.DraftDayOutcome</c> field for field, minus the intermediate
+/// <c>DraftClass</c>/<c>DraftOrderSnapshot</c> — Application does not reference Rules, and no caller
+/// of this port needs anything besides who was picked, by whom, and what the rules had to say.
+/// </summary>
+public sealed record SeasonDraftOutcome(
+    int DraftSeasonYear,
+    IReadOnlyList<DraftedPlayer> Selections,
+    IReadOnlyList<RuleFinding> Notes);
 
 /// <summary>
 /// What concluding a finished season changed, in the shape the Application port hands back. Mirrors
@@ -210,5 +225,7 @@ public sealed record SeasonConclusionSummary(
     int PlayersReleasedToFreeAgency,
     int PlayersCreditedService,
     int NextSeasonYear,
+    int PlayersDrafted,
+    int PlayersDraftedButUnrostered,
     int PlayersAutoSigned,
     IReadOnlyList<SeasonFindingLine> Notes);

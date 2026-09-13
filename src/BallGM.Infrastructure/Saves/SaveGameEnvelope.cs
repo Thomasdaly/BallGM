@@ -38,5 +38,12 @@ public sealed record SaveGameEnvelope(
     string? Season,
     IReadOnlyList<string> Negotiations)
 {
-    public const int CurrentSchemaVersion = 1;
+    /// <summary>
+    /// Moved 1 → 2 when <c>PlayerEnvelope</c> traded its single <c>Overall</c> field for the five
+    /// <c>PlayerRating</c> attributes it is now derived from. A version-1 save cannot state a
+    /// player's attribute split, and rather than inventing one on load (four of five attributes
+    /// guessed at, silently), <see cref="SaveGameSerializer"/> refuses a mismatched version outright —
+    /// no production save has existed before this version moved, so there is nothing to migrate.
+    /// </summary>
+    public const int CurrentSchemaVersion = 2;
 }

@@ -249,7 +249,7 @@ public sealed class SaveGameSerializer : ISaveGameStore
                 new PlayerId(envelope.PlayerId),
                 envelope.FullName,
                 position,
-                new PlayerRating(envelope.Overall),
+                new PlayerRating(envelope.Height, envelope.Speed, envelope.Strength, envelope.Passing, envelope.LateralQuickness),
                 birthDate,
                 envelope.SeasonsOfService,
                 envelope.InjuryDescription is null ? null : new Injury(envelope.InjuryDescription));
@@ -498,7 +498,11 @@ public sealed class SaveGameSerializer : ISaveGameStore
             player.Id.Value,
             player.FullName,
             player.Position.ToString(),
-            player.Rating.Overall,
+            player.Rating.Height,
+            player.Rating.Speed,
+            player.Rating.Strength,
+            player.Rating.Passing,
+            player.Rating.LateralQuickness,
             player.BirthDate.ToString(DateFormat, CultureInfo.InvariantCulture),
             player.SeasonsOfService,
             player.CurrentInjury?.Description);
