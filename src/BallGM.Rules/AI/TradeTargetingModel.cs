@@ -1,14 +1,11 @@
 using BallGM.Domain.AI;
-using BallGM.Domain.Cap;
 using BallGM.Domain.Common;
 using BallGM.Domain.Contracts;
-using BallGM.Domain.Leagues;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 using BallGM.Domain.Trades;
 using BallGM.Rules.Configuration;
-using BallGM.Rules.Seasons;
 using BallGM.Rules.Trades;
 
 namespace BallGM.Rules.AI;
@@ -58,14 +55,14 @@ public static class TradeTargetingModel
             .Where(contract => !contract.IsTerminated)
             .ToDictionary(contract => contract.PlayerId);
 
-        var shoppingChart = BuildChart(shoppingTeam, playersById, context.RosterLimits);
+        var shoppingChart = DepthChartSupport.BuildChart(shoppingTeam, playersById, context.RosterLimits);
         if (shoppingChart is null)
         {
             return [];
         }
 
         var shoppingNeeds = RosterNeedsCalculator.Assess(
-            shoppingTeamId, shoppingChart, playersById, context.RosterLimits, NeutralCapSheet(shoppingTeamId, context.CurrentSeason));
+            shoppingTeamId, shoppingChart, playersById, context.RosterLimits, DepthChartSupport.NeutralCapSheet(shoppingTeamId, context.CurrentSeason));
 
         var candidates = new List<TradeTargetCandidate>();
         var validator = new TradeValidator();
@@ -73,14 +70,14 @@ public static class TradeTargetingModel
 
         foreach (var counterpartyTeam in context.Teams.Where(team => team.Id != shoppingTeamId))
         {
-            var counterpartyChart = BuildChart(counterpartyTeam, playersById, context.RosterLimits);
+            var counterpartyChart = DepthChartSupport.BuildChart(counterpartyTeam, playersById, context.RosterLimits);
             if (counterpartyChart is null)
             {
                 continue;
             }
 
             var counterpartyNeeds = RosterNeedsCalculator.Assess(
-                counterpartyTeam.Id, counterpartyChart, playersById, context.RosterLimits, NeutralCapSheet(counterpartyTeam.Id, context.CurrentSeason));
+                counterpartyTeam.Id, counterpartyChart, playersById, context.RosterLimits, DepthChartSupport.NeutralCapSheet(counterpartyTeam.Id, context.CurrentSeason));
 
             foreach (var shoppingNeed in shoppingNeeds.PositionalNeeds)
             {
@@ -218,29 +215,4 @@ public static class TradeTargetingModel
             .ThenBy(slot => slot.PlayerId.Value, StringComparer.Ordinal)
             .FirstOrDefault();
     }
-
-    /// <summary>
-    /// Builds the same notion of depth the season engine builds — filtering the injured and retired
-    /// the same way <c>RulesSeasonEngine.BuildContext</c> does, because a second, slightly different
-    /// notion of "available" would be a second answer to a question the depth chart already answers.
-    /// </summary>
-    private static DepthChart? BuildChart(Team team, IReadOnlyDictionary<PlayerId, Player> playersById, RosterSizeLimits rosterLimits)
-    {
-        var available = team.PlayerIds
-            .Select(playerId => playersById.GetValueOrDefault(playerId))
-            .Where(player => player is not null && !player.IsInjured && !player.IsRetired)
-            .Select(player => new AvailablePlayer(player!.Id, player.Position, player.Rating.Overall))
-            .ToList();
-
-        var result = new DepthChartBuilder().Build(team.Id, available, rosterLimits, team.PlayerIds.Count);
-        return result.IsSuccess ? result.Value.Chart : null;
-    }
-
-    /// <summary>
-    /// A cap sheet carrying no charges and no thresholds. <see cref="RosterNeedsCalculator"/> only
-    /// reads a cap sheet for its payroll-floor note, which this model does not consume — a real
-    /// projection here would need the full <see cref="CapLedger"/> pass for no reading this model uses.
-    /// </summary>
-    private static TeamCapSheet NeutralCapSheet(TeamId teamId, Season season) =>
-        new(teamId, season, Money.Zero, Money.Zero, Money.Zero, Money.Zero, [], []);
 }
