@@ -3,9 +3,11 @@ using BallGM.Domain.Draft;
 using BallGM.Domain.DraftAssets;
 using BallGM.Domain.Franchises;
 using BallGM.Domain.Leagues;
+using BallGM.Domain.Players;
 using BallGM.Domain.Randomness;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
+using BallGM.Rules.AI;
 using BallGM.Rules.Configuration;
 
 namespace BallGM.Rules.Draft;
@@ -23,14 +25,16 @@ public sealed record DraftDayOutcome(
 /// <summary>
 /// Turns a concluded season's final standings into an actual draft: generates this league's class
 /// (<see cref="Rules.Draft.ProspectGenerator"/>), draws the order (<see cref="Rules.Draft.DraftLottery"/>),
-/// and — the piece <c>docs/architecture.md</c> named as still owed — walks the order slot by slot,
-/// handing each team the best prospect left on the board.
+/// and walks the order slot by slot, handing each team whichever prospect
+/// <see cref="DraftDecisionModel.Recommend"/> would take there.
 /// <para>
-/// "Best prospect left" rather than any notion of team need or preference, deliberately: no AI
-/// general manager exists yet (Milestone 9), so this reads the same way <c>LeagueSession</c>'s
-/// roster-floor auto-resign already does — no bidding, no preference, no randomness beyond the class
-/// generator and the lottery draw themselves, just the highest true rating available, taken in
-/// selection order, until the class runs out.
+/// Every selection goes through the same front office the diagnostics preview does — the best
+/// prospect at a position the team needs, read through <see cref="ScoutingModel"/> rather than the
+/// hidden <see cref="Prospect.TrueRating"/>, falling back to the best-scouted prospect left when no
+/// need matches. This runs uniformly for every team, with no distinction between a human's team and
+/// anyone else's, because no draft-day UI exists yet for a human to have picked any other way — see
+/// <c>docs/architecture.md</c> → "AI turn execution: acting on a candidate" for why that is the
+/// smallest viable call rather than a permanent answer to who gets a say.
 /// </para>
 /// <para>
 /// A pick's owner is resolved through <see cref="DraftAssetBook"/> where a matching asset is
@@ -50,19 +54,23 @@ public sealed class DraftDay
         Season draftSeason,
         IReadOnlyList<SeasonHistoryTeamRecord> finalStandings,
         IReadOnlyCollection<Team> teams,
+        IReadOnlyDictionary<PlayerId, Player> playersById,
         DraftAssetBook draftAssets,
         DraftRules draftRules,
         DraftClassRules classRules,
         DraftLotteryRules lotteryRules,
+        ScoutingRules scoutingRules,
         IRandomSource random)
     {
         ArgumentNullException.ThrowIfNull(draftSeason);
         ArgumentNullException.ThrowIfNull(finalStandings);
         ArgumentNullException.ThrowIfNull(teams);
+        ArgumentNullException.ThrowIfNull(playersById);
         ArgumentNullException.ThrowIfNull(draftAssets);
         ArgumentNullException.ThrowIfNull(draftRules);
         ArgumentNullException.ThrowIfNull(classRules);
         ArgumentNullException.ThrowIfNull(lotteryRules);
+        ArgumentNullException.ThrowIfNull(scoutingRules);
         ArgumentNullException.ThrowIfNull(random);
 
         if (!draftRules.HasDraft)
@@ -135,13 +143,16 @@ public sealed class DraftDay
                 continue;
             }
 
-            var prospect = pool
-                .OrderByDescending(candidate => candidate.TrueRating.Overall)
-                .ThenBy(candidate => candidate.Id.Value, StringComparer.Ordinal)
-                .First();
+            var recommendation = DraftDecisionModel.Recommend(
+                team.Id, team, playersById, pool, team.RosterLimits, scoutingRules, draftSeason)
+                ?? throw new InvalidOperationException(
+                    "DraftDecisionModel.Recommend returned no recommendation for a non-empty prospect pool.");
+
+            var prospect = pool.First(candidate => candidate.Id == recommendation.ProspectId);
 
             pool.Remove(prospect);
             selections.Add(new DraftSelection(team.Id, prospect, slot.Round, slot.SelectionNumber));
+            notes.AddRange(recommendation.Rationale);
         }
 
         return DomainOperationResult<DraftDayOutcome>.Success(new DraftDayOutcome(

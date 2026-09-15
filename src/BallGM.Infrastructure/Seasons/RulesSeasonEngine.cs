@@ -162,15 +162,18 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
 
         var ruleset = rulesetResult.Value;
         var random = new SeededRandomSource(seed);
+        var playersById = snapshot.Players.ToDictionary(player => player.Id);
 
         var dayResult = _draftDay.Run(
             draftSeason,
             finalStandings,
             snapshot.Teams,
+            playersById,
             snapshot.DraftAssets,
             ruleset.DraftRules,
             ruleset.DraftClassRules,
             ruleset.DraftLotteryRules,
+            ruleset.ScoutingRules,
             random);
 
         if (dayResult.IsFailure)

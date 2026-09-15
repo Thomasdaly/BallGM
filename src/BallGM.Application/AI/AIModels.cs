@@ -74,3 +74,36 @@ public sealed record FrontOfficeAdvisorySummary(
     IReadOnlyList<FreeAgentTargetLine> FreeAgentTargets,
     DraftRecommendationLine? DraftPreview,
     string? DraftPreviewNote);
+
+/// <summary>
+/// What one team's front office actually did when its turn was run — see
+/// <see cref="Leagues.LeagueSession.RunAiFrontOfficeTurn"/>.
+/// </summary>
+public enum AiTurnAction
+{
+    /// <summary>The team's first (only, by this slice's own rule) legal trade target was executed.</summary>
+    TradeExecuted,
+
+    /// <summary>The team's first legal free-agent target was signed.</summary>
+    SigningExecuted,
+
+    /// <summary>Neither a legal trade nor a legal free-agent offer was found (or one was found but failed re-validation at the moment of execution) — see <see cref="Notes"/> on the outcome for why.</summary>
+    NoActionTaken,
+}
+
+/// <summary>
+/// One team's outcome from a run turn: exactly one of <see cref="Trade"/>/<see cref="Signing"/> is set
+/// when <see cref="Action"/> names it, and <see cref="Notes"/> explains a <see cref="AiTurnAction.NoActionTaken"/>
+/// outcome the same way every other AI read in this codebase explains itself — a <c>RuleFinding</c>-shaped
+/// line, never a bare boolean.
+/// </summary>
+public sealed record AiTeamTurnOutcome(
+    string TeamId,
+    string TeamName,
+    AiTurnAction Action,
+    TradeTargetLine? Trade,
+    FreeAgentTargetLine? Signing,
+    IReadOnlyList<AIFindingLine> Notes);
+
+/// <summary>One call to <see cref="Leagues.LeagueSession.RunAiFrontOfficeTurn"/>, one outcome per team asked for, in the order asked.</summary>
+public sealed record AiFrontOfficeTurnSummary(IReadOnlyList<AiTeamTurnOutcome> Outcomes);

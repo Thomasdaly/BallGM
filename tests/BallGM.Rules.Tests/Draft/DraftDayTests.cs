@@ -3,6 +3,7 @@ using BallGM.Domain.Draft;
 using BallGM.Domain.DraftAssets;
 using BallGM.Domain.Franchises;
 using BallGM.Domain.Leagues;
+using BallGM.Domain.Players;
 using BallGM.Domain.Randomness;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
@@ -26,6 +27,8 @@ public sealed class DraftDayTests
     private static readonly DraftClassRules SmallClass =
         DraftClassRules.Create(classSize: 3, minimumRating: 40, maximumRating: 90, prospectAgeYears: 19).Value;
 
+    private static readonly IReadOnlyDictionary<PlayerId, Player> EmptyPlayers = new Dictionary<PlayerId, Player>();
+
     private readonly DraftDay _day = new();
 
     [Fact]
@@ -39,7 +42,7 @@ public sealed class DraftDayTests
             roundCount: 1, lotteryEnabled: false, tradableFutureDraftHorizon: 3, retainedRoundNumber: 1, retainedRoundInterval: 2).Value;
 
         var result = _day.Run(
-            DraftSeason, standings, teams, NewBook(), oneRound, SmallClass, DraftLotteryRules.None, new SeededRandomSource(20260912));
+            DraftSeason, standings, teams, EmptyPlayers, NewBook(), oneRound, SmallClass, DraftLotteryRules.None, ScoutingRules.None, new SeededRandomSource(20260912));
 
         Assert.True(result.IsSuccess);
         var selections = result.Value.Selections;
@@ -55,6 +58,32 @@ public sealed class DraftDayTests
     }
 
     [Fact]
+    public void RunSelectsThroughTheAiDraftDecisionModelRatherThanRawTrueRating()
+    {
+        var (worst, second, best) = ThreeFranchises();
+        var teams = new[] { TeamFor(worst, "Worst"), TeamFor(second, "Second"), TeamFor(best, "Best") };
+        var standings = FinalStandings();
+
+        var oneRound = DraftRules.Create(
+            roundCount: 1, lotteryEnabled: false, tradableFutureDraftHorizon: 3, retainedRoundNumber: 1, retainedRoundInterval: 2).Value;
+        var scouting = ScoutingRules.Create(baseConfidence: 40, maxRangeWidth: 20).Value;
+
+        var result = _day.Run(
+            DraftSeason, standings, teams, EmptyPlayers, NewBook(), oneRound, SmallClass, DraftLotteryRules.None, scouting, new SeededRandomSource(20260912));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(3, result.Value.Selections.Count);
+
+        // Every selection now carries the AI draft-decision model's own rationale — proof this
+        // flow reads through DraftDecisionModel/ScoutingModel for each pick rather than the bare
+        // highest-Prospect.TrueRating.Overall ordering it used before wiring.
+        Assert.Equal(3, result.Value.Notes.Count(note => note.RuleCode == "ai_draft_target.scouted_quality"));
+        Assert.All(
+            result.Value.Notes.Where(note => note.RuleCode == "ai_draft_target.scouted_quality"),
+            note => Assert.Contains("scouts", note.Explanation));
+    }
+
+    [Fact]
     public void RunProducesNoSelectionsAndANoteWhenTheLeagueHoldsNoDraft()
     {
         var (worst, second, best) = ThreeFranchises();
@@ -62,7 +91,7 @@ public sealed class DraftDayTests
         var standings = FinalStandings();
 
         var result = _day.Run(
-            DraftSeason, standings, teams, NewBook(), DraftRules.NoDraft, SmallClass, DraftLotteryRules.None, new ThrowingRandomSource());
+            DraftSeason, standings, teams, EmptyPlayers, NewBook(), DraftRules.NoDraft, SmallClass, DraftLotteryRules.None, ScoutingRules.None, new ThrowingRandomSource());
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value.Selections);
@@ -77,7 +106,7 @@ public sealed class DraftDayTests
         var standings = FinalStandings();
 
         var result = _day.Run(
-            DraftSeason, standings, teams, NewBook(), TwoRoundNoLottery, DraftClassRules.None, DraftLotteryRules.None, new ThrowingRandomSource());
+            DraftSeason, standings, teams, EmptyPlayers, NewBook(), TwoRoundNoLottery, DraftClassRules.None, DraftLotteryRules.None, ScoutingRules.None, new ThrowingRandomSource());
 
         Assert.True(result.IsSuccess);
         Assert.Empty(result.Value.Selections);
@@ -93,7 +122,7 @@ public sealed class DraftDayTests
 
         // Two rounds over three teams is six slots; the class states only three prospects.
         var result = _day.Run(
-            DraftSeason, standings, teams, NewBook(), TwoRoundNoLottery, SmallClass, DraftLotteryRules.None, new SeededRandomSource(7));
+            DraftSeason, standings, teams, EmptyPlayers, NewBook(), TwoRoundNoLottery, SmallClass, DraftLotteryRules.None, ScoutingRules.None, new SeededRandomSource(7));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(3, result.Value.Selections.Count);
@@ -118,7 +147,7 @@ public sealed class DraftDayTests
         Assert.True(book.Transfer(pickResult.Value.Id, best).IsSuccess);
 
         var result = _day.Run(
-            DraftSeason, standings, teams, book, oneRound, SmallClass, DraftLotteryRules.None, new SeededRandomSource(20260912));
+            DraftSeason, standings, teams, EmptyPlayers, book, oneRound, SmallClass, DraftLotteryRules.None, ScoutingRules.None, new SeededRandomSource(20260912));
 
         Assert.True(result.IsSuccess);
         Assert.Equal("Best", TeamNameOf(teams, result.Value.Selections[0].TeamId));
