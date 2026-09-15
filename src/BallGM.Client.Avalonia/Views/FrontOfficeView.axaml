@@ -1,0 +1,125 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.FrontOfficeView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:FrontOfficeViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="16">
+      <StackPanel Spacing="2">
+        <TextBlock Text="Front office diagnostics" FontSize="22" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding Status}" Opacity="0.7" TextWrapping="Wrap" />
+      </StackPanel>
+
+      <Border Padding="12" CornerRadius="4" Background="#20808080">
+        <TextBlock TextWrapping="Wrap">
+          Read-only. Nothing here proposes a trade, places an offer, or drafts anyone — act on a
+          suggestion from the trade or free-agency screens instead.
+        </TextBlock>
+      </Border>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="DIRECTION" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Text="{Binding DirectionLine}" FontSize="16" FontWeight="SemiBold" />
+        <ItemsControl ItemsSource="{Binding DirectionFactors}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:AIFindingRow">
+              <TextBlock Text="{Binding Explanation}" Opacity="0.8" TextWrapping="Wrap" Margin="0,0,0,4" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="ROSTER NEEDS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <ItemsControl ItemsSource="{Binding PositionalNeeds}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:PositionalNeedRow">
+              <Grid ColumnDefinitions="60,90,*" Margin="0,0,0,4">
+                <TextBlock Text="{Binding Position}" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="1" Text="{Binding Severity}" />
+                <TextBlock Grid.Column="2" Text="{Binding Explanation}" Opacity="0.8" TextWrapping="Wrap" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ItemsControl ItemsSource="{Binding NeedsNotes}" IsVisible="{Binding HasNeedsNotes}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:AIFindingRow">
+              <TextBlock Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" FontSize="12" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="TRADE TARGETS THIS TEAM COULD PURSUE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Text="No legal trade target found." IsVisible="{Binding !HasTradeTargets}" Opacity="0.65" />
+        <ItemsControl ItemsSource="{Binding TradeTargets}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:TradeTargetRow">
+              <Border Padding="10" CornerRadius="4" Background="#14808080" Margin="0,0,0,8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding SummaryLine}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding PayrollLine}" Opacity="0.7" FontSize="12" />
+                  <ItemsControl ItemsSource="{Binding Rationale}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:AIFindingRow">
+                        <TextBlock Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" FontSize="12" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="FREE-AGENT TARGETS THIS TEAM COULD PURSUE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Text="No legal free-agent target found." IsVisible="{Binding !HasFreeAgentTargets}" Opacity="0.65" />
+        <ItemsControl ItemsSource="{Binding FreeAgentTargets}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:FreeAgentTargetRow">
+              <Border Padding="10" CornerRadius="4" Background="#14808080" Margin="0,0,0,8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding PlayerName}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding OfferLine}" Opacity="0.7" FontSize="12" />
+                  <ItemsControl ItemsSource="{Binding Rationale}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:AIFindingRow">
+                        <TextBlock Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" FontSize="12" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Spacing="8">
+        <TextBlock Text="DRAFT PREVIEW" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12">
+          Generated fresh for this screen and never persisted — not the class the real draft will
+          actually use.
+        </TextBlock>
+        <TextBlock Text="{Binding DraftPreviewNote}" IsVisible="{Binding !HasDraftPreview}" Opacity="0.7" TextWrapping="Wrap" />
+        <Border Padding="10" CornerRadius="4" Background="#14808080" IsVisible="{Binding HasDraftPreview}">
+          <StackPanel Spacing="2">
+            <TextBlock Text="{Binding DraftPreview.SummaryLine}" FontWeight="SemiBold" />
+            <ItemsControl ItemsSource="{Binding DraftPreview.Rationale}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:AIFindingRow">
+                  <TextBlock Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" FontSize="12" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

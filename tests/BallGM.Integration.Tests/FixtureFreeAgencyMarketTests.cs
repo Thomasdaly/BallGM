@@ -1,6 +1,7 @@
 using BallGM.Application.Leagues;
 using BallGM.Application.Negotiations;
 using BallGM.Domain.Common;
+using BallGM.Infrastructure.AI;
 using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
@@ -404,6 +405,7 @@ public sealed class FixtureFreeAgencyMarketTests
             new RulesFreeAgencyMarket(),
             new RulesSeasonEngine(),
             new SaveGameSerializer(),
+            new RulesFrontOfficeAdvisor(new RulesCapLedger()),
             seed);
 
         var result = session.Load();

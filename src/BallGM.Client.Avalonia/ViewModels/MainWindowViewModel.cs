@@ -43,8 +43,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         FreeAgency = new FreeAgencyViewModel(overview, session, ApplyLeagueChange);
         FreeAgencyBoard = new FreeAgencyBoardViewModel(overview, session, ApplyLeagueChange);
         Season = new SeasonViewModel(session, ApplyLeagueChange);
+        FrontOffice = new FrontOfficeViewModel(session);
 
-        Sections = [_roster.Title, _capSheet.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, Season.Title];
+        Sections = [_roster.Title, _capSheet.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, Season.Title, FrontOffice.Title];
         SelectedTeam = Teams.FirstOrDefault();
         SelectedSection = Sections[0];
     }
@@ -64,6 +65,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         FreeAgency = null;
         FreeAgencyBoard = null;
         Season = null;
+        FrontOffice = null;
     }
 
     public bool HasLeague { get; }
@@ -94,6 +96,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     /// </summary>
     public SeasonViewModel? Season { get; }
 
+    /// <summary>The Milestone 9 diagnostics screen. Read-only, so unlike the season run it can be rebuilt freely.</summary>
+    public FrontOfficeViewModel? FrontOffice { get; }
+
     public TeamSummary? SelectedTeam
     {
         get => _selectedTeam;
@@ -123,6 +128,11 @@ public sealed class MainWindowViewModel : ViewModelBase
             {
                 FreeAgencyBoard.Team = value;
             }
+
+            if (FrontOffice is not null)
+            {
+                FrontOffice.Team = value;
+            }
         }
     }
 
@@ -144,6 +154,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 _ when FreeAgency is not null && value == FreeAgency.Title => FreeAgency,
                 _ when FreeAgencyBoard is not null && value == FreeAgencyBoard.Title => FreeAgencyBoard,
                 _ when Season is not null && value == Season.Title => Season,
+                _ when FrontOffice is not null && value == FrontOffice.Title => FrontOffice,
                 _ => _roster,
             };
         }
@@ -181,6 +192,10 @@ public sealed class MainWindowViewModel : ViewModelBase
         // a day, a selected free agent, and the standings of a market a GM is in the middle of
         // reading, and none of that survives being thrown away.
         FreeAgencyBoard?.RefreshFrom(overview);
+
+        // Read fresh rather than kept: a diagnostics screen showing stale suggestions after a trade
+        // or signing just happened would be actively misleading about what is still legal to do.
+        FrontOffice?.Refresh();
 
         // The trade and free-agency screens stay put: whichever one is showing is showing the result
         // of what just happened, and rebuilding it would throw that away the moment it became worth

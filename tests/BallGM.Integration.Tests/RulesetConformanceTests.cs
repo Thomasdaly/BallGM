@@ -8,6 +8,7 @@ using BallGM.Domain.Franchises;
 using BallGM.Domain.Leagues;
 using BallGM.Domain.Players;
 using BallGM.Domain.Teams;
+using BallGM.Infrastructure.AI;
 using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
@@ -298,7 +299,8 @@ public sealed class RulesetConformanceTests
             new RulesSigningEngine(),
             new RulesFreeAgencyMarket(),
             new RulesSeasonEngine(),
-            new SaveGameSerializer());
+            new SaveGameSerializer(),
+            new RulesFrontOfficeAdvisor(new RulesCapLedger()));
 
         var result = session.Load();
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));

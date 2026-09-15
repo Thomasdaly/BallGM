@@ -1,5 +1,6 @@
 using BallGM.Application.Leagues;
 using BallGM.Application.Saves;
+using BallGM.Infrastructure.AI;
 using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
@@ -101,5 +102,6 @@ public sealed class SaveGameDeterminismTests
             new RulesSigningEngine(),
             new RulesFreeAgencyMarket(),
             new RulesSeasonEngine(),
-            store);
+            store,
+            new RulesFrontOfficeAdvisor(new RulesCapLedger()));
 }

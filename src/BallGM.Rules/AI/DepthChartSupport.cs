@@ -13,8 +13,15 @@ namespace BallGM.Rules.AI;
 /// depth the season engine builds, and a cap sheet carrying nothing for a caller that needs
 /// <see cref="RosterNeedsCalculator.Assess"/>'s positional needs without a real cap projection behind
 /// them.
+/// <para>
+/// Public rather than assembly-internal since Milestone 9's diagnostics port
+/// (<c>BallGM.Infrastructure.AI.RulesFrontOfficeAdvisor</c>) became a second caller needing the exact
+/// same chart-building plumbing — the same "reuse over a second copy" reasoning this type already
+/// states for why it exists at all, applied a second time now that a caller outside
+/// <c>BallGM.Rules</c> exists.
+/// </para>
 /// </summary>
-internal static class DepthChartSupport
+public static class DepthChartSupport
 {
     /// <summary>
     /// Builds the same notion of depth the season engine builds — filtering the injured and retired

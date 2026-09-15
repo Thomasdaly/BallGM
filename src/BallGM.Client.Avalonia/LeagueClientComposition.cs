@@ -1,5 +1,6 @@
 using BallGM.Application.Leagues;
 using BallGM.Client.Avalonia.ViewModels;
+using BallGM.Infrastructure.AI;
 using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
@@ -32,7 +33,8 @@ internal static class LeagueClientComposition
             new RulesSigningEngine(),
             new RulesFreeAgencyMarket(),
             new RulesSeasonEngine(),
-            new SaveGameSerializer());
+            new SaveGameSerializer(),
+            new RulesFrontOfficeAdvisor(new RulesCapLedger()));
 
         var result = session.Load();
 

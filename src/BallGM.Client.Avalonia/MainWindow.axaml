@@ -72,6 +72,9 @@
           <DataTemplate DataType="vm:SeasonViewModel">
             <views:SeasonView />
           </DataTemplate>
+          <DataTemplate DataType="vm:FrontOfficeViewModel">
+            <views:FrontOfficeView />
+          </DataTemplate>
         </ContentControl.DataTemplates>
       </ContentControl>
     </Grid>
