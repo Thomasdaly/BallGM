@@ -43,7 +43,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         FreeAgency = new FreeAgencyViewModel(overview, session, ApplyLeagueChange);
         FreeAgencyBoard = new FreeAgencyBoardViewModel(overview, session, ApplyLeagueChange);
         Season = new SeasonViewModel(session, ApplyLeagueChange);
-        FrontOffice = new FrontOfficeViewModel(session);
+        FrontOffice = new FrontOfficeViewModel(session, ApplyLeagueChange);
 
         Sections = [_roster.Title, _capSheet.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, Season.Title, FrontOffice.Title];
         SelectedTeam = Teams.FirstOrDefault();
@@ -96,7 +96,11 @@ public sealed class MainWindowViewModel : ViewModelBase
     /// </summary>
     public SeasonViewModel? Season { get; }
 
-    /// <summary>The Milestone 9 diagnostics screen. Read-only, so unlike the season run it can be rebuilt freely.</summary>
+    /// <summary>
+    /// The Milestone 9 diagnostics-and-turn screen. Rebuilt freely like every other read screen — it
+    /// holds no in-progress form the way the trade or free-agency screens do, even though its own
+    /// "run AI turn" button can now change the league.
+    /// </summary>
     public FrontOfficeViewModel? FrontOffice { get; }
 
     public TeamSummary? SelectedTeam

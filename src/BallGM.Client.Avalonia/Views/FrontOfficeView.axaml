@@ -12,10 +12,16 @@
       </StackPanel>
 
       <Border Padding="12" CornerRadius="4" Background="#20808080">
-        <TextBlock TextWrapping="Wrap">
-          Read-only. Nothing here proposes a trade, places an offer, or drafts anyone — act on a
-          suggestion from the trade or free-agency screens instead.
-        </TextBlock>
+        <StackPanel Spacing="8">
+          <TextBlock TextWrapping="Wrap">
+            "Run AI turn" lets this team act for itself right now: its own first legal trade, else
+            its own first legal free-agent offer, else nothing — through the same trade and signing
+            engines a human proposal uses. Or act on a suggestion below yourself from the trade or
+            free-agency screens instead.
+          </TextBlock>
+          <Button Content="Run AI turn" Command="{Binding RunAiTurnCommand}" HorizontalAlignment="Left" />
+          <TextBlock Text="{Binding TurnResultLine}" IsVisible="{Binding HasTurnResult}" FontWeight="SemiBold" TextWrapping="Wrap" />
+        </StackPanel>
       </Border>
 
       <StackPanel Spacing="8">
