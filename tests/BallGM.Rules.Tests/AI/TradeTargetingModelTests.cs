@@ -146,6 +146,42 @@ public sealed class TradeTargetingModelTests
         Assert.Empty(candidates);
     }
 
+    /// <summary>
+    /// Regression: a player who was released (their old contract kept alive only for its dead-money
+    /// terms, per <c>LeagueSnapshot</c>'s own remarks on why it can carry someone no roster references)
+    /// and later re-signed elsewhere ends up with two contracts whose stated terms both reach the
+    /// current season — <c>Contract.TermFor</c> answers "is this season in the contract," not "is the
+    /// contract still live," so a naive <c>!IsTerminated</c>-only or <c>TermFor</c>-only reading throws
+    /// building a per-player dictionary. This must key on both together, the same pair
+    /// <c>LeagueSession.IsFreeAgent</c> already reads.
+    /// </summary>
+    [Fact]
+    public void DoesNotThrowWhenAPlayerHoldsBothAReleasedContractAndAFreshOne()
+    {
+        var league = TradeTargetingTestLeague.Build()
+            .WithTeam(
+                "A",
+                (Position.PointGuard, 75, 8_000_000),
+                (Position.ShootingGuard, 70, 6_000_000),
+                (Position.SmallForward, 70, 6_000_000),
+                (Position.PowerForward, 70, 6_000_000),
+                (Position.Center, 40, 3_000_000),
+                (Position.PointGuard, 65, 3_000_000))
+            .WithTeam(
+                "B",
+                (Position.PointGuard, 40, 3_000_000),
+                (Position.ShootingGuard, 70, 6_000_000),
+                (Position.SmallForward, 70, 6_000_000),
+                (Position.PowerForward, 70, 6_000_000),
+                (Position.Center, 72, 8_000_000),
+                (Position.Center, 68, 3_000_000))
+            .WithTerminatedContractStillCoveringTheCurrentSeason("B", 5);
+
+        var candidates = TradeTargetingModel.FindCandidates(league.TeamId("A"), league.Context(), PeakRules, OpenRules);
+
+        Assert.Single(candidates);
+    }
+
     [Fact]
     public void ReturnsNoCandidatesForATeamNotInTheLeague()
     {

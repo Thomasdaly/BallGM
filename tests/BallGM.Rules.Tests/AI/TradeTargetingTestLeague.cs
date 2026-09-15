@@ -9,6 +9,7 @@ using BallGM.Domain.Trades;
 using BallGM.Domain.Transactions;
 using BallGM.Rules.Configuration;
 using BallGM.Rules.Trades;
+using Xunit;
 using SteppingTestClock = BallGM.Rules.Tests.SteppingTestClock;
 
 namespace BallGM.Rules.Tests.AI;
@@ -93,6 +94,33 @@ internal sealed class TradeTargetingTestLeague
             $"{key} Team",
             RosterLimits,
             playerIds).Value;
+
+        return this;
+    }
+
+    /// <summary>
+    /// Gives an existing player a second, already-terminated contract whose stated terms still reach
+    /// into <see cref="CurrentSeason"/> — the shape a released player with guaranteed money keeps
+    /// (<c>Contract.TermFor</c> answers "is this season in the stated terms," not "is this contract
+    /// still live"), reproducing the two-contracts-at-once state a player who was released and later
+    /// re-signed elsewhere legitimately reaches.
+    /// </summary>
+    public TradeTargetingTestLeague WithTerminatedContractStillCoveringTheCurrentSeason(string key, int index)
+    {
+        var playerId = PlayerId(key, index);
+        var priorSeason = new Season(CurrentSeason.Year - 1);
+
+        var contract = Contract.Create(
+            new ContractId($"CONTRACT-{key}-{index}-RELEASED"),
+            new TeamId($"TEAM-{key}"),
+            playerId,
+            [
+                new ContractSeasonTerm(priorSeason, new Money(1), new Money(1)),
+                new ContractSeasonTerm(CurrentSeason, new Money(1), new Money(1)),
+            ]).Value;
+
+        Assert.True(contract.Terminate(CurrentSeason).IsSuccess);
+        _contracts.Add(contract);
 
         return this;
     }

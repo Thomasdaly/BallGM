@@ -37,11 +37,15 @@ public sealed class TwoSeasonIntegrationTests
         var drafted = conclusion.Value.PlayersDrafted;
         var unrostered = conclusion.Value.PlayersDraftedButUnrostered;
         var autoSigned = conclusion.Value.PlayersAutoSigned;
+        // AI-executed trades move an already-rostered player between two teams, so they leave the
+        // league-wide rostered and free-agent totals below untouched; only a signing changes either,
+        // the same way PlayersAutoSigned already does.
+        var aiSigned = conclusion.Value.AiSigningsExecuted;
 
         var overviewAfter = session.Overview().Value;
         Assert.Equal(conclusion.Value.NextSeasonYear, overviewAfter.SeasonYear);
-        Assert.Equal(rosteredBefore - released + drafted + autoSigned, overviewAfter.Teams.Sum(team => team.RosterCount));
-        Assert.Equal(freeAgentsBefore + released + unrostered - autoSigned, overviewAfter.FreeAgents.Players.Count);
+        Assert.Equal(rosteredBefore - released + drafted + autoSigned + aiSigned, overviewAfter.Teams.Sum(team => team.RosterCount));
+        Assert.Equal(freeAgentsBefore + released + unrostered - autoSigned - aiSigned, overviewAfter.FreeAgents.Players.Count);
 
         var started = session.StartSeason(seed: 2032);
         Assert.True(started.IsSuccess, string.Join("; ", started.Errors.Select(error => error.Message)));

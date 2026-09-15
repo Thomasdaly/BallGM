@@ -228,4 +228,6 @@ public sealed record SeasonConclusionSummary(
     int PlayersDrafted,
     int PlayersDraftedButUnrostered,
     int PlayersAutoSigned,
+    int AiTradesExecuted,
+    int AiSigningsExecuted,
     IReadOnlyList<SeasonFindingLine> Notes);

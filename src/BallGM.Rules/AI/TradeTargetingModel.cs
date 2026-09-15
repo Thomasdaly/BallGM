@@ -51,8 +51,17 @@ public static class TradeTargetingModel
         }
 
         var playersById = context.Players.ToDictionary(player => player.Id);
+
+        // Both conditions, not just one: Contract.TermFor answers "does this contract's stated term
+        // list include this season" without regard to termination — a released player's contract
+        // keeps its remaining terms exactly so ChargeFor can still price the dead money they leave
+        // behind (see LeagueSnapshot's own remarks on Players including a released player for the
+        // same reason). A player can legitimately hold both that terminated contract and a fresh one
+        // signed elsewhere at once, so keying this dictionary on TermFor alone collides on them the
+        // moment both exist. LeagueSession.IsFreeAgent already reads "currently under contract" as
+        // this same pair of conditions together; this is that reading, not a second one.
         var contractsByPlayer = context.Contracts
-            .Where(contract => !contract.IsTerminated)
+            .Where(contract => !contract.IsTerminated && contract.TermFor(context.CurrentSeason) is not null)
             .ToDictionary(contract => contract.PlayerId);
 
         var shoppingChart = DepthChartSupport.BuildChart(shoppingTeam, playersById, context.RosterLimits);

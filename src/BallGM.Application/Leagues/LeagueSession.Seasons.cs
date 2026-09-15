@@ -1,4 +1,5 @@
 using System.Globalization;
+using BallGM.Application.AI;
 using BallGM.Application.Seasons;
 using BallGM.Domain.Common;
 using BallGM.Domain.Contracts;
@@ -97,8 +98,11 @@ public sealed partial class LeagueSession
 
     /// <summary>
     /// Concludes a finished season: archives the champion and the final table, credits service time,
-    /// releases expired contracts back into the free-agent pool, and advances the league to the next
-    /// season year so <see cref="StartSeason"/> can be called again.
+    /// releases expired contracts back into the free-agent pool, runs the draft
+    /// (<see cref="RunDraft"/>), runs one AI front-office turn per team
+    /// (<see cref="RunAiFrontOfficeTurnAtSeasonBoundary"/>), fills every roster back to its minimum
+    /// (<see cref="AutoResignToRosterFloor"/>), and advances the league to the next season year so
+    /// <see cref="StartSeason"/> can be called again.
     /// <para>
     /// Refuses a season that has not reached its last day — the same "not reached yet" refusal
     /// <see cref="AdvanceDays"/>'s underlying engine already applies to a single game — and refuses a
@@ -140,6 +144,7 @@ public sealed partial class LeagueSession
         _seasonRun = null;
 
         var (drafted, unrostered, draftNotes) = RunDraft(outcome.Entry.FinalStandings, seasonSeed.For("draft"));
+        var (aiTradesExecuted, aiSigningsExecuted, aiTurnNotes) = RunAiFrontOfficeTurnAtSeasonBoundary();
         var autoSigned = AutoResignToRosterFloor();
 
         return DomainOperationResult<SeasonConclusionSummary>.Success(new SeasonConclusionSummary(
@@ -155,7 +160,80 @@ public sealed partial class LeagueSession
             drafted,
             unrostered,
             autoSigned,
-            outcome.Notes.Concat(draftNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList()));
+            aiTradesExecuted,
+            aiSigningsExecuted,
+            outcome.Notes.Concat(draftNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList()));
+    }
+
+    /// <summary>
+    /// Runs one AI front-office turn per team, unattended, right after the draft and before the
+    /// roster-floor auto-resign — see <c>docs/architecture.md</c> → "AI turn execution: acting on a
+    /// candidate" for why draft selection, this, and the auto-resign floor fill are three separate
+    /// automatic passes rather than one, and why every team gets a turn here rather than some
+    /// caller-chosen subset: nothing in this codebase yet distinguishes a human's team from anyone
+    /// else's, and the two season-boundary passes either side of this one already act on every team
+    /// unconditionally, so this is the same "no AI general manager, just the rule that keeps a chained
+    /// run playable" precedent applied to trades and signings instead of drafting and floor-filling.
+    /// <para>
+    /// Best-effort at the level <see cref="RunAiFrontOfficeTurn"/> itself commits to: a candidate
+    /// that fails re-validation at execution is recorded and the team's turn ends with no action, but
+    /// a failure from the advisor or engine that is not about one candidate (a data or configuration
+    /// problem) is recorded as a season note rather than failing the whole conclusion — the same
+    /// "must survive a single bad selection" reasoning <see cref="RunDraft"/> and
+    /// <see cref="AutoResignToRosterFloor"/> already apply to their own passes.
+    /// </para>
+    /// </summary>
+    private (int TradesExecuted, int SigningsExecuted, IReadOnlyList<RuleFinding> Notes) RunAiFrontOfficeTurnAtSeasonBoundary()
+    {
+        if (_snapshot is null)
+        {
+            return (0, 0, []);
+        }
+
+        var teamIds = _snapshot.Teams
+            .OrderBy(team => team.Id.Value, StringComparer.Ordinal)
+            .Select(team => team.Id.Value)
+            .ToList();
+
+        var turnResult = RunAiFrontOfficeTurn(teamIds);
+        if (turnResult.IsFailure)
+        {
+            return (0, 0, turnResult.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList());
+        }
+
+        var tradesExecuted = 0;
+        var signingsExecuted = 0;
+        var notes = new List<RuleFinding>();
+
+        foreach (var outcome in turnResult.Value.Outcomes)
+        {
+            var teamId = new TeamId(outcome.TeamId);
+
+            switch (outcome.Action)
+            {
+                case AiTurnAction.TradeExecuted:
+                    tradesExecuted++;
+                    notes.Add(new RuleFinding(
+                        "ai_turn.trade_executed",
+                        $"{outcome.TeamName} traded {outcome.Trade!.OutgoingPlayerName} to {outcome.Trade.CounterpartyTeamName} for {outcome.Trade.IncomingPlayerName}.",
+                        teamId));
+                    break;
+                case AiTurnAction.SigningExecuted:
+                    signingsExecuted++;
+                    notes.Add(new RuleFinding(
+                        "ai_turn.signing_executed",
+                        $"{outcome.TeamName} signed free agent {outcome.Signing!.PlayerName}.",
+                        teamId));
+                    break;
+                case AiTurnAction.NoActionTaken:
+                default:
+                    notes.AddRange(outcome.Notes.Select(note => new RuleFinding(
+                        note.RuleCode, $"{outcome.TeamName}: {note.Explanation}", teamId)));
+                    break;
+            }
+        }
+
+        return (tradesExecuted, signingsExecuted, notes);
     }
 
     /// <summary>
@@ -222,12 +300,14 @@ public sealed partial class LeagueSession
 
     /// <summary>
     /// Fills every team back up to its configured roster minimum from the pool of unsigned free
-    /// agents, on a one-season minimum-salary offer. Nothing in this codebase runs an AI general
-    /// manager yet (Milestone 9), so this is deliberately not one: no bidding, no team preference, no
-    /// randomness — just the highest-rated free agent available, taken in team-id order, until the
-    /// roster minimum is met or the pool runs out. Its only job is to stop a chained season-over-season
-    /// run from finding a team it cannot field, which nothing upstream of this milestone currently
-    /// prevents.
+    /// agents, on a one-season minimum-salary offer. Deliberately still not an AI general manager,
+    /// even though <see cref="RunAiFrontOfficeTurnAtSeasonBoundary"/> now runs immediately before it:
+    /// that pass makes at most one trade or one offer per team, at the front office's own asking
+    /// price, and can leave a team exactly as short as it started if nothing legal was found — this
+    /// pass is the mop-up with no bidding, no team preference, no randomness, just the highest-rated
+    /// free agent available, taken in team-id order, until the roster minimum is met or the pool runs
+    /// out. Its only job is to stop a chained season-over-season run from finding a team it cannot
+    /// field, which nothing upstream of this milestone currently prevents.
     /// </summary>
     private int AutoResignToRosterFloor()
     {
