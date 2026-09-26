@@ -17,3 +17,7 @@ coverage/
 # Local SDK/tooling caches used by Codex or developer machines.
 .dotnet/
 .nuget/
+
+# Local audit working folders.
+scratch/
+sim-audit-kit/
