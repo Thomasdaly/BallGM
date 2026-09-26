@@ -1,0 +1,110 @@
+{
+  "$comment": "Calibration targets for the sim audit. Edit era + values to match the basketball your game is modelling. Verify against basketball-reference.com before trusting these; they are approximate modern-era anchors, not gospel.",
+  "era": "nba_2018_2024",
+  "monte_carlo": {
+    "seasons": 1000,
+    "seed_mode": "fixed",
+    "note": "30 leagues x 30 seasons is an acceptable substitute for 1000 independent seasons."
+  },
+  "severity_rules": {
+    "P0": "Conservation/integrity violation, or any nonzero rate on battery 1. Ship-blocking.",
+    "P1": "Outside band by >2x the band half-width, or a structural finding (wrong functional form / missing mechanism).",
+    "P2": "Outside band but within 2x.",
+    "P3": "Inside band, drifting toward an edge."
+  },
+
+  "rate_stats": {
+    "pace_poss_per_48":      { "target": 99.0,  "min": 96.0,  "max": 101.0 },
+    "ortg":                  { "target": 115.0, "min": 112.0, "max": 117.0 },
+    "efg_pct":               { "target": 0.545, "min": 0.530, "max": 0.560 },
+    "ts_pct":                { "target": 0.575, "min": 0.560, "max": 0.590 },
+    "tov_pct":               { "target": 0.128, "min": 0.120, "max": 0.140 },
+    "orb_pct":               { "target": 0.265, "min": 0.250, "max": 0.290 },
+    "ft_per_fga":            { "target": 0.220, "min": 0.190, "max": 0.250 },
+    "fg3a_per_fga":          { "target": 0.400, "min": 0.330, "max": 0.440 },
+    "ast_per_fgm":           { "target": 0.610, "min": 0.570, "max": 0.650 },
+    "pf_per_game":           { "target": 19.5,  "min": 17.5,  "max": 21.5 },
+    "blk_per_game":          { "target": 4.9,   "min": 4.2,   "max": 5.6 },
+    "stl_per_game":          { "target": 7.4,   "min": 6.6,   "max": 8.2 },
+    "hca_points":            { "target": 2.5,   "min": 1.5,   "max": 3.5 }
+  },
+
+  "distribution_shape": {
+    "sd_team_win_pct":       { "target": 0.150, "min": 0.135, "max": 0.165 },
+    "noll_scully":           { "target": 2.70,  "min": 2.50,  "max": 3.00,
+                               "formula": "sd_observed / (0.5 / sqrt(82))" },
+    "talent_share_of_var":   { "target": 0.84,  "min": 0.80,  "max": 0.88,
+                               "formula": "(var_observed - 0.25/82) / var_observed" },
+    "sd_game_margin":        { "target": 13.5,  "min": 12.5,  "max": 14.5 },
+    "sd_team_game_score":    { "target": 12.0,  "min": 11.0,  "max": 13.0 },
+    "teams_60plus_wins_per_30": { "target": 1.2, "min": 0.6,  "max": 2.2 },
+    "teams_20orfewer_per_30":   { "target": 1.4, "min": 0.7,  "max": 2.5 },
+    "player_value_skew":     { "target": 1.20,  "min": 0.70,  "max": 2.00,
+                               "note": "Right-skewed. A value near 0 means Gaussian talent generation." },
+    "player_value_excess_kurtosis": { "target": 2.50, "min": 1.00, "max": 6.00 },
+    "hill_tail_exponent_top5pct":   { "target": 2.60, "min": 2.00, "max": 3.50,
+                               "note": "Finite mean and variance, heavy tail. Blows up if talent is normal." },
+    "rotation_size_at_90pct_mp":    { "target": 9.0,  "min": 8.2,  "max": 10.0 }
+  },
+
+  "correlation_structure": {
+    "first_pc_variance_share": { "target": 0.45, "min": 0.20, "max": 0.70,
+                               "note": ">0.70 means every player is a scalar overall in a trench coat." },
+    "usg_ts_within_player_slope": { "target": -0.60, "min": -0.90, "max": -0.30,
+                               "unit": "TS percentage points per +1 USG point" },
+    "stacking_slope_orb":    { "target": 0.55, "min": 0.40, "max": 0.70 },
+    "stacking_slope_ast":    { "target": 0.60, "min": 0.45, "max": 0.75 },
+    "stacking_slope_blk":    { "target": 0.60, "min": 0.45, "max": 0.75 },
+    "stacking_slope_drtg":   { "target": 0.65, "min": 0.50, "max": 0.80 },
+    "$comment_stacking": "Regress team rate on the sum of the five on-court players' individual rates. Slope 1.0 = linear talent aggregation = roster construction is a solved trivial problem. This is failure mode #1.",
+    "expected_rating_couplings": [
+      ["height", "block_rate", "positive"],
+      ["height", "three_point", "negative"],
+      ["height", "lateral_quickness", "negative"],
+      ["speed", "steal_rate", "positive"],
+      ["strength", "orb_rate", "positive"],
+      ["passing", "turnover_rate", "positive"]
+    ]
+  },
+
+  "temporal": {
+    "yoy_team_win_r":        { "target": 0.65, "min": 0.55, "max": 0.72 },
+    "games_to_split_half_r_0.5": { "target": 13, "min": 10, "max": 18 },
+    "yoy_player": {
+      "ft_pct":  { "target": 0.70, "min": 0.60, "max": 0.80 },
+      "fg3_pct": { "target": 0.40, "min": 0.30, "max": 0.50 },
+      "usg_pct": { "target": 0.85, "min": 0.78, "max": 0.92 },
+      "reb_pct": { "target": 0.85, "min": 0.78, "max": 0.92 },
+      "ts_pct":  { "target": 0.55, "min": 0.45, "max": 0.65 }
+    },
+    "peak_age": {
+      "net_impact":   { "target": 26.5, "min": 25.0, "max": 28.0 },
+      "scoring_vol":  { "target": 27.0, "min": 25.5, "max": 28.5 },
+      "fg3_pct":      { "target": 28.5, "min": 26.5, "max": 31.0 },
+      "reb_pct":      { "target": 25.0, "min": 23.0, "max": 27.0 },
+      "blk_pct":      { "target": 24.5, "min": 23.0, "max": 26.5 },
+      "$comment": "These MUST differ from each other. Identical peaks mean one aging curve is driving every skill."
+    },
+    "rating_drift_per_50_seasons": { "target": 0.0, "min": -1.0, "max": 1.0,
+                               "unit": "league mean overall points; any monotonic trend is a broken progs loop" },
+    "title_gini_50_seasons": { "target": 0.55, "min": 0.42, "max": 0.68 }
+  },
+
+  "calibration": {
+    "brier_score":           { "target": 0.205, "min": 0.190, "max": 0.225 },
+    "calibration_slope":     { "target": 1.00,  "min": 0.93,  "max": 1.07 },
+    "p_win_series_at_plus5_netrtg": { "target": 0.80, "min": 0.74, "max": 0.86 },
+    "p_best_rs_team_wins_title":    { "target": 0.25, "min": 0.18, "max": 0.32,
+                               "note": "60% means playoff variance is too low and the game feels deterministic." }
+  },
+
+  "economy_and_ai": {
+    "star_premium_convexity": { "target": "convex", "test": "quadratic term on surplus-vs-quality must be positive and significant" },
+    "rookie_pick_surplus_decay": { "target": "power_law", "test": "log(surplus) vs log(pick) linear; reject linear decay" },
+    "ai_cap_space_utilization": { "target": 0.93, "min": 0.85, "max": 0.99 },
+    "roster_archetype_entropy": { "target": 2.20, "min": 1.70, "max": 2.80,
+                               "unit": "nats; low = every AI team builds the same roster" },
+    "trade_value_intransitivity_rate": { "target": 0.0, "max": 0.0,
+                               "note": "Any A>B, B>C, C>A loop on 10k random triples is a P0 exploit." }
+  }
+}
