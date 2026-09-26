@@ -11,12 +11,18 @@
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" />
   </ItemGroup>
 
-  <!-- Debug builds only: lets Avalonia Developer Tools (and its MCP server, `avdt mcp`) attach to
-       the running client. Never shipped in a Release build. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="BallGM.Client.Avalonia.Tests" />
+  </ItemGroup>
+
+  <!-- Debug builds only: lets Avalonia Developer Tools (`avdt mcp`) and the Zafiro Avalonia MCP
+       server attach to the running client. Never shipped in a Release build. -->
   <ItemGroup Condition="'$(Configuration)' == 'Debug'">
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
+    <PackageReference Include="Zafiro.Avalonia.Mcp.AppHost" />
   </ItemGroup>
 
   <PropertyGroup>

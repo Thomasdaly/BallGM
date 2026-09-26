@@ -11,6 +11,12 @@
     <ProjectReference Include="..\BallGM.Simulation\BallGM.Simulation.csproj" />
   </ItemGroup>
 
+  <!-- Steam sits behind Infrastructure interfaces (CLAUDE.md), so the binding lives here and
+       nowhere else. The native steam_api libraries come from the Steamworks SDK, not this package. -->
+  <ItemGroup>
+    <PackageReference Include="Steamworks.NET" />
+  </ItemGroup>
+
   <!-- Ships the default ruleset next to the binaries so every consumer (client, tests)
        exercises the same on-disk moddable-rules path rather than a hardcoded ruleset. -->
   <ItemGroup>

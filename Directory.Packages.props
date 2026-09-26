@@ -7,10 +7,19 @@
     <PackageVersion Include="Avalonia" Version="12.0.4" />
     <PackageVersion Include="Avalonia.Desktop" Version="12.0.4" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.0.4" />
+    <PackageVersion Include="Avalonia.Headless.XUnit" Version="12.0.4" />
     <PackageVersion Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
+    <!-- Prerelease on purpose: 2.1.0-dev is the first LiveCharts2 line built against Avalonia 12;
+         the stable 2.0.x targets Avalonia 11. Move to 2.1.0 stable when it ships. -->
+    <PackageVersion Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.1.0-dev-798" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="Steamworks.NET" Version="2024.8.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
+    <!-- Only the client UI tests use xunit v3: Avalonia.Headless.XUnit 12 requires it (built
+         against 3.2.2). Every other test project stays on xunit v2. -->
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="Zafiro.Avalonia.Mcp.AppHost" Version="0.1.10" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
 </Project>

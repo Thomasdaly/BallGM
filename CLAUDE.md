@@ -61,7 +61,10 @@ Earlier state, still true — the cap sheet is real, backed by `Contract`, `CapC
 |---|---|
 | Language | C# 14, `net10.0`, nullable enabled |
 | Desktop UI | Avalonia (client project only) |
-| Tests | xUnit |
+| Tests | xUnit (v2; the headless client UI tests in `tests/BallGM.Client.Avalonia.Tests` use v3, which `Avalonia.Headless.XUnit` 12 requires) |
+| Charts | LiveCharts2 (`LiveChartsCore.SkiaSharpView.Avalonia`, 2.1.0-dev prerelease — the first line built for Avalonia 12), client only |
+| Steam | Steamworks.NET, referenced from `BallGM.Infrastructure` only — not yet wired to anything |
+| UI dev tooling | Debug builds only: `AvaloniaUI.DiagnosticsSupport` (Avalonia DevTools, `avdt mcp`, needs an Avalonia Plus license key) and `Zafiro.Avalonia.Mcp.AppHost` |
 | Serialization | `System.Text.Json` |
 | Persistence | filesystem now; SQLite only if/when justified |
 | Mods/data | JSON, schema-versioned data packs |
