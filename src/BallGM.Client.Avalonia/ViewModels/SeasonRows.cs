@@ -43,16 +43,18 @@ public sealed record StandingsRowDisplay(
 }
 
 /// <summary>One fixture on the schedule strip, with its score where it has been played.</summary>
-public sealed record FixtureRow(string Day, string Matchup, string Score)
+public sealed record FixtureRow(string GameId, string Day, string Matchup, string Score, bool Played)
 {
     public static FixtureRow From(FixtureLine line)
     {
         ArgumentNullException.ThrowIfNull(line);
 
         return new FixtureRow(
+            line.GameId,
             $"Day {line.Day} · {line.Date}",
             $"{line.AwayTeamName} at {line.HomeTeamName}",
-            line.Played ? $"{line.AwayPoints}–{line.HomePoints}" : "—");
+            line.Played ? $"{line.AwayPoints}–{line.HomePoints}" : "—",
+            line.Played);
     }
 }
 

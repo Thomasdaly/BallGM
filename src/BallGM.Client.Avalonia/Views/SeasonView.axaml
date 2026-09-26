@@ -3,6 +3,7 @@
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  xmlns:app="clr-namespace:BallGM.Application.Seasons;assembly=BallGM.Application"
   x:DataType="vm:SeasonViewModel">
   <ScrollViewer>
     <StackPanel Spacing="16">
@@ -99,6 +100,82 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+      </StackPanel>
+
+      <StackPanel Spacing="8" IsVisible="{Binding HasSeason}">
+        <TextBlock Text="RECENT RESULTS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Text="Select a game to see its box score." Opacity="0.6" FontSize="12" />
+        <ListBox ItemsSource="{Binding RecentResults}" SelectedItem="{Binding SelectedFixture}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:FixtureRow">
+              <Grid ColumnDefinitions="190,*,90" Height="24">
+                <TextBlock Text="{Binding Day}" VerticalAlignment="Center" Opacity="0.7" FontSize="12" />
+                <TextBlock Grid.Column="1" Text="{Binding Matchup}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Text="{Binding Score}" VerticalAlignment="Center" Opacity="0.8" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </StackPanel>
+
+      <StackPanel Spacing="8" IsVisible="{Binding HasSelectedFixture}">
+        <TextBlock Text="BOX SCORE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Text="{Binding BoxScoreHeadline}" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <TextBlock
+          Text="{Binding BoxScoreUnavailableMessage}"
+          Opacity="0.7"
+          TextWrapping="Wrap"
+          IsVisible="{Binding !HasBoxScoreLines}" />
+
+        <Grid ColumnDefinitions="*,*" IsVisible="{Binding HasBoxScoreLines}">
+          <StackPanel Spacing="4">
+            <TextBlock Text="{Binding AwayTeamName}" FontWeight="SemiBold" />
+            <Grid ColumnDefinitions="*,50,50,50,50">
+              <TextBlock Text="PLAYER" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+              <TextBlock Grid.Column="1" Text="MIN" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+              <TextBlock Grid.Column="2" Text="PTS" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+              <TextBlock Grid.Column="3" Text="REB" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+              <TextBlock Grid.Column="4" Text="AST" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding AwayBoxScoreLines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="app:BoxScoreLine">
+                  <Grid ColumnDefinitions="*,50,50,50,50" Height="22">
+                    <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Minutes}" VerticalAlignment="Center" Opacity="0.8" />
+                    <TextBlock Grid.Column="2" Text="{Binding Points}" VerticalAlignment="Center" Opacity="0.8" />
+                    <TextBlock Grid.Column="3" Text="{Binding Rebounds}" VerticalAlignment="Center" Opacity="0.8" />
+                    <TextBlock Grid.Column="4" Text="{Binding Assists}" VerticalAlignment="Center" Opacity="0.8" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <StackPanel Grid.Column="1" Spacing="4" Margin="16,0,0,0">
+            <TextBlock Text="{Binding HomeTeamName}" FontWeight="SemiBold" />
+            <Grid ColumnDefinitions="*,50,50,50,50">
+              <TextBlock Text="PLAYER" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+              <TextBlock Grid.Column="1" Text="MIN" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+              <TextBlock Grid.Column="2" Text="PTS" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+              <TextBlock Grid.Column="3" Text="REB" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+              <TextBlock Grid.Column="4" Text="AST" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+            </Grid>
+            <ItemsControl ItemsSource="{Binding HomeBoxScoreLines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="app:BoxScoreLine">
+                  <Grid ColumnDefinitions="*,50,50,50,50" Height="22">
+                    <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Minutes}" VerticalAlignment="Center" Opacity="0.8" />
+                    <TextBlock Grid.Column="2" Text="{Binding Points}" VerticalAlignment="Center" Opacity="0.8" />
+                    <TextBlock Grid.Column="3" Text="{Binding Rebounds}" VerticalAlignment="Center" Opacity="0.8" />
+                    <TextBlock Grid.Column="4" Text="{Binding Assists}" VerticalAlignment="Center" Opacity="0.8" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Grid>
       </StackPanel>
 
       <StackPanel Spacing="8" IsVisible="{Binding HasWarnings}">

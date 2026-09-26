@@ -22,11 +22,16 @@ public sealed class SeasonViewModel : ViewModelBase
 {
     private static readonly int[] AdvanceChoices = [1, 7, 14, 30];
 
+    /// <summary>How many days behind the current day the results strip looks for played games.</summary>
+    private const int RecentResultsDaysShown = 7;
+
     private readonly LeagueSession _session;
     private readonly Action<LeagueOverview> _onLeagueChanged;
 
     private SeasonSummary? _season;
     private SeasonAdvanceSummary? _lastAdvance;
+    private BoxScoreSummary? _boxScore;
+    private FixtureRow? _selectedFixture;
     private int _advanceDays = 1;
     private string _message = string.Empty;
     private bool _hasError;
@@ -136,6 +141,88 @@ public sealed class SeasonViewModel : ViewModelBase
             ? []
             : _season.UpcomingDays.SelectMany(day => day.Fixtures).Select(FixtureRow.From).ToList();
 
+    /// <summary>The last few days of played games, most recent first — where a box score is picked from.</summary>
+    public IReadOnlyList<FixtureRow> RecentResults
+    {
+        get
+        {
+            if (_season is null)
+            {
+                return [];
+            }
+
+            var currentDay = _season.Calendar.CurrentDay;
+            var fromDay = Math.Max(0, currentDay - RecentResultsDaysShown);
+            var dayCount = currentDay - fromDay;
+
+            if (dayCount <= 0)
+            {
+                return [];
+            }
+
+            var schedule = _session.Schedule(fromDay, dayCount);
+
+            return schedule.IsFailure
+                ? []
+                : schedule.Value
+                    .SelectMany(day => day.Fixtures)
+                    .Where(fixture => fixture.Played)
+                    .Reverse()
+                    .Select(FixtureRow.From)
+                    .ToList();
+        }
+    }
+
+    /// <summary>The fixture a box score is being read for, if one is selected.</summary>
+    public FixtureRow? SelectedFixture
+    {
+        get => _selectedFixture;
+        set
+        {
+            if (SetProperty(ref _selectedFixture, value))
+            {
+                LoadBoxScore();
+            }
+        }
+    }
+
+    public bool HasSelectedFixture => _selectedFixture is not null;
+
+    public string BoxScoreHeadline => _boxScore is null
+        ? string.Empty
+        : $"{_boxScore.AwayTeamName} {_boxScore.AwayPoints} at {_boxScore.HomeTeamName} {_boxScore.HomePoints} · day {_boxScore.Day} · {_boxScore.Date}";
+
+    public bool HasBoxScoreLines => _boxScore is { HasBoxScore: true };
+
+    /// <summary>Why there is nothing to show, when a fixture is selected but no lines came back.</summary>
+    public string BoxScoreUnavailableMessage
+    {
+        get
+        {
+            if (_selectedFixture is null || HasBoxScoreLines)
+            {
+                return string.Empty;
+            }
+
+            if (!_selectedFixture.Played)
+            {
+                return "This game has not been played yet.";
+            }
+
+            return _boxScore is null
+                ? "Could not load this game's box score."
+                : "This result was recorded without player lines.";
+        }
+    }
+
+    public string HomeTeamName => _boxScore?.HomeTeamName ?? string.Empty;
+
+    public string AwayTeamName => _boxScore?.AwayTeamName ?? string.Empty;
+
+    public IReadOnlyList<BoxScoreLine> HomeBoxScoreLines => _boxScore?.HomeLines ?? [];
+
+    public IReadOnlyList<BoxScoreLine> AwayBoxScoreLines => _boxScore?.AwayLines ?? [];
+
     public IReadOnlyList<SeasonFindingRow> Notes
     {
         get
@@ -186,6 +273,8 @@ public sealed class SeasonViewModel : ViewModelBase
 
         _season = result.Value;
         _lastAdvance = null;
+        _selectedFixture = null;
+        _boxScore = null;
         Report(["Season started."], isError: false);
         RaiseAll();
         PreviewAdvance();
@@ -252,10 +341,28 @@ public sealed class SeasonViewModel : ViewModelBase
         RaisePropertyChanged(nameof(HasWarnings));
     }
 
+    private void LoadBoxScore()
+    {
+        _boxScore = _selectedFixture is { Played: true } fixture && _session.BoxScore(fixture.GameId) is { IsSuccess: true } result
+            ? result.Value
+            : null;
+
+        RaisePropertyChanged(nameof(HasSelectedFixture));
+        RaisePropertyChanged(nameof(BoxScoreHeadline));
+        RaisePropertyChanged(nameof(HasBoxScoreLines));
+        RaisePropertyChanged(nameof(BoxScoreUnavailableMessage));
+        RaisePropertyChanged(nameof(HomeTeamName));
+        RaisePropertyChanged(nameof(AwayTeamName));
+        RaisePropertyChanged(nameof(HomeBoxScoreLines));
+        RaisePropertyChanged(nameof(AwayBoxScoreLines));
+    }
+
     private void Refresh()
     {
         var season = _session.Season();
         _season = season.IsSuccess ? season.Value : null;
+        _selectedFixture = null;
+        _boxScore = null;
         RaiseAll();
     }
 
@@ -278,6 +385,15 @@ public sealed class SeasonViewModel : ViewModelBase
         RaisePropertyChanged(nameof(Standings));
         RaisePropertyChanged(nameof(TieBreakLine));
         RaisePropertyChanged(nameof(UpcomingFixtures));
+        RaisePropertyChanged(nameof(RecentResults));
+        RaisePropertyChanged(nameof(HasSelectedFixture));
+        RaisePropertyChanged(nameof(BoxScoreHeadline));
+        RaisePropertyChanged(nameof(HasBoxScoreLines));
+        RaisePropertyChanged(nameof(BoxScoreUnavailableMessage));
+        RaisePropertyChanged(nameof(HomeTeamName));
+        RaisePropertyChanged(nameof(AwayTeamName));
+        RaisePropertyChanged(nameof(HomeBoxScoreLines));
+        RaisePropertyChanged(nameof(AwayBoxScoreLines));
         RaisePropertyChanged(nameof(Notes));
         RaisePropertyChanged(nameof(Warnings));
         RaisePropertyChanged(nameof(HasNotes));
