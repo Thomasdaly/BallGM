@@ -13,6 +13,12 @@
     <PackageReference Include="Avalonia.Themes.Fluent" />
   </ItemGroup>
 
+  <!-- Debug builds only: lets Avalonia Developer Tools (and its MCP server, `avdt mcp`) attach to
+       the running client. Never shipped in a Release build. -->
+  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
   </PropertyGroup>
