@@ -23,4 +23,5 @@ public sealed record TradeContext(
     RosterSizeLimits RosterLimits,
     CapThresholds CapThresholds,
     TradeRules TradeRules,
-    DraftRules DraftRules);
+    DraftRules DraftRules,
+    CapMechanics? CapMechanics = null);

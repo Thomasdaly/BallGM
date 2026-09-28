@@ -231,3 +231,15 @@ public sealed record SeasonConclusionSummary(
     int AiTradesExecuted,
     int AiSigningsExecuted,
     IReadOnlyList<SeasonFindingLine> Notes);
+
+/// <summary>
+/// One player's totals for the season in progress. Totals only, like the Domain line it maps: a
+/// per-game average is a display choice, so the screen that shows one decides its rounding.
+/// </summary>
+public sealed record PlayerSeasonTotals(
+    string PlayerId,
+    int GamesPlayed,
+    int Minutes,
+    int Points,
+    int Rebounds,
+    int Assists);

@@ -4,6 +4,7 @@ using BallGM.Infrastructure.AI;
 using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Fixtures;
+using BallGM.Infrastructure.LeaguePacks;
 using BallGM.Infrastructure.Negotiations;
 using BallGM.Infrastructure.Saves;
 using BallGM.Infrastructure.Seasons;
@@ -23,10 +24,21 @@ namespace BallGM.Client.Avalonia;
 /// </summary>
 internal static class LeagueClientComposition
 {
+    /// <summary>
+    /// Names a league pack file to open instead of the shipped fixture league. Unset, the client
+    /// opens the fixture exactly as before.
+    /// </summary>
+    public const string LeaguePackEnvironmentVariable = "BALLGM_LEAGUE_PACK";
+
     public static MainWindowViewModel CreateMainWindowViewModel()
     {
+        var packPath = Environment.GetEnvironmentVariable(LeaguePackEnvironmentVariable);
+        ILeagueDataSource dataSource = string.IsNullOrWhiteSpace(packPath)
+            ? new FixtureLeagueDataSource()
+            : new LeaguePackDataSource(packPath);
+
         var session = new LeagueSession(
-            new FixtureLeagueDataSource(),
+            dataSource,
             new RulesCapLedger(),
             new RulesDraftAssetLedger(),
             new RulesTradeEngine(),

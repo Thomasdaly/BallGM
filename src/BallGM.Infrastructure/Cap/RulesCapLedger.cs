@@ -4,6 +4,7 @@ using BallGM.Domain.Cap;
 using BallGM.Domain.Common;
 using BallGM.Domain.Leagues;
 using BallGM.Domain.Teams;
+using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.Cap;
 using BallGM.Rules.Configuration;
 
@@ -58,5 +59,20 @@ public sealed class RulesCapLedger : ICapLedger
         var allCharges = charges.Concat(holds).ToList();
 
         return _capLedger.Evaluate(teamId, season, allCharges, thresholdsResult.Value);
+    }
+
+    public DomainOperationResult<CapStatus> Status(
+        TeamId teamId,
+        Money payroll,
+        bool isTaxRepeater,
+        LeagueConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        // Alignment only shapes a postseason bracket; nothing about cap status depends on it.
+        var rulesetResult = configuration.ToRuleset(leagueIsFlat: false);
+        return rulesetResult.IsFailure
+            ? DomainOperationResult<CapStatus>.Failure(rulesetResult.Errors.ToArray())
+            : DomainOperationResult<CapStatus>.Success(CapStatusEvaluator.Evaluate(teamId, payroll, isTaxRepeater, rulesetResult.Value));
     }
 }

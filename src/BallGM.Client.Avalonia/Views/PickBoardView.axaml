@@ -6,26 +6,24 @@
   x:DataType="vm:PickBoardViewModel">
   <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
     <StackPanel Spacing="2">
-      <TextBlock Text="Pick ownership" FontSize="22" FontWeight="SemiBold" />
-      <TextBlock Text="{Binding SeasonLine}" Opacity="0.7" />
+            <TextBlock Text="{Binding SeasonLine}" Opacity="0.7" />
     </StackPanel>
 
-    <Border
+    <Border Classes="callout"
       Grid.Row="1"
-      Padding="12"
-      CornerRadius="4"
-      Background="#20808080"
       IsVisible="{Binding !HasDraft}">
       <TextBlock Text="{Binding NoDraftExplanation}" TextWrapping="Wrap" />
     </Border>
 
-    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" MaxHeight="300" IsVisible="{Binding HasDraft}">
+    <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" MaxHeight="400" IsVisible="{Binding HasDraft}">
       <StackPanel Spacing="4">
         <ItemsControl ItemsSource="{Binding Rows}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:PickBoardRow">
-              <Grid ColumnDefinitions="220,*" Margin="0,0,0,4">
+              <Grid ColumnDefinitions="190,*" Margin="0,0,0,6">
                 <TextBlock
+                  Classes="strong"
+                  TextWrapping="Wrap"
                   Text="{Binding FranchiseName}"
                   VerticalAlignment="Top"
                   Margin="0,4,8,0"
@@ -38,9 +36,9 @@
                   </ItemsControl.ItemsPanel>
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:PickCellRow">
-                      <Border Width="152" Padding="6" CornerRadius="3" Background="#18808080">
+                      <Border Classes="card" Width="180" Padding="8,6">
                         <StackPanel Spacing="3">
-                          <TextBlock Text="{Binding DraftSeason}" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+                          <TextBlock Classes="eyebrow" Text="{Binding DraftSeason}" />
                           <ItemsControl ItemsSource="{Binding Assets}">
                             <ItemsControl.ItemTemplate>
                               <DataTemplate x:DataType="vm:PickChip">
@@ -72,7 +70,7 @@
     </ScrollViewer>
 
     <StackPanel Grid.Row="2" Spacing="4" IsVisible="{Binding HasDraft}">
-      <TextBlock Text="{Binding SelectedFranchiseName}" FontSize="16" FontWeight="SemiBold" />
+      <TextBlock Classes="h2" Text="{Binding SelectedFranchiseName}" />
       <TextBlock Text="{Binding Summary}" Opacity="0.75" TextWrapping="Wrap" />
     </StackPanel>
 
@@ -94,11 +92,11 @@
       <ScrollViewer Grid.Column="1" IsVisible="{Binding HasSelectedAsset}">
         <StackPanel Spacing="10" DataContext="{Binding SelectedAsset}">
           <StackPanel Spacing="2">
-            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock Classes="h2" Text="{Binding Title}" />
             <TextBlock Text="{Binding OwnerLine}" Opacity="0.7" TextWrapping="Wrap" />
           </StackPanel>
 
-          <Border Padding="10" CornerRadius="3" Background="#20808080" IsVisible="{Binding HasProtection}">
+          <Border Classes="callout" IsVisible="{Binding HasProtection}">
             <StackPanel Spacing="6">
               <TextBlock Text="{Binding Protection}" TextWrapping="Wrap" />
               <TextBlock Text="{Binding OutcomeIfProtectionHolds}" TextWrapping="Wrap" Opacity="0.8" />
@@ -106,7 +104,7 @@
           </Border>
 
           <StackPanel Spacing="6" IsVisible="{Binding HasHistory}">
-            <TextBlock Text="ASSET HISTORY" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+            <TextBlock Classes="eyebrow" Text="ASSET HISTORY" />
             <ItemsControl ItemsSource="{Binding History}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:LedgerRow">

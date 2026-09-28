@@ -125,6 +125,13 @@ public sealed class SeasonConclusion
                 continue;
             }
 
+            // An extension already signed carries the player past this contract's end: he stays.
+            if (contracts.Any(other => other != contract && !other.IsTerminated && other.PlayerId == contract.PlayerId
+                && other.TeamId == contract.TeamId && other.LastSeason.Year > run.Season.Year))
+            {
+                continue;
+            }
+
             team.ReleaseExpiredPlayer(contract.PlayerId);
             released.Add(contract.PlayerId);
         }

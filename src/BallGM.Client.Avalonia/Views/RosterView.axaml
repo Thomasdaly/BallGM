@@ -2,41 +2,110 @@
   x:Class="BallGM.Client.Avalonia.Views.RosterView"
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:app="clr-namespace:BallGM.Application.Leagues;assembly=BallGM.Application"
+  xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  xmlns:views="clr-namespace:BallGM.Client.Avalonia.Views"
   x:DataType="vm:RosterViewModel">
-  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="12">
-    <StackPanel Spacing="2">
-      <TextBlock Text="{Binding TeamName}" FontSize="22" FontWeight="SemiBold" />
-      <TextBlock Text="{Binding FranchiseName}" Opacity="0.7" />
-      <TextBlock Text="{Binding RosterCountLabel}" Opacity="0.7" />
-    </StackPanel>
+  <Panel>
+  <ContentControl Content="{Binding Profile}" IsVisible="{Binding !IsShowingList}">
+    <ContentControl.DataTemplates>
+      <DataTemplate DataType="vm:PlayerProfileViewModel">
+        <views:PlayerProfileView />
+      </DataTemplate>
+    </ContentControl.DataTemplates>
+  </ContentControl>
+  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="18" IsVisible="{Binding IsShowingList}">
+    <TextBlock Text="{Binding RosterCountLabel}" Classes="dim" />
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,60,60,2*" Margin="0,8,0,0">
-      <TextBlock Text="PLAYER" FontWeight="SemiBold" FontSize="12" Opacity="0.6" />
-      <TextBlock Grid.Column="1" Text="POS" FontWeight="SemiBold" FontSize="12" Opacity="0.6" />
-      <TextBlock Grid.Column="2" Text="OVR" FontWeight="SemiBold" FontSize="12" Opacity="0.6" />
-      <TextBlock Grid.Column="3" Text="STATUS" FontWeight="SemiBold" FontSize="12" Opacity="0.6" />
-    </Grid>
+    <!-- Header tiles. -->
+    <WrapPanel Grid.Row="1" Orientation="Horizontal" ItemSpacing="12" LineSpacing="12">
+      <Border Classes="stat accent">
+        <StackPanel Spacing="2">
+          <TextBlock Text="TEAM OVR (AVG)" Classes="eyebrow" FontSize="10" />
+          <TextBlock Text="{Binding AverageOverall}" Classes="value" />
+        </StackPanel>
+      </Border>
+      <Border Classes="stat" MinWidth="240">
+        <StackPanel Spacing="2">
+          <TextBlock Text="TOP PLAYER" Classes="eyebrow" FontSize="10" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Border Classes="face large">
+              <Image Source="{Binding TopPlayerPortrait, Converter={x:Static conv:ImagePathConverter.Instance}}" Stretch="UniformToFill" />
+            </Border>
+            <Border Classes="ovr" Background="{Binding TopPlayerOverall, Converter={x:Static conv:OverallTierConverter.Instance}}">
+              <TextBlock Text="{Binding TopPlayerOverall}" />
+            </Border>
+            <TextBlock Text="{Binding TopPlayerName}" Classes="h2" VerticalAlignment="Center" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+      <Border Classes="stat">
+        <StackPanel Spacing="2">
+          <TextBlock Text="PAYROLL" Classes="eyebrow" FontSize="10" />
+          <TextBlock Text="{Binding Payroll}" Classes="value" />
+        </StackPanel>
+      </Border>
+      <Border Classes="stat">
+        <StackPanel Spacing="2">
+          <TextBlock Text="INJURED" Classes="eyebrow" FontSize="10" />
+          <TextBlock Text="{Binding InjuredCount}" Classes="value" />
+        </StackPanel>
+      </Border>
+    </WrapPanel>
 
-    <ScrollViewer Grid.Row="2">
-      <ItemsControl ItemsSource="{Binding Roster}">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="app:RosterSpot">
-            <Grid ColumnDefinitions="*,60,60,2*" Height="30">
-              <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="1" Text="{Binding Position}" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="2" Text="{Binding Overall}" VerticalAlignment="Center" />
-              <TextBlock
-                Grid.Column="3"
-                Text="{Binding InjuryDescription}"
-                IsVisible="{Binding IsInjured}"
-                VerticalAlignment="Center"
-                TextTrimming="CharacterEllipsis" />
-            </Grid>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </ScrollViewer>
+    <DockPanel Grid.Row="2">
+      <TextBlock DockPanel.Dock="Bottom" Text="{Binding SortLabel, StringFormat='{}{0} · click a player for their profile'}" Classes="faint tiny" Margin="10,8,0,0" />
+      <Grid DockPanel.Dock="Top" Classes="thead" ColumnDefinitions="56,40,*,56,46,54,54,54,54,90,64,1.3*">
+        <Button Classes="th" Content="OVR" Command="{Binding SortByOverallCommand}" />
+        <Button Grid.Column="2" Classes="th" Content="PLAYER" Command="{Binding SortByNameCommand}" />
+        <Button Grid.Column="3" Classes="th" Content="POS" Command="{Binding SortByPositionCommand}" />
+        <Button Grid.Column="4" Classes="th" Content="GP" Command="{Binding SortByGamesCommand}" ToolTip.Tip="Games played this season" />
+        <Button Grid.Column="5" Classes="th" Content="MPG" Command="{Binding SortByMinutesCommand}" ToolTip.Tip="Minutes per game" />
+        <Button Grid.Column="6" Classes="th" Content="PPG" Command="{Binding SortByPointsCommand}" ToolTip.Tip="Points per game" />
+        <Button Grid.Column="7" Classes="th" Content="RPG" Command="{Binding SortByReboundsCommand}" ToolTip.Tip="Rebounds per game" />
+        <Button Grid.Column="8" Classes="th" Content="APG" Command="{Binding SortByAssistsCommand}" ToolTip.Tip="Assists per game" />
+        <Button Grid.Column="9" Classes="th" Content="SALARY" Command="{Binding SortBySalaryCommand}" />
+        <Button Grid.Column="10" Classes="th" Content="YEARS" Command="{Binding SortByYearsCommand}" ToolTip.Tip="Contract seasons remaining" />
+        <TextBlock Grid.Column="11" Text="STATUS" VerticalAlignment="Center" />
+      </Grid>
+
+      <ScrollViewer>
+        <ItemsControl Classes="table" ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:RosterRow">
+              <Button
+                Classes="rowbtn"
+                Command="{Binding $parent[ItemsControl].((vm:RosterViewModel)DataContext).OpenProfileCommand}"
+                CommandParameter="{Binding PlayerId}"
+                ToolTip.Tip="Open player profile">
+              <Grid ColumnDefinitions="56,40,*,56,46,54,54,54,54,90,64,1.3*" Height="{StaticResource RowHeight}">
+                <Border Classes="ovr" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}">
+                  <TextBlock Text="{Binding Overall}" />
+                </Border>
+                <Border Grid.Column="1" Classes="face">
+                  <Image Source="{Binding PortraitPath, Converter={x:Static conv:ImagePathConverter.Instance}}" Stretch="UniformToFill" />
+                </Border>
+                <TextBlock Grid.Column="2" Text="{Binding FullName}" Classes="strong" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <Border Grid.Column="3" Classes="pill">
+                  <TextBlock Text="{Binding Position}" />
+                </Border>
+                <TextBlock Grid.Column="4" Text="{Binding Games}" Classes="dim num" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="5" Text="{Binding MinutesPerGame}" Classes="dim num" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="6" Text="{Binding PointsPerGame}" Classes="num" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="7" Text="{Binding ReboundsPerGame}" Classes="num" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="8" Text="{Binding AssistsPerGame}" Classes="num" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="9" Text="{Binding Salary}" Classes="num" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="10" Text="{Binding Years}" Classes="dim" VerticalAlignment="Center" />
+                <Border Grid.Column="11" Classes="pill bad" IsVisible="{Binding IsInjured}">
+                  <TextBlock Text="{Binding InjuryDescription}" TextTrimming="CharacterEllipsis" />
+                </Border>
+              </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </DockPanel>
   </Grid>
+  </Panel>
 </UserControl>

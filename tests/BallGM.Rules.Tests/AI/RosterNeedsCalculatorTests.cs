@@ -22,7 +22,7 @@ public sealed class RosterNeedsCalculatorTests
         var chart = Chart(Slot(starter.Id, Position.SmallForward, depthRank: 1));
         var players = ById(starter);
 
-        var result = RosterNeedsCalculator.Assess(TeamId, chart, players, Limits, EmptyCapSheet());
+        var result = RosterNeedsCalculator.Assess(TeamId, chart, chart.PlayerCount, players, Limits, EmptyCapSheet());
 
         var need = result.NeedAt(Position.Center);
         Assert.NotNull(need);
@@ -37,7 +37,7 @@ public sealed class RosterNeedsCalculatorTests
         var chart = Chart(Slot(starter.Id, Position.Center, depthRank: 1));
         var players = ById(starter);
 
-        var result = RosterNeedsCalculator.Assess(TeamId, chart, players, Limits, EmptyCapSheet());
+        var result = RosterNeedsCalculator.Assess(TeamId, chart, chart.PlayerCount, players, Limits, EmptyCapSheet());
 
         var need = result.NeedAt(Position.Center);
         Assert.NotNull(need);
@@ -52,7 +52,7 @@ public sealed class RosterNeedsCalculatorTests
         var chart = Chart(Slot(starter.Id, Position.Center, depthRank: 1));
         var players = ById(starter);
 
-        var result = RosterNeedsCalculator.Assess(TeamId, chart, players, Limits, EmptyCapSheet());
+        var result = RosterNeedsCalculator.Assess(TeamId, chart, chart.PlayerCount, players, Limits, EmptyCapSheet());
 
         var need = result.NeedAt(Position.Center);
         Assert.NotNull(need);
@@ -70,7 +70,7 @@ public sealed class RosterNeedsCalculatorTests
             Slot(backup.Id, Position.Center, depthRank: 2));
         var players = ById(starter, backup);
 
-        var result = RosterNeedsCalculator.Assess(TeamId, chart, players, Limits, EmptyCapSheet());
+        var result = RosterNeedsCalculator.Assess(TeamId, chart, chart.PlayerCount, players, Limits, EmptyCapSheet());
 
         Assert.Null(result.NeedAt(Position.Center));
     }
@@ -82,9 +82,23 @@ public sealed class RosterNeedsCalculatorTests
         var chart = Chart(Slot(starter.Id, Position.Center, depthRank: 1));
         var players = ById(starter);
 
-        var result = RosterNeedsCalculator.Assess(TeamId, chart, players, Limits, EmptyCapSheet());
+        var result = RosterNeedsCalculator.Assess(TeamId, chart, chart.PlayerCount, players, Limits, EmptyCapSheet());
 
         Assert.Contains(result.Notes, finding => finding.RuleCode == "ai_needs.below_roster_minimum");
+    }
+
+    [Fact]
+    public void FullRosterIsNotShortJustBecauseTheRotationIsCapped()
+    {
+        // Regression: the minimum was checked against the depth chart, which stops at the rotation
+        // cap, so a full fifteen-man roster read as "carries 10 players, below the minimum of 12".
+        var starter = Player("STARTER", overall: 70);
+        var chart = Chart(Slot(starter.Id, Position.Center, depthRank: 1));
+        var players = ById(starter);
+
+        var result = RosterNeedsCalculator.Assess(TeamId, chart, rosterCount: 15, players, Limits, EmptyCapSheet());
+
+        Assert.DoesNotContain(result.Notes, finding => finding.RuleCode == "ai_needs.below_roster_minimum");
     }
 
     [Fact]
@@ -95,7 +109,7 @@ public sealed class RosterNeedsCalculatorTests
         var players = ById(starter);
         var capSheet = CapSheetWithBreachedFloor();
 
-        var result = RosterNeedsCalculator.Assess(TeamId, chart, players, Limits, capSheet);
+        var result = RosterNeedsCalculator.Assess(TeamId, chart, chart.PlayerCount, players, Limits, capSheet);
 
         Assert.Contains(result.Notes, finding => finding.RuleCode == "ai_needs.below_payroll_floor");
     }
@@ -108,7 +122,7 @@ public sealed class RosterNeedsCalculatorTests
         var players = ById(starter);
         var capSheet = CapSheetWithCompliantFloor();
 
-        var result = RosterNeedsCalculator.Assess(TeamId, chart, players, Limits, capSheet);
+        var result = RosterNeedsCalculator.Assess(TeamId, chart, chart.PlayerCount, players, Limits, capSheet);
 
         Assert.DoesNotContain(result.Notes, finding => finding.RuleCode == "ai_needs.below_payroll_floor");
     }

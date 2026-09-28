@@ -2,6 +2,7 @@ using BallGM.Domain.Common;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Teams;
+using BallGM.Rules.Configuration;
 
 namespace BallGM.Rules.Negotiations;
 
@@ -34,7 +35,7 @@ public sealed class PreferenceModel
     /// settle indefinitely, and the gap between those two is what makes a market resolve on nobody
     /// a reachable outcome rather than a theoretical one.
     /// </summary>
-    private const int ReservationPercentOfAsk = 85;
+    public const int ReservationPercentOfAsk = 85;
 
     // Materiality bands, per factor: how much better one offer has to read before this player would
     // actually notice. Money's is the tightest because money is the factor a GM bids with; market
@@ -80,10 +81,23 @@ public sealed class PreferenceModel
     public Money? AskingPrice(MarketContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        return AskingPriceFor(context.Player, context.NegotiationRules, context.CapThresholds);
+    }
 
-        var service = context.Player.SeasonsOfService;
-        var floor = context.NegotiationRules.CompensationFloor.FloorFor(service);
-        var ceiling = context.NegotiationRules.CompensationCeiling.CeilingFor(service, context.CapThresholds.SoftCap);
+    /// <summary>
+    /// The same asking price without a market around it — what a player wants per season to sign
+    /// at all, whoever is asking. Shared with <c>ContractExtension</c>, so a player asks his own team
+    /// for exactly what he would ask the open market for.
+    /// </summary>
+    public static Money? AskingPriceFor(Player player, NegotiationRules rules, CapThresholds thresholds)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(rules);
+        ArgumentNullException.ThrowIfNull(thresholds);
+
+        var service = player.SeasonsOfService;
+        var floor = rules.CompensationFloor.FloorFor(service);
+        var ceiling = rules.CompensationCeiling.CeilingFor(service, thresholds.SoftCap);
 
         return (floor, ceiling) switch
         {
@@ -93,22 +107,43 @@ public sealed class PreferenceModel
             // the only figure the league states.
             (not null, null) => floor,
 
-            (null, not null) => new Money(ceiling.SmallestUnits * QualityShare(context.Player) / 100),
+            (null, not null) => new Money(ceiling.SmallestUnits * QualityShare(player) / 100),
 
             _ => new Money(
                 floor.SmallestUnits +
-                ((ceiling.SmallestUnits - floor.SmallestUnits) * QualityShare(context.Player) / 100)),
+                ((ceiling.SmallestUnits - floor.SmallestUnits) * QualityShare(player) / 100)),
         };
     }
 
     /// <summary>
     /// Where a player sits between "asks the league minimum" and "asks the maximum", from their
-    /// rating alone. A deliberately blunt line rather than a curve: it is a placeholder for the
-    /// multi-attribute rating that arrives with the match engine, and a curve fitted to a single
-    /// number would only look more authoritative than it is.
+    /// rating alone, as a percentage. Convex rather than the straight line this replaced: a straight
+    /// line from rating 40 put a solid rotation player (77) three quarters of the way to the maximum,
+    /// which no real market pays — pay concentrates at the top. Piecewise-linear over a small integer
+    /// table so it is exact and identical on every platform; the knots follow the same shape the
+    /// data-pack salary estimate uses (league minimum below 55, the maximum at 92 and above).
     /// </summary>
-    private static int QualityShare(Player player) =>
-        Math.Clamp((player.Rating.Overall - 40) * 2, 0, 100);
+    internal static int QualityShare(Player player)
+    {
+        ReadOnlySpan<(int Overall, int Share)> knots = [(55, 0), (62, 4), (68, 12), (74, 28), (80, 50), (86, 76), (92, 100)];
+        var overall = player.Rating.Overall;
+        if (overall <= knots[0].Overall)
+        {
+            return 0;
+        }
+
+        for (var index = 1; index < knots.Length; index++)
+        {
+            var (x1, y1) = knots[index];
+            if (overall <= x1)
+            {
+                var (x0, y0) = knots[index - 1];
+                return y0 + ((overall - x0) * (y1 - y0) / (x1 - x0));
+            }
+        }
+
+        return 100;
+    }
 
     private static PreferenceContribution Money(Offer offer, IReadOnlyList<Offer> liveOffers, Money? ask)
     {

@@ -5,6 +5,7 @@ using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
+using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.Configuration;
 using BallGM.Rules.Signings;
 
@@ -58,6 +59,40 @@ public sealed class RulesSigningEngine : ISigningEngine
                 executionResult.Value.Contract,
                 executionResult.Value.Route,
                 executionResult.Value.LedgerEntryCount));
+    }
+
+    public DomainOperationResult<ExtensionAssessment> AssessExtension(Offer offer, LeagueSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(offer);
+        var contextResult = BuildContext(snapshot, offer.TeamId, offer.PlayerId, null);
+        if (contextResult.IsFailure)
+        {
+            return DomainOperationResult<ExtensionAssessment>.Failure(contextResult.Errors.ToArray());
+        }
+
+        var context = contextResult.Value;
+        return DomainOperationResult<ExtensionAssessment>.Success(ContractExtension.Assess(
+            offer, context.Team, context.Player, context.Contracts, context.CurrentSeason, context.NegotiationRules, context.CapThresholds));
+    }
+
+    public DomainOperationResult<ExtensionResult> ExecuteExtension(Offer offer, LeagueSnapshot snapshot)
+    {
+        var assessment = AssessExtension(offer, snapshot);
+        if (assessment.IsFailure)
+        {
+            return DomainOperationResult<ExtensionResult>.Failure(assessment.Errors.ToArray());
+        }
+
+        if (!assessment.Value.IsLegal || !assessment.Value.Accepted)
+        {
+            return DomainOperationResult<ExtensionResult>.Success(new ExtensionResult(assessment.Value, null));
+        }
+
+        var player = snapshot.Players.First(candidate => candidate.Id == offer.PlayerId);
+        var contract = ContractExtension.Execute(offer, assessment.Value, player, snapshot.CurrentSeason, snapshot.Ledger, new BallGM.Domain.Contracts.ContractId(SortableId.NewId()));
+        return contract.IsFailure
+            ? DomainOperationResult<ExtensionResult>.Failure(contract.Errors.ToArray())
+            : DomainOperationResult<ExtensionResult>.Success(new ExtensionResult(assessment.Value, contract.Value));
     }
 
     public CompensationLimits LimitsFor(LeagueSnapshot snapshot, int seasonsOfService)
@@ -151,6 +186,12 @@ public sealed class RulesSigningEngine : ISigningEngine
             return DomainOperationResult<SigningContext>.Failure(postseasonResult.Errors.ToArray());
         }
 
+        var capMechanicsResult = configuration.ToCapMechanics();
+        if (capMechanicsResult.IsFailure)
+        {
+            return DomainOperationResult<SigningContext>.Failure(capMechanicsResult.Errors.ToArray());
+        }
+
         return DomainOperationResult<SigningContext>.Success(new SigningContext(
             snapshot.CurrentSeason,
             team,
@@ -161,7 +202,8 @@ public sealed class RulesSigningEngine : ISigningEngine
             thresholdsResult.Value,
             negotiationRulesResult.Value,
             postseasonResult.Value,
-            day));
+            day,
+            capMechanicsResult.Value));
     }
 
     /// <summary>

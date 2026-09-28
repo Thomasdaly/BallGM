@@ -78,7 +78,7 @@ public sealed record LeagueRuleset
     /// a version 8 reader handed a version 9 file would ignore a stated award list and run a league
     /// with none, in a league that had described one.
     /// </remarks>
-    public const int CurrentSchemaVersion = 9;
+    public const int CurrentSchemaVersion = 10;
 
     public LeagueRuleset(
         int schemaVersion,
@@ -97,7 +97,8 @@ public sealed record LeagueRuleset
         DraftLotteryRules? draftLotteryRules = null,
         DevelopmentRules? developmentRules = null,
         RetirementRules? retirementRules = null,
-        AwardRules? awardRules = null)
+        AwardRules? awardRules = null,
+        CapMechanics? capMechanics = null)
     {
         if (schemaVersion <= 0)
         {
@@ -137,6 +138,7 @@ public sealed record LeagueRuleset
         DevelopmentRules = developmentRules ?? DevelopmentRules.None;
         RetirementRules = retirementRules ?? RetirementRules.None;
         AwardRules = awardRules ?? AwardRules.None;
+        CapMechanics = capMechanics ?? CapMechanics.None;
     }
 
     public int SchemaVersion { get; }
@@ -193,4 +195,7 @@ public sealed record LeagueRuleset
 
     /// <summary>The award set, or <see cref="Configuration.AwardRules.None"/> in a league that hands out none.</summary>
     public AwardRules AwardRules { get; }
+
+    /// <summary>Tax schedule, apron-tiered matching, and the reduced allowance, or <see cref="Configuration.CapMechanics.None"/>.</summary>
+    public CapMechanics CapMechanics { get; }
 }

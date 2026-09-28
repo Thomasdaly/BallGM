@@ -33,7 +33,48 @@ public sealed record LeagueSnapshot(
     IReadOnlyCollection<Contract> Contracts,
     DraftAssetBook DraftAssets,
     TransactionLedger Ledger,
-    LeagueConfiguration Configuration);
+    LeagueConfiguration Configuration)
+{
+    /// <summary>
+    /// Presentation artwork a data source supplied, if any. An init property rather than a
+    /// positional one: artwork is optional content, not league state, so every load path that has
+    /// none (the fixture, a save) simply leaves it at <see cref="LeagueArtwork.None"/>, and
+    /// <c>with</c> expressions after a trade or signing carry it along untouched.
+    /// </summary>
+    public LeagueArtwork Artwork { get; init; } = LeagueArtwork.None;
+
+    /// <summary>
+    /// Past seasons per player, keyed by <see cref="PlayerId"/> value: whatever a data source states
+    /// (a pack's history) plus every season concluded in this session. Presentation content, like
+    /// <see cref="Artwork"/>: no rule reads it, and a load path with none leaves it empty.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<Players.CareerSeasonLine>> CareerHistory { get; init; } =
+        new Dictionary<string, IReadOnlyList<Players.CareerSeasonLine>>();
+
+    /// <summary>
+    /// Teams (by <see cref="TeamId"/> value) charged the repeater tax schedule — a status earned by
+    /// paying tax in past seasons, which this build does not yet track itself, so a data source
+    /// states it. Empty means nobody is a repeater.
+    /// </summary>
+    public IReadOnlySet<string> TaxRepeaterTeams { get; init; } = new HashSet<string>();
+}
+
+/// <summary>
+/// Image files for teams and players, keyed by the loaded league's own identifiers
+/// (<see cref="TeamId"/> and <see cref="PlayerId"/> values) and holding full file paths a data
+/// source has already validated. Deliberately outside the Domain: an image is something a screen
+/// draws, never something a rule reads.
+/// </summary>
+public sealed record LeagueArtwork(
+    IReadOnlyDictionary<string, string> TeamLogos,
+    IReadOnlyDictionary<string, string> PlayerPortraits)
+{
+    public static LeagueArtwork None { get; } = new(new Dictionary<string, string>(), new Dictionary<string, string>());
+
+    public string? LogoFor(TeamId teamId) => TeamLogos.TryGetValue(teamId.Value, out var path) ? path : null;
+
+    public string? PortraitFor(PlayerId playerId) => PlayerPortraits.TryGetValue(playerId.Value, out var path) ? path : null;
+}
 
 /// <summary>
 /// The subset of a league's configured ruleset the Application layer needs, expressed in Domain
@@ -74,7 +115,8 @@ public sealed record LeagueConfiguration(
     IReadOnlyList<int>? DraftLotteryWeights = null,
     DevelopmentConfiguration? Development = null,
     RetirementConfiguration? Retirement = null,
-    IReadOnlyList<AwardDefinition>? Awards = null)
+    IReadOnlyList<AwardDefinition>? Awards = null,
+    CapMechanicsConfiguration? CapMechanics = null)
 {
     /// <summary>Whether this league configures any threshold at all.</summary>
     public bool IsUncapped =>
@@ -263,3 +305,22 @@ public sealed record NegotiationConfiguration(
 
     public bool HasShortTermContracts => ShortTermContractDays is not null;
 }
+
+/// <summary>
+/// The cap mechanics a ruleset states (see <c>BallGM.Rules.Configuration.CapMechanics</c>), in the
+/// shape a project that does not reference <c>BallGM.Rules</c> can carry. <c>null</c> on the
+/// configuration means the league states none of it.
+/// </summary>
+public sealed record CapMechanicsConfiguration(
+    Money? TaxBracketSize,
+    IReadOnlyList<int> TaxRatesPercent,
+    IReadOnlyList<int> RepeaterTaxRatesPercent,
+    int TaxRateIncrementPercent,
+    IReadOnlyList<SalaryMatchingBandConfiguration> SalaryMatchingBands,
+    int? AboveFirstApronMatchPercent,
+    bool SecondApronBlocksAggregation,
+    Money? ReducedOverCapAllowance,
+    CapThresholdKind? ReducedOverCapAllowanceUnavailableAbove);
+
+/// <summary>One salary-matching band (see <see cref="CapMechanicsConfiguration"/>).</summary>
+public sealed record SalaryMatchingBandConfiguration(Money? OutgoingUpTo, int Percent, Money Allowance);

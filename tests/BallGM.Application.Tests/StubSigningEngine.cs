@@ -15,6 +15,12 @@ namespace BallGM.Application.Tests;
 /// </summary>
 internal sealed class StubSigningEngine : ISigningEngine
 {
+    public DomainOperationResult<ExtensionAssessment> AssessExtension(Offer offer, LeagueSnapshot snapshot) =>
+        DomainOperationResult<ExtensionAssessment>.Failure(new DomainError("stub.no_extensions", "The stub signing engine does not assess extensions."));
+
+    public DomainOperationResult<ExtensionResult> ExecuteExtension(Offer offer, LeagueSnapshot snapshot) =>
+        DomainOperationResult<ExtensionResult>.Failure(new DomainError("stub.no_extensions", "The stub signing engine does not execute extensions."));
+
     public DomainOperationResult<SigningAssessment> Assess(
         Offer offer,
         LeagueSnapshot snapshot,

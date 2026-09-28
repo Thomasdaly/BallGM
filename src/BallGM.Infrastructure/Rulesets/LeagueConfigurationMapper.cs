@@ -273,6 +273,14 @@ internal static class LeagueConfigurationMapper
             awardRules = awardRulesResult.Value;
         }
 
+        var capMechanicsResult = configuration.ToCapMechanics();
+        if (capMechanicsResult.IsFailure)
+        {
+            return DomainOperationResult<LeagueRuleset>.Failure(capMechanicsResult.Errors.ToArray());
+        }
+
+        var capMechanics = capMechanicsResult.Value;
+
         return DomainOperationResult<LeagueRuleset>.Success(new LeagueRuleset(
             LeagueRuleset.CurrentSchemaVersion,
             configuration.RulesetName,
@@ -290,7 +298,8 @@ internal static class LeagueConfigurationMapper
             draftLotteryRules,
             developmentRules,
             retirementRules,
-            awardRules));
+            awardRules,
+            capMechanics));
     }
 
     /// <summary>
@@ -381,7 +390,44 @@ internal static class LeagueConfigurationMapper
                 ? ruleset.AwardRules.Awards
                     .Select(award => new Application.Leagues.AwardDefinition(award.Code, award.Name, award.StatBasis.ToString()))
                     .ToList()
+                : null,
+            ruleset.CapMechanics.IsConfigured
+                ? new CapMechanicsConfiguration(
+                    ruleset.CapMechanics.TaxBracketSize,
+                    ruleset.CapMechanics.TaxRatesPercent,
+                    ruleset.CapMechanics.RepeaterTaxRatesPercent,
+                    ruleset.CapMechanics.TaxRateIncrementPercent,
+                    ruleset.CapMechanics.SalaryMatchingBands.Select(band => new SalaryMatchingBandConfiguration(band.OutgoingUpTo, band.Percent, band.Allowance)).ToList(),
+                    ruleset.CapMechanics.AboveFirstApronMatchPercent,
+                    ruleset.CapMechanics.SecondApronBlocksAggregation,
+                    ruleset.CapMechanics.ReducedOverCapAllowance,
+                    ruleset.CapMechanics.ReducedOverCapAllowanceUnavailableAbove)
                 : null);
+    }
+
+    /// <summary>
+    /// The validated cap mechanics a configuration states, or <see cref="CapMechanics.None"/>. Its
+    /// own entry point because the trade, signing, and market adapters build their contexts from
+    /// configuration pieces rather than a whole ruleset.
+    /// </summary>
+    public static DomainOperationResult<CapMechanics> ToCapMechanics(this LeagueConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        if (configuration.CapMechanics is not { } mechanics)
+        {
+            return DomainOperationResult<CapMechanics>.Success(CapMechanics.None);
+        }
+
+        return CapMechanics.Create(
+            mechanics.TaxBracketSize,
+            mechanics.TaxRatesPercent,
+            mechanics.RepeaterTaxRatesPercent,
+            mechanics.TaxRateIncrementPercent,
+            mechanics.SalaryMatchingBands.Select(band => new SalaryMatchingBand(band.OutgoingUpTo, band.Percent, band.Allowance)).ToList(),
+            mechanics.AboveFirstApronMatchPercent,
+            mechanics.SecondApronBlocksAggregation,
+            mechanics.ReducedOverCapAllowance,
+            mechanics.ReducedOverCapAllowanceUnavailableAbove);
     }
 
     private static DomainOperationResult<T> Relabel<T>(IReadOnlyList<DomainError> errors, string code) =>

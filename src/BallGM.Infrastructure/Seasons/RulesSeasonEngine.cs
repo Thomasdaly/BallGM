@@ -86,6 +86,12 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
                 ToOutcome(advanced.Value.Assessment, advanced.Value.Played));
     }
 
+    public IReadOnlyList<PlayerSeasonStatLine> PlayerSeasonStats(SeasonRun run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        return PlayerSeasonStatsCalculator.Calculate(run.Results);
+    }
+
     public Standings Standings(SeasonRun run, LeagueSnapshot snapshot)
     {
         var contextResult = BuildContext(snapshot);

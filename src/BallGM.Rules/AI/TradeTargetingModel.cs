@@ -71,7 +71,7 @@ public static class TradeTargetingModel
         }
 
         var shoppingNeeds = RosterNeedsCalculator.Assess(
-            shoppingTeamId, shoppingChart, playersById, context.RosterLimits, DepthChartSupport.NeutralCapSheet(shoppingTeamId, context.CurrentSeason));
+            shoppingTeamId, shoppingChart, shoppingTeam.RosterCount, playersById, context.RosterLimits, DepthChartSupport.NeutralCapSheet(shoppingTeamId, context.CurrentSeason));
 
         var candidates = new List<TradeTargetCandidate>();
         var validator = new TradeValidator();
@@ -86,7 +86,7 @@ public static class TradeTargetingModel
             }
 
             var counterpartyNeeds = RosterNeedsCalculator.Assess(
-                counterpartyTeam.Id, counterpartyChart, playersById, context.RosterLimits, DepthChartSupport.NeutralCapSheet(counterpartyTeam.Id, context.CurrentSeason));
+                counterpartyTeam.Id, counterpartyChart, counterpartyTeam.RosterCount, playersById, context.RosterLimits, DepthChartSupport.NeutralCapSheet(counterpartyTeam.Id, context.CurrentSeason));
 
             foreach (var shoppingNeed in shoppingNeeds.PositionalNeeds)
             {

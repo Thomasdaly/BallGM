@@ -105,8 +105,15 @@ public sealed class FixtureFreeAgencyMarketTests
 
         // Three offers, three different fates: one signs, one is not a legal signing at all, and one
         // is perfectly legal and simply not enough money.
+        // "Not enough money" is measured against the player's own asking price, read from the board
+        // rather than hard-coded, so the scenario survives a change to how asks are derived.
+        var quote = session.FreeAgencyBoard(withRoom.TeamId, day: 0).Value.Columns
+            .SelectMany(column => column.BestAvailable)
+            .Single(candidate => candidate.PlayerId == target.PlayerId);
+        var belowAsk = quote.MinimumSalary!.Value;
+        Assert.True(belowAsk < quote.AskingPrice!.Value * BallGM.Rules.Negotiations.PreferenceModel.ReservationPercentOfAsk / 100, "the scenario needs a reservation above the minimum");
         session.PlaceOffer(Offer(pastTheApron, target, 17_000_000, 3), day: 0);
-        session.PlaceOffer(Offer(withAllowance, target, 12_000_000, 3), day: 0);
+        session.PlaceOffer(Offer(withAllowance, target, belowAsk, 3), day: 0);
         session.PlaceOffer(Offer(withRoom, target, 16_000_000, 3), day: 0);
 
         var assessment = session.AssessMarket(target.PlayerId, day: 0);

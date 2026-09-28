@@ -74,6 +74,56 @@ public sealed class LeagueRulesetSerializerTests
     }
 
     [Fact]
+    public void CapMechanicsSectionReadsFromTheFileAndRoundTrips()
+    {
+        var serializer = new LeagueRulesetSerializer();
+        var json = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "rulesets", "default-league.json"))
+            .TrimEnd().TrimEnd('}')
+            + """
+              ,
+              "capMechanics": {
+                "taxBracketSize": 6064000,
+                "taxRatesPercent": [100, 125, 350, 475],
+                "repeaterTaxRatesPercent": [300, 325, 550, 675],
+                "taxRateIncrementPercent": 50,
+                "salaryMatchingBands": [
+                  { "outgoingUpTo": 8846000, "percent": 200, "allowance": 250000 },
+                  { "outgoingUpTo": 35384000, "percent": 100, "allowance": 9096000 },
+                  { "percent": 125, "allowance": 250000 }
+                ],
+                "aboveFirstApronMatchPercent": 100,
+                "secondApronBlocksAggregation": true,
+                "reducedOverCapAllowance": 6064000,
+                "reducedOverCapAllowanceUnavailableAbove": "SecondApron"
+              }
+            }
+            """;
+
+        var read = serializer.Deserialize(json);
+        Assert.True(read.IsSuccess, string.Join("; ", read.Errors.Select(error => error.Message)));
+        var again = serializer.Deserialize(serializer.Serialize(read.Value));
+        Assert.True(again.IsSuccess, string.Join("; ", again.Errors.Select(error => error.Message)));
+
+        var mechanics = again.Value.CapMechanics;
+        Assert.Equal(6_064_000, mechanics.TaxBracketSize?.SmallestUnits);
+        Assert.Equal([300, 325, 550, 675], mechanics.RepeaterTaxRatesPercent);
+        Assert.Equal(3, mechanics.SalaryMatchingBands.Count);
+        Assert.Null(mechanics.SalaryMatchingBands[^1].OutgoingUpTo);
+        Assert.Equal(100, mechanics.AboveFirstApronMatchPercent);
+        Assert.True(mechanics.SecondApronBlocksAggregation);
+        Assert.Equal(CapThresholdKind.SecondApron, mechanics.ReducedOverCapAllowanceUnavailableAbove);
+    }
+
+    [Fact]
+    public void AMissingCapMechanicsSectionMeansNoneOfIt()
+    {
+        var read = new LeagueRulesetSerializer().Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "rulesets", "default-league.json")));
+
+        Assert.True(read.IsSuccess);
+        Assert.False(read.Value.CapMechanics.IsConfigured);
+    }
+
+    [Fact]
     public void DeserializeRejectsARulesetFileFromBeforeTheDraftRestrictionsExisted()
     {
         var serializer = new LeagueRulesetSerializer();

@@ -1,0 +1,391 @@
+<!--
+  Style classes: the vocabulary views are written in. A view says Classes="eyebrow" or
+  Classes="panel", never FontSize/Opacity/Background literals, so the whole client restyles here.
+
+  Text:    display, h1, h2, h3, eyebrow, body, dim, faint, mono-num, good/warn/bad/accent
+  Boxes:   panel, card, callout, stat, pill, ovr (colour set by OverallTierConverter), crest
+  Tables:  Grid.thead (header row), ItemsControl.table (zebra rows), ListBox.table
+  Buttons: default (ghost), primary
+  Nav:     ListBox.nav
+-->
+<Styles
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Base. -->
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{StaticResource Bg0Brush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="TextBlock">
+    <Setter Property="FontSize" Value="13" />
+  </Style>
+
+  <!-- Type scale. Display and h1 are the broadcast voice: heavy, italic, tight. -->
+  <Style Selector="TextBlock.display">
+    <Setter Property="FontSize" Value="30" />
+    <Setter Property="FontWeight" Value="Black" />
+    <Setter Property="FontStyle" Value="Italic" />
+    <Setter Property="LetterSpacing" Value="-0.5" />
+  </Style>
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="24" />
+    <Setter Property="FontWeight" Value="Black" />
+    <Setter Property="FontStyle" Value="Italic" />
+    <Setter Property="LetterSpacing" Value="-0.3" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.h3">
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <Style Selector="TextBlock.eyebrow">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="1.4" />
+    <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+  </Style>
+  <Style Selector="TextBlock.eyebrow.accent">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="TextBlock.dim">
+    <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+  </Style>
+  <Style Selector="TextBlock.faint">
+    <Setter Property="Foreground" Value="{StaticResource TextFaintBrush}" />
+  </Style>
+  <Style Selector="TextBlock.small">
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="TextBlock.tiny">
+    <Setter Property="FontSize" Value="11" />
+  </Style>
+  <Style Selector="TextBlock.code">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontFamily" Value="Menlo, Consolas, monospace" />
+    <Setter Property="Foreground" Value="{StaticResource TextFaintBrush}" />
+  </Style>
+  <Style Selector="TextBlock.strong">
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.num">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+  </Style>
+  <Style Selector="TextBlock.accent">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="TextBlock.good">
+    <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
+  </Style>
+  <Style Selector="TextBlock.warn">
+    <Setter Property="Foreground" Value="{StaticResource WarnBrush}" />
+  </Style>
+  <Style Selector="TextBlock.bad">
+    <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
+  </Style>
+
+  <!-- Boxes. -->
+  <Style Selector="Border.panel">
+    <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+    <Setter Property="Padding" Value="16" />
+  </Style>
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    <Setter Property="Padding" Value="12" />
+  </Style>
+  <Style Selector="Border.card.accent">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+  </Style>
+  <!-- An explanation the GM should read: accent rule down the left, faint accent wash. -->
+  <Style Selector="Border.callout">
+    <Setter Property="Background" Value="{StaticResource AccentFaintBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    <Setter Property="Padding" Value="14,12" />
+  </Style>
+  <Style Selector="Border.callout.bad">
+    <Setter Property="Background" Value="#1AFF4D5E" />
+    <Setter Property="BorderBrush" Value="{StaticResource BadBrush}" />
+  </Style>
+  <Style Selector="Border.callout.warn">
+    <Setter Property="Background" Value="#1AFFB020" />
+    <Setter Property="BorderBrush" Value="{StaticResource WarnBrush}" />
+  </Style>
+  <Style Selector="Border.stat">
+    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="MinWidth" Value="150" />
+  </Style>
+  <Style Selector="Border.stat.accent">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.stat TextBlock.value">
+    <Setter Property="FontSize" Value="26" />
+    <Setter Property="FontWeight" Value="Black" />
+    <Setter Property="FontStyle" Value="Italic" />
+  </Style>
+  <Style Selector="Border.pill">
+    <Setter Property="Background" Value="{StaticResource Bg3Brush}" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.pill TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="0.6" />
+  </Style>
+  <Style Selector="Border.pill.bad">
+    <Setter Property="Background" Value="#33FF4D5E" />
+  </Style>
+  <Style Selector="Border.pill.bad TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
+  </Style>
+  <!-- Overall rating badge. Background comes from OverallTierConverter; the number sits dark on it. -->
+  <Style Selector="Border.ovr">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.ovr TextBlock">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Black" />
+    <Setter Property="FontStyle" Value="Italic" />
+    <Setter Property="Foreground" Value="#0A0C11" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.ovr.small">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="17" />
+  </Style>
+  <Style Selector="Border.ovr.small TextBlock">
+    <Setter Property="FontSize" Value="10" />
+  </Style>
+  <!-- Player face: a round frame on the raised surface, so a missing portrait still reads as a slot. -->
+  <Style Selector="Border.face">
+    <Setter Property="Width" Value="28" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="Background" Value="{StaticResource Bg4Brush}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.face.large">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+    <Setter Property="CornerRadius" Value="20" />
+  </Style>
+  <!-- Team crest: a slanted accent plate carrying the team's initials. -->
+  <Style Selector="Border.crest">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Width" Value="64" />
+    <Setter Property="Height" Value="56" />
+    <Setter Property="RenderTransform" Value="skewX(-10deg)" />
+  </Style>
+  <Style Selector="Border.crest TextBlock">
+    <Setter Property="FontSize" Value="22" />
+    <Setter Property="FontWeight" Value="Black" />
+    <Setter Property="FontStyle" Value="Italic" />
+    <Setter Property="Foreground" Value="#0A0C11" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="RenderTransform" Value="skewX(10deg)" />
+  </Style>
+  <!-- The slanted accent bar that marks a section heading. -->
+  <Style Selector="Border.slash">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Width" Value="5" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="RenderTransform" Value="skewX(-18deg)" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- Tables. A header row is a Grid.thead; rows are an ItemsControl.table, zebra-striped. -->
+  <Style Selector="Grid.thead">
+    <Setter Property="Margin" Value="10,0,10,6" />
+  </Style>
+  <Style Selector="Grid.thead TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="1.2" />
+    <Setter Property="Foreground" Value="{StaticResource TextFaintBrush}" />
+  </Style>
+  <!-- A sortable column header: reads as header text, lights up on hover. -->
+  <Style Selector="Button.th">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{StaticResource TextFaintBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.th:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <!-- A whole table row that opens something: no button chrome, the row's own hover shows it. -->
+  <Style Selector="Button.rowbtn">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.rowbtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.rowbtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentFaintBrush}" />
+  </Style>
+  <!-- Attribute bar on the player profile; the fill colour comes from the rating tier. -->
+  <Style Selector="ProgressBar.attr">
+    <Setter Property="Height" Value="8" />
+    <Setter Property="MinHeight" Value="8" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Background" Value="{StaticResource Bg3Brush}" />
+    <Setter Property="Margin" Value="0,5,0,0" />
+  </Style>
+  <Style Selector="ItemsControl.table > ContentPresenter">
+    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="CornerRadius" Value="3" />
+  </Style>
+  <Style Selector="ItemsControl.table > ContentPresenter:nth-child(2n+1)">
+    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
+  </Style>
+  <Style Selector="ItemsControl.table > ContentPresenter:pointerover">
+    <Setter Property="Background" Value="{StaticResource Bg3Brush}" />
+  </Style>
+
+  <!-- Lists. -->
+  <Style Selector="ListBox">
+    <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+    <Setter Property="Padding" Value="4" />
+  </Style>
+  <Style Selector="ListBox ListBoxItem">
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Margin" Value="0,1" />
+  </Style>
+  <Style Selector="ListBox ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+  </Style>
+  <Style Selector="ListBox ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+  </Style>
+
+  <!-- Row templates inside lists: text lines up with the rating badge's centre. -->
+  <Style Selector="ListBoxItem Grid > TextBlock">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- Sidebar navigation. -->
+  <Style Selector="ListBox.nav">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.nav ListBoxItem">
+    <Setter Property="Padding" Value="20,11" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+  </Style>
+  <Style Selector="ListBox.nav ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
+  </Style>
+  <Style Selector="ListBox.nav ListBoxItem:selected">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="ListBox.nav ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentFaintBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="ListBox.nav ListBoxItem:selected PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <!-- Buttons: ghost by default, primary for the one action a screen is about. -->
+  <Style Selector="Button">
+    <Setter Property="Background" Value="{StaticResource Bg3Brush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Bg4Brush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Bg4Brush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource TextFaintBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="#0A0C11" />
+    <Setter Property="FontWeight" Value="Black" />
+  </Style>
+  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentHoverBrush}" />
+    <Setter Property="Foreground" Value="#0A0C11" />
+  </Style>
+  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource AccentPressedBrush}" />
+  </Style>
+  <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextFaintBrush}" />
+  </Style>
+
+  <!-- Profile tabs: broadcast-style labels with an accent underline on the open one. -->
+  <Style Selector="TabControl.profile TabItem">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Black" />
+    <Setter Property="FontStyle" Value="Italic" />
+    <Setter Property="Padding" Value="0,6,24,6" />
+    <Setter Property="MinHeight" Value="36" />
+  </Style>
+  <Style Selector="TabControl.profile TabItem:selected /template/ Border#PART_SelectedPipe">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <!-- Inputs sit on the raised surface. -->
+  <Style Selector="ComboBox, TextBox, NumericUpDown">
+    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Bg4Brush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+  </Style>
+</Styles>

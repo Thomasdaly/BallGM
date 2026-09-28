@@ -26,9 +26,9 @@ public sealed class FreeAgentTargetingModelTests
         Assert.Equal(league.TeamId("A"), candidate.ShoppingTeamId);
         Assert.Equal(league.FreeAgentId("CENTER"), candidate.Offer.PlayerId);
 
-        // floor $1,000,000 + (ceiling $25,000,000 - floor) * QualityShare(70)=60% = 15,400,000.
+        // floor $1,000,000 + (ceiling $25,000,000 - floor) * QualityShare(70)=17% = 5,080,000.
         Assert.Equal(2, candidate.Offer.SeasonCount);
-        Assert.All(candidate.Offer.Terms, term => Assert.Equal(15_400_000, term.Compensation.SmallestUnits));
+        Assert.All(candidate.Offer.Terms, term => Assert.Equal(5_080_000, term.Compensation.SmallestUnits));
 
         Assert.Contains(candidate.Rationale, finding => finding.RuleCode == "ai_fa_target.needs_match");
         Assert.Contains(candidate.Rationale, finding => finding.RuleCode == "ai_fa_target.offer_at_asking_price");

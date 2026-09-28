@@ -1,0 +1,305 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.PlayerProfileView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:PlayerProfileViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="18">
+      <Button Content="‹ Back to squad" Command="{Binding BackCommand}" HorizontalAlignment="Left" />
+
+      <!-- Identity: portrait, name, rating, bio. -->
+      <Border Classes="panel">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="20">
+          <Border Classes="face" Width="104" Height="104" CornerRadius="52">
+            <Image Source="{Binding PortraitPath, Converter={x:Static conv:ImagePathConverter.Instance}}" Stretch="UniformToFill" />
+          </Border>
+          <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border Classes="pill">
+                <TextBlock Text="{Binding Position}" />
+              </Border>
+              <TextBlock Text="{Binding TeamLine, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="eyebrow accent" VerticalAlignment="Center" />
+            </StackPanel>
+            <TextBlock Text="{Binding FullName, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="display" />
+            <TextBlock Text="{Binding BioLine}" Classes="dim" />
+            <Border Classes="pill bad" IsVisible="{Binding IsInjured}">
+              <TextBlock Text="{Binding InjuryDescription}" />
+            </Border>
+          </StackPanel>
+          <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center" HorizontalAlignment="Right">
+            <TextBlock Text="OVERALL" Classes="eyebrow" HorizontalAlignment="Center" />
+            <Border Classes="ovr" Width="84" Height="56" CornerRadius="6" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}">
+              <TextBlock Text="{Binding Overall}" FontSize="32" />
+            </Border>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <TabControl Classes="profile">
+        <TabItem Header="OVERVIEW">
+          <Grid ColumnDefinitions="2*,3*" ColumnSpacing="24" Margin="0,14,0,0">
+            <StackPanel Spacing="18">
+          <Border Classes="panel">
+            <StackPanel Spacing="12">
+              <TextBlock Text="ATTRIBUTES" Classes="eyebrow accent" />
+              <ItemsControl ItemsSource="{Binding Attributes}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:AttributeRow">
+                    <Grid ColumnDefinitions="*,40" RowDefinitions="Auto,Auto" Margin="0,0,0,12" ToolTip.Tip="{Binding Meaning}">
+                      <TextBlock Text="{Binding Name}" Classes="strong" />
+                      <TextBlock Grid.Column="1" Text="{Binding Value}" Classes="num" HorizontalAlignment="Right" />
+                      <ProgressBar
+                        Grid.Row="1"
+                        Grid.ColumnSpan="2"
+                        Classes="attr"
+                        Minimum="0"
+                        Maximum="100"
+                        Value="{Binding Value}"
+                        Foreground="{Binding Value, Converter={x:Static conv:OverallTierConverter.Instance}}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="Overall is the average of these five. Hover an attribute for what it covers." Classes="faint tiny" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="18">
+          <StackPanel Spacing="8">
+            <TextBlock Text="THIS SEASON" Classes="eyebrow" />
+            <TextBlock Text="No games played this season yet." Classes="faint small" IsVisible="{Binding !HasSeason}" />
+            <ItemsControl ItemsSource="{Binding SeasonTiles}" IsVisible="{Binding HasSeason}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:StatTile">
+                  <Border Classes="stat" MinWidth="0" Margin="0,0,10,0">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{Binding Label}" Classes="eyebrow" FontSize="10" />
+                      <TextBlock Text="{Binding Value}" Classes="value" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <StackPanel Spacing="8">
+            <TextBlock Text="RECENT FORM" Classes="eyebrow" />
+            <TextBlock Text="Form appears once this player has played in a simulated game." Classes="faint small" IsVisible="{Binding !HasRecentGames}" />
+            <StackPanel Spacing="4" IsVisible="{Binding HasRecentGames}">
+              <Grid Classes="thead" ColumnDefinitions="64,*,96,44,44,44,44,56">
+                <TextBlock Text="DATE" />
+                <TextBlock Grid.Column="1" Text="OPPONENT" />
+                <TextBlock Grid.Column="2" Text="RESULT" />
+                <TextBlock Grid.Column="3" Text="MIN" />
+                <TextBlock Grid.Column="4" Text="PTS" />
+                <TextBlock Grid.Column="5" Text="REB" />
+                <TextBlock Grid.Column="6" Text="AST" />
+                <TextBlock Grid.Column="7" Text="FG" />
+              </Grid>
+              <ItemsControl Classes="table" ItemsSource="{Binding RecentGames}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:RecentGameRow">
+                    <Grid ColumnDefinitions="64,*,96,44,44,44,44,56" Height="30">
+                      <TextBlock Text="{Binding Date}" Classes="dim small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Opponent}" Classes="strong small" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="2" Text="{Binding Result}" Classes="num small" Classes.good="{Binding Won}" Classes.bad="{Binding !Won}" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="3" Text="{Binding Minutes}" Classes="dim small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="4" Text="{Binding Points}" Classes="num" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="5" Text="{Binding Rebounds}" Classes="small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="6" Text="{Binding Assists}" Classes="small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="7" Text="{Binding Shooting}" Classes="dim small" VerticalAlignment="Center" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </StackPanel>
+
+            </StackPanel>
+          </Grid>
+        </TabItem>
+
+        <TabItem Header="STATS">
+          <StackPanel Spacing="8" Margin="0,14,0,0">
+            <TextBlock Text="THIS SEASON — SIMULATED" Classes="eyebrow" />
+            <TextBlock Text="No games played this season yet. Start or advance the season on the Calendar." Classes="faint small" IsVisible="{Binding !HasSimulatedStats}" />
+              <ItemsControl ItemsSource="{Binding SimulatedGroups}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:StatGroup">
+                    <Border Classes="panel" Margin="0,0,0,14">
+                      <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                          <TextBlock Text="{Binding Title, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="eyebrow accent" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Subtitle}" Classes="faint tiny" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding Cells}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:StatCell">
+                              <Border Classes="stat" MinWidth="104" Padding="12,8" ToolTip.Tip="{Binding Definition}">
+                                <StackPanel Spacing="1">
+                                  <TextBlock Text="{Binding Label}" Classes="eyebrow" FontSize="10" />
+                                  <TextBlock Text="{Binding Value}" FontSize="19" FontWeight="Black" FontStyle="Italic" />
+                                </StackPanel>
+                              </Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            <TextBlock Text="{Binding StatedSeasonTitle}" Classes="eyebrow" IsVisible="{Binding HasStatedStats}" Margin="0,10,0,0" />
+              <ItemsControl ItemsSource="{Binding StatedGroups}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:StatGroup">
+                    <Border Classes="panel" Margin="0,0,0,14">
+                      <StackPanel Spacing="10">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                          <TextBlock Text="{Binding Title, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="eyebrow accent" VerticalAlignment="Center" />
+                          <TextBlock Text="{Binding Subtitle}" Classes="faint tiny" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding Cells}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:StatCell">
+                              <Border Classes="stat" MinWidth="104" Padding="12,8" ToolTip.Tip="{Binding Definition}">
+                                <StackPanel Spacing="1">
+                                  <TextBlock Text="{Binding Label}" Classes="eyebrow" FontSize="10" />
+                                  <TextBlock Text="{Binding Value}" FontSize="19" FontWeight="Black" FontStyle="Italic" />
+                                </StackPanel>
+                              </Border>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            <TextBlock Text="Hover any stat for its definition. Simulated rate stats use the player's share of team minutes, as box scores do not record who shared the floor." Classes="faint tiny" TextWrapping="Wrap" />
+          </StackPanel>
+        </TabItem>
+
+        <TabItem Header="CONTRACT">
+          <StackPanel Spacing="16" Margin="0,14,0,0">
+            <TextBlock Text="{Binding ContractSummary}" Classes="h3" />
+            <ItemsControl ItemsSource="{Binding ContractTiles}" IsVisible="{Binding HasContractDetail}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel Orientation="Horizontal" ItemSpacing="12" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:StatTile">
+                  <Border Classes="stat accent">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{Binding Label}" Classes="eyebrow" FontSize="10" />
+                      <TextBlock Text="{Binding Value}" Classes="value" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Border Classes="panel" IsVisible="{Binding HasContractDetail}">
+              <StackPanel Spacing="8">
+                <TextBlock Text="SALARY SCALE" Classes="eyebrow accent" />
+                <Panel Width="360" Height="10" HorizontalAlignment="Left">
+                  <Border Width="360" Height="10" CornerRadius="5" Background="{StaticResource Bg3Brush}" />
+                  <Border Width="{Binding SalaryScaleFill}" Height="10" CornerRadius="5" Background="{StaticResource AccentBrush}" HorizontalAlignment="Left" />
+                </Panel>
+                <TextBlock Text="{Binding SalaryScaleLine}" Classes="dim small" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <StackPanel Spacing="4" IsVisible="{Binding HasContractDetail}">
+              <Grid Classes="thead" ColumnDefinitions="100,140,140,140,*">
+                <TextBlock Text="SEASON" />
+                <TextBlock Grid.Column="1" Text="SALARY" />
+                <TextBlock Grid.Column="2" Text="GUARANTEED" />
+                <TextBlock Grid.Column="3" Text="OPTION" />
+                <TextBlock Grid.Column="4" Text="% OF CAP" />
+              </Grid>
+              <ItemsControl Classes="table" ItemsSource="{Binding ContractYears}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ContractYearRow">
+                    <Grid ColumnDefinitions="100,140,140,140,*" Height="30">
+                      <TextBlock Text="{Binding Season}" Classes="dim" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Salary}" Classes="num" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="{Binding Guaranteed}" Classes="small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="3" Text="{Binding Option}" Classes="warn small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="4" Text="{Binding ShareOfCap}" Classes="num small" VerticalAlignment="Center" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </StackPanel>
+        </TabItem>
+
+        <TabItem Header="CAREER">
+          <StackPanel Spacing="4" Margin="0,14,0,0">
+            <TextBlock Text="No career history yet." Classes="faint small" IsVisible="{Binding !HasCareer}" />
+            <StackPanel Spacing="4" IsVisible="{Binding HasCareer}">
+              <Grid Classes="thead" ColumnDefinitions="72,*,40,50,50,50,50,56,56,56,56,56,52">
+                <TextBlock Text="SEASON" />
+                <TextBlock Grid.Column="1" Text="TEAM" />
+                <TextBlock Grid.Column="2" Text="GP" />
+                <TextBlock Grid.Column="3" Text="MPG" />
+                <TextBlock Grid.Column="4" Text="PPG" />
+                <TextBlock Grid.Column="5" Text="RPG" />
+                <TextBlock Grid.Column="6" Text="APG" />
+                <TextBlock Grid.Column="7" Text="FG%" />
+                <TextBlock Grid.Column="8" Text="3P%" />
+                <TextBlock Grid.Column="9" Text="TS%" />
+                <TextBlock Grid.Column="10" Text="USG%" />
+                <TextBlock Grid.Column="11" Text="NETRTG" />
+                <TextBlock Grid.Column="12" Text="PIE" />
+              </Grid>
+              <ItemsControl Classes="table" ItemsSource="{Binding Career}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:CareerRow">
+                    <Grid ColumnDefinitions="72,*,40,50,50,50,50,56,56,56,56,56,52" Height="28">
+                      <TextBlock Text="{Binding Season}" Classes="small" Classes.accent="{Binding IsCurrent}" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Team}" Classes="dim small" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Grid.Column="2" Text="{Binding Games}" Classes="dim small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="3" Text="{Binding Minutes}" Classes="dim small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="4" Text="{Binding Points}" Classes="num small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="5" Text="{Binding Rebounds}" Classes="small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="6" Text="{Binding Assists}" Classes="small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="7" Text="{Binding FieldGoalPct}" Classes="dim small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="8" Text="{Binding ThreePct}" Classes="dim small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="9" Text="{Binding TrueShooting}" Classes="small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="10" Text="{Binding Usage}" Classes="small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="11" Text="{Binding NetRating}" Classes="num small" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="12" Text="{Binding Pie}" Classes="dim small" VerticalAlignment="Center" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{Binding CareerTotalsLine}" Classes="dim small" Margin="10,6,0,0" />
+            </StackPanel>
+          </StackPanel>
+        </TabItem>
+      </TabControl>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

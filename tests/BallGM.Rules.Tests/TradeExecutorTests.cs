@@ -182,6 +182,23 @@ public sealed class TradeExecutorTests
         Assert.Equal(2, league.TeamOf("A").RosterCount);
     }
 
+    [Fact]
+    public void Execute_MovesASignedExtensionWithThePlayer()
+    {
+        // Regression: only the first matching contract moved, stranding an extension with the old team.
+        var league = TradeTestLeague.Build()
+            .WithTeam("A", 20_000_000, 10_000_000)
+            .WithTeam("B", 20_000_000, 10_000_000)
+            .WithExtension("A", 0, 22_000_000);
+
+        var result = Execute(league, league.SendPlayer("A", 0, "B"), league.SendPlayer("B", 0, "A"));
+
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
+        Assert.All(
+            league.Contracts.Where(contract => contract.PlayerId == league.PlayerOf("A", 0)),
+            contract => Assert.Equal(league.TeamOf("B").Id, contract.TeamId));
+    }
+
     private static DomainOperationResult<TradeExecution> Execute(
         TradeTestLeague league,
         params TradeAssetMovement[] movements) =>

@@ -93,10 +93,11 @@ public sealed partial class LeagueSession
 
         var playersById = _snapshot.Players.ToDictionary(player => player.Id);
         var teamNames = TeamNames(_snapshot);
+        var names = ExplanationNames.From(_snapshot);
 
         var direction = new OrganisationalDirectionLine(
             assessmentResult.Value.Direction.Direction.ToString(),
-            assessmentResult.Value.Direction.Factors.Select(finding => ToAILine(finding, teamNames)).ToList());
+            assessmentResult.Value.Direction.Factors.Select(finding => ToAILine(finding, teamNames, names)).ToList());
 
         var needs = new RosterNeedsLine(
             assessmentResult.Value.Needs.PositionalNeeds
@@ -104,16 +105,16 @@ public sealed partial class LeagueSession
                     GetLeagueOverviewQuery.DescribePosition(need.Position),
                     need.Severity.ToString(),
                     need.RuleCode,
-                    need.Explanation))
+                    names.Humanize(need.Explanation)))
                 .ToList(),
-            assessmentResult.Value.Needs.Notes.Select(finding => ToAILine(finding, teamNames)).ToList());
+            assessmentResult.Value.Needs.Notes.Select(finding => ToAILine(finding, teamNames, names)).ToList());
 
         var tradeTargets = tradeTargetsResult.Value
-            .Select(candidate => ToLine(candidate, playersById, teamNames))
+            .Select(candidate => ToLine(candidate, playersById, teamNames, names))
             .ToList();
 
         var freeAgentTargets = freeAgentTargetsResult.Value
-            .Select(candidate => ToLine(candidate, playersById, teamNames, team.Name))
+            .Select(candidate => ToLine(candidate, playersById, teamNames, team.Name, names))
             .ToList();
 
         DraftRecommendationLine? draftPreview = null;
@@ -125,7 +126,7 @@ public sealed partial class LeagueSession
                 preview.Prospect.Id.Value,
                 preview.Prospect.FullName,
                 GetLeagueOverviewQuery.DescribePosition(preview.Prospect.Position),
-                preview.Recommendation.Rationale.Select(finding => ToAILine(finding, teamNames)).ToList());
+                preview.Recommendation.Rationale.Select(finding => ToAILine(finding, teamNames, names)).ToList());
         }
         else if (!_snapshot.Configuration.HasDraft || !_snapshot.Configuration.GeneratesDraftClasses)
         {
@@ -200,6 +201,7 @@ public sealed partial class LeagueSession
     {
         var playersById = _snapshot!.Players.ToDictionary(player => player.Id);
         var teamNames = TeamNames(_snapshot);
+        var names = ExplanationNames.From(_snapshot);
         var notes = new List<AIFindingLine>();
 
         var tradeTargetsResult = _frontOfficeAdvisor.FindTradeTargets(teamId, _snapshot);
@@ -215,7 +217,7 @@ public sealed partial class LeagueSession
             if (executionResult.IsSuccess)
             {
                 return DomainOperationResult<AiTeamTurnOutcome>.Success(new AiTeamTurnOutcome(
-                    teamId.Value, teamName, AiTurnAction.TradeExecuted, ToLine(trade, playersById, teamNames), null, []));
+                    teamId.Value, teamName, AiTurnAction.TradeExecuted, ToLine(trade, playersById, teamNames, names), null, []));
             }
 
             notes.Add(new AIFindingLine(
@@ -239,7 +241,7 @@ public sealed partial class LeagueSession
             {
                 _snapshot = _snapshot with { Contracts = [.. _snapshot.Contracts, executionResult.Value.Contract] };
                 return DomainOperationResult<AiTeamTurnOutcome>.Success(new AiTeamTurnOutcome(
-                    teamId.Value, teamName, AiTurnAction.SigningExecuted, null, ToLine(offer, playersById, teamNames, teamName), []));
+                    teamId.Value, teamName, AiTurnAction.SigningExecuted, null, ToLine(offer, playersById, teamNames, teamName, names), []));
             }
 
             notes.Add(new AIFindingLine(
@@ -260,13 +262,14 @@ public sealed partial class LeagueSession
             teamId.Value, teamName, AiTurnAction.NoActionTaken, null, null, notes));
     }
 
-    private static AIFindingLine ToAILine(RuleFinding finding, IReadOnlyDictionary<TeamId, string> teamNames) =>
-        new(finding.RuleCode, finding.Explanation, finding.TeamId is null ? null : teamNames.GetValueOrDefault(finding.TeamId, finding.TeamId.Value));
+    private static AIFindingLine ToAILine(RuleFinding finding, IReadOnlyDictionary<TeamId, string> teamNames, ExplanationNames names) =>
+        new(finding.RuleCode, names.Humanize(finding.Explanation), finding.TeamId is null ? null : teamNames.GetValueOrDefault(finding.TeamId, finding.TeamId.Value));
 
     private TradeTargetLine ToLine(
         TradeTargetCandidate candidate,
         IReadOnlyDictionary<PlayerId, Player> playersById,
-        IReadOnlyDictionary<TeamId, string> teamNames)
+        IReadOnlyDictionary<TeamId, string> teamNames,
+        ExplanationNames names)
     {
         var incoming = candidate.Proposal.ReceivedBy(candidate.ShoppingTeamId).First(movement => movement.Kind == TradeAssetKind.Player);
         var outgoing = candidate.Proposal.SentBy(candidate.ShoppingTeamId).First(movement => movement.Kind == TradeAssetKind.Player);
@@ -278,7 +281,7 @@ public sealed partial class LeagueSession
             playersById.TryGetValue(incoming.PlayerId!, out var incomingPlayer) ? incomingPlayer.FullName : incoming.PlayerId!.Value,
             outgoing.PlayerId!.Value,
             playersById.TryGetValue(outgoing.PlayerId!, out var outgoingPlayer) ? outgoingPlayer.FullName : outgoing.PlayerId!.Value,
-            candidate.Rationale.Select(finding => ToAILine(finding, teamNames)).ToList(),
+            candidate.Rationale.Select(finding => ToAILine(finding, teamNames, names)).ToList(),
             ToSummary(candidate.Assessment, _snapshot!));
     }
 
@@ -286,14 +289,15 @@ public sealed partial class LeagueSession
         FreeAgentTargetCandidate candidate,
         IReadOnlyDictionary<PlayerId, Player> playersById,
         IReadOnlyDictionary<TeamId, string> teamNames,
-        string shoppingTeamName)
+        string shoppingTeamName,
+        ExplanationNames names)
     {
         var playerName = playersById.TryGetValue(candidate.Offer.PlayerId, out var player) ? player.FullName : candidate.Offer.PlayerId.Value;
 
         return new FreeAgentTargetLine(
             candidate.Offer.PlayerId.Value,
             playerName,
-            candidate.Rationale.Select(finding => ToAILine(finding, teamNames)).ToList(),
+            candidate.Rationale.Select(finding => ToAILine(finding, teamNames, names)).ToList(),
             ToSummary(candidate.Assessment, shoppingTeamName, playerName));
     }
 }

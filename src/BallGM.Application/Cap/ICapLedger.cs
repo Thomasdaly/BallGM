@@ -31,4 +31,14 @@ public interface ICapLedger
         IReadOnlyCollection<CapCharge> charges,
         int filledRosterSpots,
         LeagueConfiguration configuration);
+
+    /// <summary>
+    /// What a payroll costs and forbids beyond the threshold comparison: the tax bill (standard or
+    /// repeater schedule) and each configured restriction the team's position triggers.
+    /// </summary>
+    DomainOperationResult<CapStatus> Status(
+        TeamId teamId,
+        Money payroll,
+        bool isTaxRepeater,
+        LeagueConfiguration configuration);
 }

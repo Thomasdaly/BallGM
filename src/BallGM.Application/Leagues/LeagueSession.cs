@@ -62,6 +62,7 @@ public sealed partial class LeagueSession
     public const int SeasonOpeningDayOfMonth = 1;
 
     private readonly ILeagueDataSource _dataSource;
+    private readonly ICapLedger _capLedger;
     private readonly ITradeEngine _tradeEngine;
     private readonly ISigningEngine _signingEngine;
     private readonly IFreeAgencyMarket _freeAgencyMarket;
@@ -104,6 +105,7 @@ public sealed partial class LeagueSession
         ArgumentNullException.ThrowIfNull(frontOfficeAdvisor);
 
         _dataSource = dataSource;
+        _capLedger = capLedger;
         _tradeEngine = tradeEngine;
         _signingEngine = signingEngine;
         _freeAgencyMarket = freeAgencyMarket;

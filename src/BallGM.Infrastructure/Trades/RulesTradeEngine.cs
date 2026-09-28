@@ -2,6 +2,7 @@ using BallGM.Application.Leagues;
 using BallGM.Application.Trades;
 using BallGM.Domain.Common;
 using BallGM.Domain.Trades;
+using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.Configuration;
 using BallGM.Rules.Trades;
 
@@ -95,6 +96,12 @@ public sealed class RulesTradeEngine : ITradeEngine
                 .ToArray());
         }
 
+        var capMechanicsResult = configuration.ToCapMechanics();
+        if (capMechanicsResult.IsFailure)
+        {
+            return DomainOperationResult<TradeContext>.Failure(capMechanicsResult.Errors.ToArray());
+        }
+
         return DomainOperationResult<TradeContext>.Success(new TradeContext(
             snapshot.CurrentSeason,
             snapshot.Teams,
@@ -105,6 +112,7 @@ public sealed class RulesTradeEngine : ITradeEngine
             configuration.RosterLimits,
             thresholdsResult.Value,
             tradeRulesResult.Value,
-            draftRulesResult.Value));
+            draftRulesResult.Value,
+            capMechanicsResult.Value));
     }
 }

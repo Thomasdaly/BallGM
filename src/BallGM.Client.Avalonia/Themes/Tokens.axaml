@@ -1,0 +1,95 @@
+<!--
+  Design tokens: every colour, size, and icon the client draws with, in one place. Views never
+  hard-code a colour; they use a style class from Controls.axaml or one of these brushes.
+
+  Direction: a management-sim layout (persistent nav, identity banner, dense tables) wearing a
+  broadcast-sports skin (near-black surfaces, one hot accent, heavy italic display type, rating
+  badges coloured by tier). All original: no league or publisher marks.
+-->
+<ResourceDictionary
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Surfaces, darkest to lightest. -->
+  <Color x:Key="Bg0Color">#0A0C11</Color>
+  <Color x:Key="Bg1Color">#11141B</Color>
+  <Color x:Key="Bg2Color">#181C25</Color>
+  <Color x:Key="Bg3Color">#212632</Color>
+  <Color x:Key="Bg4Color">#2B3140</Color>
+  <Color x:Key="LineColor">#262C39</Color>
+
+  <!-- Text. -->
+  <Color x:Key="TextColor">#F3F5F9</Color>
+  <Color x:Key="TextDimColor">#A7AFC0</Color>
+  <Color x:Key="TextFaintColor">#7F889B</Color>
+
+  <!-- Accent: hardwood orange. One accent only, so it always means "this is the thing". -->
+  <Color x:Key="AccentColor">#FF5A1F</Color>
+  <Color x:Key="AccentHoverColor">#FF7A47</Color>
+  <Color x:Key="AccentPressedColor">#E04A12</Color>
+  <Color x:Key="AccentSoftColor">#33FF5A1F</Color>
+  <Color x:Key="AccentFaintColor">#14FF5A1F</Color>
+
+  <!-- Status. -->
+  <Color x:Key="GoodColor">#3DDC84</Color>
+  <Color x:Key="WarnColor">#FFB020</Color>
+  <Color x:Key="BadColor">#FF4D5E</Color>
+  <Color x:Key="InfoColor">#38C8FF</Color>
+
+  <!-- Rating tiers (Overall). -->
+  <Color x:Key="TierEliteColor">#B98CFF</Color>
+  <Color x:Key="TierStarColor">#FFC83D</Color>
+  <Color x:Key="TierStarterColor">#38C8FF</Color>
+  <Color x:Key="TierRotationColor">#3DDC84</Color>
+  <Color x:Key="TierBenchColor">#8A93A6</Color>
+  <Color x:Key="TierFringeColor">#5F687A</Color>
+
+  <SolidColorBrush x:Key="Bg0Brush" Color="{StaticResource Bg0Color}" />
+  <SolidColorBrush x:Key="Bg1Brush" Color="{StaticResource Bg1Color}" />
+  <SolidColorBrush x:Key="Bg2Brush" Color="{StaticResource Bg2Color}" />
+  <SolidColorBrush x:Key="Bg3Brush" Color="{StaticResource Bg3Color}" />
+  <SolidColorBrush x:Key="Bg4Brush" Color="{StaticResource Bg4Color}" />
+  <SolidColorBrush x:Key="LineBrush" Color="{StaticResource LineColor}" />
+  <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
+  <SolidColorBrush x:Key="TextDimBrush" Color="{StaticResource TextDimColor}" />
+  <SolidColorBrush x:Key="TextFaintBrush" Color="{StaticResource TextFaintColor}" />
+  <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+  <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHoverColor}" />
+  <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource AccentPressedColor}" />
+  <SolidColorBrush x:Key="AccentSoftBrush" Color="{StaticResource AccentSoftColor}" />
+  <SolidColorBrush x:Key="AccentFaintBrush" Color="{StaticResource AccentFaintColor}" />
+  <SolidColorBrush x:Key="GoodBrush" Color="{StaticResource GoodColor}" />
+  <SolidColorBrush x:Key="WarnBrush" Color="{StaticResource WarnColor}" />
+  <SolidColorBrush x:Key="BadBrush" Color="{StaticResource BadColor}" />
+  <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}" />
+  <SolidColorBrush x:Key="TierEliteBrush" Color="{StaticResource TierEliteColor}" />
+  <SolidColorBrush x:Key="TierStarBrush" Color="{StaticResource TierStarColor}" />
+  <SolidColorBrush x:Key="TierStarterBrush" Color="{StaticResource TierStarterColor}" />
+  <SolidColorBrush x:Key="TierRotationBrush" Color="{StaticResource TierRotationColor}" />
+  <SolidColorBrush x:Key="TierBenchBrush" Color="{StaticResource TierBenchColor}" />
+  <SolidColorBrush x:Key="TierFringeBrush" Color="{StaticResource TierFringeColor}" />
+
+  <!-- The identity banner: a dark sweep that warms into the accent at the far edge. -->
+  <LinearGradientBrush x:Key="BannerBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Offset="0" Color="#11141B" />
+    <GradientStop Offset="0.62" Color="#171A22" />
+    <GradientStop Offset="1" Color="#4A1E10" />
+  </LinearGradientBrush>
+
+  <!-- Sizes. -->
+  <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
+  <CornerRadius x:Key="RadiusMedium">8</CornerRadius>
+  <x:Double x:Key="RowHeight">34</x:Double>
+
+  <!-- Navigation icons: 24x24, stroked-look filled paths, drawn for this project. -->
+  <StreamGeometry x:Key="Icon.Roster">M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM1 20c0-3.9 3.6-7 8-7s8 3.1 8 7v1H1v-1Zm17.5-6.8c2.6.6 4.5 2.8 4.5 5.3V20h-4v-1c0-2.3-.9-4.3-2.4-5.8.6 0 1.2 0 1.9 0Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.CapSheet">M12 1a11 11 0 1 0 0 22 11 11 0 0 0 0-22Zm1 17.9V20h-2v-1.1c-1.9-.3-3.3-1.5-3.5-3.3h2.1c.2.9 1 1.5 2.4 1.5 1.5 0 2.2-.6 2.2-1.4 0-.9-.7-1.3-2.6-1.8-2.4-.6-3.8-1.4-3.8-3.4 0-1.6 1.3-2.8 3.2-3.1V6h2v1.4c1.8.4 2.9 1.6 3.1 3.2h-2.1c-.2-.8-.9-1.3-2.1-1.3-1.3 0-1.9.6-1.9 1.3 0 .8.7 1.1 2.6 1.6 2.4.6 3.8 1.5 3.8 3.6 0 1.7-1.3 2.8-3.4 3.1Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.PickBoard">M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4a3 3 0 0 0 0 6v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4a3 3 0 0 0 0-6V5Zm6 2v2h2V7H9Zm0 4v2h2v-2H9Zm0 4v2h2v-2H9Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Trade">M16 3l5 5-5 5V9.5H4v-3h12V3ZM8 11v3.5h12v3H8V21l-5-5 5-5Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.FreeAgency">M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm8 1.5V8h4.5L14 3.5ZM7 12v2h10v-2H7Zm0 4v2h6v-2H7Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.FreeAgencyBoard">M3 3h8v8H3V3Zm10 0h8v8h-8V3ZM3 13h8v8H3v-8Zm10 0h8v8h-8v-8Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Calendar">M7 1h2v2h6V1h2v2h2a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2V1ZM5 9v11h14V9H5Zm2 2h4v4H7v-4Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.FrontOffice">M9 2h6a2 2 0 0 1 2 2v2h4a2 2 0 0 1 2 2v4H1V8a2 2 0 0 1 2-2h4V4a2 2 0 0 1 2-2Zm0 2v2h6V4H9ZM1 14h9v2h4v-2h9v6a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-6Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Contracts">M5 2h10l4 4v5.5a6.5 6.5 0 0 0-8.9 10.5H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm1 6v2h8V8H6Zm0 4v2h5v-2H6Zm11 1a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm-.9 2.2v3.3l2.8 1.7.8-1.3-2.1-1.3v-2.4h-1.5Z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.Default">M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z</StreamGeometry>
+</ResourceDictionary>

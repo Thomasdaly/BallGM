@@ -151,7 +151,7 @@ internal static class FixtureDraftAssets
     /// tradable horizon. Registering them all up front is what lets an obligation roll forward: a
     /// rollover needs the following draft's pick to already exist.
     /// </summary>
-    private static DomainOperationResult RegisterPicks(
+    internal static DomainOperationResult RegisterPicks(
         DraftAssetBook book,
         LeagueId leagueId,
         Season currentSeason,

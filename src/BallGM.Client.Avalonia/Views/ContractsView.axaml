@@ -1,0 +1,198 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.ContractsView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:app="clr-namespace:BallGM.Application.Players;assembly=BallGM.Application"
+  xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:ContractsViewModel">
+  <ScrollViewer>
+    <StackPanel Spacing="18">
+
+      <!-- Alerts first: a refusal is the thing to act on. -->
+      <Border Classes="callout bad" IsVisible="{Binding HasAlerts}">
+        <StackPanel Spacing="6">
+          <TextBlock Text="{Binding AlertCountLine, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="eyebrow" />
+          <ItemsControl ItemsSource="{Binding Alerts}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="app:ExtensionRefusalLine">
+                <StackPanel Spacing="1" Margin="0,2">
+                  <TextBlock Classes="strong">
+                    <Run Text="{Binding FullName}" />
+                    <Run Text=" · " />
+                    <Run Text="{Binding TeamName}" />
+                  </TextBlock>
+                  <TextBlock Text="{Binding Explanation}" Classes="small" TextWrapping="Wrap" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <!-- Payroll outlook. -->
+      <Border Classes="panel">
+        <StackPanel Spacing="12">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Text="PAYROLL OUTLOOK" Classes="eyebrow accent" />
+              <TextBlock Text="{Binding OutlookHeadline}" Classes="dim" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <TextBlock Text="CAP GROWTH / SEASON" Classes="eyebrow" VerticalAlignment="Center" />
+              <ComboBox ItemsSource="{Binding GrowthOptions}" SelectedItem="{Binding CapGrowthPercent}" MinWidth="80">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="x:Int32">
+                    <TextBlock Text="{Binding StringFormat='{}{0}%'}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
+          </Grid>
+
+          <StackPanel Orientation="Horizontal" Margin="10,0,0,0">
+            <TextBlock Text="PLAYER" Width="250" Classes="eyebrow" FontSize="10" />
+            <ItemsControl ItemsSource="{Binding Seasons}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Text="{Binding}" Width="130" Classes="eyebrow" FontSize="10" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <ItemsControl Classes="table" ItemsSource="{Binding OutlookRows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:OutlookRow">
+                <StackPanel Orientation="Horizontal" Height="28">
+                  <StackPanel Orientation="Horizontal" Width="250" Spacing="8" VerticalAlignment="Center">
+                    <Border Classes="ovr small" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}">
+                      <TextBlock Text="{Binding Overall}" />
+                    </Border>
+                    <TextBlock Text="{Binding FullName}" Classes="strong small" TextTrimming="CharacterEllipsis" MaxWidth="170" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Position}" Classes="faint tiny" VerticalAlignment="Center" />
+                  </StackPanel>
+                  <ItemsControl ItemsSource="{Binding Cells}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:OutlookCell">
+                        <TextBlock Text="{Binding Text}" Width="130" Classes="num small" Classes.warn="{Binding IsOption}" Classes.accent="{Binding IsExtension}" VerticalAlignment="Center" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <ItemsControl ItemsSource="{Binding OutlookTotals}" Margin="10,6,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:OutlookTotalRow">
+                <StackPanel Orientation="Horizontal" Height="26">
+                  <TextBlock Text="{Binding Label}" Width="250" Classes="small" Classes.strong="{Binding Emphasis}" Classes.dim="{Binding !Emphasis}" VerticalAlignment="Center" />
+                  <ItemsControl ItemsSource="{Binding Cells}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:OutlookTotalCell">
+                        <TextBlock Text="{Binding Text}" Width="130" Classes="num small" Classes.bad="{Binding IsBad}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="PO / TO = player / team option (not counted until taken up). Orange = an extension already signed. Lines beyond this season are projected at the growth rate chosen; roster holds charge for empty spots up to the roster minimum." Classes="faint tiny" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <!-- Upcoming free agents, by summer. -->
+      <Grid ColumnDefinitions="3*,2*" ColumnSpacing="24">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="UPCOMING FREE AGENTS" Classes="eyebrow accent" VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="1" IsChecked="{Binding WholeLeague}" OnContent="Whole league" OffContent="This team" />
+          </Grid>
+          <ItemsControl ItemsSource="{Binding FreeAgentClasses}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:FreeAgentClassRow">
+                <StackPanel Spacing="4" Margin="0,0,0,14">
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Border Classes="slash" />
+                    <TextBlock Text="{Binding Summer}" Classes="h3" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding CountLine}" Classes="faint tiny" VerticalAlignment="Center" />
+                  </StackPanel>
+                  <ItemsControl Classes="table" ItemsSource="{Binding Players}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:UpcomingFreeAgentRow">
+                        <Grid ColumnDefinitions="40,34,*,44,40,80,150,Auto" Height="32">
+                          <Border Classes="ovr small" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}">
+                            <TextBlock Text="{Binding Overall}" />
+                          </Border>
+                          <Border Grid.Column="1" Classes="face">
+                            <Image Source="{Binding PortraitPath, Converter={x:Static conv:ImagePathConverter.Instance}}" Stretch="UniformToFill" />
+                          </Border>
+                          <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding FullName}" Classes="strong small" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding TeamName}" Classes="faint tiny" TextTrimming="CharacterEllipsis" />
+                          </StackPanel>
+                          <TextBlock Grid.Column="3" Text="{Binding Position}" Classes="dim small" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="4" Text="{Binding Age}" Classes="dim small" VerticalAlignment="Center" />
+                          <TextBlock Grid.Column="5" Text="{Binding Salary}" Classes="num small" VerticalAlignment="Center" />
+                          <Border Grid.Column="6" Classes="pill" Classes.bad="{Binding RefusedExtension}">
+                            <TextBlock Text="{Binding Status}" />
+                          </Border>
+                          <Button Grid.Column="7" Content="Extend…" Classes="small" IsVisible="{Binding ExtensionEligible}" Padding="10,3"
+                                  Command="{Binding $parent[UserControl].((vm:ContractsViewModel)DataContext).SelectForExtensionCommand}"
+                                  CommandParameter="{Binding PlayerId}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+
+        <!-- Re-signing panel. -->
+        <Border Grid.Column="1" Classes="panel" VerticalAlignment="Top">
+          <StackPanel Spacing="10">
+            <TextBlock Text="RE-SIGN A PLAYER" Classes="eyebrow accent" />
+            <TextBlock Text="Pick an extension-eligible player (final season of his contract) from the list." Classes="faint small" TextWrapping="Wrap" IsVisible="{Binding !HasSelection}" />
+            <StackPanel Spacing="10" IsVisible="{Binding HasSelection}">
+              <TextBlock Text="{Binding Selected.FullName, FallbackValue=''}" Classes="h2" />
+              <TextBlock Text="{Binding TermsLine}" Classes="dim small" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding AskingLine}" Classes="strong small" TextWrapping="Wrap" />
+              <StackPanel Spacing="6" IsVisible="{Binding CanOffer}">
+                <TextBlock Text="FIRST SEASON ($M)" Classes="eyebrow" FontSize="10" />
+                <TextBox x:Name="ExtensionSalary" Text="{Binding OfferSalary}" />
+                <TextBlock Text="SEASONS" Classes="eyebrow" FontSize="10" />
+                <NumericUpDown Value="{Binding OfferSeasons}" Minimum="1" Maximum="6" Increment="1" FormatString="0" />
+                <TextBlock Text="ANNUAL RAISE (%)" Classes="eyebrow" FontSize="10" />
+                <NumericUpDown Value="{Binding OfferRaise}" Minimum="0" Maximum="8" Increment="1" FormatString="0" />
+                <Button Classes="primary" Content="OFFER EXTENSION" Command="{Binding OfferCommand}" HorizontalAlignment="Left" Margin="0,6,0,0" />
+              </StackPanel>
+            </StackPanel>
+            <Border Classes="callout" Classes.bad="{Binding !OutcomeAccepted}" IsVisible="{Binding HasOutcome}">
+              <TextBlock Text="{Binding Outcome}" TextWrapping="Wrap" />
+            </Border>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

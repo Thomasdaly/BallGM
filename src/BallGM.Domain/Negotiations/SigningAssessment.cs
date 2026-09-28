@@ -31,6 +31,11 @@ public enum SigningRouteKind
 
     /// <summary>One fixed allowance usable above the soft cap, possibly withdrawn above a higher line.</summary>
     StandardOverCapAllowance = 3,
+
+    /// <summary>
+    /// A smaller allowance a team keeps after losing the standard one, up to its own higher cut-off.
+    /// </summary>
+    ReducedOverCapAllowance = 4,
 }
 
 /// <summary>

@@ -5,6 +5,7 @@ using BallGM.Domain.Common;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Randomness;
+using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.Configuration;
 using BallGM.Rules.Negotiations;
 
@@ -131,6 +132,12 @@ public sealed class RulesFreeAgencyMarket : IFreeAgencyMarket
             return DomainOperationResult<MarketContext>.Failure(postseasonResult.Errors.ToArray());
         }
 
+        var capMechanicsResult = configuration.ToCapMechanics();
+        if (capMechanicsResult.IsFailure)
+        {
+            return DomainOperationResult<MarketContext>.Failure(capMechanicsResult.Errors.ToArray());
+        }
+
         return DomainOperationResult<MarketContext>.Success(new MarketContext(
             snapshot.CurrentSeason,
             day,
@@ -143,6 +150,7 @@ public sealed class RulesFreeAgencyMarket : IFreeAgencyMarket
             thresholdsResult.Value,
             negotiationRulesResult.Value,
             random,
-            postseasonResult.Value));
+            postseasonResult.Value,
+            capMechanicsResult.Value));
     }
 }

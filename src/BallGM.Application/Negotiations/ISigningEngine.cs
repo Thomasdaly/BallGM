@@ -48,7 +48,21 @@ public interface ISigningEngine
     /// the architecture boundary tests exist to keep out of the presentation layer.
     /// </summary>
     CompensationLimits LimitsFor(LeagueSnapshot snapshot, int seasonsOfService);
+
+    /// <summary>
+    /// Reads an extension offer to a player already under contract with the offering team: whether
+    /// it is legal, and whether the player accepts. Never mutates.
+    /// </summary>
+    DomainOperationResult<ExtensionAssessment> AssessExtension(Offer offer, LeagueSnapshot snapshot);
+
+    /// <summary>
+    /// Re-assesses and, if legal and accepted, records the extension as a new contract. A refusal
+    /// comes back as a success carrying the refusal and no contract — the player said no, nothing failed.
+    /// </summary>
+    DomainOperationResult<ExtensionResult> ExecuteExtension(Offer offer, LeagueSnapshot snapshot);
 }
+
+public sealed record ExtensionResult(ExtensionAssessment Assessment, Contract? Contract);
 
 /// <summary>
 /// The floor and ceiling for one player's service. Either may be <c>null</c>, meaning the league

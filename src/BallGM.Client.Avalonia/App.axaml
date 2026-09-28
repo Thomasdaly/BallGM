@@ -2,8 +2,50 @@
   x:Class="BallGM.Client.Avalonia.App"
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  RequestedThemeVariant="Default">
+  RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Tokens.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
   <Application.Styles>
-    <FluentTheme />
+    <!-- Fluent supplies control templates; its dark palette is retuned to the design tokens so
+         stock controls (combo boxes, focus rings, scroll bars) match the custom surfaces. -->
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources
+          x:Key="Dark"
+          Accent="#FF5A1F"
+          AltHigh="#0A0C11"
+          AltLow="#0A0C11"
+          AltMedium="#0A0C11"
+          AltMediumHigh="#0A0C11"
+          AltMediumLow="#0A0C11"
+          BaseHigh="#F3F5F9"
+          BaseLow="#262C39"
+          BaseMedium="#9BA4B6"
+          BaseMediumHigh="#C3CAD6"
+          BaseMediumLow="#5F687A"
+          ChromeAltLow="#C3CAD6"
+          ChromeBlackHigh="#000000"
+          ChromeBlackLow="#C3CAD6"
+          ChromeBlackMedium="#000000"
+          ChromeBlackMediumLow="#000000"
+          ChromeDisabledHigh="#262C39"
+          ChromeDisabledLow="#5F687A"
+          ChromeGray="#8A93A6"
+          ChromeHigh="#8A93A6"
+          ChromeLow="#11141B"
+          ChromeMedium="#181C25"
+          ChromeMediumLow="#212632"
+          ChromeWhite="#FFFFFF"
+          ListLow="#181C25"
+          ListMedium="#262C39"
+          RegionColor="#0A0C11" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
+    <StyleInclude Source="avares://BallGM.Client.Avalonia/Themes/Controls.axaml" />
   </Application.Styles>
 </Application>

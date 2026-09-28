@@ -18,11 +18,17 @@
     <InternalsVisibleTo Include="BallGM.Client.Avalonia.Tests" />
   </ItemGroup>
 
-  <!-- Debug builds only: lets Avalonia Developer Tools (`avdt mcp`) and the Zafiro Avalonia MCP
-       server attach to the running client. Never shipped in a Release build. -->
-  <ItemGroup Condition="'$(Configuration)' == 'Debug'">
-    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" />
-    <PackageReference Include="Zafiro.Avalonia.Mcp.AppHost" />
+  <!-- Developer tooling: lets Avalonia Developer Tools (`avdt mcp`) and the Zafiro Avalonia MCP
+       server attach to a running client. Only Debug builds call into them (App.axaml.cs and
+       Program.cs, under #if DEBUG).
+
+       Referenced unconditionally on purpose: NuGet restore does not see the build configuration,
+       so a Configuration-conditioned PackageReference made the restore depend on which command ran
+       first — and CI's configuration-less restore put them in Release builds anyway. Publish="false"
+       is what keeps them, and Zafiro's Roslyn dependency, out of published (shipped) output. -->
+  <ItemGroup>
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Publish="false" />
+    <PackageReference Include="Zafiro.Avalonia.Mcp.AppHost" Publish="false" />
   </ItemGroup>
 
   <PropertyGroup>

@@ -168,6 +168,25 @@ internal sealed class TradeTestLeague
         return this;
     }
 
+    public CapMechanics CapMechanics { get; private set; } = CapMechanics.None;
+
+    /// <summary>Gives a player a signed extension starting the season after his current contract.</summary>
+    public TradeTestLeague WithExtension(string teamKey, int playerIndex, long salary)
+    {
+        _contracts.Add(Contract.Create(
+            new ContractId($"EXTENSION-{teamKey}-{playerIndex}"),
+            _teams[teamKey].Id,
+            PlayerOf(teamKey, playerIndex),
+            [new ContractSeasonTerm(new Season(CurrentSeason.Year + 1), new Money(salary), new Money(salary))]).Value);
+        return this;
+    }
+
+    public TradeTestLeague WithCapMechanics(CapMechanics mechanics)
+    {
+        CapMechanics = mechanics;
+        return this;
+    }
+
     public TradeTestLeague WithTradeRules(TradeRules tradeRules)
     {
         TradeRules = tradeRules;
@@ -194,7 +213,8 @@ internal sealed class TradeTestLeague
         RosterLimits,
         CapThresholds,
         TradeRules,
-        DraftRules);
+        DraftRules,
+        CapMechanics);
 
     /// <summary>Builds a proposal against the league as it stands, so it starts out fresh rather than stale.</summary>
     public TradeProposal Proposal(params TradeAssetMovement[] movements)

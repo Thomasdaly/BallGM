@@ -30,6 +30,11 @@ public static class SigningRouteTable
     public const string PermittedCapRoomCode = "signing.permitted_cap_room";
     public const string PermittedMinimumCode = "signing.permitted_minimum_salary";
     public const string PermittedAllowanceCode = "signing.permitted_standard_allowance";
+    public const string PermittedReducedAllowanceCode = "signing.permitted_reduced_allowance";
+    public const string ReducedAllowanceNotNeededCode = "signing.reduced_allowance_standard_available";
+    public const string ReducedAllowanceWithdrawnCode = "signing.reduced_allowance_unavailable_above_threshold";
+    public const string InsufficientReducedAllowanceCode = "signing.insufficient_reduced_allowance";
+    public const string NoReducedAllowanceRouteCode = "signing.no_reduced_allowance_configured";
 
     public const string InsufficientCapRoomCode = "signing.insufficient_cap_room";
     public const string AboveMinimumCode = "signing.above_minimum_salary";
@@ -63,7 +68,9 @@ public static class SigningRouteTable
         Money payrollBeforeSigning,
         Money holdReleasedBySigning,
         Money allowanceAlreadyCommitted,
-        int allowanceSigningsAlreadyMade)
+        int allowanceSigningsAlreadyMade,
+        CapMechanics? mechanics = null,
+        Money? reducedAllowanceAlreadyCommitted = null)
     {
         ArgumentNullException.ThrowIfNull(offer);
         ArgumentNullException.ThrowIfNull(rules);
@@ -78,6 +85,7 @@ public static class SigningRouteTable
             MinimumSalary(offer, rules, seasonsOfService),
             CapRoom(offer, thresholds, payrollBeforeSigning, holdReleasedBySigning),
             StandardAllowance(offer, rules, thresholds, payrollBeforeSigning, allowanceAlreadyCommitted, allowanceSigningsAlreadyMade),
+            ReducedAllowance(offer, rules, thresholds, mechanics ?? CapMechanics.None, payrollBeforeSigning, reducedAllowanceAlreadyCommitted ?? Money.Zero),
         ];
     }
 
@@ -230,6 +238,73 @@ public static class SigningRouteTable
     }
 
     /// <summary>
+    /// The allowance a team keeps once its payroll has climbed past the standard allowance's cut-off,
+    /// up to a cut-off of its own. Tried after the standard allowance, so a team still entitled to the
+    /// larger pot is never steered into the smaller one.
+    /// </summary>
+    private static SigningRouteEvaluation ReducedAllowance(
+        Offer offer,
+        NegotiationRules rules,
+        CapThresholds thresholds,
+        CapMechanics mechanics,
+        Money payrollBeforeSigning,
+        Money alreadyCommitted)
+    {
+        if (mechanics.ReducedOverCapAllowance is not { } allowance)
+        {
+            return new SigningRouteEvaluation(
+                SigningRouteKind.ReducedOverCapAllowance,
+                Applicable: false,
+                Permits: false,
+                MaximumFirstSeasonCompensation: null,
+                NoReducedAllowanceRouteCode,
+                "This league configures no reduced over-cap allowance.");
+        }
+
+        var standardCutoff = rules.StandardOverCapAllowanceUnavailableAbove is { } standardKind
+            ? thresholds.Configured.FirstOrDefault(entry => entry.Kind == standardKind).Amount
+            : null;
+        if (rules.StandardOverCapAllowance is not null && (standardCutoff is null || payrollBeforeSigning <= standardCutoff))
+        {
+            return new SigningRouteEvaluation(
+                SigningRouteKind.ReducedOverCapAllowance,
+                Applicable: false,
+                Permits: false,
+                MaximumFirstSeasonCompensation: null,
+                ReducedAllowanceNotNeededCode,
+                "The team still has access to the standard over-cap allowance, so the reduced one does not apply.");
+        }
+
+        if (mechanics.ReducedOverCapAllowanceUnavailableAbove is { } limitKind)
+        {
+            var limit = thresholds.Configured.FirstOrDefault(entry => entry.Kind == limitKind).Amount;
+            if (limit is not null && payrollBeforeSigning > limit)
+            {
+                return new SigningRouteEvaluation(
+                    SigningRouteKind.ReducedOverCapAllowance,
+                    Applicable: true,
+                    Permits: false,
+                    Money.Zero,
+                    ReducedAllowanceWithdrawnCode,
+                    $"The team's payroll of {payrollBeforeSigning.SmallestUnits} is above the {Describe(limitKind)} of {limit.SmallestUnits}, where this league withdraws the reduced allowance too.");
+            }
+        }
+
+        var remaining = new Money(Math.Max(0, allowance.SmallestUnits - alreadyCommitted.SmallestUnits));
+        var permits = offer.FirstSeasonCompensation <= remaining && remaining.SmallestUnits > 0;
+
+        return new SigningRouteEvaluation(
+            SigningRouteKind.ReducedOverCapAllowance,
+            Applicable: true,
+            Permits: permits,
+            remaining,
+            permits ? PermittedReducedAllowanceCode : InsufficientReducedAllowanceCode,
+            permits
+                ? $"Past the standard allowance's cut-off the team keeps a reduced allowance, {remaining.SmallestUnits} of it left, which covers this offer's first season of {offer.FirstSeasonCompensation.SmallestUnits}."
+                : $"The team's reduced over-cap allowance has {remaining.SmallestUnits} left, and this offer's first season is {offer.FirstSeasonCompensation.SmallestUnits}.");
+    }
+
+    /// <summary>
     /// How much of the standard allowance a team has already committed this season, read back from
     /// the ledger rather than kept as a running total. A stored balance is a second account of the
     /// same events, and a rolled-back signing would leave it wrong with nothing to notice.
@@ -237,14 +312,15 @@ public static class SigningRouteTable
     public static (Money Committed, int Signings) AllowanceUsed(
         TransactionLedger ledger,
         TeamId teamId,
-        Season season)
+        Season season,
+        SigningRouteKind route = SigningRouteKind.StandardOverCapAllowance)
     {
         ArgumentNullException.ThrowIfNull(ledger);
         ArgumentNullException.ThrowIfNull(teamId);
         ArgumentNullException.ThrowIfNull(season);
 
         var entries = ledger.EntriesForTeam(teamId)
-            .Where(entry => entry.SigningRoute == SigningRouteKind.StandardOverCapAllowance)
+            .Where(entry => entry.SigningRoute == route)
             .Where(entry => entry.Season == season)
             .ToList();
 

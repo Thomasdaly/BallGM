@@ -373,6 +373,9 @@ public sealed class GetLeagueOverviewQueryTests
     /// </summary>
     private sealed class StubCapLedger : ICapLedger
     {
+        public DomainOperationResult<CapStatus> Status(TeamId teamId, Money payroll, bool isTaxRepeater, LeagueConfiguration configuration) =>
+            DomainOperationResult<CapStatus>.Success(CapStatus.None);
+
         public DomainOperationResult<TeamCapSheet> Evaluate(
             TeamId teamId,
             Season season,
@@ -478,6 +481,9 @@ public sealed class GetLeagueOverviewQueryTests
 
     private sealed class FailingCapLedger : ICapLedger
     {
+        public DomainOperationResult<CapStatus> Status(TeamId teamId, Money payroll, bool isTaxRepeater, LeagueConfiguration configuration) =>
+            DomainOperationResult<CapStatus>.Success(CapStatus.None);
+
         public DomainOperationResult<TeamCapSheet> Evaluate(
             TeamId teamId,
             Season season,

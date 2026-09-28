@@ -145,6 +145,7 @@ public sealed class SigningValidator
         }
 
         var allowanceUsed = SigningRouteTable.AllowanceUsed(context.Ledger, context.Team.Id, season);
+        var reducedUsed = SigningRouteTable.AllowanceUsed(context.Ledger, context.Team.Id, season, SigningRouteKind.ReducedOverCapAllowance);
 
         var routes = SigningRouteTable.Evaluate(
             offer,
@@ -154,7 +155,9 @@ public sealed class SigningValidator
             before.TotalPayroll,
             HoldReleasedBySigning(before, rules),
             allowanceUsed.Committed,
-            allowanceUsed.Signings);
+            allowanceUsed.Signings,
+            context.CapMechanics,
+            reducedUsed.Committed);
 
         if (!routes.Any(route => route.Permits))
         {

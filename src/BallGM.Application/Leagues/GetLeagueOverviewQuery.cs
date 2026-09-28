@@ -100,7 +100,8 @@ public sealed class GetLeagueOverviewQuery(
                 franchiseName,
                 team.RosterCount,
                 roster,
-                capSheetResult.Value));
+                capSheetResult.Value,
+                snapshot.Artwork.LogoFor(team.Id)));
         }
 
         var pickBoardResult = BuildPickBoard(snapshot, franchisesById);
@@ -335,6 +336,22 @@ public sealed class GetLeagueOverviewQuery(
             .Select(ToLine)
             .ToList();
 
+        var statusResult = _capLedger.Status(team.Id, capSheet.TotalPayroll, snapshot.TaxRepeaterTeams.Contains(team.Id.Value), snapshot.Configuration);
+        if (statusResult.IsFailure)
+        {
+            return DomainOperationResult<TeamCapSummary>.Failure(statusResult.Errors.ToArray());
+        }
+
+        var status = statusResult.Value;
+        var taxBill = status.TaxBill is { } bill
+            ? new TaxBillSummary(
+                bill.TaxLine.SmallestUnits,
+                bill.AmountOverTaxLine.SmallestUnits,
+                bill.TaxOwed.SmallestUnits,
+                bill.IsRepeater,
+                bill.Brackets.Select(bracket => new TaxBracketLine(bracket.Bracket, bracket.SalaryInBracket.SmallestUnits, bracket.RatePercent, bracket.Tax.SmallestUnits)).ToList())
+            : null;
+
         return DomainOperationResult<TeamCapSummary>.Success(new TeamCapSummary(
             capSheet.Season.Year,
             capSheet.CommittedSalary.SmallestUnits,
@@ -343,7 +360,9 @@ public sealed class GetLeagueOverviewQuery(
             capSheet.TotalPayroll.SmallestUnits,
             capSheet.Thresholds.Select(ToSummary).ToList(),
             chargeLines,
-            transactionLines));
+            transactionLines,
+            taxBill,
+            status.Restrictions.Select(finding => new CapRestrictionLine(finding.RuleCode, finding.Explanation)).ToList()));
     }
 
     private static ThresholdStandingSummary ToSummary(ThresholdStanding standing) =>
@@ -407,7 +426,8 @@ public sealed class GetLeagueOverviewQuery(
                 player.IsInjured,
                 player.CurrentInjury?.Description,
                 contract?.ChargeFor(snapshot.CurrentSeason)?.Amount.SmallestUnits ?? 0,
-                SeasonsRemaining(contract, snapshot.CurrentSeason)));
+                SeasonsRemaining(contract, snapshot.CurrentSeason),
+                snapshot.Artwork.PortraitFor(player.Id)));
         }
 
         // Best player first: the roster grid's whole job at this milestone is "who have I got".

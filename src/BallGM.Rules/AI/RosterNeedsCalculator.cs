@@ -28,6 +28,7 @@ public static class RosterNeedsCalculator
     public static RosterNeedsAssessment Assess(
         TeamId teamId,
         DepthChart depthChart,
+        int rosterCount,
         IReadOnlyDictionary<PlayerId, Player> playersById,
         RosterSizeLimits rosterSizeLimits,
         TeamCapSheet capSheet)
@@ -51,11 +52,13 @@ public static class RosterNeedsCalculator
 
         var notes = new List<RuleFinding>();
 
-        if (depthChart.PlayerCount < rosterSizeLimits.MinimumPlayers)
+        // The roster, not the rotation: a depth chart stops at the rotation cap, so a full roster
+        // would read as "short" if its size were taken from the chart.
+        if (rosterCount < rosterSizeLimits.MinimumPlayers)
         {
             notes.Add(new RuleFinding(
                 BelowRosterMinimumCode,
-                $"Team '{teamId.Value}' carries {depthChart.PlayerCount} players, below this league's roster minimum of {rosterSizeLimits.MinimumPlayers}.",
+                $"Team '{teamId.Value}' carries {rosterCount} players, below this league's roster minimum of {rosterSizeLimits.MinimumPlayers}.",
                 teamId));
         }
 

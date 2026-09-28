@@ -131,24 +131,32 @@ public sealed class TradeExecutor
         ILookup<PlayerId, Contract> contractsByPlayer,
         Stack<Action> undo)
     {
-        var contract = contractsByPlayer[movement.PlayerId!]
-            .FirstOrDefault(candidate => candidate.TeamId == movement.FromTeamId);
+        // Every contract the player has with the sending team moves — the current one and any
+        // extension already signed to follow it — or the extension would stay behind with a team the
+        // player no longer plays for.
+        var contracts = contractsByPlayer[movement.PlayerId!]
+            .Where(candidate => candidate.TeamId == movement.FromTeamId && !candidate.IsTerminated)
+            .ToList();
 
-        if (contract is null)
+        if (contracts.Count == 0)
         {
             return DomainOperationResult.Failure(new DomainError(
                 "trade.player_has_no_contract",
                 $"Player '{movement.PlayerId!.Value}' has no live contract with team '{movement.FromTeamId.Value}'."));
         }
 
-        var previousTeam = contract.TeamId;
-        var result = contract.TransferTo(movement.ToTeamId);
-        if (result.IsFailure)
+        foreach (var contract in contracts)
         {
-            return result;
+            var previousTeam = contract.TeamId;
+            var result = contract.TransferTo(movement.ToTeamId);
+            if (result.IsFailure)
+            {
+                return result;
+            }
+
+            undo.Push(() => contract.TransferTo(previousTeam));
         }
 
-        undo.Push(() => contract.TransferTo(previousTeam));
         return DomainOperationResult.Success;
     }
 

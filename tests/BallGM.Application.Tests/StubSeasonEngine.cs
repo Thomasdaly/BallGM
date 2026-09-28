@@ -89,6 +89,8 @@ internal sealed class StubSeasonEngine : ISeasonEngine
 
     public Standings Standings(SeasonRun run, LeagueSnapshot snapshot) => Domain.Seasons.Standings.Empty;
 
+    public IReadOnlyList<PlayerSeasonStatLine> PlayerSeasonStats(SeasonRun run) => [];
+
     public DomainOperationResult<DepthChartOutcome> DepthChart(
         SeasonRun run,
         LeagueSnapshot snapshot,

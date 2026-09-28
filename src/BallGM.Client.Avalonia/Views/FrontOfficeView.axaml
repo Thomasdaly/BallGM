@@ -7,11 +7,10 @@
   <ScrollViewer>
     <StackPanel Spacing="16">
       <StackPanel Spacing="2">
-        <TextBlock Text="Front office diagnostics" FontSize="22" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding Status}" Opacity="0.7" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Status}" Opacity="0.7" TextWrapping="Wrap" />
       </StackPanel>
 
-      <Border Padding="12" CornerRadius="4" Background="#20808080">
+      <Border Classes="panel">
         <StackPanel Spacing="8">
           <TextBlock TextWrapping="Wrap">
             "Run AI turn" lets this team act for itself right now: its own first legal trade, else
@@ -19,14 +18,14 @@
             engines a human proposal uses. Or act on a suggestion below yourself from the trade or
             free-agency screens instead.
           </TextBlock>
-          <Button Content="Run AI turn" Command="{Binding RunAiTurnCommand}" HorizontalAlignment="Left" />
+          <Button Classes="primary" Content="RUN AI TURN" Command="{Binding RunAiTurnCommand}" HorizontalAlignment="Left" />
           <TextBlock Text="{Binding TurnResultLine}" IsVisible="{Binding HasTurnResult}" FontWeight="SemiBold" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
 
       <StackPanel Spacing="8">
-        <TextBlock Text="DIRECTION" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        <TextBlock Text="{Binding DirectionLine}" FontSize="16" FontWeight="SemiBold" />
+        <TextBlock Classes="eyebrow" Text="DIRECTION" />
+        <TextBlock Classes="h2" Text="{Binding DirectionLine}" />
         <ItemsControl ItemsSource="{Binding DirectionFactors}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:AIFindingRow">
@@ -37,7 +36,7 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Text="ROSTER NEEDS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Classes="eyebrow" Text="ROSTER NEEDS" />
         <ItemsControl ItemsSource="{Binding PositionalNeeds}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:PositionalNeedRow">
@@ -59,12 +58,12 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Text="TRADE TARGETS THIS TEAM COULD PURSUE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Classes="eyebrow" Text="TRADE TARGETS THIS TEAM COULD PURSUE" />
         <TextBlock Text="No legal trade target found." IsVisible="{Binding !HasTradeTargets}" Opacity="0.65" />
         <ItemsControl ItemsSource="{Binding TradeTargets}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:TradeTargetRow">
-              <Border Padding="10" CornerRadius="4" Background="#14808080" Margin="0,0,0,8">
+              <Border Classes="card" Margin="0,0,0,8">
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding SummaryLine}" FontWeight="SemiBold" TextWrapping="Wrap" />
                   <TextBlock Text="{Binding PayrollLine}" Opacity="0.7" FontSize="12" />
@@ -83,12 +82,12 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Text="FREE-AGENT TARGETS THIS TEAM COULD PURSUE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Classes="eyebrow" Text="FREE-AGENT TARGETS THIS TEAM COULD PURSUE" />
         <TextBlock Text="No legal free-agent target found." IsVisible="{Binding !HasFreeAgentTargets}" Opacity="0.65" />
         <ItemsControl ItemsSource="{Binding FreeAgentTargets}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:FreeAgentTargetRow">
-              <Border Padding="10" CornerRadius="4" Background="#14808080" Margin="0,0,0,8">
+              <Border Classes="card" Margin="0,0,0,8">
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding PlayerName}" FontWeight="SemiBold" />
                   <TextBlock Text="{Binding OfferLine}" Opacity="0.7" FontSize="12" />
@@ -107,13 +106,13 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Text="DRAFT PREVIEW" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Classes="eyebrow" Text="DRAFT PREVIEW" />
         <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12">
           Generated fresh for this screen and never persisted — not the class the real draft will
           actually use.
         </TextBlock>
         <TextBlock Text="{Binding DraftPreviewNote}" IsVisible="{Binding !HasDraftPreview}" Opacity="0.7" TextWrapping="Wrap" />
-        <Border Padding="10" CornerRadius="4" Background="#14808080" IsVisible="{Binding HasDraftPreview}">
+        <Border Classes="card" IsVisible="{Binding HasDraftPreview}">
           <StackPanel Spacing="2">
             <TextBlock Text="{Binding DraftPreview.SummaryLine}" FontWeight="SemiBold" />
             <ItemsControl ItemsSource="{Binding DraftPreview.Rationale}">

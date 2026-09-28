@@ -13,6 +13,7 @@ namespace BallGM.Client.Avalonia.ViewModels;
 /// </summary>
 public sealed class MainWindowViewModel : ViewModelBase
 {
+    private readonly LeagueSession? _session;
     private RosterViewModel? _roster;
     private CapSheetViewModel? _capSheet;
     private PickBoardViewModel? _pickBoard;
@@ -27,6 +28,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ArgumentNullException.ThrowIfNull(session);
 
         HasLeague = true;
+        _session = session;
         LeagueName = overview.LeagueName;
 
         // The ruleset clause only earns its space when a data pack names the ruleset something other
@@ -36,7 +38,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             : $"{overview.Teams.Count} teams · {overview.RegularSeasonGameCount}-game regular season · ruleset \"{overview.RulesetName}\"";
 
         _teams = overview.Teams;
-        _roster = new RosterViewModel(overview);
+        _roster = new RosterViewModel(overview, session.PlayerSeasonTotals, session.PlayerProfile);
         _capSheet = new CapSheetViewModel(overview);
         _pickBoard = new PickBoardViewModel(overview);
         Trade = new TradeProposalViewModel(overview, session, ApplyLeagueChange);
@@ -44,8 +46,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         FreeAgencyBoard = new FreeAgencyBoardViewModel(overview, session, ApplyLeagueChange);
         Season = new SeasonViewModel(session, ApplyLeagueChange);
         FrontOffice = new FrontOfficeViewModel(session, ApplyLeagueChange);
+        Contracts = new ContractsViewModel(session, () => ApplyLeagueChange(session.Overview() is { IsSuccess: true } refreshed ? refreshed.Value : overview));
 
-        Sections = [_roster.Title, _capSheet.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, Season.Title, FrontOffice.Title];
+        Sections = [_roster.Title, _capSheet.Title, Contracts.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, Season.Title, FrontOffice.Title];
         SelectedTeam = Teams.FirstOrDefault();
         SelectedSection = Sections[0];
     }
@@ -66,6 +69,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         FreeAgencyBoard = null;
         Season = null;
         FrontOffice = null;
+        Contracts = null;
     }
 
     public bool HasLeague { get; }
@@ -103,15 +107,53 @@ public sealed class MainWindowViewModel : ViewModelBase
     /// </summary>
     public FrontOfficeViewModel? FrontOffice { get; }
 
+    /// <summary>Payroll outlook, upcoming free agents, and re-signing. Held for the run: refusals are session state.</summary>
+    public ContractsViewModel? Contracts { get; }
+
+    /// <summary>The banner's alert chip: players who have refused to re-sign with the selected team.</summary>
+    public string AlertLine => Contracts is null || _selectedTeam is null
+        ? string.Empty
+        : Contracts.Alerts.Count switch
+        {
+            0 => string.Empty,
+            1 => "1 player refused to re-sign",
+            var count => $"{count} players refused to re-sign",
+        };
+
+    public bool HasAlerts => AlertLine.Length > 0;
+
+    /// <summary>
+    /// The banner's second line: the roster at a glance, plus the franchise name only when it says
+    /// something the team name does not (in many leagues the two are the same).
+    /// </summary>
+    public string SelectedTeamDetail => _selectedTeam is null
+        ? string.Empty
+        : string.Join(" · ", new[]
+        {
+            string.Equals(_selectedTeam.FranchiseName, _selectedTeam.TeamName, StringComparison.Ordinal) ? null : _selectedTeam.FranchiseName,
+            $"{_selectedTeam.RosterCount} players",
+            $"{MoneyDisplay.ToMillions(_selectedTeam.Roster.Sum(spot => spot.CapCharge))} payroll",
+        }.Where(part => part is not null));
+
     public TeamSummary? SelectedTeam
     {
         get => _selectedTeam;
         set
         {
+            // Replacing the team list after a league change makes the combo box push a transient
+            // null before it re-reads the selection. Taking that null would leave the team-scoped
+            // screens reading "no team selected" for a team that is still selected.
+            if (value is null && Teams.Count > 0)
+            {
+                return;
+            }
+
             if (!SetProperty(ref _selectedTeam, value))
             {
                 return;
             }
+
+            RaisePropertyChanged(nameof(SelectedTeamDetail));
 
             if (_roster is not null)
             {
@@ -137,6 +179,14 @@ public sealed class MainWindowViewModel : ViewModelBase
             {
                 FrontOffice.Team = value;
             }
+
+            if (Contracts is not null)
+            {
+                Contracts.Team = value;
+            }
+
+            RaisePropertyChanged(nameof(AlertLine));
+            RaisePropertyChanged(nameof(HasAlerts));
         }
     }
 
@@ -159,8 +209,23 @@ public sealed class MainWindowViewModel : ViewModelBase
                 _ when FreeAgencyBoard is not null && value == FreeAgencyBoard.Title => FreeAgencyBoard,
                 _ when Season is not null && value == Season.Title => Season,
                 _ when FrontOffice is not null && value == FrontOffice.Title => FrontOffice,
+                _ when Contracts is not null && value == Contracts.Title => Contracts,
                 _ => _roster,
             };
+
+            // Games may have been played, or contracts signed, since these screens were last drawn.
+            if (CurrentScreen is RosterViewModel roster)
+            {
+                roster.Refresh();
+            }
+
+            if (CurrentScreen is ContractsViewModel contracts)
+            {
+                contracts.Refresh();
+            }
+
+            RaisePropertyChanged(nameof(AlertLine));
+            RaisePropertyChanged(nameof(HasAlerts));
         }
     }
 
@@ -181,16 +246,35 @@ public sealed class MainWindowViewModel : ViewModelBase
         var selectedTeamId = _selectedTeam?.TeamId;
 
         Teams = overview.Teams;
-        _roster = new RosterViewModel(overview);
+        _roster = new RosterViewModel(overview, _session is null ? null : _session.PlayerSeasonTotals, _session is null ? null : _session.PlayerProfile);
         _capSheet = new CapSheetViewModel(overview);
         _pickBoard = new PickBoardViewModel(overview);
 
         _selectedTeam = Teams.FirstOrDefault(team => team.TeamId == selectedTeamId) ?? Teams.FirstOrDefault();
         RaisePropertyChanged(nameof(SelectedTeam));
+        RaisePropertyChanged(nameof(SelectedTeamDetail));
 
         _roster.Team = _selectedTeam;
         _capSheet.Team = _selectedTeam;
         _pickBoard.Team = _selectedTeam;
+        if (FreeAgencyBoard is not null)
+        {
+            FreeAgencyBoard.Team = _selectedTeam;
+        }
+
+        if (FrontOffice is not null)
+        {
+            FrontOffice.Team = _selectedTeam;
+        }
+
+        if (Contracts is not null)
+        {
+            Contracts.Team = _selectedTeam;
+            Contracts.Refresh();
+        }
+
+        RaisePropertyChanged(nameof(AlertLine));
+        RaisePropertyChanged(nameof(HasAlerts));
 
         // The board rebuilds itself against the new league rather than being replaced: it is holding
         // a day, a selected free agent, and the standings of a market a GM is in the middle of

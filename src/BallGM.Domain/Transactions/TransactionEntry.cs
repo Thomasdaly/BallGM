@@ -48,6 +48,9 @@ public enum TransactionKind
 
     /// <summary>A player changed teams in a trade. Recorded against both teams, from each one's side.</summary>
     PlayerTraded = 12,
+
+    /// <summary>A player under contract agreed a new one with his own team, starting when the current one ends.</summary>
+    ContractExtended = 13,
 }
 
 public sealed record TransactionId

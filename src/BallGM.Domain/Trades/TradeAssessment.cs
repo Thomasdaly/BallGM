@@ -35,7 +35,8 @@ public sealed record TradeTeamOutcome(
     int RosterCountAfter,
     int PicksBefore,
     int PicksAfter,
-    IReadOnlyList<ThresholdStanding> ThresholdsAfter)
+    IReadOnlyList<ThresholdStanding> ThresholdsAfter,
+    int OutgoingContractCount = 0)
 {
     /// <summary>Payroll after minus payroll before: positive means the team took salary on.</summary>
     public long PayrollChangeSmallestUnits =>

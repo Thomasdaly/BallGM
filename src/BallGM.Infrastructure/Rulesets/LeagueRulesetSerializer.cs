@@ -107,7 +107,8 @@ public sealed class LeagueRulesetSerializer
             ruleset.RetirementRules.IsConfigured ? ToAgeCurveBands(ruleset.RetirementRules.VoluntaryOddsByAge) : null,
             ruleset.AwardRules.IsConfigured
                 ? ruleset.AwardRules.Awards.Select(award => new AwardEnvelope(award.Code, award.Name, award.StatBasis.ToString())).ToList()
-                : null);
+                : null,
+            ToEnvelope(ruleset.CapMechanics));
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -286,6 +287,12 @@ public sealed class LeagueRulesetSerializer
                 return DomainOperationResult<LeagueRuleset>.Failure(awardRulesResult.Errors.ToArray());
             }
 
+            var capMechanicsResult = BuildCapMechanics(envelope.CapMechanics);
+            if (capMechanicsResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(capMechanicsResult.Errors.ToArray());
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
@@ -303,7 +310,8 @@ public sealed class LeagueRulesetSerializer
                 draftLotteryRulesResult.Value,
                 developmentRulesResult.Value,
                 retirementRulesResult.Value,
-                awardRulesResult.Value);
+                awardRulesResult.Value,
+                capMechanicsResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
@@ -481,6 +489,54 @@ public sealed class LeagueRulesetSerializer
     }
 
     /// <summary>Maps the award section, absent in full for a league that hands out no awards.</summary>
+    internal static DomainOperationResult<CapMechanics> BuildCapMechanics(CapMechanicsEnvelope? envelope)
+    {
+        if (envelope is null)
+        {
+            return DomainOperationResult<CapMechanics>.Success(CapMechanics.None);
+        }
+
+        CapThresholdKind? cutoff = null;
+        if (envelope.ReducedOverCapAllowanceUnavailableAbove is { } cutoffName)
+        {
+            if (!Enum.TryParse<CapThresholdKind>(cutoffName, out var parsed) || !Enum.IsDefined(parsed))
+            {
+                return DomainOperationResult<CapMechanics>.Failure(new DomainError(
+                    "ruleset.unknown_threshold_kind",
+                    $"'{cutoffName}' is not a threshold this build knows. Expected one of: {string.Join(", ", Enum.GetNames<CapThresholdKind>())}."));
+            }
+
+            cutoff = parsed;
+        }
+
+        return CapMechanics.Create(
+            ToMoney(envelope.TaxBracketSize),
+            envelope.TaxRatesPercent,
+            envelope.RepeaterTaxRatesPercent,
+            envelope.TaxRateIncrementPercent,
+            envelope.SalaryMatchingBands?.Select(band => new SalaryMatchingBand(ToMoney(band.OutgoingUpTo), band.Percent, new Money(band.Allowance))).ToList(),
+            envelope.AboveFirstApronMatchPercent,
+            envelope.SecondApronBlocksAggregation,
+            ToMoney(envelope.ReducedOverCapAllowance),
+            cutoff);
+    }
+
+    internal static CapMechanicsEnvelope? ToEnvelope(CapMechanics mechanics) =>
+        !mechanics.IsConfigured
+            ? null
+            : new CapMechanicsEnvelope(
+                mechanics.TaxBracketSize?.SmallestUnits,
+                mechanics.TaxRatesPercent.Count > 0 ? mechanics.TaxRatesPercent : null,
+                mechanics.RepeaterTaxRatesPercent.Count > 0 ? mechanics.RepeaterTaxRatesPercent : null,
+                mechanics.HasTaxBill ? mechanics.TaxRateIncrementPercent : null,
+                mechanics.HasTieredMatching
+                    ? mechanics.SalaryMatchingBands.Select(band => new SalaryMatchingBandEnvelope(band.OutgoingUpTo?.SmallestUnits, band.Percent, band.Allowance.SmallestUnits)).ToList()
+                    : null,
+                mechanics.AboveFirstApronMatchPercent,
+                mechanics.SecondApronBlocksAggregation,
+                mechanics.ReducedOverCapAllowance?.SmallestUnits,
+                mechanics.ReducedOverCapAllowanceUnavailableAbove?.ToString());
+
     private static DomainOperationResult<AwardRules> BuildAwardRules(LeagueRulesetEnvelope envelope)
     {
         if (envelope.Awards is null)

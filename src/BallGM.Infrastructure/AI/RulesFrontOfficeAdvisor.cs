@@ -97,7 +97,7 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         }
 
         var needs = RosterNeedsCalculator.Assess(
-            teamId, chart, playersById, ruleset.RosterLimits, capSheetResult.Value);
+            teamId, chart, team.RosterCount, playersById, ruleset.RosterLimits, capSheetResult.Value);
 
         return DomainOperationResult<FrontOfficeAssessment>.Success(new FrontOfficeAssessment(direction, needs));
     }
@@ -126,7 +126,8 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             ruleset.RosterLimits,
             ruleset.CapThresholds,
             ruleset.TradeRules,
-            ruleset.DraftRules);
+            ruleset.DraftRules,
+            ruleset.CapMechanics);
 
         var candidates = TradeTargetingModel.FindCandidates(teamId, context, ruleset.DevelopmentRules, ruleset.NegotiationRules);
         return DomainOperationResult<IReadOnlyList<TradeTargetCandidate>>.Success(candidates);
@@ -168,7 +169,8 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             ruleset.CapThresholds,
             ruleset.NegotiationRules,
             new SeededRandomSource(AskingPriceSeed),
-            ruleset.PostseasonRules);
+            ruleset.PostseasonRules,
+            ruleset.CapMechanics);
 
         var candidates = FreeAgentTargetingModel.FindCandidates(teamId, freeAgents, context);
         return DomainOperationResult<IReadOnlyList<FreeAgentTargetCandidate>>.Success(candidates);

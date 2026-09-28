@@ -24,7 +24,8 @@ public sealed record TeamSummary(
     string FranchiseName,
     int RosterCount,
     IReadOnlyList<RosterSpot> Roster,
-    TeamCapSummary CapSheet);
+    TeamCapSummary CapSheet,
+    string? LogoPath = null);
 
 public sealed record RosterSpot(
     string PlayerId,
@@ -34,7 +35,8 @@ public sealed record RosterSpot(
     bool IsInjured,
     string? InjuryDescription,
     long CapCharge,
-    int ContractSeasonsRemaining);
+    int ContractSeasonsRemaining,
+    string? PortraitPath = null);
 
 /// <summary>
 /// The league's configured lines, each null when the league does not have it. Null rather than zero
@@ -70,7 +72,18 @@ public sealed record TeamCapSummary(
     long TotalPayroll,
     IReadOnlyList<ThresholdStandingSummary> Thresholds,
     IReadOnlyList<CapChargeLine> Charges,
-    IReadOnlyList<TransactionLine> Transactions);
+    IReadOnlyList<TransactionLine> Transactions,
+    TaxBillSummary? TaxBill = null,
+    IReadOnlyList<CapRestrictionLine>? Restrictions = null);
+
+/// <summary>The luxury-tax bill a payroll would owe, bracket by bracket; null on the cap summary when the league has no tax schedule.</summary>
+public sealed record TaxBillSummary(long TaxLine, long AmountOverTaxLine, long TaxOwed, bool IsRepeater, IReadOnlyList<TaxBracketLine> Brackets);
+
+/// <summary>One bracket of a tax bill. <paramref name="RatePercent"/> 150 means $1.50 of tax per $1.</summary>
+public sealed record TaxBracketLine(int Bracket, long SalaryInBracket, int RatePercent, long Tax);
+
+/// <summary>One restriction a team's payroll position triggers, with its machine-readable code.</summary>
+public sealed record CapRestrictionLine(string RuleCode, string Explanation);
 
 /// <summary>
 /// Where the payroll sits against one threshold. <paramref name="SignedDistance"/> is the threshold

@@ -106,7 +106,7 @@ public static class DraftDecisionModel
         }
 
         var needs = RosterNeedsCalculator.Assess(
-            teamId, chart, playersById, rosterLimits, DepthChartSupport.NeutralCapSheet(teamId, currentSeason));
+            teamId, chart, team.RosterCount, playersById, rosterLimits, DepthChartSupport.NeutralCapSheet(teamId, currentSeason));
 
         return needs.PositionalNeeds.Select(need => need.Position).ToHashSet();
     }

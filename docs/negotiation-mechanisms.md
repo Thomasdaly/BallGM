@@ -89,8 +89,10 @@ three and names the rest.
 | **Cap room** | Sign anyone up to the gap between payroll and the soft cap | **Built (M6a)** | `SigningRouteTable` (uses `CapLedger`) |
 | **Minimum-salary signing** | Always available regardless of payroll, at the compensation floor | **Built (M6a)** | `SigningRouteTable` |
 | **Standard over-cap allowance** | One generically named fixed-size allowance usable above the soft cap; may be split across players; unavailable above a configured threshold | **Built (M6a)** | `NegotiationRules` + `SigningRouteTable` |
+| **Contract extension** | A team re-signs its own player in the final season of his contract, starting when the current deal ends; he accepts at or above the reservation he would apply in free agency, and a refusal is surfaced as an alert | **Built** | `ContractExtension` (Rules) + `ISigningEngine.AssessExtension`/`ExecuteExtension` + `LeagueSession.OfferExtension` |
 | **Incumbent retention allowance** | Re-sign your own player above the cap, up to the compensation ceiling, if they have accrued enough continuous service with you | M9 | Ruleset field + Rules service |
 | **Retention tiers** | Partial versions of the above for shorter service — typically a percentage of the ceiling, or a multiple of prior salary | M9 | Ruleset field (tier table) |
+| **Reduced over-cap allowance** | A smaller allowance a team keeps once its payroll passes the standard allowance's cut-off, up to a cut-off of its own (a real league's taxpayer-level allowance) | **Built (ruleset v10)** | `CapMechanics.ReducedOverCapAllowance` + `SigningRouteKind.ReducedOverCapAllowance` |
 | **Post-room allowance** | Smaller allowance available to a team that has already spent its cap room | M9 | Ruleset field |
 | **Periodic allowance** | Allowance usable only every N seasons | M9 | Ruleset field |
 | **Replacement allowance** | Allowance granted when a player suffers a season-ending injury | M8 | Rules service (needs injuries) |
@@ -110,6 +112,23 @@ branches.
 refused the signing as a rule code, in the same `DomainOperationResult` shape everything else
 uses. "You cannot afford this" is not an explanation; "your payroll is above the soft cap and
 your standard allowance has $2.1m left" is.
+
+**Built with the cap mechanics (ruleset v10).** Alongside the reduced allowance, the ruleset's
+optional `capMechanics` section adds the **luxury-tax bill** (a bracket size, a rate per bracket in
+percent, a steeper schedule for a team flagged as a repeater, and an increment per bracket beyond the
+listed ones — resolving the "tax brackets (M10)" entry early), **tiered salary matching** for teams
+under the first apron (bands by outgoing salary, each a percentage plus an allowance), a **strict
+match percentage above the first apron** (no allowance), and **no salary aggregation above the
+second apron**. All generic by name; the NBA-shaped local pack supplies 2026-27 values. Still not
+built: the post-room and periodic allowances, traded-salary credits, and the rule that repeater
+status is *earned* by tax history — a pack states it per team (`taxRepeater`) until seasons of tax
+history are tracked.
+
+**Asking prices became convex.** `PreferenceModel`'s quality share — where a player sits between
+the league minimum and maximum — was a straight line from rating 40, which put a solid rotation
+player (77) three quarters of the way to the maximum. It is now a piecewise-linear integer table
+(0% at 55 up to 100% at 92), the same shape as the data-pack salary estimate, so pay concentrates at
+the top the way real markets do. The free-agency market and extensions share it.
 
 ## 3. Retention and competition — who gets to keep the player?
 

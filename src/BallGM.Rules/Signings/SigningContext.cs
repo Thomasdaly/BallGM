@@ -29,7 +29,8 @@ public sealed record SigningContext(
     CapThresholds CapThresholds,
     NegotiationRules NegotiationRules,
     PostseasonRules? PostseasonRules = null,
-    SeasonDay? SigningDay = null)
+    SeasonDay? SigningDay = null,
+    CapMechanics? CapMechanics = null)
 {
     /// <summary>
     /// Whether this is the player's current team. It changes the term limit where a league lets an

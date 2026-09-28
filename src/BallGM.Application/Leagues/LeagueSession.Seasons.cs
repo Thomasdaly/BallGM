@@ -140,7 +140,8 @@ public sealed partial class LeagueSession
         var concludedYear = _seasonRun.Season.Year;
         var seasonSeed = _seasonRun.Seed;
 
-        _snapshot = _snapshot with { CurrentSeason = new Season(concludedYear + 1) };
+        _snapshot = WithConcludedSeason(_snapshot, _seasonRun) with { CurrentSeason = new Season(concludedYear + 1) };
+        ClearExtensionRefusals();
         _seasonRun = null;
 
         var (drafted, unrostered, draftNotes) = RunDraft(outcome.Entry.FinalStandings, seasonSeed.For("draft"));
@@ -490,6 +491,24 @@ public sealed partial class LeagueSession
     }
 
     /// <summary>One game's box score, or an explanation of why there is none.</summary>
+    /// <summary>
+    /// Every player's totals for the season in progress, keyed by player identifier. Empty — not a
+    /// failure — before a season starts, because a squad screen reads it on every repaint and "no
+    /// games yet" is an ordinary state, not an error.
+    /// </summary>
+    public IReadOnlyDictionary<string, PlayerSeasonTotals> PlayerSeasonTotals()
+    {
+        if (_snapshot is null || _seasonRun is null)
+        {
+            return new Dictionary<string, PlayerSeasonTotals>();
+        }
+
+        return _seasonEngine.PlayerSeasonStats(_seasonRun).ToDictionary(
+            line => line.PlayerId.Value,
+            line => new PlayerSeasonTotals(line.PlayerId.Value, line.GamesPlayed, line.TotalMinutes, line.TotalPoints, line.TotalRebounds, line.TotalAssists),
+            StringComparer.Ordinal);
+    }
+
     public DomainOperationResult<BoxScoreSummary> BoxScore(string gameId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(gameId);

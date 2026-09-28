@@ -64,7 +64,7 @@ public static class FreeAgentTargetingModel
         }
 
         var shoppingNeeds = RosterNeedsCalculator.Assess(
-            shoppingTeamId, shoppingChart, playersById, context.RosterLimits, DepthChartSupport.NeutralCapSheet(shoppingTeamId, context.CurrentSeason));
+            shoppingTeamId, shoppingChart, shoppingTeam.RosterCount, playersById, context.RosterLimits, DepthChartSupport.NeutralCapSheet(shoppingTeamId, context.CurrentSeason));
 
         var neededPositions = shoppingNeeds.PositionalNeeds.ToDictionary(need => need.Position);
         if (neededPositions.Count == 0)

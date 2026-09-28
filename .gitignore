@@ -21,3 +21,11 @@ coverage/
 # Local audit working folders.
 scratch/
 sim-audit-kit/
+
+# Local-only league packs built from real-world data. Never commit these.
+local-packs/
+
+# Python virtualenvs for local tooling.
+.venv/
+tools/league-pack-builder/sample/generated/
+__pycache__/

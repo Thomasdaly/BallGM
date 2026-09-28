@@ -284,6 +284,9 @@ public sealed class LeagueSessionTests
 
     private sealed class PassThroughCapLedger : ICapLedger
     {
+        public DomainOperationResult<CapStatus> Status(TeamId teamId, Money payroll, bool isTaxRepeater, LeagueConfiguration configuration) =>
+            DomainOperationResult<CapStatus>.Success(CapStatus.None);
+
         public DomainOperationResult<TeamCapSheet> Evaluate(
             TeamId teamId,
             Season season,

@@ -37,6 +37,8 @@ public sealed class TradeValidator
     private const string SalaryMatchCode = "trade.salary_not_matched";
     private const string HardCapCode = "trade.hard_cap_exceeded";
     private const string SecondApronCode = "trade.second_apron_salary_increase";
+    private const string AboveFirstApronMatchCode = "trade.first_apron_salary_matching";
+    private const string AggregationCode = "trade.second_apron_salary_aggregation";
     private const string CrossesTaxCode = "trade.crosses_luxury_tax";
     private const string CrossesApronCode = "trade.crosses_apron";
     private const string SalaryMatchingSkippedNoSoftCapCode = "trade.salary_matching_skipped_no_soft_cap";
@@ -297,7 +299,8 @@ public sealed class TradeValidator
             rosterAfter,
             picksBefore,
             picksAfter,
-            capSheet.Thresholds));
+            capSheet.Thresholds,
+            outgoingContracts.Count));
     }
 
     private static void CheckRosterLimits(
@@ -388,6 +391,7 @@ public sealed class TradeValidator
         CheckSalaryMatching(outcome, context, violations);
         CheckHardCap(outcome, thresholds, violations);
         CheckApronRestriction(outcome, context, violations);
+        CheckAggregation(outcome, context, violations);
 
         // A crossing warning for a line the league does not have would be a warning about nothing.
         WarnOnCrossing(outcome, thresholds.LuxuryTax, CrossesTaxCode, "the luxury tax line", warnings);
@@ -411,8 +415,11 @@ public sealed class TradeValidator
             return;
         }
 
-        // Skipping salary matching: this league has a soft cap but states no matching percentage.
-        if (rules.SalaryMatchPercent is not { } matchPercent)
+        var mechanics = context.CapMechanics ?? CapMechanics.None;
+
+        // Skipping salary matching: this league has a soft cap but states neither a matching
+        // percentage nor tiered bands.
+        if (rules.SalaryMatchPercent is not { } matchPercent && !mechanics.HasTieredMatching)
         {
             return;
         }
@@ -420,19 +427,65 @@ public sealed class TradeValidator
         var incoming = outcome.IncomingSalary.SmallestUnits;
         var outgoing = outcome.OutgoingSalary.SmallestUnits;
 
+        // A team finishing above the first apron gets the strict percentage and nothing else: no
+        // allowance, no room (it has none), no kinder band.
+        if (mechanics.AboveFirstApronMatchPercent is { } apronPercent
+            && context.CapThresholds.FirstApron is { } firstApron
+            && outcome.PayrollAfter > firstApron)
+        {
+            var apronLimit = outgoing * apronPercent / 100;
+            if (incoming > apronLimit)
+            {
+                violations.Add(new RuleFinding(
+                    AboveFirstApronMatchCode,
+                    $"This team finishes above the first apron, where it may take back at most {apronPercent}% of what it sends out: {apronLimit} for {outgoing} sent, against {incoming} taken back.",
+                    outcome.TeamId));
+            }
+
+            return;
+        }
+
         // Two ways to be allowed to take salary back, and a team gets whichever is kinder: the room
         // it has under the cap once its own outgoing salary is off the books, or a matched share of
-        // what it is sending out.
+        // what it is sending out — from the tiered bands when the league states them, otherwise the
+        // flat percentage plus allowance.
         var payrollAfterSending = outcome.PayrollBefore.SmallestUnits - outgoing;
         var roomAllowance = Math.Max(0, softCap.SmallestUnits - payrollAfterSending);
-        var matchedAllowance = (outgoing * matchPercent / 100) + rules.SalaryMatchAllowance.SmallestUnits;
+        var tiered = mechanics.TieredMatchingLimit(outcome.OutgoingSalary);
+        var matchedAllowance = tiered?.SmallestUnits
+            ?? ((outgoing * rules.SalaryMatchPercent!.Value / 100) + rules.SalaryMatchAllowance.SmallestUnits);
         var allowedIncoming = Math.Max(roomAllowance, matchedAllowance);
 
         if (incoming > allowedIncoming)
         {
+            var basis = tiered is null
+                ? $"{rules.SalaryMatchPercent}% of outgoing salary plus the configured allowance"
+                : "the salary-matching band for that outgoing amount";
             violations.Add(new RuleFinding(
                 SalaryMatchCode,
-                $"This team takes back {incoming} against {outgoing} sent out, and may take back at most {allowedIncoming} — {matchPercent}% of outgoing salary plus the configured allowance, or the room it has under the soft cap, whichever is larger.",
+                $"This team takes back {incoming} against {outgoing} sent out, and may take back at most {allowedIncoming} — {basis}, or the room it has under the soft cap, whichever is larger.",
+                outcome.TeamId));
+        }
+    }
+
+    private static void CheckAggregation(
+        TradeTeamOutcome outcome,
+        TradeContext context,
+        List<RuleFinding> violations)
+    {
+        var mechanics = context.CapMechanics ?? CapMechanics.None;
+
+        // Skipping: the league does not bar aggregation, or states no second apron to bar it above.
+        if (!mechanics.SecondApronBlocksAggregation || context.CapThresholds.SecondApron is not { } secondApron)
+        {
+            return;
+        }
+
+        if (outcome.PayrollAfter > secondApron && outcome.OutgoingContractCount > 1 && outcome.IncomingSalary.SmallestUnits > 0)
+        {
+            violations.Add(new RuleFinding(
+                AggregationCode,
+                $"This team finishes above the second apron, where salaries cannot be combined: it sends out {outcome.OutgoingContractCount} contracts to take salary back. Each incoming salary needs one outgoing salary to match it.",
                 outcome.TeamId));
         }
     }

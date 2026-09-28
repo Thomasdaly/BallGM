@@ -35,8 +35,59 @@ public sealed class CapSheetViewModel(LeagueOverview overview) : ViewModelBase
             RaisePropertyChanged(nameof(HasThresholds));
             RaisePropertyChanged(nameof(Charges));
             RaisePropertyChanged(nameof(Transactions));
+            RaisePropertyChanged(nameof(HasTaxBill));
+            RaisePropertyChanged(nameof(TaxOwed));
+            RaisePropertyChanged(nameof(TaxBillLine));
+            RaisePropertyChanged(nameof(TaxBrackets));
+            RaisePropertyChanged(nameof(Restrictions));
+            RaisePropertyChanged(nameof(HasRestrictions));
+            RaisePropertyChanged(nameof(GaugeFill));
+            RaisePropertyChanged(nameof(GaugeMarkers));
         }
     }
+
+    /// <summary>Pixel width of the cap-position gauge; markers are placed against it.</summary>
+    public const double GaugeWidth = 820;
+
+    private double GaugeMaximum => _team is null
+        ? 1
+        : Math.Max(_team.CapSheet.TotalPayroll, _team.CapSheet.Thresholds.Select(threshold => threshold.ThresholdAmount).DefaultIfEmpty(0).Max()) * 1.08;
+
+    /// <summary>How far along the gauge the payroll reaches, in pixels.</summary>
+    public double GaugeFill => _team is null ? 0 : GaugeWidth * _team.CapSheet.TotalPayroll / GaugeMaximum;
+
+    /// <summary>One tick per configured line, placed where its amount falls on the gauge.</summary>
+    public IReadOnlyList<GaugeMarker> GaugeMarkers => _team is null
+        ? []
+        : _team.CapSheet.Thresholds
+            .Select((threshold, index) => new GaugeMarker(
+                threshold.ThresholdName,
+                MoneyDisplay.ToMillions(threshold.ThresholdAmount),
+                GaugeWidth * threshold.ThresholdAmount / GaugeMaximum,
+                threshold.IsBreached,
+                LabelTop: index % 2 == 0 ? 44 : 0))
+            .ToList();
+
+    public bool HasTaxBill => _team?.CapSheet.TaxBill is not null;
+
+    public string TaxOwed => _team?.CapSheet.TaxBill is { } bill ? MoneyDisplay.ToMillions(bill.TaxOwed) : NoTeam;
+
+    public string TaxBillLine => _team?.CapSheet.TaxBill switch
+    {
+        null => string.Empty,
+        { AmountOverTaxLine: <= 0 } bill => $"Under the tax line by {MoneyDisplay.ToMillions(bill.TaxLine - (_team!.CapSheet.TotalPayroll))} — no tax owed{(bill.IsRepeater ? " (a repeater would pay the higher schedule)" : string.Empty)}.",
+        var bill => $"{MoneyDisplay.ToMillions(bill.AmountOverTaxLine)} over the tax line, charged at the {(bill.IsRepeater ? "repeater" : "standard")} rates.",
+    };
+
+    public IReadOnlyList<TaxBracketRow> TaxBrackets => _team?.CapSheet.TaxBill is { } bill
+        ? bill.Brackets.Select(TaxBracketRow.From).ToList()
+        : [];
+
+    public IReadOnlyList<RestrictionRow> Restrictions => _team?.CapSheet.Restrictions is { } restrictions
+        ? restrictions.Select(line => new RestrictionRow(line.Explanation, line.RuleCode)).ToList()
+        : [];
+
+    public bool HasRestrictions => _team?.CapSheet.Restrictions is { Count: > 0 };
 
     public string TeamName => _team?.TeamName ?? "No team selected";
 
@@ -130,4 +181,17 @@ public sealed class CapSheetViewModel(LeagueOverview overview) : ViewModelBase
 
     private static string Format(long? smallestUnits) =>
         smallestUnits is null ? NoTeam : MoneyDisplay.ToMillions(smallestUnits.Value);
+}
+
+public sealed record GaugeMarker(string Name, string Amount, double Left, bool IsBreached, double LabelTop);
+
+public sealed record RestrictionRow(string Explanation, string RuleCode);
+
+public sealed record TaxBracketRow(string Bracket, string Salary, string Rate, string Tax)
+{
+    public static TaxBracketRow From(TaxBracketLine line) => new(
+        $"Bracket {line.Bracket}",
+        MoneyDisplay.ToMillions(line.SalaryInBracket),
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"${line.RatePercent / 100m:0.00} per $1"),
+        MoneyDisplay.ToMillions(line.Tax));
 }

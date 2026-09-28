@@ -6,201 +6,202 @@
   xmlns:app="clr-namespace:BallGM.Application.Seasons;assembly=BallGM.Application"
   x:DataType="vm:SeasonViewModel">
   <ScrollViewer>
-    <StackPanel Spacing="16">
-      <StackPanel Spacing="2">
-        <TextBlock Text="{Binding Headline}" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
-        <TextBlock Text="{Binding PhaseLine}" Opacity="0.7" />
-      </StackPanel>
+    <StackPanel Spacing="18">
 
-      <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasNoSeason}">
-        <Button Content="Start season" Command="{Binding StartSeasonCommand}" />
-      </StackPanel>
+      <!-- Where the league is, and the controls that move it. -->
+      <Border Classes="panel">
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
+          <StackPanel Spacing="3" VerticalAlignment="Center">
+            <TextBlock Classes="h2" Text="{Binding Headline}" />
+            <TextBlock Text="{Binding PhaseLine}" Classes="dim" />
+            <TextBlock Text="{Binding AdvancePreview}" Classes="faint small" TextWrapping="Wrap" IsVisible="{Binding HasSeason}" />
+          </StackPanel>
 
-      <StackPanel Spacing="8" IsVisible="{Binding HasSeason}">
-        <TextBlock Text="ADVANCE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <TextBlock Text="Days" VerticalAlignment="Center" Opacity="0.7" />
-          <ComboBox ItemsSource="{Binding AdvanceOptions}" SelectedItem="{Binding AdvanceDays}" MinWidth="90" />
-          <Button Content="Advance" Command="{Binding AdvanceCommand}" />
-          <Button Content="To end of season" Command="{Binding AdvanceToEndCommand}" />
-        </StackPanel>
-        <TextBlock Text="{Binding AdvancePreview}" Opacity="0.75" TextWrapping="Wrap" />
-      </StackPanel>
+          <Button Grid.Column="1" Classes="primary" Content="START SEASON" Command="{Binding StartSeasonCommand}" VerticalAlignment="Center" IsVisible="{Binding HasNoSeason}" />
 
-      <Border
-        Padding="12"
-        CornerRadius="4"
-        Background="#20808080"
-        IsVisible="{Binding HasMessage}">
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding HasSeason}">
+            <TextBlock Text="DAYS" Classes="eyebrow" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding AdvanceOptions}" SelectedItem="{Binding AdvanceDays}" MinWidth="80" />
+            <Button Classes="primary" Content="ADVANCE" Command="{Binding AdvanceCommand}" />
+            <Button Content="To end of season" Command="{Binding AdvanceToEndCommand}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border Classes="callout" IsVisible="{Binding HasMessage}">
         <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
       </Border>
 
-      <StackPanel Spacing="8" IsVisible="{Binding HasSeason}">
-        <TextBlock Text="CALENDAR" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        <ItemsControl ItemsSource="{Binding Phases}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:CalendarPhaseRow">
-              <Grid ColumnDefinitions="150,130,*,60" Height="24">
-                <TextBlock Text="{Binding Phase}" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" Text="{Binding Days}" VerticalAlignment="Center" Opacity="0.7" />
-                <TextBlock Grid.Column="2" Text="{Binding Dates}" VerticalAlignment="Center" Opacity="0.7" />
-                <TextBlock
-                  Grid.Column="3"
-                  Text="now"
-                  VerticalAlignment="Center"
-                  FontWeight="SemiBold"
-                  IsVisible="{Binding IsCurrent}" />
-              </Grid>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
+      <!-- Dashboard: the table on the left, the games on the right. -->
+      <Grid ColumnDefinitions="3*,2*" ColumnSpacing="24" IsVisible="{Binding HasSeason}">
 
-      <StackPanel Spacing="8" IsVisible="{Binding HasSeason}">
-        <TextBlock Text="STANDINGS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        <TextBlock Text="{Binding TieBreakLine}" Opacity="0.7" TextWrapping="Wrap" FontSize="12" />
-        <Grid ColumnDefinitions="34,200,190,70,70,70,70,70">
-          <TextBlock Text="#" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-          <TextBlock Grid.Column="1" Text="TEAM" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-          <TextBlock Grid.Column="2" Text="GROUP" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-          <TextBlock Grid.Column="3" Text="W-L" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-          <TextBlock Grid.Column="4" Text="DIV" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-          <TextBlock Grid.Column="5" Text="CONF" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-          <TextBlock Grid.Column="6" Text="DIFF" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-          <TextBlock Grid.Column="7" Text="PF" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        </Grid>
-        <ItemsControl ItemsSource="{Binding Standings}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:StandingsRowDisplay">
-              <Grid ColumnDefinitions="34,200,190,70,70,70,70,70" Height="24">
-                <TextBlock Text="{Binding Position}" VerticalAlignment="Center" Opacity="0.7" />
-                <TextBlock Grid.Column="1" Text="{Binding TeamName}" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" Text="{Binding Group}" VerticalAlignment="Center" Opacity="0.7" FontSize="12" />
-                <TextBlock Grid.Column="3" Text="{Binding Record}" VerticalAlignment="Center" FontWeight="SemiBold" />
-                <TextBlock Grid.Column="4" Text="{Binding DivisionRecord}" VerticalAlignment="Center" Opacity="0.8" />
-                <TextBlock Grid.Column="5" Text="{Binding ConferenceRecord}" VerticalAlignment="Center" Opacity="0.8" />
-                <TextBlock Grid.Column="6" Text="{Binding PointDifferential}" VerticalAlignment="Center" Opacity="0.8" />
-                <TextBlock Grid.Column="7" Text="{Binding PointsFor}" VerticalAlignment="Center" Opacity="0.8" />
-              </Grid>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
-
-      <StackPanel Spacing="8" IsVisible="{Binding HasSeason}">
-        <TextBlock Text="NEXT UP" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        <ItemsControl ItemsSource="{Binding UpcomingFixtures}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:FixtureRow">
-              <Grid ColumnDefinitions="190,*,90" Height="24">
-                <TextBlock Text="{Binding Day}" VerticalAlignment="Center" Opacity="0.7" FontSize="12" />
-                <TextBlock Grid.Column="1" Text="{Binding Matchup}" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" Text="{Binding Score}" VerticalAlignment="Center" Opacity="0.8" />
-              </Grid>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
-
-      <StackPanel Spacing="8" IsVisible="{Binding HasSeason}">
-        <TextBlock Text="RECENT RESULTS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        <TextBlock Text="Select a game to see its box score." Opacity="0.6" FontSize="12" />
-        <ListBox ItemsSource="{Binding RecentResults}" SelectedItem="{Binding SelectedFixture}">
-          <ListBox.ItemTemplate>
-            <DataTemplate x:DataType="vm:FixtureRow">
-              <Grid ColumnDefinitions="190,*,90" Height="24">
-                <TextBlock Text="{Binding Day}" VerticalAlignment="Center" Opacity="0.7" FontSize="12" />
-                <TextBlock Grid.Column="1" Text="{Binding Matchup}" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" Text="{Binding Score}" VerticalAlignment="Center" Opacity="0.8" />
-              </Grid>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-      </StackPanel>
-
-      <StackPanel Spacing="8" IsVisible="{Binding HasSelectedFixture}">
-        <TextBlock Text="BOX SCORE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        <TextBlock Text="{Binding BoxScoreHeadline}" FontWeight="SemiBold" TextWrapping="Wrap" />
-        <TextBlock
-          Text="{Binding BoxScoreUnavailableMessage}"
-          Opacity="0.7"
-          TextWrapping="Wrap"
-          IsVisible="{Binding !HasBoxScoreLines}" />
-
-        <Grid ColumnDefinitions="*,*" IsVisible="{Binding HasBoxScoreLines}">
-          <StackPanel Spacing="4">
-            <TextBlock Text="{Binding AwayTeamName}" FontWeight="SemiBold" />
-            <Grid ColumnDefinitions="*,50,50,50,50">
-              <TextBlock Text="PLAYER" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
-              <TextBlock Grid.Column="1" Text="MIN" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
-              <TextBlock Grid.Column="2" Text="PTS" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
-              <TextBlock Grid.Column="3" Text="REB" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
-              <TextBlock Grid.Column="4" Text="AST" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
+        <StackPanel Spacing="18">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="eyebrow" Text="STANDINGS" />
+            <Grid Classes="thead" ColumnDefinitions="30,*,150,62,50,56,62,52">
+              <TextBlock Text="#" />
+              <TextBlock Grid.Column="1" Text="TEAM" />
+              <TextBlock Grid.Column="2" Text="GROUP" />
+              <TextBlock Grid.Column="3" Text="W-L" />
+              <TextBlock Grid.Column="4" Text="DIV" />
+              <TextBlock Grid.Column="5" Text="CONF" />
+              <TextBlock Grid.Column="6" Text="DIFF" />
+              <TextBlock Grid.Column="7" Text="PF" />
             </Grid>
-            <ItemsControl ItemsSource="{Binding AwayBoxScoreLines}">
+            <ItemsControl Classes="table" ItemsSource="{Binding Standings}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="app:BoxScoreLine">
-                  <Grid ColumnDefinitions="*,50,50,50,50" Height="22">
-                    <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="{Binding Minutes}" VerticalAlignment="Center" Opacity="0.8" />
-                    <TextBlock Grid.Column="2" Text="{Binding Points}" VerticalAlignment="Center" Opacity="0.8" />
-                    <TextBlock Grid.Column="3" Text="{Binding Rebounds}" VerticalAlignment="Center" Opacity="0.8" />
-                    <TextBlock Grid.Column="4" Text="{Binding Assists}" VerticalAlignment="Center" Opacity="0.8" />
+                <DataTemplate x:DataType="vm:StandingsRowDisplay">
+                  <Grid ColumnDefinitions="30,*,150,62,50,56,62,52" Height="30">
+                    <TextBlock Text="{Binding Position}" VerticalAlignment="Center" Classes="faint num" />
+                    <TextBlock Grid.Column="1" Text="{Binding TeamName}" VerticalAlignment="Center" Classes="strong" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="2" Text="{Binding Group}" VerticalAlignment="Center" Classes="dim tiny" TextTrimming="CharacterEllipsis" Margin="0,0,10,0" />
+                    <TextBlock Grid.Column="3" Text="{Binding Record}" VerticalAlignment="Center" Classes="num accent" />
+                    <TextBlock Grid.Column="4" Text="{Binding DivisionRecord}" VerticalAlignment="Center" Classes="dim small" />
+                    <TextBlock Grid.Column="5" Text="{Binding ConferenceRecord}" VerticalAlignment="Center" Classes="dim small" />
+                    <TextBlock Grid.Column="6" Text="{Binding PointDifferential}" VerticalAlignment="Center" Classes="num" />
+                    <TextBlock Grid.Column="7" Text="{Binding PointsFor}" VerticalAlignment="Center" Classes="dim small" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{Binding TieBreakLine}" Classes="faint tiny" TextWrapping="Wrap" />
+          </StackPanel>
+
+          <StackPanel Spacing="8">
+            <TextBlock Classes="eyebrow" Text="CALENDAR" />
+            <ItemsControl Classes="table" ItemsSource="{Binding Phases}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:CalendarPhaseRow">
+                  <Grid ColumnDefinitions="140,120,*,56" Height="28">
+                    <TextBlock Text="{Binding Phase}" VerticalAlignment="Center" Classes="strong" />
+                    <TextBlock Grid.Column="1" Text="{Binding Days}" VerticalAlignment="Center" Classes="dim small" />
+                    <TextBlock Grid.Column="2" Text="{Binding Dates}" VerticalAlignment="Center" Classes="dim small" />
+                    <Border Grid.Column="3" Classes="pill" Background="{StaticResource AccentBrush}" IsVisible="{Binding IsCurrent}">
+                      <TextBlock Text="NOW" Foreground="{StaticResource Bg0Brush}" />
+                    </Border>
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </StackPanel>
+        </StackPanel>
 
-          <StackPanel Grid.Column="1" Spacing="4" Margin="16,0,0,0">
-            <TextBlock Text="{Binding HomeTeamName}" FontWeight="SemiBold" />
-            <Grid ColumnDefinitions="*,50,50,50,50">
-              <TextBlock Text="PLAYER" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
-              <TextBlock Grid.Column="1" Text="MIN" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
-              <TextBlock Grid.Column="2" Text="PTS" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
-              <TextBlock Grid.Column="3" Text="REB" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
-              <TextBlock Grid.Column="4" Text="AST" FontSize="11" FontWeight="SemiBold" Opacity="0.6" />
-            </Grid>
-            <ItemsControl ItemsSource="{Binding HomeBoxScoreLines}">
+        <StackPanel Grid.Column="1" Spacing="18">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="eyebrow" Text="RECENT RESULTS" />
+            <TextBlock Text="Select a game to see its box score." Classes="faint tiny" />
+            <ListBox x:Name="RecentResults" ItemsSource="{Binding RecentResults}" SelectedItem="{Binding SelectedFixture}" MaxHeight="260">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:FixtureRow">
+                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                    <TextBlock Text="{Binding Matchup}" Classes="strong" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1" Text="{Binding Score}" Classes="num accent" Margin="12,0,0,0" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Day}" Classes="faint tiny" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+
+          <Border Classes="panel" IsVisible="{Binding HasSelectedFixture}">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="eyebrow accent" Text="BOX SCORE" />
+              <TextBlock Text="{Binding BoxScoreHeadline}" Classes="h3" TextWrapping="Wrap" />
+              <TextBlock
+                Text="{Binding BoxScoreUnavailableMessage}"
+                Classes="dim"
+                TextWrapping="Wrap"
+                IsVisible="{Binding !HasBoxScoreLines}" />
+
+              <StackPanel Spacing="4" IsVisible="{Binding HasBoxScoreLines}">
+                <TextBlock Text="{Binding AwayTeamName}" Classes="strong" />
+                <Grid Classes="thead" ColumnDefinitions="*,40,40,40,40">
+                  <TextBlock Text="PLAYER" />
+                  <TextBlock Grid.Column="1" Text="MIN" />
+                  <TextBlock Grid.Column="2" Text="PTS" />
+                  <TextBlock Grid.Column="3" Text="REB" />
+                  <TextBlock Grid.Column="4" Text="AST" />
+                </Grid>
+                <ItemsControl Classes="table" ItemsSource="{Binding AwayBoxScoreLines}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="app:BoxScoreLine">
+                      <Grid ColumnDefinitions="*,40,40,40,40" Height="24">
+                        <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" Classes="small" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{Binding Minutes}" VerticalAlignment="Center" Classes="dim small" />
+                        <TextBlock Grid.Column="2" Text="{Binding Points}" VerticalAlignment="Center" Classes="num small" />
+                        <TextBlock Grid.Column="3" Text="{Binding Rebounds}" VerticalAlignment="Center" Classes="dim small" />
+                        <TextBlock Grid.Column="4" Text="{Binding Assists}" VerticalAlignment="Center" Classes="dim small" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="{Binding HomeTeamName}" Classes="strong" Margin="0,10,0,0" />
+                <Grid Classes="thead" ColumnDefinitions="*,40,40,40,40">
+                  <TextBlock Text="PLAYER" />
+                  <TextBlock Grid.Column="1" Text="MIN" />
+                  <TextBlock Grid.Column="2" Text="PTS" />
+                  <TextBlock Grid.Column="3" Text="REB" />
+                  <TextBlock Grid.Column="4" Text="AST" />
+                </Grid>
+                <ItemsControl Classes="table" ItemsSource="{Binding HomeBoxScoreLines}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="app:BoxScoreLine">
+                      <Grid ColumnDefinitions="*,40,40,40,40" Height="24">
+                        <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" Classes="small" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{Binding Minutes}" VerticalAlignment="Center" Classes="dim small" />
+                        <TextBlock Grid.Column="2" Text="{Binding Points}" VerticalAlignment="Center" Classes="num small" />
+                        <TextBlock Grid.Column="3" Text="{Binding Rebounds}" VerticalAlignment="Center" Classes="dim small" />
+                        <TextBlock Grid.Column="4" Text="{Binding Assists}" VerticalAlignment="Center" Classes="dim small" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <StackPanel Spacing="8">
+            <TextBlock Classes="eyebrow" Text="NEXT UP" />
+            <ItemsControl Classes="table" ItemsSource="{Binding UpcomingFixtures}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="app:BoxScoreLine">
-                  <Grid ColumnDefinitions="*,50,50,50,50" Height="22">
-                    <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="{Binding Minutes}" VerticalAlignment="Center" Opacity="0.8" />
-                    <TextBlock Grid.Column="2" Text="{Binding Points}" VerticalAlignment="Center" Opacity="0.8" />
-                    <TextBlock Grid.Column="3" Text="{Binding Rebounds}" VerticalAlignment="Center" Opacity="0.8" />
-                    <TextBlock Grid.Column="4" Text="{Binding Assists}" VerticalAlignment="Center" Opacity="0.8" />
+                <DataTemplate x:DataType="vm:FixtureRow">
+                  <Grid ColumnDefinitions="*,Auto" Height="30">
+                    <TextBlock Text="{Binding Matchup}" VerticalAlignment="Center" Classes="small strong" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1" Text="{Binding Day}" VerticalAlignment="Center" Classes="faint tiny" Margin="12,0,0,0" />
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </StackPanel>
-        </Grid>
-      </StackPanel>
+        </StackPanel>
+      </Grid>
 
       <StackPanel Spacing="8" IsVisible="{Binding HasWarnings}">
-        <TextBlock Text="WARNINGS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Classes="eyebrow" Text="WARNINGS" />
         <ItemsControl ItemsSource="{Binding Warnings}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:SeasonFindingRow">
-              <StackPanel Spacing="1" Margin="0,0,0,8">
-                <TextBlock Text="{Binding Scope}" FontWeight="SemiBold" FontSize="12" />
-                <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding Code}" Opacity="0.5" FontSize="11" />
-              </StackPanel>
+              <Border Classes="callout warn" Margin="0,0,0,8">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Scope}" Classes="strong small" />
+                  <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding Code}" Classes="code" />
+                </StackPanel>
+              </Border>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </StackPanel>
 
       <StackPanel Spacing="8" IsVisible="{Binding HasNotes}">
-        <TextBlock Text="RULES THIS LEAGUE DOES NOT STATE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Classes="eyebrow" Text="RULES THIS LEAGUE DOES NOT STATE" />
         <ItemsControl ItemsSource="{Binding Notes}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:SeasonFindingRow">
               <StackPanel Spacing="1" Margin="0,0,0,8">
-                <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" Opacity="0.85" />
-                <TextBlock Text="{Binding Code}" Opacity="0.5" FontSize="11" />
+                <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" Classes="dim" />
+                <TextBlock Text="{Binding Code}" Classes="code" />
               </StackPanel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

@@ -2,42 +2,131 @@
   x:Class="BallGM.Client.Avalonia.Views.CapSheetView"
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   x:DataType="vm:CapSheetViewModel">
   <ScrollViewer>
     <StackPanel Spacing="16">
       <StackPanel Spacing="2">
-        <TextBlock Text="{Binding TeamName}" FontSize="22" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding SeasonLine}" Opacity="0.7" />
+                <TextBlock Text="{Binding SeasonLine}" Opacity="0.7" />
       </StackPanel>
 
-      <Border Padding="12" CornerRadius="4" Background="#20808080">
+      <Border Classes="callout">
         <TextBlock Text="{Binding Headline}" TextWrapping="Wrap" />
       </Border>
 
+      <!-- Where the payroll sits along the lines, floor to second apron. -->
+      <StackPanel Spacing="6" IsVisible="{Binding HasThresholds}">
+        <TextBlock Classes="eyebrow" Text="CAP POSITION" />
+        <Canvas Width="820" Height="80" HorizontalAlignment="Left">
+          <Border Canvas.Top="30" Width="820" Height="12" CornerRadius="6" Background="{StaticResource Bg3Brush}" />
+          <Border Canvas.Top="30" Width="{Binding GaugeFill}" Height="12" CornerRadius="6" Background="{StaticResource AccentBrush}" />
+          <ItemsControl ItemsSource="{Binding GaugeMarkers}" Width="820" Height="80">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <Canvas />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.Styles>
+              <Style Selector="ContentPresenter" x:DataType="vm:GaugeMarker">
+                <Setter Property="Canvas.Left" Value="{Binding Left}" />
+              </Style>
+            </ItemsControl.Styles>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:GaugeMarker">
+                <Canvas>
+                  <Border Canvas.Top="24" Width="2" Height="24" Background="{StaticResource TextBrush}" />
+                  <StackPanel Canvas.Top="{Binding LabelTop}" Canvas.Left="-30" Width="120" Spacing="0">
+                    <TextBlock Text="{Binding Name}" Classes="tiny strong" />
+                    <TextBlock Text="{Binding Amount}" Classes="tiny dim" />
+                  </StackPanel>
+                </Canvas>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Canvas>
+      </StackPanel>
+
+      <!-- What this payroll costs the team in freedom. -->
+      <StackPanel Spacing="8" IsVisible="{Binding HasRestrictions}">
+        <TextBlock Classes="eyebrow" Text="WHAT THIS PAYROLL RESTRICTS" />
+        <ItemsControl ItemsSource="{Binding Restrictions}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:RestrictionRow">
+              <Border Classes="callout warn" Margin="0,0,0,6">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding RuleCode}" Classes="code" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- The luxury-tax bill, bracket by bracket. -->
+      <Border Classes="panel" IsVisible="{Binding HasTaxBill}">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Classes="eyebrow accent" Text="LUXURY TAX" />
+              <TextBlock Text="{Binding TaxBillLine}" Classes="dim" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+              <TextBlock Text="PROJECTED BILL" Classes="eyebrow" FontSize="10" HorizontalAlignment="Right" />
+              <TextBlock Text="{Binding TaxOwed}" Classes="display" HorizontalAlignment="Right" />
+            </StackPanel>
+          </Grid>
+          <ItemsControl Classes="table" ItemsSource="{Binding TaxBrackets}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:TaxBracketRow">
+                <Grid ColumnDefinitions="120,140,160,*" Height="28">
+                  <TextBlock Text="{Binding Bracket}" Classes="dim small" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="{Binding Salary}" Classes="num" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Text="{Binding Rate}" Classes="small" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="3" Text="{Binding Tax}" Classes="num accent" VerticalAlignment="Center" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
       <StackPanel Spacing="8">
-        <TextBlock Text="PAYROLL" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        <Grid ColumnDefinitions="200,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="4">
-          <TextBlock Text="Committed salary" />
-          <TextBlock Grid.Column="1" Text="{Binding CommittedSalary}" />
-          <TextBlock Grid.Row="1" Text="Dead money" />
-          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DeadMoney}" />
-          <TextBlock Grid.Row="2" Text="Total payroll" FontWeight="SemiBold" />
-          <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TotalPayroll}" FontWeight="SemiBold" />
-        </Grid>
+        <TextBlock Classes="eyebrow" Text="PAYROLL" />
+        <WrapPanel Orientation="Horizontal" ItemSpacing="12" LineSpacing="12">
+          <Border Classes="stat accent">
+            <StackPanel Spacing="2">
+              <TextBlock Text="TOTAL PAYROLL" Classes="eyebrow" FontSize="10" />
+              <TextBlock Text="{Binding TotalPayroll}" Classes="value" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="2">
+              <TextBlock Text="COMMITTED SALARY" Classes="eyebrow" FontSize="10" />
+              <TextBlock Text="{Binding CommittedSalary}" Classes="value" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat">
+            <StackPanel Spacing="2">
+              <TextBlock Text="DEAD MONEY" Classes="eyebrow" FontSize="10" />
+              <TextBlock Text="{Binding DeadMoney}" Classes="value" />
+            </StackPanel>
+          </Border>
+        </WrapPanel>
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Text="THRESHOLDS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <TextBlock Classes="eyebrow" Text="THRESHOLDS" />
 
-        <Border Padding="12" CornerRadius="4" Background="#20808080" IsVisible="{Binding !HasThresholds}">
+        <Border Classes="callout" IsVisible="{Binding !HasThresholds}">
           <TextBlock Text="{Binding NoThresholdsExplanation}" TextWrapping="Wrap" />
         </Border>
 
-        <Grid ColumnDefinitions="140,110,140" IsVisible="{Binding HasThresholds}">
-          <TextBlock Text="LINE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-          <TextBlock Grid.Column="1" Text="AMOUNT" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-          <TextBlock Grid.Column="2" Text="DISTANCE" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
+        <Grid Classes="thead" ColumnDefinitions="140,110,140" IsVisible="{Binding HasThresholds}">
+          <TextBlock Classes="eyebrow" Text="LINE" />
+          <TextBlock Classes="eyebrow" Grid.Column="1" Text="AMOUNT" />
+          <TextBlock Classes="eyebrow" Grid.Column="2" Text="DISTANCE" />
         </Grid>
         <ItemsControl ItemsSource="{Binding Thresholds}">
           <ItemsControl.ItemTemplate>
@@ -56,8 +145,8 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Text="WHAT THE PAYROLL IS MADE OF" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        <ItemsControl ItemsSource="{Binding Charges}">
+        <TextBlock Classes="eyebrow" Text="WHAT THE PAYROLL IS MADE OF" />
+        <ItemsControl Classes="table" ItemsSource="{Binding Charges}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:ChargeRow">
               <Grid ColumnDefinitions="240,140,*" Height="24">
@@ -71,8 +160,8 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Text="RECENT TRANSACTIONS" FontSize="12" FontWeight="SemiBold" Opacity="0.6" />
-        <ItemsControl ItemsSource="{Binding Transactions}">
+        <TextBlock Classes="eyebrow" Text="RECENT TRANSACTIONS" />
+        <ItemsControl Classes="table" ItemsSource="{Binding Transactions}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:LedgerRow">
               <Grid ColumnDefinitions="130,140,90,*" Height="24">

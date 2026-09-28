@@ -76,7 +76,8 @@ public sealed record LeagueRulesetEnvelope
         int? retirementMinimumVoluntaryAge = null,
         int? retirementMandatoryAge = null,
         IReadOnlyList<AgeCurveBandEnvelope>? retirementVoluntaryOddsByAge = null,
-        IReadOnlyList<AwardEnvelope>? awards = null)
+        IReadOnlyList<AwardEnvelope>? awards = null,
+        CapMechanicsEnvelope? capMechanics = null)
     {
         SchemaVersion = schemaVersion;
         Name = name;
@@ -141,6 +142,7 @@ public sealed record LeagueRulesetEnvelope
         RetirementMandatoryAge = retirementMandatoryAge;
         RetirementVoluntaryOddsByAge = retirementVoluntaryOddsByAge;
         Awards = awards;
+        CapMechanics = capMechanics;
     }
 
     public int SchemaVersion { get; }
@@ -331,7 +333,31 @@ public sealed record LeagueRulesetEnvelope
 
     /// <summary>The award set. Absent means this league hands out no awards at all.</summary>
     public IReadOnlyList<AwardEnvelope>? Awards { get; }
+
+    /// <summary>
+    /// The tax schedule, apron-tiered salary matching, and reduced over-cap allowance (schema v10).
+    /// Absent means none of it: every behaviour falls back to what the thresholds alone describe.
+    /// </summary>
+    public CapMechanicsEnvelope? CapMechanics { get; }
 }
+
+/// <summary>
+/// The on-disk shape of <c>CapMechanics</c>. Money in smallest units; rates in percent (150 = $1.50
+/// per $1); threshold names as <c>CapThresholdKind</c> member names. Every field optional by absence.
+/// </summary>
+public sealed record CapMechanicsEnvelope(
+    long? TaxBracketSize = null,
+    IReadOnlyList<int>? TaxRatesPercent = null,
+    IReadOnlyList<int>? RepeaterTaxRatesPercent = null,
+    int? TaxRateIncrementPercent = null,
+    IReadOnlyList<SalaryMatchingBandEnvelope>? SalaryMatchingBands = null,
+    int? AboveFirstApronMatchPercent = null,
+    bool SecondApronBlocksAggregation = false,
+    long? ReducedOverCapAllowance = null,
+    string? ReducedOverCapAllowanceUnavailableAbove = null);
+
+/// <summary>One salary-matching band: up to <see cref="OutgoingUpTo"/> sent (absent on the last band), take back <see cref="Percent"/>% plus <see cref="Allowance"/>.</summary>
+public sealed record SalaryMatchingBandEnvelope(long? OutgoingUpTo, int Percent, long Allowance);
 
 /// <summary>
 /// One row of the compensation ceiling table: the lowest service figure it covers, and the share of
