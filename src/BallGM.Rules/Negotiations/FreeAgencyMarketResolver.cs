@@ -78,7 +78,7 @@ public sealed class FreeAgencyMarketResolver
         {
             warnings.Add(new RuleFinding(
                 OfferExpiredCode,
-                $"The offer from this team has stood longer than the {rules.OfferExpiryDays} day(s) this league allows and is out of the running.",
+                $"The offer from this team has stood longer than the {MarketText.Count(rules.OfferExpiryDays.GetValueOrDefault(), "day")} this league allows and is out of the running.",
                 expired.TeamId));
         }
 
@@ -285,7 +285,7 @@ public sealed class FreeAgencyMarketResolver
                 // Below the top there is nothing at stake, so the tie falls to the stated key rather
                 // than spending a draw on an ordering nobody acts on.
                 chosen = leaders[0];
-                narrative = $"Finished {rank}: inseparable from the offers beside it, ordered by team identifier.";
+                narrative = $"Finished {MarketText.Ordinal(rank)}: inseparable from the offers beside it, ordered by team identifier.";
             }
 
             ranked.Add((chosen.Offer, chosen.Preference, rank, narrative));
@@ -334,11 +334,11 @@ public sealed class FreeAgencyMarketResolver
         {
             return rank == 1
                 ? "Taken: the only offer this player would accept."
-                : $"Finished {rank}.";
+                : $"Finished {MarketText.Ordinal(rank)}.";
         }
 
         var comparison = PreferenceRanking.Compare(chosen.Preference, runnerUp.Preference);
-        var prefix = rank == 1 ? "Taken" : $"Finished {rank}";
+        var prefix = rank == 1 ? "Taken" : $"Finished {MarketText.Ordinal(rank)}";
 
         return $"{prefix}: {comparison.Explanation}";
     }
@@ -360,7 +360,7 @@ public sealed class FreeAgencyMarketResolver
         if (winner is null)
         {
             return eligibleCount == 0 && liveCount > 0
-                ? $"{player} turned down all {liveCount} offer(s) on the table: none of them was one this player would sign."
+                ? (liveCount == 1 ? $"{player} turned down the only offer on the table: it was not one this player would sign." : $"{player} turned down all {liveCount} offers on the table: none of them was one this player would sign.")
                 : $"{player} signed with nobody.";
         }
 
@@ -370,7 +370,7 @@ public sealed class FreeAgencyMarketResolver
 
         var field = against <= 0
             ? "the only offer on the table"
-            : $"{against} competing offer(s)";
+            : MarketText.Count(against, "competing offer");
 
         return tieBreakUsed
             ? $"{player} would sign with {teamName}, chosen by seeded draw against {field} this player could not separate."

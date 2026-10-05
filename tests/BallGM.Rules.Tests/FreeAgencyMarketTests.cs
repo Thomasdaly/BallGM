@@ -68,6 +68,31 @@ public sealed class FreeAgencyMarketTests
     }
 
     [Fact]
+    public void Market_ExplainsEachFactorInWordsAGmReads()
+    {
+        // Regression: the breakdown printed money in smallest units ("10000000 ... the 2537526"),
+        // "season(s)"-style plurals, and positions as enum names ("PointGuard").
+        var league = MarketTestLeague.Build([[10_000_000], [10_000_000]]);
+        var negotiation = league.OpenNegotiation();
+        negotiation.PlaceOffer(league.Offer(0, 22_000_000), new SeasonDay(0));
+        negotiation.PlaceOffer(league.Offer(1, 18_000_000), new SeasonDay(0));
+
+        var assessment = _resolver.Assess(negotiation, league.Context()).Value;
+        var sentences = assessment.Standings
+            .SelectMany(standing => standing.Preference.Contributions.Select(contribution => contribution.Explanation).Append(standing.Narrative))
+            .Append(assessment.Narrative)
+            .ToList();
+
+        Assert.All(sentences, sentence =>
+        {
+            Assert.DoesNotContain("(s)", sentence, StringComparison.Ordinal);
+            Assert.DoesNotMatch(@"\d{5,}", sentence);
+            Assert.DoesNotMatch(@"PointGuard|ShootingGuard|SmallForward|PowerForward|Center\b", sentence);
+        });
+        Assert.Contains(sentences, sentence => sentence.Contains("$22.0M", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Market_LeavesOutAnOfferThatStoodLongerThanThisLeagueAllows()
     {
         // Offers expire after three days in the standard rules, so the first team's day-nought offer

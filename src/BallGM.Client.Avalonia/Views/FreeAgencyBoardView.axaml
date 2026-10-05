@@ -118,12 +118,12 @@
                       <ItemsControl ItemsSource="{Binding Factors}" Margin="0,4,0,0">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:PreferenceFactorRow">
-                            <StackPanel Margin="0,1">
+                            <StackPanel Margin="0,2" ToolTip.Tip="{Binding BandLine}">
                               <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Text="{Binding Factor}" FontSize="11" />
-                                <TextBlock Grid.Column="1" Text="{Binding ScoreLine}" FontSize="10" Opacity="0.6" />
+                                <TextBlock Text="{Binding Factor}" Classes="small strong" />
+                                <TextBlock Grid.Column="1" Text="{Binding ScoreLine}" Classes="num" FontSize="13" />
                               </Grid>
-                              <TextBlock Text="{Binding Explanation}" FontSize="10" Opacity="0.6" TextWrapping="Wrap" />
+                              <TextBlock Text="{Binding Explanation}" Classes="tiny dim" TextWrapping="Wrap" />
                             </StackPanel>
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>

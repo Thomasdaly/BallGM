@@ -152,16 +152,17 @@ public sealed record BoardCandidateRow(
 /// One factor's say on one offer, as the board shows it. Four rows, never a total: a GM who was
 /// outbid has to be able to read which factor beat them.
 /// </summary>
-public sealed record PreferenceFactorRow(string Factor, string ScoreLine, string Explanation)
+public sealed record PreferenceFactorRow(string Factor, string ScoreLine, string Explanation, string BandLine = "")
 {
     public static PreferenceFactorRow From(PreferenceFactorLine line)
     {
         ArgumentNullException.ThrowIfNull(line);
 
         return new PreferenceFactorRow(
-            line.Factor,
-            $"{line.Score}/100 (±{line.MaterialityBand} unnoticed)",
-            line.Explanation);
+            DisplayText.Words(line.Factor),
+            $"{line.Score} of 100",
+            line.Explanation,
+            $"This player does not notice a difference of {line.MaterialityBand} points or less on this factor.");
     }
 }
 
@@ -186,8 +187,8 @@ public sealed record MarketStandingRow(
 
         var rank = line.Rank switch
         {
-            0 when !line.IsSignable => "Out — illegal",
-            0 => "Out — refused",
+            0 when !line.IsSignable => "Out: not allowed",
+            0 => "Out: refused",
             1 => "Signed",
             var place => $"#{place}",
         };
