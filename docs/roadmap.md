@@ -110,7 +110,7 @@ Scope for this milestone is fixed by `docs/negotiation-mechanisms.md`, which inv
 
 Two additions from `docs/competitive-feature-review.md`, both inside the work this milestone already owns: the free-agency board is columned **by position against the team's own depth** (a market you cannot read is a market you cannot play), and the market-resolution model is written into `docs/architecture.md` when chosen, not left implicit.
 
-UI: an offer screen with every signing route's verdict (6a, done), and the free-agency board — positional columns, best available per slot, counteroffers, and the per-factor breakdown behind every competing offer (6b, done).
+UI: an offer screen with every signing route's verdict (6a, done), and the free-agency board — a position depth strip over one sortable table of the market, counteroffers, and the per-factor breakdown behind every competing offer (6b, done).
 
 ## Milestone 7 — Calendar and game simulation
 

@@ -7,80 +7,74 @@
   x:DataType="vm:FreeAgencyBoardViewModel">
   <Grid RowDefinitions="Auto,*" RowSpacing="10">
     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-      <TextBlock Text="{Binding BoardLine}" FontSize="12" Opacity="0.7" TextWrapping="Wrap" VerticalAlignment="Center" />
+      <TextBlock Text="{Binding BoardLine}" Classes="dim small" TextWrapping="Wrap" VerticalAlignment="Center" />
       <TextBlock Classes="eyebrow" Grid.Column="1" Text="Day" VerticalAlignment="Center" />
       <NumericUpDown Grid.Column="2" Value="{Binding Day}" Minimum="0" Maximum="365" Increment="1" FormatString="0" Width="110" />
     </Grid>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,20,340">
-      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-        <ItemsControl ItemsSource="{Binding Columns}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <StackPanel Orientation="Horizontal" Spacing="10" />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:BoardColumnRow">
-              <Border Classes="panel" Padding="8" Width="230">
-                <DockPanel>
-                  <StackPanel DockPanel.Dock="Top" Spacing="2">
-                    <TextBlock Classes="h2" Text="{Binding Position}" />
-                    <TextBlock Text="{Binding DepthLine}" FontSize="11" Opacity="0.6" />
-                  </StackPanel>
+    <Grid Grid.Row="1" ColumnDefinitions="*,24,340">
+      <DockPanel>
+        <!-- Depth strip: our roster at each position. Picking one narrows the table to it, so the
+             market is always read against our own gap, never as a league-wide best-available list. -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,0,0,12">
+          <ToggleButton Classes="chip" Content="All" IsChecked="{Binding IsShowingAllPositions, Mode=OneWay}" Command="{Binding ShowAllPositionsCommand}" VerticalAlignment="Stretch" />
+          <ListBox Grid.Column="1" Classes="strip" ItemsSource="{Binding Columns}" SelectedItem="{Binding SelectedColumn}">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Rows="1" />
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:BoardColumnRow">
+                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ToolTip.Tip="{Binding DepthLine}">
+                  <TextBlock Text="{Binding Position}" Classes="h2" />
+                  <Border Grid.Column="1" Classes="ovr small" IsVisible="{Binding HasOwnPlayers}" Background="{Binding BestOwnOverall, Converter={x:Static conv:OverallTierConverter.Instance}}">
+                    <TextBlock Text="{Binding BestOwnOverall}" />
+                  </Border>
+                  <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding DepthLine}" Classes="small dim" Classes.warn="{Binding IsThin}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
 
-                  <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding OwnPlayers}" Margin="0,6,0,0">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:BoardDepthRow">
-                        <Grid ColumnDefinitions="*,34" Margin="0,1">
-                          <TextBlock Text="{Binding FullName}" FontSize="11" Opacity="0.75" TextTrimming="CharacterEllipsis" />
-                          <Border Grid.Column="1" Classes="ovr small" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}"><TextBlock Text="{Binding Overall}" /></Border>
-                        </Grid>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
+        <TextBlock DockPanel.Dock="Top" Text="{Binding RowCountLine}" Classes="faint small" Margin="10,0,0,6" />
 
-                  <TextBlock Classes="section"
-                    DockPanel.Dock="Top"
-                    Text="Available"
-                    Margin="0,10,0,4" />
+        <Grid DockPanel.Dock="Top" Classes="thead" ColumnDefinitions="34,36,*,52,46,46,80,140,120,20">
+          <Button Classes="th" Content="OVR" Command="{Binding SortCommand}" CommandParameter="overall" />
+          <Button Grid.Column="2" Classes="th" Content="Player" Command="{Binding SortCommand}" CommandParameter="name" />
+          <Button Grid.Column="3" Classes="th" Content="POS" Command="{Binding SortCommand}" CommandParameter="position" />
+          <Button Grid.Column="4" Classes="th" Content="Age" Command="{Binding SortCommand}" CommandParameter="age" />
+          <Button Grid.Column="5" Classes="th" Content="Svc" Command="{Binding SortCommand}" CommandParameter="service" ToolTip.Tip="Seasons of service" />
+          <Button Grid.Column="6" Classes="th" Content="Asking" Command="{Binding SortCommand}" CommandParameter="asking" />
+          <TextBlock Grid.Column="7" Text="Market" />
+          <TextBlock Grid.Column="8" Text="Our offer" />
+        </Grid>
 
-                  <TextBlock
-                    DockPanel.Dock="Top"
-                    Text="Nobody unsigned at this position."
-                    FontSize="11"
-                    Opacity="0.5"
-                    IsVisible="{Binding !HasCandidates}" />
+        <TextBlock DockPanel.Dock="Top" Text="Nobody unsigned at this position." Classes="dim" Margin="10,8" IsVisible="{Binding !Rows.Count}" />
 
-                  <ListBox ItemsSource="{Binding Candidates}" SelectedItem="{Binding $parent[UserControl].((vm:FreeAgencyBoardViewModel)DataContext).Candidate}">
-                    <ListBox.ItemTemplate>
-                      <DataTemplate x:DataType="vm:BoardCandidateRow">
-                        <StackPanel Spacing="1">
-                          <Grid ColumnDefinitions="*,40">
-                            <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
-                            <Border Grid.Column="1" Classes="ovr" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}"><TextBlock Text="{Binding Overall}" /></Border>
-                          </Grid>
-                          <TextBlock Text="{Binding Detail}" FontSize="10" Opacity="0.6" />
-                          <TextBlock Text="{Binding AskLine}" FontSize="10" Opacity="0.6" TextWrapping="Wrap" />
-                          <TextBlock Text="{Binding MarketLine}" FontSize="10" Opacity="0.6" TextWrapping="Wrap" />
-                          <TextBlock Text="{Binding OurOfferLine}" FontSize="10" Opacity="0.6" TextWrapping="Wrap" />
-                          <TextBlock
-                            Text="{Binding CounterLine}"
-                            FontSize="10"
-                            FontWeight="SemiBold"
-                            Opacity="0.85"
-                            TextWrapping="Wrap"
-                            IsVisible="{Binding HasCounter}" />
-                        </StackPanel>
-                      </DataTemplate>
-                    </ListBox.ItemTemplate>
-                  </ListBox>
-                </DockPanel>
-              </Border>
+        <ListBox Classes="table" ItemsSource="{Binding Rows}" SelectedItem="{Binding Candidate}">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:BoardCandidateRow">
+              <Grid ColumnDefinitions="34,36,*,52,46,46,80,140,120,20" Height="28">
+                <Border Classes="ovr" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}">
+                  <TextBlock Text="{Binding Overall}" />
+                </Border>
+                <TextBlock Grid.Column="2" Text="{Binding FullName}" Classes="strong" TextTrimming="CharacterEllipsis" />
+                <Border Grid.Column="3" Classes="pill">
+                  <TextBlock Text="{Binding Position}" />
+                </Border>
+                <TextBlock Grid.Column="4" Text="{Binding Age}" Classes="num" />
+                <TextBlock Grid.Column="5" Text="{Binding SeasonsOfService}" Classes="num dim" />
+                <TextBlock Grid.Column="6" Text="{Binding AskCell}" Classes="num" />
+                <TextBlock Grid.Column="7" Text="{Binding MarketCell}" Classes="dim small" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="8" Text="{Binding OurOfferCell}" Classes="num" Classes.dim="{Binding !HasOurOffer}" />
+                <Ellipse Grid.Column="9" Width="8" Height="8" Fill="{StaticResource WarnBrush}" IsVisible="{Binding HasCounter}" ToolTip.Tip="{Binding CounterLine}" HorizontalAlignment="Center" />
+              </Grid>
             </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </ScrollViewer>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </DockPanel>
 
       <DockPanel Grid.Column="2">
         <StackPanel DockPanel.Dock="Top" Spacing="6">

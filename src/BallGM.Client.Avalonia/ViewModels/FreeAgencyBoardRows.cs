@@ -31,12 +31,18 @@ public sealed record BoardColumnRow(
             column.Position,
             depth,
             column.OwnPlayers.Select(BoardDepthRow.From).ToList(),
-            column.BestAvailable.Select(BoardCandidateRow.From).ToList());
+            column.BestAvailable.Select(line => BoardCandidateRow.From(line, column.Position)).ToList());
     }
 
     public bool HasCandidates => Candidates.Count > 0;
 
     public bool HasOwnPlayers => OwnPlayers.Count > 0;
+
+    /// <summary>The best rostered Overall here, for the depth strip; null when nobody is rostered.</summary>
+    public int? BestOwnOverall => OwnPlayers.Count == 0 ? null : OwnPlayers.Max(player => player.Overall);
+
+    /// <summary>The strip's need cue: a position with fewer than two rostered players has no backup.</summary>
+    public bool IsThin => OwnPlayers.Count < 2;
 }
 
 /// <summary>One player already on the roster at a position, with how long they are tied up for.</summary>
@@ -58,9 +64,10 @@ public sealed record BoardDepthRow(string PlayerId, string FullName, int Overall
 }
 
 /// <summary>
-/// One available player in a column. The asking price is shown when this league has one, and its
-/// absence is stated rather than rendered as a zero — an open market gives a player no range to be
-/// placed inside, and a board that printed "$0.0M" would be describing a different league.
+/// One available player, as one table row. The asking price is shown when this league has one, and
+/// its absence is stated rather than rendered as a zero — an open market gives a player no range to
+/// be placed inside, and a board that printed "$0.0M" would be describing a different league. The
+/// long lines feed the selected-player panel; the short cells feed the table.
 /// </summary>
 public sealed record BoardCandidateRow(
     string PlayerId,
@@ -72,9 +79,17 @@ public sealed record BoardCandidateRow(
     string MarketLine,
     string OurOfferLine,
     string CounterLine,
-    bool HasCounter)
+    bool HasCounter,
+    string Position = "",
+    int Age = 0,
+    int SeasonsOfService = 0,
+    long? AskingPrice = null,
+    string AskCell = "—",
+    string MarketCell = "—",
+    string OurOfferCell = "—",
+    bool HasOurOffer = false)
 {
-    public static BoardCandidateRow From(BoardCandidateLine line)
+    public static BoardCandidateRow From(BoardCandidateLine line, string position = "")
     {
         ArgumentNullException.ThrowIfNull(line);
 
@@ -101,6 +116,16 @@ public sealed record BoardCandidateRow(
             ? $"They countered: {MoneyDisplay.ToMillions(counterAmount)} × {DisplayText.Count(counterSeasons, "season")}"
             : string.Empty;
 
+        var marketCell = line.NegotiationState == "None"
+            ? "—"
+            : line.LiveOfferCount == 0
+                ? line.NegotiationState
+                : $"{line.NegotiationState} · {DisplayText.Count(line.LiveOfferCount, "offer")}";
+
+        var ourCell = line is { HasOurOffer: true, OurFirstSeasonCompensation: { } ourAmount, OurSeasonCount: { } ourSeasons }
+            ? $"{MoneyDisplay.ToMillions(ourAmount)} × {ourSeasons}"
+            : "—";
+
         return new BoardCandidateRow(
             line.PlayerId,
             line.FullName,
@@ -111,7 +136,15 @@ public sealed record BoardCandidateRow(
             market,
             ours,
             counter,
-            counter.Length > 0);
+            counter.Length > 0,
+            position,
+            line.Age,
+            line.SeasonsOfService,
+            line.AskingPrice,
+            line.AskingPrice is { } askingCell ? MoneyDisplay.ToMillions(askingCell) : "—",
+            marketCell,
+            ourCell,
+            line.HasOurOffer);
     }
 }
 

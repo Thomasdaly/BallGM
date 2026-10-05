@@ -6,8 +6,9 @@ using BallGM.Application.Negotiations;
 namespace BallGM.Client.Avalonia.ViewModels;
 
 /// <summary>
-/// The free-agency board: the market columned by position against this team's own depth, and the
-/// negotiation controls for whichever player is selected.
+/// The free-agency board: one dense table of the available market, read against a strip of this
+/// team's own depth at each position (picking a position filters the table), and the negotiation
+/// controls for whichever player is selected.
 /// <para>
 /// The market half of Milestone 6. The offer screen answers "what am I allowed to offer"; this
 /// answers "who else wants him, what does he want, and what happens when the market resolves". Every
@@ -31,10 +32,14 @@ public sealed class FreeAgencyBoardViewModel : ViewModelBase
     private int _day;
     private string _firstSeasonSalary = "10.0";
     private int _seasons = 3;
-    private string _status = "Pick a position column and a free agent to open a market.";
+    private string _status = "Pick a free agent to open a market.";
     private string _marketLine = string.Empty;
     private string _boardLine = string.Empty;
     private IReadOnlyList<BoardColumnRow> _columns = [];
+    private string? _positionFilter;
+    private bool _rebuildingRows;
+    private string _sortKey = SortOverall;
+    private bool _sortDescending = true;
     private IReadOnlyList<BoardNegotiationRow> _ourNegotiations = [];
     private IReadOnlyList<MarketStandingRow> _standings = [];
     private IReadOnlyList<SigningFindingRow> _warnings = [];
@@ -58,11 +63,109 @@ public sealed class FreeAgencyBoardViewModel : ViewModelBase
         CounterCommand = new RelayCommand(Counter);
         CheckMarketCommand = new RelayCommand(CheckMarket);
         ResolveMarketCommand = new RelayCommand(ResolveMarket);
+        SortCommand = new ParameterCommand<string>(SortBy);
+        ShowAllPositionsCommand = new RelayCommand(() => PositionFilter = null);
 
         Refresh();
     }
 
     public string Title => "Free agency board";
+
+    internal const string SortOverall = "overall";
+    internal const string SortName = "name";
+    internal const string SortPosition = "position";
+    internal const string SortAge = "age";
+    internal const string SortService = "service";
+    internal const string SortAsking = "asking";
+
+    /// <summary>Sorts the table by a column key; the same key again flips the direction.</summary>
+    public ICommand SortCommand { get; }
+
+    public ICommand ShowAllPositionsCommand { get; }
+
+    /// <summary>
+    /// The position the table is narrowed to, or null for every position. Picked from the depth strip,
+    /// so a GM narrows the market by looking at their own gap first.
+    /// </summary>
+    public string? PositionFilter
+    {
+        get => _positionFilter;
+        set
+        {
+            if (SetProperty(ref _positionFilter, value))
+            {
+                RaisePropertyChanged(nameof(SelectedColumn));
+                RaisePropertyChanged(nameof(Rows));
+                RaisePropertyChanged(nameof(IsShowingAllPositions));
+                RaisePropertyChanged(nameof(RowCountLine));
+            }
+        }
+    }
+
+    public bool IsShowingAllPositions => _positionFilter is null;
+
+    /// <summary>The depth-strip selection; setting null (the strip clearing itself) is ignored, "all" has its own button.</summary>
+    public BoardColumnRow? SelectedColumn
+    {
+        get => _columns.FirstOrDefault(column => column.Position == _positionFilter);
+        set
+        {
+            if (value is not null)
+            {
+                PositionFilter = value.Position;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The table: every available player at the filtered position (or all of them, once each), in the
+    /// chosen order. A player listed under two positions appears once, under the first.
+    /// </summary>
+    public IReadOnlyList<BoardCandidateRow> Rows
+    {
+        get
+        {
+            var rows = _columns
+                .Where(column => _positionFilter is null || column.Position == _positionFilter)
+                .SelectMany(column => column.Candidates)
+                .DistinctBy(candidate => candidate.PlayerId);
+
+            IOrderedEnumerable<BoardCandidateRow> ordered = _sortKey switch
+            {
+                SortName => Order(rows, row => row.FullName),
+                SortPosition => Order(rows, row => row.Position),
+                SortAge => Order(rows, row => row.Age),
+                SortService => Order(rows, row => row.SeasonsOfService),
+                SortAsking => Order(rows, row => row.AskingPrice ?? -1),
+                _ => Order(rows, row => row.Overall),
+            };
+
+            return ordered.ThenBy(row => row.FullName, StringComparer.Ordinal).ToList();
+        }
+    }
+
+    public string RowCountLine => _positionFilter is null
+        ? $"{DisplayText.Count(Rows.Count, "free agent")} at every position"
+        : $"{DisplayText.Count(Rows.Count, "free agent")} at {_positionFilter}";
+
+    private IOrderedEnumerable<BoardCandidateRow> Order<TKey>(IEnumerable<BoardCandidateRow> rows, Func<BoardCandidateRow, TKey> key) =>
+        _sortDescending ? rows.OrderByDescending(key) : rows.OrderBy(key);
+
+    private void SortBy(string key)
+    {
+        if (_sortKey == key)
+        {
+            _sortDescending = !_sortDescending;
+        }
+        else
+        {
+            _sortKey = key;
+            // Names and positions read naturally A to Z; numbers read best (highest) first.
+            _sortDescending = key is not (SortName or SortPosition);
+        }
+
+        RaisePropertyChanged(nameof(Rows));
+    }
 
     public ICommand OfferCommand { get; }
 
@@ -90,6 +193,13 @@ public sealed class FreeAgencyBoardViewModel : ViewModelBase
         get => _candidate;
         set
         {
+            // Rebuilding the table replaces the list's items, and the list answers with a null
+            // selection. That is not the GM deselecting anyone; Refresh re-reads the player itself.
+            if (value is null && _rebuildingRows)
+            {
+                return;
+            }
+
             if (SetProperty(ref _candidate, value))
             {
                 ClearMarket();
@@ -155,7 +265,22 @@ public sealed class FreeAgencyBoardViewModel : ViewModelBase
     public IReadOnlyList<BoardColumnRow> Columns
     {
         get => _columns;
-        private set => SetProperty(ref _columns, value);
+        private set
+        {
+            if (SetProperty(ref _columns, value))
+            {
+                if (_positionFilter is not null && _columns.All(column => column.Position != _positionFilter))
+                {
+                    _positionFilter = null;
+                    RaisePropertyChanged(nameof(PositionFilter));
+                    RaisePropertyChanged(nameof(IsShowingAllPositions));
+                }
+
+                RaisePropertyChanged(nameof(SelectedColumn));
+                RaisePropertyChanged(nameof(Rows));
+                RaisePropertyChanged(nameof(RowCountLine));
+            }
+        }
     }
 
     public IReadOnlyList<BoardNegotiationRow> OurNegotiations
@@ -250,7 +375,16 @@ public sealed class FreeAgencyBoardViewModel : ViewModelBase
         }
 
         var board = result.Value;
-        Columns = board.Columns.Select(BoardColumnRow.From).ToList();
+        _rebuildingRows = true;
+        try
+        {
+            Columns = board.Columns.Select(BoardColumnRow.From).ToList();
+        }
+        finally
+        {
+            _rebuildingRows = false;
+        }
+
         OurNegotiations = board.OurNegotiations.Select(BoardNegotiationRow.From).ToList();
 
         var expiry = board.OfferExpiryDays is { } days

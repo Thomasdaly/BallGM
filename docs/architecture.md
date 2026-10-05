@@ -227,6 +227,8 @@ Offer expiry is measured in `NegotiationRules.OfferExpiryDays`, so the market ne
 
 `FreeAgencyBoardSummary` presents the market as one column per position, each carrying the team's own depth chart at that position alongside the best players available for it, plus whatever this team has on the table and whatever the player has countered with. A league-wide "best available" list answers who the best free agent is and nothing about whether this team needs one; a market a GM cannot read against their own squad is a market they cannot play.
 
+The client draws that summary as one dense, sortable table rather than side-by-side cards, without dropping the principle: a **depth strip** across the top shows each position's rostered count and best Overall (a position with fewer than two rostered players is marked thin), and picking a position narrows the table to it. "All" lists every free agent once. The read model is unchanged; the columns are flattened in `FreeAgencyBoardViewModel.Rows`. Rebuilding the table after an offer replaces the list's items, and the list answers with a null selection, so the view model ignores a null `Candidate` while it is rebuilding rather than dropping the player the GM just made an offer to (`FreeAgencyBoardTableTests` is the regression test).
+
 
 ## The season: a calendar, a schedule, a table, and a bracket
 
