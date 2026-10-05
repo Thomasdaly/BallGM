@@ -14,6 +14,11 @@
     <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" />
   </ItemGroup>
 
+  <!-- Embedded typefaces (Barlow, SIL OFL 1.1 - licence in Assets/Fonts/OFL.txt). -->
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\Fonts\*.ttf" />
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="BallGM.Client.Avalonia.Tests" />
   </ItemGroup>

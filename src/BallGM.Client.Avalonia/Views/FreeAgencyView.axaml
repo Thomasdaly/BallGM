@@ -11,7 +11,7 @@
 
     <Grid Grid.Row="1" ColumnDefinitions="*,20,320">
       <DockPanel>
-        <TextBlock Classes="eyebrow" DockPanel.Dock="Top" Text="AVAILABLE" />
+        <TextBlock Classes="section" DockPanel.Dock="Top" Text="Available" />
         <TextBlock
           DockPanel.Dock="Top"
           Text="Nobody is unsigned in this league."
@@ -35,7 +35,7 @@
 
       <DockPanel Grid.Column="2">
         <StackPanel DockPanel.Dock="Top" Spacing="6">
-          <TextBlock Classes="eyebrow" Text="OFFERING TEAM" />
+          <TextBlock Classes="eyebrow" Text="Offering team" />
           <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding Team}" HorizontalAlignment="Stretch">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="app:TeamSummary">
@@ -44,18 +44,18 @@
             </ComboBox.ItemTemplate>
           </ComboBox>
 
-          <TextBlock Classes="eyebrow" Text="FIRST SEASON ($M)" Margin="0,8,0,0" />
+          <TextBlock Classes="eyebrow" Text="First season ($M)" Margin="0,8,0,0" />
           <TextBox Text="{Binding FirstSeasonSalary}" />
 
-          <TextBlock Classes="eyebrow" Text="SEASONS" />
+          <TextBlock Classes="eyebrow" Text="Seasons" />
           <NumericUpDown Value="{Binding Seasons}" Minimum="1" Maximum="12" Increment="1" FormatString="0" />
 
-          <TextBlock Classes="eyebrow" Text="ANNUAL RAISE (% OF FIRST SEASON)" />
+          <TextBlock Classes="eyebrow" Text="Annual raise (% of first season)" />
           <NumericUpDown Value="{Binding AnnualRaisePercent}" Minimum="-50" Maximum="50" Increment="1" FormatString="0" />
         </StackPanel>
 
         <DockPanel Margin="0,12,0,0">
-          <TextBlock Classes="eyebrow" DockPanel.Dock="Top" Text="HOW THIS WOULD BE PAID FOR" />
+          <TextBlock Classes="section" DockPanel.Dock="Top" Text="How this would be paid for" />
           <TextBlock
             DockPanel.Dock="Top"
             Text="Check the offer to see every route this league has, which of them would pay for it, and how much each one leaves."
@@ -123,7 +123,7 @@
     <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
       <TextBlock Text="{Binding Status}" VerticalAlignment="Center" TextWrapping="Wrap" Opacity="0.8" />
       <Button Grid.Column="1" Content="Check offer" Command="{Binding CheckCommand}" />
-      <Button Grid.Column="2" Classes="primary" Content="SIGN" Command="{Binding SignCommand}" IsEnabled="{Binding IsLegal}" />
+      <Button Grid.Column="2" Classes="primary" Content="Sign" Command="{Binding SignCommand}" IsEnabled="{Binding IsLegal}" />
     </Grid>
   </Grid>
 </UserControl>

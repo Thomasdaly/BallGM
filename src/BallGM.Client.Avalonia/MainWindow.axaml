@@ -12,97 +12,138 @@
   MinWidth="1080"
   MinHeight="640"
   x:DataType="vm:MainWindowViewModel">
-  <Grid ColumnDefinitions="228,*">
+  <Grid ColumnDefinitions="220,*">
 
-    <!-- Sidebar: wordmark, navigation, league footer. -->
+    <!-- Sidebar: wordmark, grouped navigation, league footer. -->
     <Border Background="{StaticResource Bg1Brush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
       <DockPanel>
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="22,26,20,26">
-          <Border Classes="slash" Height="26" Width="7" />
-          <TextBlock Text="BALLGM" Classes="display" FontSize="26" VerticalAlignment="Center" />
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="9" Margin="22,24,20,14">
+          <Panel Width="24" Height="24" VerticalAlignment="Center">
+            <Ellipse Width="22" Height="22" Stroke="{StaticResource MapleBrush}" StrokeThickness="2" />
+            <Path Data="{StaticResource Icon.BallSeams}" Stroke="{StaticResource MapleBrush}" StrokeThickness="1.6" Stretch="Uniform" Margin="2" />
+          </Panel>
+          <TextBlock Text="BallGM" Classes="display" FontSize="27" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <!-- Which team every screen is about: a navigation choice, so it lives with the navigation. -->
+        <StackPanel DockPanel.Dock="Top" Spacing="5" Margin="20,0,16,6" IsVisible="{Binding HasLeague}">
+          <TextBlock Text="Viewing team" Classes="eyebrow" Margin="3,0,0,0" />
+          <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding SelectedTeam}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="app:TeamSummary">
+                <TextBlock Text="{Binding TeamName}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
         </StackPanel>
 
         <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="22,16,20,22">
-          <TextBlock Text="LEAGUE" Classes="eyebrow" FontSize="10" />
+          <TextBlock Text="League" Classes="eyebrow" />
           <TextBlock Text="{Binding LeagueName}" Classes="small strong" TextWrapping="Wrap" />
         </StackPanel>
 
-        <StackPanel Spacing="6">
-          <TextBlock Text="MANAGE" Classes="eyebrow" FontSize="10" Margin="22,0,0,4" />
-          <ListBox x:Name="Nav" Classes="nav" ItemsSource="{Binding Sections}" SelectedItem="{Binding SelectedSection}">
-            <ListBox.ItemTemplate>
-              <DataTemplate x:DataType="x:String">
-                <StackPanel Orientation="Horizontal" Spacing="12">
-                  <PathIcon
-                    Data="{Binding Converter={x:Static conv:SectionIconConverter.Instance}}"
-                    Width="16"
-                    Height="16" />
-                  <TextBlock
-                    Text="{Binding Converter={x:Static conv:UpperCaseConverter.Instance}}"
-                    FontSize="12"
-                    FontWeight="Bold"
-                    LetterSpacing="0.8"
-                    VerticalAlignment="Center" />
-                </StackPanel>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
-        </StackPanel>
+        <ItemsControl ItemsSource="{Binding NavGroups}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:NavGroup">
+              <StackPanel>
+                <TextBlock Text="{Binding Name}" Classes="navgroup" />
+                <ListBox Name="Nav" Classes="nav" ItemsSource="{Binding Sections}" SelectedItem="{Binding Selected}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <StackPanel Orientation="Horizontal" Spacing="12">
+                        <PathIcon
+                          Data="{Binding Converter={x:Static conv:SectionIconConverter.Instance}}"
+                          Width="15"
+                          Height="15" />
+                        <TextBlock Text="{Binding}" FontSize="14" FontWeight="Medium" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
       </DockPanel>
     </Border>
 
     <Grid Grid.Column="1" RowDefinitions="Auto,*">
 
-      <!-- Identity banner: crest, team, league line, team picker. -->
-      <Border Background="{StaticResource BannerBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
-        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="20" Margin="32,22,32,20">
-          <!-- The pack's logo when it supplies one; otherwise a crest drawn from the team's initials. -->
-          <Panel IsVisible="{Binding HasLeague}" Width="64" Height="56" VerticalAlignment="Center">
-            <Border Classes="crest" IsVisible="{Binding SelectedTeam.LogoPath, Converter={x:Static ObjectConverters.IsNull}, FallbackValue=True}">
-              <TextBlock Text="{Binding SelectedTeam.TeamName, Converter={x:Static conv:TeamInitialsConverter.Instance}, FallbackValue=''}" />
-            </Border>
-            <Image
-              Source="{Binding SelectedTeam.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}, FallbackValue={x:Null}}"
-              IsVisible="{Binding SelectedTeam.LogoPath, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue=False}"
-              Stretch="Uniform" />
-          </Panel>
-
-          <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center" IsVisible="{Binding HasLeague}">
-            <TextBlock Text="{Binding LeagueSubtitle, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="eyebrow accent" FontSize="10" TextTrimming="CharacterEllipsis" />
-            <TextBlock
-              Text="{Binding SelectedTeam.TeamName, Converter={x:Static conv:UpperCaseConverter.Instance}, FallbackValue=''}"
-              Classes="display"
-              TextTrimming="CharacterEllipsis" />
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <TextBlock Text="{Binding SelectedTeamDetail}" Classes="dim small" VerticalAlignment="Center" />
-              <Border Classes="pill bad" IsVisible="{Binding HasAlerts}">
-                <TextBlock Text="{Binding AlertLine, Converter={x:Static conv:UpperCaseConverter.Instance}}" />
+      <!-- Identity band: the team's paint, court lines, crest, name, the numbers a GM checks first. -->
+      <Border Background="{StaticResource BannerBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" ClipToBounds="True">
+        <Panel>
+          <!-- In a Canvas so the drawing never sets the band's height; the band clips it. -->
+          <Canvas IsHitTestVisible="False">
+            <Path
+              Canvas.Right="-40"
+              Canvas.Top="-1"
+              Data="{StaticResource Court.HalfCourt}"
+              Stroke="{StaticResource MapleBrush}"
+              StrokeThickness="2"
+              Opacity="0.09" />
+          </Canvas>
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="24" Margin="32,20,32,18">
+            <!-- The pack's logo when it supplies one; otherwise a crest drawn from the team's initials. -->
+            <Panel IsVisible="{Binding HasLeague}" Width="72" Height="72" VerticalAlignment="Center">
+              <Border Classes="crest" IsVisible="{Binding SelectedTeam.LogoPath, Converter={x:Static ObjectConverters.IsNull}, FallbackValue=True}">
+                <TextBlock Text="{Binding SelectedTeam.TeamName, Converter={x:Static conv:TeamInitialsConverter.Instance}, FallbackValue=''}" />
               </Border>
+              <Image
+                Source="{Binding SelectedTeam.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}, FallbackValue={x:Null}}"
+                IsVisible="{Binding SelectedTeam.LogoPath, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue=False}"
+                Stretch="Uniform" />
+            </Panel>
+
+            <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" IsVisible="{Binding HasLeague}">
+              <TextBlock Text="{Binding LeagueSubtitle}" Classes="dim small" TextTrimming="CharacterEllipsis" />
+              <TextBlock
+                Text="{Binding SelectedTeam.TeamName, Converter={x:Static conv:UpperCaseConverter.Instance}, FallbackValue=''}"
+                Classes="display"
+                TextTrimming="CharacterEllipsis" />
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Text="{Binding SelectedTeamDetail}" Classes="dim small" VerticalAlignment="Center" />
+                <Border Classes="pill bad" IsVisible="{Binding HasAlerts}">
+                  <TextBlock Text="{Binding AlertLine}" />
+                </Border>
+              </StackPanel>
             </StackPanel>
-          </StackPanel>
 
-          <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding !HasLeague}">
-            <TextBlock Text="{Binding LeagueName, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="display" />
-            <TextBlock Text="{Binding LeagueSubtitle}" Classes="dim" TextWrapping="Wrap" />
-          </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding !HasLeague}">
+              <TextBlock Text="{Binding LeagueName}" Classes="display" />
+              <TextBlock Text="{Binding LeagueSubtitle}" Classes="dim" TextWrapping="Wrap" />
+            </StackPanel>
 
-          <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center" IsVisible="{Binding HasLeague}">
-            <TextBlock Text="VIEWING TEAM" Classes="eyebrow" FontSize="10" />
-            <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding SelectedTeam}" MinWidth="260">
-              <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="app:TeamSummary">
-                  <TextBlock Text="{Binding TeamName}" />
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-          </StackPanel>
-        </Grid>
+            <!-- The four figures, scoreboard-style: label over number, hairlines between. -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="22" VerticalAlignment="Center" IsVisible="{Binding HasLeague}">
+              <StackPanel Spacing="0">
+                <TextBlock Text="Record" Classes="eyebrow" />
+                <TextBlock Text="{Binding BannerRecord}" Classes="num" FontSize="26" FontWeight="Bold" />
+              </StackPanel>
+              <Rectangle Width="1" Fill="{StaticResource LineBrush}" Margin="0,4" />
+              <StackPanel Spacing="0">
+                <TextBlock Text="Payroll" Classes="eyebrow" />
+                <TextBlock Text="{Binding BannerPayroll}" Classes="num" FontSize="26" FontWeight="Bold" />
+              </StackPanel>
+              <Rectangle Width="1" Fill="{StaticResource LineBrush}" Margin="0,4" />
+              <StackPanel Spacing="0">
+                <TextBlock Text="{Binding BannerCapLabel}" Classes="eyebrow" />
+                <TextBlock Text="{Binding BannerCapValue}" Classes="num" FontSize="26" FontWeight="Bold" />
+              </StackPanel>
+              <Rectangle Width="1" Fill="{StaticResource LineBrush}" Margin="0,4" />
+              <StackPanel Spacing="0">
+                <TextBlock Text="Players" Classes="eyebrow" />
+                <TextBlock Text="{Binding BannerRosterCount}" Classes="num" FontSize="26" FontWeight="Bold" />
+              </StackPanel>
+            </StackPanel>
+
+          </Grid>
+        </Panel>
       </Border>
 
       <!-- Load failure: the shell still opens so the reason is visible. -->
       <Border Grid.Row="1" Classes="callout bad" Margin="32,24" VerticalAlignment="Top" IsVisible="{Binding !HasLeague}">
         <StackPanel Spacing="8">
-          <TextBlock Text="LOAD ERRORS" Classes="eyebrow" />
+          <TextBlock Text="Load errors" Classes="section" />
           <ItemsControl ItemsSource="{Binding LoadErrors}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="x:String">
@@ -114,10 +155,7 @@
       </Border>
 
       <DockPanel Grid.Row="1" Margin="32,22,32,24" IsVisible="{Binding HasLeague}">
-      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,14">
-        <Border Classes="slash" Height="20" Width="6" />
-        <TextBlock Text="{Binding SelectedSection, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h1" />
-      </StackPanel>
+      <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedSection}" Classes="h1" Margin="0,0,0,12" />
       <ContentControl Content="{Binding CurrentScreen}">
         <ContentControl.DataTemplates>
           <DataTemplate DataType="vm:RosterViewModel">

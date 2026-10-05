@@ -104,7 +104,7 @@
           </Border>
 
           <StackPanel Spacing="6" IsVisible="{Binding HasHistory}">
-            <TextBlock Classes="eyebrow" Text="ASSET HISTORY" />
+            <TextBlock Classes="section" Text="Asset history" />
             <ItemsControl ItemsSource="{Binding History}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:LedgerRow">

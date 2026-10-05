@@ -20,6 +20,7 @@ namespace BallGM.Client.Avalonia.ViewModels;
 /// </summary>
 public sealed class SeasonViewModel : ViewModelBase
 {
+    private string? _viewedTeamName;
     private static readonly int[] AdvanceChoices = [1, 7, 14, 30];
 
     /// <summary>How many days behind the current day the results strip looks for played games.</summary>
@@ -80,7 +81,7 @@ public sealed class SeasonViewModel : ViewModelBase
 
     public string PhaseLine => _season is null
         ? string.Empty
-        : $"{_season.Calendar.CurrentPhase} · {_season.Calendar.PlayedGames} of {_season.Calendar.ScheduledGames} scheduled games played";
+        : $"{DisplayText.Words(_season.Calendar.CurrentPhase)} · {_season.Calendar.PlayedGames} of {_season.Calendar.ScheduledGames} scheduled games played";
 
     public string Message => _message;
 
@@ -100,13 +101,13 @@ public sealed class SeasonViewModel : ViewModelBase
 
             if (_lastAdvance is null)
             {
-                return $"Advance {_advanceDays} day(s).";
+                return $"Advance {DisplayText.Count(_advanceDays, "day")}.";
             }
 
             var permitted = _lastAdvance.IsPermitted ? string.Empty : " — which this season will not permit";
 
             return $"Day {_lastAdvance.FromDay} ({_lastAdvance.FromDate}) to day {_lastAdvance.ToDay} ({_lastAdvance.ToDate}), " +
-                   $"{_lastAdvance.ToPhase.ToLowerInvariant()}, {_lastAdvance.GamesInRange} fixture(s) in range{permitted}.";
+                   $"{DisplayText.Words(_lastAdvance.ToPhase).ToLowerInvariant()}, {DisplayText.Count(_lastAdvance.GamesInRange, "fixture")} in range{permitted}.";
         }
     }
 
@@ -114,7 +115,20 @@ public sealed class SeasonViewModel : ViewModelBase
         _season is null ? [] : _season.Calendar.Phases.Select(CalendarPhaseRow.From).ToList();
 
     public IReadOnlyList<StandingsRowDisplay> Standings =>
-        _season is null ? [] : _season.Standings.Rows.Select(StandingsRowDisplay.From).ToList();
+        _season is null ? [] : _season.Standings.Rows.Select(row => StandingsRowDisplay.From(row, ViewedTeamName)).ToList();
+
+    /// <summary>The team the shell is viewing, picked out in the standings the way a GM looks for their own line first.</summary>
+    public string? ViewedTeamName
+    {
+        get => _viewedTeamName;
+        set
+        {
+            if (SetProperty(ref _viewedTeamName, value))
+            {
+                RaisePropertyChanged(nameof(Standings));
+            }
+        }
+    }
 
     /// <summary>
     /// The tie-break sequence this league states, in words. A GM reading a table has to be able to
@@ -131,7 +145,7 @@ public sealed class SeasonViewModel : ViewModelBase
             }
 
             return _season.Standings.HasStatedTieBreaks
-                ? "Ties broken by: " + string.Join(", then ", _season.Standings.TieBreakSequence)
+                ? "Ties broken by " + string.Join(", then ", _season.Standings.TieBreakSequence.Select(step => DisplayText.Words(step).ToLowerInvariant()))
                 : "This league states no tie-break. Teams level on record are ordered by identifier, and every tie that decides is listed below.";
         }
     }
@@ -306,7 +320,7 @@ public sealed class SeasonViewModel : ViewModelBase
         Refresh();
 
         Report(
-            [$"Advanced to day {result.Value.ToDay} ({result.Value.ToDate}). {result.Value.GamesPlayed} game(s) played."],
+            [$"Advanced to day {result.Value.ToDay} ({result.Value.ToDate}). {DisplayText.Count(result.Value.GamesPlayed, "game")} played."],
             isError: false);
 
         // The league itself has not changed — a day passing moves no money and no players — but the

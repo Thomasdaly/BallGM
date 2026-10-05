@@ -97,10 +97,10 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
     public IReadOnlyList<StatTile> ContractTiles { get; } = profile.ContractDetail is { Years.Count: > 0 } c
         ?
         [
-            new("TOTAL", ViewModels.MoneyDisplay.ToMillions(c.TotalValue)),
-            new("GUARANTEED", ViewModels.MoneyDisplay.ToMillions(c.GuaranteedValue)),
-            new("PER SEASON (AVG)", ViewModels.MoneyDisplay.ToMillions(c.AverageAnnualValue)),
-            new("FREE AGENT", c.FreeAgentYear is { } year ? LeagueSeasonLabel(year) : "–"),
+            new("Total value", ViewModels.MoneyDisplay.ToMillions(c.TotalValue)),
+            new("Guaranteed", ViewModels.MoneyDisplay.ToMillions(c.GuaranteedValue)),
+            new("Average per season", ViewModels.MoneyDisplay.ToMillions(c.AverageAnnualValue)),
+            new("Free agent in", c.FreeAgentYear is { } year ? LeagueSeasonLabel(year) : "–"),
         ]
         : [];
 

@@ -1,48 +1,59 @@
 <!--
-  Design tokens: every colour, size, and icon the client draws with, in one place. Views never
-  hard-code a colour; they use a style class from Controls.axaml or one of these brushes.
+  Design tokens: every colour, typeface, size, and icon the client draws with, in one place. Views
+  never hard-code a colour; they use a style class from Controls.axaml or one of these brushes.
 
-  Direction: a management-sim layout (persistent nav, identity banner, dense tables) wearing a
-  broadcast-sports skin (near-black surfaces, one hot accent, heavy italic display type, rating
-  badges coloured by tier). All original: no league or publisher marks.
+  Direction, "the scorer's table": a management-sim layout (persistent grouped nav, team identity
+  band, dense tables) set on arena-navy surfaces rather than neutral black. The one accent is the
+  team's own colour - "paint", like the painted lane - which TeamPaint derives from the pack's logo
+  at runtime and writes into the Accent* brushes below; the values here are only the fallback for a
+  league without logos. Type is Barlow (body) and Barlow Condensed (headings and every number), a
+  jersey-and-scoreboard voice. All original: no league or publisher marks.
 -->
 <ResourceDictionary
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- Surfaces, darkest to lightest. -->
-  <Color x:Key="Bg0Color">#0A0C11</Color>
-  <Color x:Key="Bg1Color">#11141B</Color>
-  <Color x:Key="Bg2Color">#181C25</Color>
-  <Color x:Key="Bg3Color">#212632</Color>
-  <Color x:Key="Bg4Color">#2B3140</Color>
-  <Color x:Key="LineColor">#262C39</Color>
+  <!-- Typefaces, embedded (SIL OFL, licence beside the files) and registered by BallGmFontCollection. -->
+  <FontFamily x:Key="BodyFont">fonts:BallGM#Barlow</FontFamily>
+  <FontFamily x:Key="DisplayFont">fonts:BallGM#Barlow Condensed</FontFamily>
 
-  <!-- Text. -->
-  <Color x:Key="TextColor">#F3F5F9</Color>
-  <Color x:Key="TextDimColor">#A7AFC0</Color>
-  <Color x:Key="TextFaintColor">#7F889B</Color>
+  <!-- Surfaces, darkest to lightest: arena navy. -->
+  <Color x:Key="Bg0Color">#0D1522</Color>
+  <Color x:Key="Bg1Color">#121C2C</Color>
+  <Color x:Key="Bg2Color">#172338</Color>
+  <Color x:Key="Bg3Color">#1F2D45</Color>
+  <Color x:Key="Bg4Color">#2A3B58</Color>
+  <Color x:Key="LineColor">#22314A</Color>
 
-  <!-- Accent: hardwood orange. One accent only, so it always means "this is the thing". -->
-  <Color x:Key="AccentColor">#FF5A1F</Color>
-  <Color x:Key="AccentHoverColor">#FF7A47</Color>
-  <Color x:Key="AccentPressedColor">#E04A12</Color>
-  <Color x:Key="AccentSoftColor">#33FF5A1F</Color>
-  <Color x:Key="AccentFaintColor">#14FF5A1F</Color>
+  <!-- Text. Faint still clears 4.5:1 on Bg0 through Bg2. -->
+  <Color x:Key="TextColor">#EAEEF4</Color>
+  <Color x:Key="TextDimColor">#A3AEC2</Color>
+  <Color x:Key="TextFaintColor">#8592AA</Color>
 
-  <!-- Status. -->
-  <Color x:Key="GoodColor">#3DDC84</Color>
-  <Color x:Key="WarnColor">#FFB020</Color>
-  <Color x:Key="BadColor">#FF4D5E</Color>
-  <Color x:Key="InfoColor">#38C8FF</Color>
+  <!-- Paint: the team colour. Fallback is ball leather; TeamPaint overwrites these brushes. -->
+  <Color x:Key="AccentColor">#E06A2C</Color>
+  <Color x:Key="AccentHoverColor">#E8834F</Color>
+  <Color x:Key="AccentPressedColor">#C45A22</Color>
+  <Color x:Key="AccentSoftColor">#33E06A2C</Color>
+  <Color x:Key="AccentFaintColor">#14E06A2C</Color>
+  <Color x:Key="OnAccentColor">#0D1522</Color>
 
-  <!-- Rating tiers (Overall). -->
-  <Color x:Key="TierEliteColor">#B98CFF</Color>
-  <Color x:Key="TierStarColor">#FFC83D</Color>
-  <Color x:Key="TierStarterColor">#38C8FF</Color>
-  <Color x:Key="TierRotationColor">#3DDC84</Color>
-  <Color x:Key="TierBenchColor">#8A93A6</Color>
-  <Color x:Key="TierFringeColor">#5F687A</Color>
+  <!-- Hardwood: the court itself. Decorative only (court lines, the wordmark), never an action. -->
+  <Color x:Key="MapleColor">#D8A86A</Color>
+
+  <!-- Status: reserved, never reused as a series or tier colour. -->
+  <Color x:Key="GoodColor">#45C98C</Color>
+  <Color x:Key="WarnColor">#F59E3D</Color>
+  <Color x:Key="BadColor">#F2606F</Color>
+  <Color x:Key="InfoColor">#6DB6F2</Color>
+
+  <!-- Rating tiers (Overall). Dark numerals sit on each; every tier clears 4.5:1 against them. -->
+  <Color x:Key="TierEliteColor">#B996FF</Color>
+  <Color x:Key="TierStarColor">#F5CE5A</Color>
+  <Color x:Key="TierStarterColor">#6DB6F2</Color>
+  <Color x:Key="TierRotationColor">#45C98C</Color>
+  <Color x:Key="TierBenchColor">#9AA4B8</Color>
+  <Color x:Key="TierFringeColor">#7A869C</Color>
 
   <SolidColorBrush x:Key="Bg0Brush" Color="{StaticResource Bg0Color}" />
   <SolidColorBrush x:Key="Bg1Brush" Color="{StaticResource Bg1Color}" />
@@ -53,15 +64,22 @@
   <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
   <SolidColorBrush x:Key="TextDimBrush" Color="{StaticResource TextDimColor}" />
   <SolidColorBrush x:Key="TextFaintBrush" Color="{StaticResource TextFaintColor}" />
+  <!-- Mutable on purpose: TeamPaint sets Color on these instances, so every StaticResource user follows. -->
   <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
   <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHoverColor}" />
   <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource AccentPressedColor}" />
   <SolidColorBrush x:Key="AccentSoftBrush" Color="{StaticResource AccentSoftColor}" />
   <SolidColorBrush x:Key="AccentFaintBrush" Color="{StaticResource AccentFaintColor}" />
+  <SolidColorBrush x:Key="OnAccentBrush" Color="{StaticResource OnAccentColor}" />
+  <SolidColorBrush x:Key="MapleBrush" Color="{StaticResource MapleColor}" />
   <SolidColorBrush x:Key="GoodBrush" Color="{StaticResource GoodColor}" />
   <SolidColorBrush x:Key="WarnBrush" Color="{StaticResource WarnColor}" />
   <SolidColorBrush x:Key="BadBrush" Color="{StaticResource BadColor}" />
   <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}" />
+  <SolidColorBrush x:Key="GoodSoftBrush" Color="#1F45C98C" />
+  <SolidColorBrush x:Key="WarnSoftBrush" Color="#1FF59E3D" />
+  <SolidColorBrush x:Key="BadSoftBrush" Color="#1FF2606F" />
+  <SolidColorBrush x:Key="BadPillBrush" Color="#33F2606F" />
   <SolidColorBrush x:Key="TierEliteBrush" Color="{StaticResource TierEliteColor}" />
   <SolidColorBrush x:Key="TierStarBrush" Color="{StaticResource TierStarColor}" />
   <SolidColorBrush x:Key="TierStarterBrush" Color="{StaticResource TierStarterColor}" />
@@ -69,16 +87,20 @@
   <SolidColorBrush x:Key="TierBenchBrush" Color="{StaticResource TierBenchColor}" />
   <SolidColorBrush x:Key="TierFringeBrush" Color="{StaticResource TierFringeColor}" />
 
-  <!-- The identity banner: a dark sweep that warms into the accent at the far edge. -->
+  <!-- The identity band: navy that takes on the team's paint toward the far edge. TeamPaint
+       rewrites the last two stops, so they must stay mutable GradientStops at these indexes. -->
   <LinearGradientBrush x:Key="BannerBrush" StartPoint="0%,0%" EndPoint="100%,100%">
-    <GradientStop Offset="0" Color="#11141B" />
-    <GradientStop Offset="0.62" Color="#171A22" />
-    <GradientStop Offset="1" Color="#4A1E10" />
+    <GradientStop Offset="0" Color="#121C2C" />
+    <GradientStop Offset="0.55" Color="#2A1A14" />
+    <GradientStop Offset="1" Color="#5A2A12" />
   </LinearGradientBrush>
 
+  <!-- Court lines drawn across the identity band: half-court circle, lane, and arc. Stroked faint. -->
+  <StreamGeometry x:Key="Court.HalfCourt">M0 0H520M260 0V40M300 0A40 40 0 0 1 220 0M150 0V150H370V0M150 150H370M200 150A60 60 0 0 0 320 150M30 0V60A230 230 0 0 0 490 60V0</StreamGeometry>
+
   <!-- Sizes. -->
-  <CornerRadius x:Key="RadiusSmall">4</CornerRadius>
-  <CornerRadius x:Key="RadiusMedium">8</CornerRadius>
+  <CornerRadius x:Key="RadiusSmall">3</CornerRadius>
+  <CornerRadius x:Key="RadiusMedium">6</CornerRadius>
   <x:Double x:Key="RowHeight">34</x:Double>
 
   <!-- Navigation icons: 24x24, stroked-look filled paths, drawn for this project. -->
@@ -92,4 +114,6 @@
   <StreamGeometry x:Key="Icon.FrontOffice">M9 2h6a2 2 0 0 1 2 2v2h4a2 2 0 0 1 2 2v4H1V8a2 2 0 0 1 2-2h4V4a2 2 0 0 1 2-2Zm0 2v2h6V4H9ZM1 14h9v2h4v-2h9v6a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-6Z</StreamGeometry>
   <StreamGeometry x:Key="Icon.Contracts">M5 2h10l4 4v5.5a6.5 6.5 0 0 0-8.9 10.5H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm1 6v2h8V8H6Zm0 4v2h5v-2H6Zm11 1a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm-.9 2.2v3.3l2.8 1.7.8-1.3-2.1-1.3v-2.4h-1.5Z</StreamGeometry>
   <StreamGeometry x:Key="Icon.Default">M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z</StreamGeometry>
+  <!-- The wordmark's ball: outline and seams, stroked. -->
+  <StreamGeometry x:Key="Icon.BallSeams">M12 1V23M1 12H23M4.5 4.2A11 11 0 0 1 4.5 19.8M19.5 4.2A11 11 0 0 0 19.5 19.8</StreamGeometry>
 </ResourceDictionary>

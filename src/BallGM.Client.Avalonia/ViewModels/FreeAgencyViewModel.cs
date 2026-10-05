@@ -370,7 +370,7 @@ public sealed class FreeAgencyViewModel : ViewModelBase
         OutcomeLine =
             $"{room}Payroll {MoneyDisplay.ToMillions(assessment.PayrollBefore)} → {MoneyDisplay.ToMillions(assessment.PayrollAfter)}. " +
             $"Roster {assessment.RosterCountBefore} → {assessment.RosterCountAfter}. " +
-            $"Total commitment {MoneyDisplay.ToMillions(assessment.TotalCompensation)} over {assessment.SeasonCount} season(s).";
+            $"Total commitment {MoneyDisplay.ToMillions(assessment.TotalCompensation)} over {DisplayText.Count(assessment.SeasonCount, "season")}.";
     }
 
     private void ShowFailure(IReadOnlyList<SigningFindingRow> findings)

@@ -18,13 +18,13 @@
             engines a human proposal uses. Or act on a suggestion below yourself from the trade or
             free-agency screens instead.
           </TextBlock>
-          <Button Classes="primary" Content="RUN AI TURN" Command="{Binding RunAiTurnCommand}" HorizontalAlignment="Left" />
+          <Button Classes="primary" Content="Run AI turn" Command="{Binding RunAiTurnCommand}" HorizontalAlignment="Left" />
           <TextBlock Text="{Binding TurnResultLine}" IsVisible="{Binding HasTurnResult}" FontWeight="SemiBold" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
 
       <StackPanel Spacing="8">
-        <TextBlock Classes="eyebrow" Text="DIRECTION" />
+        <TextBlock Classes="section" Text="Direction" />
         <TextBlock Classes="h2" Text="{Binding DirectionLine}" />
         <ItemsControl ItemsSource="{Binding DirectionFactors}">
           <ItemsControl.ItemTemplate>
@@ -36,7 +36,7 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Classes="eyebrow" Text="ROSTER NEEDS" />
+        <TextBlock Classes="section" Text="Roster needs" />
         <ItemsControl ItemsSource="{Binding PositionalNeeds}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:PositionalNeedRow">
@@ -58,7 +58,7 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Classes="eyebrow" Text="TRADE TARGETS THIS TEAM COULD PURSUE" />
+        <TextBlock Classes="section" Text="Trade targets this team could pursue" />
         <TextBlock Text="No legal trade target found." IsVisible="{Binding !HasTradeTargets}" Opacity="0.65" />
         <ItemsControl ItemsSource="{Binding TradeTargets}">
           <ItemsControl.ItemTemplate>
@@ -82,7 +82,7 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Classes="eyebrow" Text="FREE-AGENT TARGETS THIS TEAM COULD PURSUE" />
+        <TextBlock Classes="section" Text="Free-agent targets this team could pursue" />
         <TextBlock Text="No legal free-agent target found." IsVisible="{Binding !HasFreeAgentTargets}" Opacity="0.65" />
         <ItemsControl ItemsSource="{Binding FreeAgentTargets}">
           <ItemsControl.ItemTemplate>
@@ -106,7 +106,7 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Classes="eyebrow" Text="DRAFT PREVIEW" />
+        <TextBlock Classes="section" Text="Draft preview" />
         <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12">
           Generated fresh for this screen and never persisted — not the class the real draft will
           actually use.

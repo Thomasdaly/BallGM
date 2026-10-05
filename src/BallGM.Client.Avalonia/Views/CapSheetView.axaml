@@ -17,7 +17,7 @@
 
       <!-- Where the payroll sits along the lines, floor to second apron. -->
       <StackPanel Spacing="6" IsVisible="{Binding HasThresholds}">
-        <TextBlock Classes="eyebrow" Text="CAP POSITION" />
+        <TextBlock Classes="section" Text="Cap position" />
         <Canvas Width="820" Height="80" HorizontalAlignment="Left">
           <Border Canvas.Top="30" Width="820" Height="12" CornerRadius="6" Background="{StaticResource Bg3Brush}" />
           <Border Canvas.Top="30" Width="{Binding GaugeFill}" Height="12" CornerRadius="6" Background="{StaticResource AccentBrush}" />
@@ -49,7 +49,7 @@
 
       <!-- What this payroll costs the team in freedom. -->
       <StackPanel Spacing="8" IsVisible="{Binding HasRestrictions}">
-        <TextBlock Classes="eyebrow" Text="WHAT THIS PAYROLL RESTRICTS" />
+        <TextBlock Classes="section" Text="What this payroll restricts" />
         <ItemsControl ItemsSource="{Binding Restrictions}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:RestrictionRow">
@@ -69,11 +69,11 @@
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Spacing="2">
-              <TextBlock Classes="eyebrow accent" Text="LUXURY TAX" />
+              <TextBlock Classes="section" Text="Luxury tax" />
               <TextBlock Text="{Binding TaxBillLine}" Classes="dim" TextWrapping="Wrap" />
             </StackPanel>
             <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-              <TextBlock Text="PROJECTED BILL" Classes="eyebrow" FontSize="10" HorizontalAlignment="Right" />
+              <TextBlock Text="Projected bill" Classes="eyebrow" HorizontalAlignment="Right" />
               <TextBlock Text="{Binding TaxOwed}" Classes="display" HorizontalAlignment="Right" />
             </StackPanel>
           </Grid>
@@ -84,7 +84,7 @@
                   <TextBlock Text="{Binding Bracket}" Classes="dim small" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="1" Text="{Binding Salary}" Classes="num" VerticalAlignment="Center" />
                   <TextBlock Grid.Column="2" Text="{Binding Rate}" Classes="small" VerticalAlignment="Center" />
-                  <TextBlock Grid.Column="3" Text="{Binding Tax}" Classes="num accent" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="3" Text="{Binding Tax}" Classes="num warn" VerticalAlignment="Center" />
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
@@ -93,23 +93,23 @@
       </Border>
 
       <StackPanel Spacing="8">
-        <TextBlock Classes="eyebrow" Text="PAYROLL" />
+        <TextBlock Classes="section" Text="Payroll" />
         <WrapPanel Orientation="Horizontal" ItemSpacing="12" LineSpacing="12">
           <Border Classes="stat accent">
             <StackPanel Spacing="2">
-              <TextBlock Text="TOTAL PAYROLL" Classes="eyebrow" FontSize="10" />
+              <TextBlock Text="Total payroll" Classes="eyebrow" />
               <TextBlock Text="{Binding TotalPayroll}" Classes="value" />
             </StackPanel>
           </Border>
           <Border Classes="stat">
             <StackPanel Spacing="2">
-              <TextBlock Text="COMMITTED SALARY" Classes="eyebrow" FontSize="10" />
+              <TextBlock Text="Committed salary" Classes="eyebrow" />
               <TextBlock Text="{Binding CommittedSalary}" Classes="value" />
             </StackPanel>
           </Border>
           <Border Classes="stat">
             <StackPanel Spacing="2">
-              <TextBlock Text="DEAD MONEY" Classes="eyebrow" FontSize="10" />
+              <TextBlock Text="Dead money" Classes="eyebrow" />
               <TextBlock Text="{Binding DeadMoney}" Classes="value" />
             </StackPanel>
           </Border>
@@ -117,16 +117,16 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Classes="eyebrow" Text="THRESHOLDS" />
+        <TextBlock Classes="section" Text="Thresholds" />
 
         <Border Classes="callout" IsVisible="{Binding !HasThresholds}">
           <TextBlock Text="{Binding NoThresholdsExplanation}" TextWrapping="Wrap" />
         </Border>
 
         <Grid Classes="thead" ColumnDefinitions="140,110,140" IsVisible="{Binding HasThresholds}">
-          <TextBlock Classes="eyebrow" Text="LINE" />
-          <TextBlock Classes="eyebrow" Grid.Column="1" Text="AMOUNT" />
-          <TextBlock Classes="eyebrow" Grid.Column="2" Text="DISTANCE" />
+          <TextBlock Classes="eyebrow" Text="Line" />
+          <TextBlock Classes="eyebrow" Grid.Column="1" Text="Amount" />
+          <TextBlock Classes="eyebrow" Grid.Column="2" Text="Distance" />
         </Grid>
         <ItemsControl ItemsSource="{Binding Thresholds}">
           <ItemsControl.ItemTemplate>
@@ -145,7 +145,7 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Classes="eyebrow" Text="WHAT THE PAYROLL IS MADE OF" />
+        <TextBlock Classes="section" Text="What the payroll is made of" />
         <ItemsControl Classes="table" ItemsSource="{Binding Charges}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:ChargeRow">
@@ -160,7 +160,7 @@
       </StackPanel>
 
       <StackPanel Spacing="8">
-        <TextBlock Classes="eyebrow" Text="RECENT TRANSACTIONS" />
+        <TextBlock Classes="section" Text="Recent transactions" />
         <ItemsControl Classes="table" ItemsSource="{Binding Transactions}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:LedgerRow">

@@ -69,7 +69,7 @@ public sealed record FreeAgentTargetRow(
     {
         ArgumentNullException.ThrowIfNull(line);
 
-        var offerLine = $"{line.Assessment.SeasonCount} season(s) at {MoneyDisplay.ToMillions(line.Assessment.FirstSeasonCompensation)} per year";
+        var offerLine = $"{DisplayText.Count(line.Assessment.SeasonCount, "season")} at {MoneyDisplay.ToMillions(line.Assessment.FirstSeasonCompensation)} per year";
 
         return new FreeAgentTargetRow(line.PlayerName, offerLine, line.Rationale.Select(AIFindingRow.From).ToList());
     }

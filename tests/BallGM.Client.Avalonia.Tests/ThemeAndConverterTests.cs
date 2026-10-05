@@ -66,7 +66,7 @@ public sealed class ThemeAndConverterTests
     [AvaloniaFact]
     public void DesignTokens_LoadWithTheApplication()
     {
-        foreach (var key in new[] { "AccentBrush", "Bg0Brush", "TextBrush", "TierEliteBrush", "BannerBrush" })
+        foreach (var key in new[] { "AccentBrush", "OnAccentBrush", "MapleBrush", "Bg0Brush", "TextBrush", "TierEliteBrush", "BannerBrush", "BodyFont", "DisplayFont" })
         {
             Assert.True(global::Avalonia.Application.Current!.TryFindResource(key, out var value) && value is not null, $"Missing design token '{key}'.");
         }

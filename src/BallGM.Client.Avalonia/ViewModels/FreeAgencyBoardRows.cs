@@ -94,11 +94,11 @@ public sealed record BoardCandidateRow(
             };
 
         var ours = line is { HasOurOffer: true, OurFirstSeasonCompensation: { } compensation, OurSeasonCount: { } seasons }
-            ? $"Our offer: {MoneyDisplay.ToMillions(compensation)} × {seasons} season(s)"
+            ? $"Our offer: {MoneyDisplay.ToMillions(compensation)} × {DisplayText.Count(seasons, "season")}"
             : "We have nothing on the table";
 
         var counter = line is { CounterofferFirstSeasonCompensation: { } counterAmount, CounterofferSeasonCount: { } counterSeasons }
-            ? $"They countered: {MoneyDisplay.ToMillions(counterAmount)} × {counterSeasons} season(s)"
+            ? $"They countered: {MoneyDisplay.ToMillions(counterAmount)} × {DisplayText.Count(counterSeasons, "season")}"
             : string.Empty;
 
         return new BoardCandidateRow(
@@ -162,7 +162,7 @@ public sealed record MarketStandingRow(
         return new MarketStandingRow(
             line.TeamName,
             rank,
-            $"{MoneyDisplay.ToMillions(line.FirstSeasonCompensation)} × {line.SeasonCount} season(s)",
+            $"{MoneyDisplay.ToMillions(line.FirstSeasonCompensation)} × {DisplayText.Count(line.SeasonCount, "season")}",
             line.Narrative,
             line.Rank == 1,
             line.Rank == 0,
@@ -183,6 +183,6 @@ public sealed record BoardNegotiationRow(string PlayerName, string State, string
         return new BoardNegotiationRow(
             summary.PlayerName,
             summary.State,
-            $"{summary.LiveOfferCount} live of {summary.TotalOfferCount} offer(s) · {summary.CounterofferCount} counter(s)");
+            $"{summary.LiveOfferCount} live of {DisplayText.Count(summary.TotalOfferCount, "offer")} · {DisplayText.Count(summary.CounterofferCount, "counter")}");
     }
 }

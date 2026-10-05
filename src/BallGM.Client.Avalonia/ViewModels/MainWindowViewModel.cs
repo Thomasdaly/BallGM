@@ -49,6 +49,19 @@ public sealed class MainWindowViewModel : ViewModelBase
         Contracts = new ContractsViewModel(session, () => ApplyLeagueChange(session.Overview() is { IsSuccess: true } refreshed ? refreshed.Value : overview));
 
         Sections = [_roster.Title, _capSheet.Title, Contracts.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, Season.Title, FrontOffice.Title];
+        NavGroups =
+        [
+            new NavGroup("Squad", [_roster.Title, _capSheet.Title, Contracts.Title], () => SelectedSection, section => SelectedSection = section),
+            new NavGroup("Market", [Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, _pickBoard.Title], () => SelectedSection, section => SelectedSection = section),
+            new NavGroup("League", [Season.Title, FrontOffice.Title], () => SelectedSection, section => SelectedSection = section),
+        ];
+        Season.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(SeasonViewModel.Standings))
+            {
+                RaisePropertyChanged(nameof(BannerRecord));
+            }
+        };
         SelectedTeam = Teams.FirstOrDefault();
         SelectedSection = Sections[0];
     }
@@ -64,6 +77,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         LoadErrors = loadErrors;
         _teams = [];
         Sections = [];
+        NavGroups = [];
         Trade = null;
         FreeAgency = null;
         FreeAgencyBoard = null;
@@ -87,6 +101,32 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     public IReadOnlyList<string> Sections { get; }
+
+    /// <summary>The sidebar: <see cref="Sections"/> under their headings. Every section is in exactly one group.</summary>
+    public IReadOnlyList<NavGroup> NavGroups { get; }
+
+    /// <summary>The identity band's record figure: the selected team's line in the standings, or a dash before a season.</summary>
+    public string BannerRecord =>
+        _selectedTeam is not null && Season?.Standings.FirstOrDefault(row => row.TeamName == _selectedTeam.TeamName) is { } row
+            ? row.Record
+            : "—";
+
+    public string BannerPayroll => _selectedTeam is null ? "—" : MoneyDisplay.ToMillions(_selectedTeam.CapSheet.TotalPayroll);
+
+    /// <summary>The identity band's cap figure: distance to the soft cap, whichever side of it the team is on.</summary>
+    public string BannerCapValue => SoftCapStanding is { } softCap ? MoneyDisplay.ToMillions(Math.Abs(softCap.SignedDistance)) : "—";
+
+    public string BannerCapLabel => SoftCapStanding switch
+    {
+        null => "Soft cap",
+        { IsOver: true } => "Over the cap",
+        _ => "Cap room",
+    };
+
+    public string BannerRosterCount => _selectedTeam is null ? "—" : _selectedTeam.RosterCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private ThresholdStandingSummary? SoftCapStanding =>
+        _selectedTeam?.CapSheet.Thresholds.FirstOrDefault(line => line.RuleCode.Contains("soft_cap", StringComparison.Ordinal));
 
     public TradeProposalViewModel? Trade { get; }
 
@@ -154,6 +194,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             }
 
             RaisePropertyChanged(nameof(SelectedTeamDetail));
+            RaiseBannerChanged();
 
             if (_roster is not null)
             {
@@ -178,6 +219,11 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (FrontOffice is not null)
             {
                 FrontOffice.Team = value;
+            }
+
+            if (Season is not null)
+            {
+                Season.ViewedTeamName = value?.TeamName;
             }
 
             if (Contracts is not null)
@@ -213,6 +259,11 @@ public sealed class MainWindowViewModel : ViewModelBase
                 _ => _roster,
             };
 
+            foreach (var group in NavGroups)
+            {
+                group.SelectionChanged();
+            }
+
             // Games may have been played, or contracts signed, since these screens were last drawn.
             if (CurrentScreen is RosterViewModel roster)
             {
@@ -227,6 +278,15 @@ public sealed class MainWindowViewModel : ViewModelBase
             RaisePropertyChanged(nameof(AlertLine));
             RaisePropertyChanged(nameof(HasAlerts));
         }
+    }
+
+    private void RaiseBannerChanged()
+    {
+        RaisePropertyChanged(nameof(BannerRecord));
+        RaisePropertyChanged(nameof(BannerPayroll));
+        RaisePropertyChanged(nameof(BannerCapValue));
+        RaisePropertyChanged(nameof(BannerCapLabel));
+        RaisePropertyChanged(nameof(BannerRosterCount));
     }
 
     public object? CurrentScreen
@@ -253,9 +313,15 @@ public sealed class MainWindowViewModel : ViewModelBase
         _selectedTeam = Teams.FirstOrDefault(team => team.TeamId == selectedTeamId) ?? Teams.FirstOrDefault();
         RaisePropertyChanged(nameof(SelectedTeam));
         RaisePropertyChanged(nameof(SelectedTeamDetail));
+        RaiseBannerChanged();
 
         _roster.Team = _selectedTeam;
         _capSheet.Team = _selectedTeam;
+        if (Season is not null)
+        {
+            Season.ViewedTeamName = _selectedTeam?.TeamName;
+        }
+
         _pickBoard.Team = _selectedTeam;
         if (FreeAgencyBoard is not null)
         {

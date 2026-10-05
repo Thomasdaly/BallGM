@@ -12,7 +12,7 @@
       <!-- Alerts first: a refusal is the thing to act on. -->
       <Border Classes="callout bad" IsVisible="{Binding HasAlerts}">
         <StackPanel Spacing="6">
-          <TextBlock Text="{Binding AlertCountLine, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="eyebrow" />
+          <TextBlock Text="{Binding AlertCountLine}" Classes="eyebrow" />
           <ItemsControl ItemsSource="{Binding Alerts}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="app:ExtensionRefusalLine">
@@ -35,11 +35,11 @@
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,Auto">
             <StackPanel Spacing="2">
-              <TextBlock Text="PAYROLL OUTLOOK" Classes="eyebrow accent" />
+              <TextBlock Text="Payroll outlook" Classes="section" />
               <TextBlock Text="{Binding OutlookHeadline}" Classes="dim" TextWrapping="Wrap" />
             </StackPanel>
             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-              <TextBlock Text="CAP GROWTH / SEASON" Classes="eyebrow" VerticalAlignment="Center" />
+              <TextBlock Text="Cap growth per season" Classes="eyebrow" VerticalAlignment="Center" />
               <ComboBox ItemsSource="{Binding GrowthOptions}" SelectedItem="{Binding CapGrowthPercent}" MinWidth="80">
                 <ComboBox.ItemTemplate>
                   <DataTemplate x:DataType="x:Int32">
@@ -51,7 +51,7 @@
           </Grid>
 
           <StackPanel Orientation="Horizontal" Margin="10,0,0,0">
-            <TextBlock Text="PLAYER" Width="250" Classes="eyebrow" FontSize="10" />
+            <TextBlock Text="Player" Width="250" Classes="eyebrow" />
             <ItemsControl ItemsSource="{Binding Seasons}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -60,7 +60,7 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="x:String">
-                  <TextBlock Text="{Binding}" Width="130" Classes="eyebrow" FontSize="10" />
+                  <TextBlock Text="{Binding}" Width="130" Classes="eyebrow" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -123,7 +123,7 @@
       <Grid ColumnDefinitions="3*,2*" ColumnSpacing="24">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Text="UPCOMING FREE AGENTS" Classes="eyebrow accent" VerticalAlignment="Center" />
+            <TextBlock Text="Upcoming free agents" Classes="section" VerticalAlignment="Center" />
             <ToggleSwitch Grid.Column="1" IsChecked="{Binding WholeLeague}" OnContent="Whole league" OffContent="This team" />
           </Grid>
           <ItemsControl ItemsSource="{Binding FreeAgentClasses}">
@@ -171,20 +171,20 @@
         <!-- Re-signing panel. -->
         <Border Grid.Column="1" Classes="panel" VerticalAlignment="Top">
           <StackPanel Spacing="10">
-            <TextBlock Text="RE-SIGN A PLAYER" Classes="eyebrow accent" />
+            <TextBlock Text="Re-sign a player" Classes="section" />
             <TextBlock Text="Pick an extension-eligible player (final season of his contract) from the list." Classes="faint small" TextWrapping="Wrap" IsVisible="{Binding !HasSelection}" />
             <StackPanel Spacing="10" IsVisible="{Binding HasSelection}">
               <TextBlock Text="{Binding Selected.FullName, FallbackValue=''}" Classes="h2" />
               <TextBlock Text="{Binding TermsLine}" Classes="dim small" TextWrapping="Wrap" />
               <TextBlock Text="{Binding AskingLine}" Classes="strong small" TextWrapping="Wrap" />
               <StackPanel Spacing="6" IsVisible="{Binding CanOffer}">
-                <TextBlock Text="FIRST SEASON ($M)" Classes="eyebrow" FontSize="10" />
+                <TextBlock Text="First season ($M)" Classes="eyebrow" />
                 <TextBox x:Name="ExtensionSalary" Text="{Binding OfferSalary}" />
-                <TextBlock Text="SEASONS" Classes="eyebrow" FontSize="10" />
+                <TextBlock Text="Seasons" Classes="eyebrow" />
                 <NumericUpDown Value="{Binding OfferSeasons}" Minimum="1" Maximum="6" Increment="1" FormatString="0" />
-                <TextBlock Text="ANNUAL RAISE (%)" Classes="eyebrow" FontSize="10" />
+                <TextBlock Text="Annual raise (%)" Classes="eyebrow" />
                 <NumericUpDown Value="{Binding OfferRaise}" Minimum="0" Maximum="8" Increment="1" FormatString="0" />
-                <Button Classes="primary" Content="OFFER EXTENSION" Command="{Binding OfferCommand}" HorizontalAlignment="Left" Margin="0,6,0,0" />
+                <Button Classes="primary" Content="Offer extension" Command="{Binding OfferCommand}" HorizontalAlignment="Left" Margin="0,6,0,0" />
               </StackPanel>
             </StackPanel>
             <Border Classes="callout" Classes.bad="{Binding !OutcomeAccepted}" IsVisible="{Binding HasOutcome}">

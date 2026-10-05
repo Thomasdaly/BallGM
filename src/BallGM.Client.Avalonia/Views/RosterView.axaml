@@ -21,13 +21,13 @@
     <WrapPanel Grid.Row="1" Orientation="Horizontal" ItemSpacing="12" LineSpacing="12">
       <Border Classes="stat accent">
         <StackPanel Spacing="2">
-          <TextBlock Text="TEAM OVR (AVG)" Classes="eyebrow" FontSize="10" />
+          <TextBlock Text="Average overall" Classes="eyebrow" />
           <TextBlock Text="{Binding AverageOverall}" Classes="value" />
         </StackPanel>
       </Border>
       <Border Classes="stat" MinWidth="240">
         <StackPanel Spacing="2">
-          <TextBlock Text="TOP PLAYER" Classes="eyebrow" FontSize="10" />
+          <TextBlock Text="Top player" Classes="eyebrow" />
           <StackPanel Orientation="Horizontal" Spacing="10">
             <Border Classes="face large">
               <Image Source="{Binding TopPlayerPortrait, Converter={x:Static conv:ImagePathConverter.Instance}}" Stretch="UniformToFill" />
@@ -41,13 +41,7 @@
       </Border>
       <Border Classes="stat">
         <StackPanel Spacing="2">
-          <TextBlock Text="PAYROLL" Classes="eyebrow" FontSize="10" />
-          <TextBlock Text="{Binding Payroll}" Classes="value" />
-        </StackPanel>
-      </Border>
-      <Border Classes="stat">
-        <StackPanel Spacing="2">
-          <TextBlock Text="INJURED" Classes="eyebrow" FontSize="10" />
+          <TextBlock Text="Injured" Classes="eyebrow" />
           <TextBlock Text="{Binding InjuredCount}" Classes="value" />
         </StackPanel>
       </Border>
@@ -57,16 +51,16 @@
       <TextBlock DockPanel.Dock="Bottom" Text="{Binding SortLabel, StringFormat='{}{0} · click a player for their profile'}" Classes="faint tiny" Margin="10,8,0,0" />
       <Grid DockPanel.Dock="Top" Classes="thead" ColumnDefinitions="56,40,*,56,46,54,54,54,54,90,64,1.3*">
         <Button Classes="th" Content="OVR" Command="{Binding SortByOverallCommand}" />
-        <Button Grid.Column="2" Classes="th" Content="PLAYER" Command="{Binding SortByNameCommand}" />
+        <Button Grid.Column="2" Classes="th" Content="Player" Command="{Binding SortByNameCommand}" />
         <Button Grid.Column="3" Classes="th" Content="POS" Command="{Binding SortByPositionCommand}" />
         <Button Grid.Column="4" Classes="th" Content="GP" Command="{Binding SortByGamesCommand}" ToolTip.Tip="Games played this season" />
         <Button Grid.Column="5" Classes="th" Content="MPG" Command="{Binding SortByMinutesCommand}" ToolTip.Tip="Minutes per game" />
         <Button Grid.Column="6" Classes="th" Content="PPG" Command="{Binding SortByPointsCommand}" ToolTip.Tip="Points per game" />
         <Button Grid.Column="7" Classes="th" Content="RPG" Command="{Binding SortByReboundsCommand}" ToolTip.Tip="Rebounds per game" />
         <Button Grid.Column="8" Classes="th" Content="APG" Command="{Binding SortByAssistsCommand}" ToolTip.Tip="Assists per game" />
-        <Button Grid.Column="9" Classes="th" Content="SALARY" Command="{Binding SortBySalaryCommand}" />
-        <Button Grid.Column="10" Classes="th" Content="YEARS" Command="{Binding SortByYearsCommand}" ToolTip.Tip="Contract seasons remaining" />
-        <TextBlock Grid.Column="11" Text="STATUS" VerticalAlignment="Center" />
+        <Button Grid.Column="9" Classes="th" Content="Salary" Command="{Binding SortBySalaryCommand}" />
+        <Button Grid.Column="10" Classes="th" Content="Years" Command="{Binding SortByYearsCommand}" ToolTip.Tip="Contract seasons remaining" />
+        <TextBlock Grid.Column="11" Text="Status" VerticalAlignment="Center" />
       </Grid>
 
       <ScrollViewer>

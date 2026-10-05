@@ -254,7 +254,7 @@ public sealed class FreeAgencyBoardViewModel : ViewModelBase
         OurNegotiations = board.OurNegotiations.Select(BoardNegotiationRow.From).ToList();
 
         var expiry = board.OfferExpiryDays is { } days
-            ? $"offers stand for {days} day(s)"
+            ? $"offers stand for {DisplayText.Count(days, "day")}"
             : "offers never expire";
 
         var mode = board.ResolutionMode == "Immediate"
@@ -294,7 +294,7 @@ public sealed class FreeAgencyBoardViewModel : ViewModelBase
 
         var negotiation = result.Value;
         Status = $"Offer on the table for {negotiation.PlayerName}. " +
-                 $"{negotiation.LiveOfferCount} offer(s) standing on day {_day}. Check the market to see who would win.";
+                 $"{DisplayText.Count(negotiation.LiveOfferCount, "offer")} standing on day {_day}. Check the market to see who would win.";
 
         Refresh();
     }

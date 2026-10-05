@@ -11,9 +11,10 @@ public sealed record StandingsRowDisplay(
     string DivisionRecord,
     string ConferenceRecord,
     string PointDifferential,
-    string PointsFor)
+    string PointsFor,
+    bool IsViewedTeam = false)
 {
-    public static StandingsRowDisplay From(StandingsLine line)
+    public static StandingsRowDisplay From(StandingsLine line, string? viewedTeamName = null)
     {
         ArgumentNullException.ThrowIfNull(line);
 
@@ -38,7 +39,8 @@ public sealed record StandingsRowDisplay(
             division,
             conference,
             line.PointDifferential > 0 ? $"+{line.PointDifferential}" : line.PointDifferential.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            line.PointsFor.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            line.PointsFor.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            string.Equals(line.TeamName, viewedTeamName, StringComparison.Ordinal));
     }
 }
 
@@ -66,7 +68,7 @@ public sealed record CalendarPhaseRow(string Phase, string Days, string Dates, b
         ArgumentNullException.ThrowIfNull(line);
 
         return new CalendarPhaseRow(
-            line.Phase,
+            DisplayText.Words(line.Phase),
             $"days {line.StartDay}–{line.EndDayExclusive - 1}",
             $"{line.StartDate} to {line.EndDate}",
             line.IsCurrent);

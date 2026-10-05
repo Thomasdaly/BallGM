@@ -10,7 +10,7 @@
     <Grid ColumnDefinitions="*,20,*">
       <DockPanel>
         <StackPanel DockPanel.Dock="Top" Spacing="6">
-          <TextBlock Classes="eyebrow" Text="SENDING" />
+          <TextBlock Classes="section" Text="Sending" />
           <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding SendingTeam}" HorizontalAlignment="Stretch">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="app:TeamSummary">
@@ -35,7 +35,7 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
-          <TextBlock Classes="eyebrow" Grid.Row="1" Text="DRAFT ASSETS" />
+          <TextBlock Classes="section" Grid.Row="1" Text="Draft assets" />
           <ListBox
             Grid.Row="2"
             ItemsSource="{Binding SendingPickAssets}"
@@ -60,7 +60,7 @@
 
       <DockPanel Grid.Column="2">
         <StackPanel DockPanel.Dock="Top" Spacing="6">
-          <TextBlock Classes="eyebrow" Text="RECEIVING" />
+          <TextBlock Classes="section" Text="Receiving" />
           <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding ReceivingTeam}" HorizontalAlignment="Stretch">
             <ComboBox.ItemTemplate>
               <DataTemplate x:DataType="app:TeamSummary">
@@ -85,7 +85,7 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
-          <TextBlock Classes="eyebrow" Grid.Row="1" Text="DRAFT ASSETS" />
+          <TextBlock Classes="section" Grid.Row="1" Text="Draft assets" />
           <ListBox
             Grid.Row="2"
             ItemsSource="{Binding ReceivingPickAssets}"
@@ -111,7 +111,7 @@
 
     <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
       <Button Content="Check trade" Command="{Binding CheckCommand}" />
-      <Button Classes="primary" Content="SUBMIT TRADE" Command="{Binding SubmitCommand}" IsEnabled="{Binding IsLegal}" />
+      <Button Classes="primary" Content="Submit trade" Command="{Binding SubmitCommand}" IsEnabled="{Binding IsLegal}" />
       <Button Content="Clear" Command="{Binding ClearCommand}" />
     </StackPanel>
 
@@ -123,7 +123,7 @@
     <ScrollViewer Grid.Row="3" IsVisible="{Binding HasAssessment}" MaxHeight="340">
       <StackPanel Spacing="14">
         <StackPanel Spacing="6" IsVisible="{Binding HasViolations}">
-          <TextBlock Classes="eyebrow" Text="WHY IT IS REJECTED" />
+          <TextBlock Classes="section" Text="Why it is rejected" />
           <ItemsControl ItemsSource="{Binding Violations}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:TradeFindingRow">
@@ -139,7 +139,7 @@
         </StackPanel>
 
         <StackPanel Spacing="6" IsVisible="{Binding HasWarnings}">
-          <TextBlock Classes="eyebrow" Text="WORTH KNOWING" />
+          <TextBlock Classes="section" Text="Worth knowing" />
           <ItemsControl ItemsSource="{Binding Warnings}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:TradeFindingRow">
@@ -155,7 +155,7 @@
         </StackPanel>
 
         <StackPanel Spacing="6" IsVisible="{Binding HasNotes}">
-          <TextBlock Classes="eyebrow" Text="RULES THIS LEAGUE DOES NOT HAVE" />
+          <TextBlock Classes="section" Text="Rules this league does not have" />
           <ItemsControl ItemsSource="{Binding Notes}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:TradeFindingRow">
@@ -171,7 +171,7 @@
         </StackPanel>
 
         <StackPanel Spacing="6">
-          <TextBlock Classes="eyebrow" Text="WHAT IT DOES TO EACH TEAM" />
+          <TextBlock Classes="section" Text="What it does to each team" />
           <ItemsControl ItemsSource="{Binding Outcomes}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:TradeOutcomeRow">

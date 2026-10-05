@@ -57,6 +57,15 @@ Versioned external schemas, loading, validation, compatibility checks, content m
 
 Presentation, input, navigation, view models, localisation, accessibility, and desktop-platform integration.
 
+**The visual system ("the scorer's table").** Every colour, typeface, and icon is a token in `Themes/Tokens.axaml`; views speak in the style classes of `Themes/Controls.axaml` and never hard-code a colour. Four decisions worth not re-deriving:
+
+- **The one accent is the viewed team's own colour ("paint").** Packs state no team colours, so `Theming/TeamPaint` reads it from the team's logo (the most common strongly saturated hue), lifts it until it clears 4.5:1 on the darkest surface, and writes it into the existing `Accent*` brush instances, so every `StaticResource` user follows without a lookup change. A monochrome logo, or no logo, restores the token fallback. Paint marks *chrome* — the nav rule, primary buttons, tabs, the identity band, the viewed team's standings line — and never data: a red or green paint on a W-L figure would read as a status, and status colours (`Good`/`Warn`/`Bad`) are reserved.
+- **Surfaces are arena navy, not neutral black, and hardwood ("maple") is decorative only** — the wordmark and the court lines drawn across the identity band.
+- **Type is embedded Barlow (body) and Barlow Condensed (headings and every figure, tabular), SIL OFL, registered as one `EmbeddedFontCollection` by `App` itself.** A plain `avares://…#Family` lookup matched only faces whose legacy family name is exactly that, so SemiBold silently fell back; and a typeface key naming an unregistered collection *throws* while measuring text, which is why `App.Initialize` registers it rather than one `AppBuilder` (the headless test host builds its own).
+- **Sentence case everywhere.** The only capitals are the team name in the identity band, position codes, and stat abbreviations that are capitals in the sport.
+
+The shell groups navigation under Squad / Market / League (`NavGroup`, one list per heading, ignoring the null a list pushes when another takes the selection), moves the team picker into the sidebar because it is a navigation choice, and gives the identity band four scoreboard figures (record, payroll, distance to the soft cap, roster count).
+
 ## Current project references
 
 ```text

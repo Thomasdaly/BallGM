@@ -17,12 +17,12 @@
             <TextBlock Text="{Binding AdvancePreview}" Classes="faint small" TextWrapping="Wrap" IsVisible="{Binding HasSeason}" />
           </StackPanel>
 
-          <Button Grid.Column="1" Classes="primary" Content="START SEASON" Command="{Binding StartSeasonCommand}" VerticalAlignment="Center" IsVisible="{Binding HasNoSeason}" />
+          <Button Grid.Column="1" Classes="primary" Content="Start season" Command="{Binding StartSeasonCommand}" VerticalAlignment="Center" IsVisible="{Binding HasNoSeason}" />
 
           <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding HasSeason}">
-            <TextBlock Text="DAYS" Classes="eyebrow" VerticalAlignment="Center" />
+            <TextBlock Text="Days" Classes="eyebrow" VerticalAlignment="Center" />
             <ComboBox ItemsSource="{Binding AdvanceOptions}" SelectedItem="{Binding AdvanceDays}" MinWidth="80" />
-            <Button Classes="primary" Content="ADVANCE" Command="{Binding AdvanceCommand}" />
+            <Button Classes="primary" Content="Advance" Command="{Binding AdvanceCommand}" />
             <Button Content="To end of season" Command="{Binding AdvanceToEndCommand}" />
           </StackPanel>
         </Grid>
@@ -37,25 +37,25 @@
 
         <StackPanel Spacing="18">
           <StackPanel Spacing="8">
-            <TextBlock Classes="eyebrow" Text="STANDINGS" />
+            <TextBlock Classes="section" Text="Standings" />
             <Grid Classes="thead" ColumnDefinitions="30,*,150,62,50,56,62,52">
               <TextBlock Text="#" />
-              <TextBlock Grid.Column="1" Text="TEAM" />
-              <TextBlock Grid.Column="2" Text="GROUP" />
+              <TextBlock Grid.Column="1" Text="Team" />
+              <TextBlock Grid.Column="2" Text="Group" />
               <TextBlock Grid.Column="3" Text="W-L" />
-              <TextBlock Grid.Column="4" Text="DIV" />
-              <TextBlock Grid.Column="5" Text="CONF" />
-              <TextBlock Grid.Column="6" Text="DIFF" />
+              <TextBlock Grid.Column="4" Text="Div" />
+              <TextBlock Grid.Column="5" Text="Conf" />
+              <TextBlock Grid.Column="6" Text="Diff" />
               <TextBlock Grid.Column="7" Text="PF" />
             </Grid>
             <ItemsControl Classes="table" ItemsSource="{Binding Standings}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:StandingsRowDisplay">
-                  <Grid ColumnDefinitions="30,*,150,62,50,56,62,52" Height="30">
+                  <Grid ColumnDefinitions="30,*,150,62,50,56,62,52" Height="30" Classes.viewed="{Binding IsViewedTeam}">
                     <TextBlock Text="{Binding Position}" VerticalAlignment="Center" Classes="faint num" />
                     <TextBlock Grid.Column="1" Text="{Binding TeamName}" VerticalAlignment="Center" Classes="strong" TextTrimming="CharacterEllipsis" />
                     <TextBlock Grid.Column="2" Text="{Binding Group}" VerticalAlignment="Center" Classes="dim tiny" TextTrimming="CharacterEllipsis" Margin="0,0,10,0" />
-                    <TextBlock Grid.Column="3" Text="{Binding Record}" VerticalAlignment="Center" Classes="num accent" />
+                    <TextBlock Grid.Column="3" Text="{Binding Record}" VerticalAlignment="Center" Classes="num" />
                     <TextBlock Grid.Column="4" Text="{Binding DivisionRecord}" VerticalAlignment="Center" Classes="dim small" />
                     <TextBlock Grid.Column="5" Text="{Binding ConferenceRecord}" VerticalAlignment="Center" Classes="dim small" />
                     <TextBlock Grid.Column="6" Text="{Binding PointDifferential}" VerticalAlignment="Center" Classes="num" />
@@ -68,7 +68,7 @@
           </StackPanel>
 
           <StackPanel Spacing="8">
-            <TextBlock Classes="eyebrow" Text="CALENDAR" />
+            <TextBlock Classes="section" Text="Calendar" />
             <ItemsControl Classes="table" ItemsSource="{Binding Phases}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:CalendarPhaseRow">
@@ -77,7 +77,7 @@
                     <TextBlock Grid.Column="1" Text="{Binding Days}" VerticalAlignment="Center" Classes="dim small" />
                     <TextBlock Grid.Column="2" Text="{Binding Dates}" VerticalAlignment="Center" Classes="dim small" />
                     <Border Grid.Column="3" Classes="pill" Background="{StaticResource AccentBrush}" IsVisible="{Binding IsCurrent}">
-                      <TextBlock Text="NOW" Foreground="{StaticResource Bg0Brush}" />
+                      <TextBlock Text="Now" Foreground="{StaticResource Bg0Brush}" />
                     </Border>
                   </Grid>
                 </DataTemplate>
@@ -88,14 +88,14 @@
 
         <StackPanel Grid.Column="1" Spacing="18">
           <StackPanel Spacing="8">
-            <TextBlock Classes="eyebrow" Text="RECENT RESULTS" />
+            <TextBlock Classes="section" Text="Recent results" />
             <TextBlock Text="Select a game to see its box score." Classes="faint tiny" />
             <ListBox x:Name="RecentResults" ItemsSource="{Binding RecentResults}" SelectedItem="{Binding SelectedFixture}" MaxHeight="260">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:FixtureRow">
                   <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
                     <TextBlock Text="{Binding Matchup}" Classes="strong" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="1" Text="{Binding Score}" Classes="num accent" Margin="12,0,0,0" />
+                    <TextBlock Grid.Column="1" Text="{Binding Score}" Classes="num" Margin="12,0,0,0" />
                     <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Day}" Classes="faint tiny" />
                   </Grid>
                 </DataTemplate>
@@ -105,7 +105,7 @@
 
           <Border Classes="panel" IsVisible="{Binding HasSelectedFixture}">
             <StackPanel Spacing="10">
-              <TextBlock Classes="eyebrow accent" Text="BOX SCORE" />
+              <TextBlock Classes="section" Text="Box score" />
               <TextBlock Text="{Binding BoxScoreHeadline}" Classes="h3" TextWrapping="Wrap" />
               <TextBlock
                 Text="{Binding BoxScoreUnavailableMessage}"
@@ -116,7 +116,7 @@
               <StackPanel Spacing="4" IsVisible="{Binding HasBoxScoreLines}">
                 <TextBlock Text="{Binding AwayTeamName}" Classes="strong" />
                 <Grid Classes="thead" ColumnDefinitions="*,40,40,40,40">
-                  <TextBlock Text="PLAYER" />
+                  <TextBlock Text="Player" />
                   <TextBlock Grid.Column="1" Text="MIN" />
                   <TextBlock Grid.Column="2" Text="PTS" />
                   <TextBlock Grid.Column="3" Text="REB" />
@@ -138,7 +138,7 @@
 
                 <TextBlock Text="{Binding HomeTeamName}" Classes="strong" Margin="0,10,0,0" />
                 <Grid Classes="thead" ColumnDefinitions="*,40,40,40,40">
-                  <TextBlock Text="PLAYER" />
+                  <TextBlock Text="Player" />
                   <TextBlock Grid.Column="1" Text="MIN" />
                   <TextBlock Grid.Column="2" Text="PTS" />
                   <TextBlock Grid.Column="3" Text="REB" />
@@ -162,7 +162,7 @@
           </Border>
 
           <StackPanel Spacing="8">
-            <TextBlock Classes="eyebrow" Text="NEXT UP" />
+            <TextBlock Classes="section" Text="Next up" />
             <ItemsControl Classes="table" ItemsSource="{Binding UpcomingFixtures}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:FixtureRow">
@@ -178,7 +178,7 @@
       </Grid>
 
       <StackPanel Spacing="8" IsVisible="{Binding HasWarnings}">
-        <TextBlock Classes="eyebrow" Text="WARNINGS" />
+        <TextBlock Classes="section" Text="Warnings" />
         <ItemsControl ItemsSource="{Binding Warnings}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:SeasonFindingRow">
@@ -195,7 +195,7 @@
       </StackPanel>
 
       <StackPanel Spacing="8" IsVisible="{Binding HasNotes}">
-        <TextBlock Classes="eyebrow" Text="RULES THIS LEAGUE DOES NOT STATE" />
+        <TextBlock Classes="section" Text="Rules this league does not state" />
         <ItemsControl ItemsSource="{Binding Notes}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:SeasonFindingRow">
