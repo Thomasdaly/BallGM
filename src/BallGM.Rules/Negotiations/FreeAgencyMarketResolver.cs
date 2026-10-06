@@ -78,7 +78,7 @@ public sealed class FreeAgencyMarketResolver
         {
             warnings.Add(new RuleFinding(
                 OfferExpiredCode,
-                $"The offer from this team has stood longer than the {MarketText.Count(rules.OfferExpiryDays.GetValueOrDefault(), "day")} this league allows and is out of the running.",
+                $"The offer from this team has stood longer than the {ExplanationText.Count(rules.OfferExpiryDays.GetValueOrDefault(), "day")} this league allows and is out of the running.",
                 expired.TeamId));
         }
 
@@ -285,7 +285,7 @@ public sealed class FreeAgencyMarketResolver
                 // Below the top there is nothing at stake, so the tie falls to the stated key rather
                 // than spending a draw on an ordering nobody acts on.
                 chosen = leaders[0];
-                narrative = $"Finished {MarketText.Ordinal(rank)}: inseparable from the offers beside it, ordered by team identifier.";
+                narrative = $"Finished {ExplanationText.Ordinal(rank)}: inseparable from the offers beside it, ordered by team identifier.";
             }
 
             ranked.Add((chosen.Offer, chosen.Preference, rank, narrative));
@@ -334,11 +334,11 @@ public sealed class FreeAgencyMarketResolver
         {
             return rank == 1
                 ? "Taken: the only offer this player would accept."
-                : $"Finished {MarketText.Ordinal(rank)}.";
+                : $"Finished {ExplanationText.Ordinal(rank)}.";
         }
 
         var comparison = PreferenceRanking.Compare(chosen.Preference, runnerUp.Preference);
-        var prefix = rank == 1 ? "Taken" : $"Finished {MarketText.Ordinal(rank)}";
+        var prefix = rank == 1 ? "Taken" : $"Finished {ExplanationText.Ordinal(rank)}";
 
         return $"{prefix}: {comparison.Explanation}";
     }
@@ -370,7 +370,7 @@ public sealed class FreeAgencyMarketResolver
 
         var field = against <= 0
             ? "the only offer on the table"
-            : MarketText.Count(against, "competing offer");
+            : ExplanationText.Count(against, "competing offer");
 
         return tieBreakUsed
             ? $"{player} would sign with {teamName}, chosen by seeded draw against {field} this player could not separate."

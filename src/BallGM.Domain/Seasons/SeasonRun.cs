@@ -72,7 +72,7 @@ public sealed class SeasonRun
         {
             return DomainOperationResult<SeasonRun>.Failure(new DomainError(
                 DayBeyondCalendarCode,
-                $"{uncovered.Length} fixture(s) fall on days the season {season.Year} calendar does not cover — the first is game '{uncovered[0].Id.Value}' on {uncovered[0].Day}, and the calendar runs {calendar.LengthInDays} days."));
+                $"{ExplanationText.Count(uncovered.Length, "fixture")} {(uncovered.Length == 1 ? "falls" : "fall")} on days the season {season.Year} calendar does not cover — the first is game '{uncovered[0].Id.Value}' on {uncovered[0].Day}, and the calendar runs {calendar.LengthInDays} days."));
         }
 
         return DomainOperationResult<SeasonRun>.Success(new SeasonRun(

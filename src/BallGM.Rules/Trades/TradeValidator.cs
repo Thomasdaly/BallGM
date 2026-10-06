@@ -438,7 +438,7 @@ public sealed class TradeValidator
             {
                 violations.Add(new RuleFinding(
                     AboveFirstApronMatchCode,
-                    $"This team finishes above the first apron, where it may take back at most {apronPercent}% of what it sends out: {apronLimit} for {outgoing} sent, against {incoming} taken back.",
+                    $"This team finishes above the first apron, where it may take back at most {apronPercent}% of what it sends out: {ExplanationText.Money(apronLimit)} for {ExplanationText.Money(outgoing)} sent, against {ExplanationText.Money(incoming)} taken back.",
                     outcome.TeamId));
             }
 
@@ -463,7 +463,7 @@ public sealed class TradeValidator
                 : "the salary-matching band for that outgoing amount";
             violations.Add(new RuleFinding(
                 SalaryMatchCode,
-                $"This team takes back {incoming} against {outgoing} sent out, and may take back at most {allowedIncoming} — {basis}, or the room it has under the soft cap, whichever is larger.",
+                $"This team takes back {ExplanationText.Money(incoming)} against {ExplanationText.Money(outgoing)} sent out, and may take back at most {ExplanationText.Money(allowedIncoming)}: {basis}, or the room it has under the soft cap, whichever is larger.",
                 outcome.TeamId));
         }
     }
@@ -508,7 +508,7 @@ public sealed class TradeValidator
         {
             violations.Add(new RuleFinding(
                 HardCapCode,
-                $"The trade would put this team at {payrollAfter}, above the hard cap of {hardCap.SmallestUnits}. No transaction may cross that line.",
+                $"The trade would put this team at {ExplanationText.Money(payrollAfter)}, above the hard cap of {ExplanationText.Money(hardCap.SmallestUnits)}. No transaction may cross that line.",
                 outcome.TeamId));
         }
     }
@@ -537,7 +537,7 @@ public sealed class TradeValidator
         {
             violations.Add(new RuleFinding(
                 SecondApronCode,
-                $"This team finishes above the second apron and would take on more salary than it sends out ({incoming} in against {outgoing} out). Above that line this ruleset allows no net increase.",
+                $"This team finishes above the second apron and would take on more salary than it sends out ({ExplanationText.Money(incoming)} in against {ExplanationText.Money(outgoing)} out). Above that line this ruleset allows no net increase.",
                 outcome.TeamId));
         }
     }
@@ -566,7 +566,7 @@ public sealed class TradeValidator
         {
             warnings.Add(new RuleFinding(
                 ruleCode,
-                $"The trade takes this team over {description}, from {before} to {after}.",
+                $"The trade takes this team over {description}, from {ExplanationText.Money(before)} to {ExplanationText.Money(after)}.",
                 outcome.TeamId));
         }
     }

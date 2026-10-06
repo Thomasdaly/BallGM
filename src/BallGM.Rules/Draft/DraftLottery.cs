@@ -56,7 +56,7 @@ public static class DraftLottery
         {
             return DomainOperationResult<DraftOrderSnapshot>.Failure(new DomainError(
                 PoolLargerThanLeagueCode,
-                $"The lottery pool states {lotteryRules.Weights.Count} weight(s) but the league has only {reverseStandingsOrder.Count} team(s)."));
+                $"The lottery pool states {ExplanationText.Count(lotteryRules.Weights.Count, "weight")} but the league has only {ExplanationText.Count(reverseStandingsOrder.Count, "team")}."));
         }
 
         var round1Order = draftRules.LotteryEnabled && lotteryRules.IsConfigured

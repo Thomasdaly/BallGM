@@ -68,7 +68,7 @@ public static class ContractTerms
         {
             errors.Add(new DomainError(
                 GuaranteeExceedsCompensationCode,
-                $"Season {term.Season.Year} guarantees {term.GuaranteedAmount.SmallestUnits}, which is more than its compensation of {term.Compensation.SmallestUnits}."));
+                $"Season {term.Season.Year} guarantees {ExplanationText.Money(term.GuaranteedAmount.SmallestUnits)}, which is more than its compensation of {ExplanationText.Money(term.Compensation.SmallestUnits)}."));
         }
 
         return errors.Count > 0

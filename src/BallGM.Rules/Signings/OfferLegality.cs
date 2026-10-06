@@ -155,7 +155,7 @@ public static class OfferLegality
         {
             violations.Add(new RuleFinding(
                 AboveCeilingCode,
-                $"Season {term.Season.Year} pays {term.Compensation.SmallestUnits}. With {seasonsOfService} seasons of service this player may be paid at most {ceiling.SmallestUnits} in any season, which is {rules.CompensationCeiling.PercentFor(seasonsOfService)}% of the soft cap.",
+                $"Season {term.Season.Year} pays {ExplanationText.Money(term.Compensation.SmallestUnits)}. With {ExplanationText.Count(seasonsOfService, "season")} of service this player may be paid at most {ExplanationText.Money(ceiling.SmallestUnits)} in any season, which is {rules.CompensationCeiling.PercentFor(seasonsOfService)}% of the soft cap.",
                 offer.TeamId));
         }
     }
@@ -185,7 +185,7 @@ public static class OfferLegality
         {
             violations.Add(new RuleFinding(
                 BelowFloorCode,
-                $"Season {term.Season.Year} pays {term.Compensation.SmallestUnits}. With {seasonsOfService} seasons of service this player cannot be paid less than {floor.SmallestUnits} in any season.",
+                $"Season {term.Season.Year} pays {ExplanationText.Money(term.Compensation.SmallestUnits)}. With {ExplanationText.Count(seasonsOfService, "season")} of service this player cannot be paid less than {ExplanationText.Money(floor.SmallestUnits)} in any season.",
                 offer.TeamId));
         }
     }

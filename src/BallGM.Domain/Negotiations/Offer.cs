@@ -89,7 +89,7 @@ public sealed record Offer
         {
             errors.Add(new DomainError(
                 NonPositiveCompensationCode,
-                $"Season {term.Season.Year} of this offer pays {term.Compensation.SmallestUnits}. An offer has to pay something in every season it covers."));
+                $"Season {term.Season.Year} of this offer pays {ExplanationText.Money(term.Compensation.SmallestUnits)}. An offer has to pay something in every season it covers."));
         }
 
         return errors.Count > 0

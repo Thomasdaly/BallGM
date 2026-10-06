@@ -96,7 +96,7 @@ public sealed record CapThresholds
                 new DomainError(
                     DescendingThresholdsCode,
                     "Cap thresholds must be configured in non-decreasing order: payroll floor, soft cap, luxury tax, first apron, second apron, hard cap. " +
-                    $"The configured {Describe(configured[index - 1].Kind)} of {configured[index - 1].Amount.SmallestUnits} is above the configured {Describe(configured[index].Kind)} of {configured[index].Amount.SmallestUnits}."));
+                    $"The configured {Describe(configured[index - 1].Kind)} of {ExplanationText.Money(configured[index - 1].Amount.SmallestUnits)} is above the configured {Describe(configured[index].Kind)} of {ExplanationText.Money(configured[index].Amount.SmallestUnits)}."));
         }
 
         return DomainOperationResult<CapThresholds>.Success(candidate);

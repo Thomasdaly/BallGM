@@ -58,7 +58,7 @@ public sealed class SigningValidatorTests
         var capRoom = Route(assessment, SigningRouteKind.CapRoom);
         Assert.False(capRoom.Permits);
         Assert.Equal(SigningRouteTable.InsufficientCapRoomCode, capRoom.RuleCode);
-        Assert.Contains("15000000", capRoom.Explanation, StringComparison.Ordinal);
+        Assert.Contains("$15.0M", capRoom.Explanation, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -200,7 +200,7 @@ public sealed class SigningValidatorTests
         // it covers, and each one is named rather than the first standing in for the rest.
         var violations = assessment.Violations.Where(finding => finding.RuleCode == OfferLegality.AboveCeilingCode).ToList();
         Assert.Equal(2, violations.Count);
-        Assert.All(violations, violation => Assert.Contains("25000000", violation.Explanation, StringComparison.Ordinal));
+        Assert.All(violations, violation => Assert.Contains("$25.0M", violation.Explanation, StringComparison.Ordinal));
     }
 
     /// <summary>The ceiling rises with service, so the same offer is legal for a longer-serving player.</summary>

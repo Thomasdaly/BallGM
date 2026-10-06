@@ -139,7 +139,7 @@ public static class FreeAgentTargetingModel
                 shoppingTeamId),
             new(
                 AskingPriceOfferCode,
-                $"Offer prices at '{freeAgent.Id.Value}''s asking price of {ask.SmallestUnits} for {termSeasons} season(s) — where this league's configured range places their quality.",
+                $"Offer prices at '{freeAgent.Id.Value}''s asking price of {ExplanationText.Money(ask.SmallestUnits)} for {ExplanationText.Count(termSeasons, "season")}: where this league's configured range places their quality.",
                 shoppingTeamId),
         };
 

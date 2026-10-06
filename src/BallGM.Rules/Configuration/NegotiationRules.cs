@@ -260,7 +260,7 @@ public sealed record NegotiationRules
             {
                 errors.Add(new DomainError(
                     NonPositiveAllowanceCode,
-                    $"The standard over-cap allowance is {allowance.SmallestUnits}. An allowance of nothing is not an allowance; leave the field out if this league has none."));
+                    $"The standard over-cap allowance is {ExplanationText.Money(allowance.SmallestUnits)}. An allowance of nothing is not an allowance; leave the field out if this league has none."));
             }
 
             if (capThresholds.SoftCap is null)

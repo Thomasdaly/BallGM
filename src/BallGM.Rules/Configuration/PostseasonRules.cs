@@ -104,7 +104,7 @@ public sealed record PostseasonRules
         {
             errors.Add(new DomainError(
                 TooFewQualifiersCode,
-                $"{qualifyingTeamsPerConference} team(s) qualify per conference. A postseason needs at least two teams to have a series at all."));
+                $"{ExplanationText.Count(qualifyingTeamsPerConference, "team")} per conference qualify. A postseason needs at least two teams to have a series at all."));
         }
         else if ((qualifyingTeamsPerConference & (qualifyingTeamsPerConference - 1)) != 0)
         {
@@ -148,7 +148,7 @@ public sealed record PostseasonRules
             {
                 errors.Add(new DomainError(
                     RoundCountMismatchCode,
-                    $"This postseason has {expectedRounds} round(s) — {qualifyingTeamsPerConference} qualifiers per conference{(playsFinal ? " plus a final" : string.Empty)} — but {lengths.Length} series length(s) are stated."));
+                    $"This postseason has {ExplanationText.Count(expectedRounds, "round")} ({ExplanationText.Count(qualifyingTeamsPerConference, "qualifier")} per conference{(playsFinal ? " plus a final" : string.Empty)}), but {ExplanationText.Count(lengths.Length, "series length")} {(lengths.Length == 1 ? "is" : "are")} stated."));
             }
         }
 

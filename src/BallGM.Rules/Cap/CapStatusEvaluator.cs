@@ -151,6 +151,5 @@ public static class CapStatusEvaluator
         _ => "configured line",
     };
 
-    private static string Show(Money money) =>
-        string.Create(CultureInfo.InvariantCulture, $"${money.SmallestUnits / 1_000_000d:0.00}M");
+    private static string Show(Money money) => ExplanationText.Money(money);
 }

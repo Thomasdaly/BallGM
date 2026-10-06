@@ -130,7 +130,7 @@ public sealed class DraftDay
             {
                 notes.Add(new RuleFinding(
                     ClassExhaustedCode,
-                    $"The {draftSeason.Year} draft class ran out of prospects after {selections.Count} selection(s); round {slot.Round}, pick {slot.SelectionNumber} was not made."));
+                    $"The {draftSeason.Year} draft class ran out of prospects after {ExplanationText.Count(selections.Count, "selection")}; round {slot.Round}, pick {slot.SelectionNumber} was not made."));
                 break;
             }
 

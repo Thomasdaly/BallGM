@@ -96,7 +96,7 @@ public static class AssetValuationModel
             PickValuationFactorKind.YearsOut,
             yearsOutReading,
             YearsOutCode,
-            $"Pick '{pick.Id.Value}' is {yearsOut} season(s) out from the {currentSeason.Year} draft, and uncertainty grows with distance.");
+            $"Pick '{pick.Id.Value}' is {ExplanationText.Count(yearsOut, "season")} out from the {currentSeason.Year} draft, and uncertainty grows with distance.");
 
         return new PickValuation(pick.Id, [roundFinding, yearsOutFinding]);
     }
@@ -132,7 +132,7 @@ public static class AssetValuationModel
                 ValuationFactorKind.Trajectory,
                 ValuationContribution.Clamp(100 - yearsToPeak * TrajectoryAscentPerYear),
                 TrajectoryAscendingCode,
-                $"Player '{player.Id.Value}' is age {age}, {yearsToPeak} season(s) from this league's peak age of {developmentRules.PeakAgeStart}, so still ascending.");
+                $"Player '{player.Id.Value}' is age {age}, {ExplanationText.Count(yearsToPeak, "season")} from this league's peak age of {developmentRules.PeakAgeStart}, so still ascending.");
         }
 
         if (age > developmentRules.PeakAgeEnd)
@@ -142,7 +142,7 @@ public static class AssetValuationModel
                 ValuationFactorKind.Trajectory,
                 ValuationContribution.Clamp(100 - yearsPastPeak * TrajectoryDeclinePerYear),
                 TrajectoryDecliningCode,
-                $"Player '{player.Id.Value}' is age {age}, {yearsPastPeak} season(s) past this league's peak age of {developmentRules.PeakAgeEnd}, so declining.");
+                $"Player '{player.Id.Value}' is age {age}, {ExplanationText.Count(yearsPastPeak, "season")} past this league's peak age of {developmentRules.PeakAgeEnd}, so declining.");
         }
 
         return new ValuationContribution(
@@ -184,7 +184,7 @@ public static class AssetValuationModel
             ValuationFactorKind.Cost,
             ValuationContribution.Clamp(headroomPercent),
             CostCode,
-            $"Player '{player.Id.Value}' is paid {term.Compensation.SmallestUnits} against a ceiling of {ceiling.SmallestUnits} for their service, leaving {headroomPercent}% of headroom.");
+            $"Player '{player.Id.Value}' is paid {ExplanationText.Money(term.Compensation.SmallestUnits)} against a ceiling of {ExplanationText.Money(ceiling.SmallestUnits)} for their service, leaving {headroomPercent}% of headroom.");
     }
 
     private static ValuationContribution ControlContribution(Contract? contract, Season currentSeason)
@@ -203,6 +203,6 @@ public static class AssetValuationModel
             ValuationFactorKind.Control,
             ValuationContribution.Clamp(yearsRemaining * 100 / MaximumMeaningfulControlYears),
             ControlCode,
-            $"Contract '{contract.Id.Value}' runs through {contract.LastSeason.Year}, {yearsRemaining} season(s) of control from {currentSeason.Year}.");
+            $"Contract '{contract.Id.Value}' runs through {contract.LastSeason.Year}, {ExplanationText.Count(yearsRemaining, "season")} of control from {currentSeason.Year}.");
     }
 }

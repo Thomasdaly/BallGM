@@ -79,7 +79,7 @@ public sealed class ScheduleGenerator
         {
             return DomainOperationResult<ScheduleGeneration>.Failure(new DomainError(
                 TooFewTeamsCode,
-                $"A league of {teams.Length} team(s) has nobody to play. A schedule needs at least two teams."));
+                $"A league of {ExplanationText.Count(teams.Length, "team")} has nobody to play. A schedule needs at least two teams."));
         }
 
         if (regularSeasonGameCount <= 0)
@@ -106,7 +106,7 @@ public sealed class ScheduleGenerator
         {
             return DomainOperationResult<ScheduleGeneration>.Failure(new DomainError(
                 NotEnoughDaysCode,
-                $"Season {season.Year} needs more than the {regularSeason.LengthInDays} day(s) its regular season runs for: {meetings.Count} game(s) across {teams.Length} teams cannot be fitted in without a team playing twice in a day."));
+                $"Season {season.Year} needs more than the {ExplanationText.Count(regularSeason.LengthInDays, "day")} its regular season runs for: {ExplanationText.Count(meetings.Count, "game")} across {teams.Length} teams cannot be fitted in without a team playing twice in a day."));
         }
 
         var scheduleResult = SeasonSchedule.Create(fixtures);
@@ -179,7 +179,7 @@ public sealed class ScheduleGenerator
             {
                 notes.Add(new RuleFinding(
                     UnalignedTeamsCode,
-                    $"{unaligned.Length} team(s) are not placed in any conference, so the weighting has no group to read for them. They are played at the cross-conference rate."));
+                    unaligned.Length == 1 ? "1 team is not placed in any conference, so the weighting has no group to read for it. It is played at the cross-conference rate." : $"{unaligned.Length} teams are not placed in any conference, so the weighting has no group to read for them. They are played at the cross-conference rate."));
             }
 
             return WeightedMeetings(alignment, scheduleRules, rotation);

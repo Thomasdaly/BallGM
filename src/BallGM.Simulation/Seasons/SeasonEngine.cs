@@ -149,7 +149,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         {
             violations.Add(new RuleFinding(
                 NotAdvancingCode,
-                $"An advance of {days} day(s) moves the league nowhere. Time in a season runs forwards only."));
+                $"An advance of {ExplanationText.Count(days, "day")} moves the league nowhere. Time in a season runs forwards only."));
         }
 
         var target = run.CurrentDay.Plus(Math.Max(0, days));
@@ -172,7 +172,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         {
             notes.Add(new RuleFinding(
                 UnplayedMatchEngine.NoMatchEngineCode,
-                $"{fixtures.Length} fixture(s) fall inside this advance, and this build has no model for deciding a game. The days pass and the fixtures stay unplayed."));
+                $"{ExplanationText.Count(fixtures.Length, "fixture")} fall inside this advance, and this build has no model for deciding a game. The days pass and the fixtures stay unplayed."));
         }
 
         foreach (var team in context.Teams)
@@ -183,7 +183,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
             {
                 warnings.Add(new RuleFinding(
                     ShortOfFloorCode,
-                    $"{team.TeamName} has {availableCount} available player(s), fewer than the {MinutesAllocationBounds.PlayersOnFloor} needed to put a side on the floor.",
+                    $"{team.TeamName} has {ExplanationText.Count(availableCount, "available player")}, fewer than the {MinutesAllocationBounds.PlayersOnFloor} needed to put a side on the floor.",
                     team.TeamId));
             }
         }
@@ -557,7 +557,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         {
             warnings.Add(new RuleFinding(
                 PostseasonNeedsMoreDaysCode,
-                $"This postseason's {rounds} round(s) need up to {daysNeeded} days if every series runs its full length, and the calendar reserves {rules.PostseasonDays}. A series that runs past the reserved days cannot be played and the advance that reaches it will be refused."));
+                $"This postseason's {ExplanationText.Count(rounds, "round")} need up to {ExplanationText.Count(daysNeeded, "day")} if every series runs its full length, and the calendar reserves {rules.PostseasonDays}. A series that runs past the reserved days cannot be played and the advance that reaches it will be refused."));
         }
     }
 

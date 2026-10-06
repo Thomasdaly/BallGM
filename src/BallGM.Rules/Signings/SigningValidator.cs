@@ -132,7 +132,7 @@ public sealed class SigningValidator
             {
                 violations.Add(new RuleFinding(
                     AboveHardCapCode,
-                    $"This signing would take the payroll to {after.TotalPayroll.SmallestUnits}, above the hard cap of {hardCap.SmallestUnits}. No signing route permits a payroll above the hard cap.",
+                    $"This signing would take the payroll to {ExplanationText.Money(after.TotalPayroll.SmallestUnits)}, above the hard cap of {ExplanationText.Money(hardCap.SmallestUnits)}. No signing route permits a payroll above the hard cap.",
                     offer.TeamId));
             }
         }
@@ -180,7 +180,7 @@ public sealed class SigningValidator
         {
             warnings.Add(new RuleFinding(
                 BelowFloorAfterCode,
-                $"Even after this signing the payroll is {after.TotalPayroll.SmallestUnits}, still {floor.SmallestUnits - after.TotalPayroll.SmallestUnits} below this league's payroll floor.",
+                $"Even after this signing the payroll is {ExplanationText.Money(after.TotalPayroll.SmallestUnits)}, still {ExplanationText.Money(floor.SmallestUnits - after.TotalPayroll.SmallestUnits)} below this league's payroll floor.",
                 offer.TeamId));
         }
 

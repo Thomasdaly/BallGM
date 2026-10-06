@@ -165,8 +165,8 @@ public sealed class PreferenceModel
                 MoneyBand,
                 MoneyAgainstFieldCode,
                 best == offered
-                    ? $"At {MarketText.Money(offered)} in the first season this is the best money on the table, and this league sets no salary range to measure it against."
-                    : $"At {MarketText.Money(offered)} in the first season this trails the {MarketText.Money(best)} another team is offering, and this league sets no salary range to measure either against.");
+                    ? $"At {ExplanationText.Money(offered)} in the first season this is the best money on the table, and this league sets no salary range to measure it against."
+                    : $"At {ExplanationText.Money(offered)} in the first season this trails the {ExplanationText.Money(best)} another team is offering, and this league sets no salary range to measure either against.");
         }
 
         var asking = ask.SmallestUnits;
@@ -178,8 +178,8 @@ public sealed class PreferenceModel
             MoneyBand,
             MoneyAgainstRangeCode,
             offered >= asking
-                ? $"{MarketText.Money(offered)} in the first season meets the {MarketText.Money(asking)} this player is asking for."
-                : $"{MarketText.Money(offered)} in the first season is {MarketText.Money(asking - offered)} short of the {MarketText.Money(asking)} this player is asking for.");
+                ? $"{ExplanationText.Money(offered)} in the first season meets the {ExplanationText.Money(asking)} this player is asking for."
+                : $"{ExplanationText.Money(offered)} in the first season is {ExplanationText.Money(asking - offered)} short of the {ExplanationText.Money(asking)} this player is asking for.");
     }
 
     private static PreferenceContribution Term(Offer offer, MarketContext context)
@@ -190,10 +190,10 @@ public sealed class PreferenceModel
         var score = PreferenceContribution.Clamp(100 - (25 * distance));
 
         var sentence = distance == 0
-            ? $"{MarketText.Count(offered, "season")} is exactly the security this player wants."
+            ? $"{ExplanationText.Count(offered, "season")} is exactly the security this player wants."
             : offered < desired
-                ? $"{MarketText.Count(offered, "season")} is {distance} short of the {desired} this player wants at this stage of a career."
-                : $"{MarketText.Count(offered, "season")} is {distance} more than the {desired} this player wants to commit to.";
+                ? $"{ExplanationText.Count(offered, "season")} is {distance} short of the {desired} this player wants at this stage of a career."
+                : $"{ExplanationText.Count(offered, "season")} is {distance} more than the {desired} this player wants to commit to.";
 
         return new PreferenceContribution(PreferenceFactorKind.Term, score, TermBand, TermCode, sentence);
     }
@@ -255,8 +255,8 @@ public sealed class PreferenceModel
         var score = PreferenceContribution.Clamp(((depthScore * 2) + quality) / 3);
 
         var depthSentence = atPosition == 0
-            ? $"{team.Name} rosters nobody at {MarketText.Position(context.Player.Position)}, so the spot is open."
-            : $"{team.Name} already rosters {MarketText.Count(atPosition, "player")} at {MarketText.Position(context.Player.Position)}.";
+            ? $"{team.Name} rosters nobody at {ExplanationText.Position(context.Player.Position)}, so the spot is open."
+            : $"{team.Name} already rosters {ExplanationText.Count(atPosition, "player")} at {ExplanationText.Position(context.Player.Position)}.";
 
         return new PreferenceContribution(
             PreferenceFactorKind.TeamFit,
@@ -310,10 +310,10 @@ public sealed class PreferenceModel
             ? (
                 true,
                 ReservationMetCode,
-                $"At {MarketText.Money(offered)} this clears the {MarketText.Money(reservation)} {player.FullName} will go down to, against an asking price of {MarketText.Money(ask.SmallestUnits)}.")
+                $"At {ExplanationText.Money(offered)} this clears the {ExplanationText.Money(reservation)} {player.FullName} will go down to, against an asking price of {ExplanationText.Money(ask.SmallestUnits)}.")
             : (
                 false,
                 ReservationUnmetCode,
-                $"At {MarketText.Money(offered)} this is below the {MarketText.Money(reservation)} {player.FullName} will go down to, against an asking price of {MarketText.Money(ask.SmallestUnits)}. They would rather wait.");
+                $"At {ExplanationText.Money(offered)} this is below the {ExplanationText.Money(reservation)} {player.FullName} will go down to, against an asking price of {ExplanationText.Money(ask.SmallestUnits)}. They would rather wait.");
     }
 }

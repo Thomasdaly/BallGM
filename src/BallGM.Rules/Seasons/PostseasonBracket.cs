@@ -141,7 +141,7 @@ public sealed class PostseasonBracketBuilder
             {
                 return DomainOperationResult<PostseasonSeeding>.Failure(new DomainError(
                     TooFewTeamsCode,
-                    $"{qualifiers} team(s) qualify from {group ?? "the league"}, which has {rows.Count}. A bracket cannot be drawn from fewer teams than it seeds."));
+                    $"{ExplanationText.Count(qualifiers, "team")} qualify from {group ?? "the league"}, which has {rows.Count}. A bracket cannot be drawn from fewer teams than it seeds."));
             }
 
             // The order the table is already in. Its tie-breaks — and every tie the league's stated
@@ -219,7 +219,7 @@ public sealed class PostseasonBracketBuilder
                 [
                     new RuleFinding(
                         RoundCountMismatchCode,
-                        $"This postseason has {totalRounds} round(s) but the ruleset states {rules.SeriesLengths.Count} series length(s), so at least one round has no length to be played over."),
+                        $"This postseason has {ExplanationText.Count(totalRounds, "round")} but the ruleset states {ExplanationText.Count(rules.SeriesLengths.Count, "series length")}, so at least one round has no length to be played over."),
                 ],
                 [],
                 LiveRound: 0,
@@ -300,7 +300,7 @@ public sealed class PostseasonBracketBuilder
             {
                 violations.Add(new RuleFinding(
                     RunsPastItsDaysCode,
-                    $"Game {gameNumber} of the round-{contest.Round} series between {contest.Higher.TeamId.Value} and {contest.Lower.TeamId.Value} falls on {gameDay}, and this league reserves {phase.LengthInDays} day(s) for its postseason. The bracket needs {rules.SeriesLengths.Sum()} day(s) to be played in full."));
+                    $"Game {gameNumber} of the round-{contest.Round} series between {contest.Higher.TeamId.Value} and {contest.Lower.TeamId.Value} falls on {gameDay}, and this league reserves {ExplanationText.Count(phase.LengthInDays, "day")} for its postseason. The bracket needs {ExplanationText.Count(rules.SeriesLengths.Sum(), "day")} to be played in full."));
                 continue;
             }
 

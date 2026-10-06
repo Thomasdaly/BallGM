@@ -148,6 +148,5 @@ public static class ContractExtension
         return contract;
     }
 
-    private static string Show(Money money) =>
-        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"${money.SmallestUnits / 1_000_000d:0.0}M");
+    private static string Show(Money money) => ExplanationText.Money(money);
 }

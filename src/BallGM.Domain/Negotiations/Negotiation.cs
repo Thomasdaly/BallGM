@@ -120,8 +120,8 @@ public sealed class Negotiation
             offer,
             inResponseTo: null,
             superseded is null
-                ? $"Team '{offer.TeamId.Value}' offered {offer.SeasonCount} season(s), {offer.FirstSeasonCompensation.SmallestUnits} in the first."
-                : $"Team '{offer.TeamId.Value}' improved on its own offer: {offer.SeasonCount} season(s), {offer.FirstSeasonCompensation.SmallestUnits} in the first.");
+                ? $"Team '{offer.TeamId.Value}' offered {ExplanationText.Count(offer.SeasonCount, "season")}, {ExplanationText.Money(offer.FirstSeasonCompensation)} in the first."
+                : $"Team '{offer.TeamId.Value}' improved on its own offer: {ExplanationText.Count(offer.SeasonCount, "season")}, {ExplanationText.Money(offer.FirstSeasonCompensation)} in the first.");
 
         return DomainOperationResult.Success;
     }
@@ -172,7 +172,7 @@ public sealed class Negotiation
             counteroffer.TeamId,
             counteroffer,
             inResponseTo,
-            $"The player countered team '{counteroffer.TeamId.Value}': {counteroffer.SeasonCount} season(s), {counteroffer.FirstSeasonCompensation.SmallestUnits} in the first.");
+            $"The player countered team '{counteroffer.TeamId.Value}': {ExplanationText.Count(counteroffer.SeasonCount, "season")}, {ExplanationText.Money(counteroffer.FirstSeasonCompensation)} in the first.");
 
         return DomainOperationResult.Success;
     }

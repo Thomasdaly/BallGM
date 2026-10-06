@@ -139,8 +139,8 @@ public static class SigningRouteTable
             floor,
             permits ? PermittedMinimumCode : AboveMinimumCode,
             permits
-                ? $"A minimum-salary signing is available to every team regardless of payroll. With {seasonsOfService} seasons of service this player's minimum is {floor.SmallestUnits}."
-                : $"This offer pays {offer.FirstSeasonCompensation.SmallestUnits} in its first season, above the {floor.SmallestUnits} minimum for a player with {seasonsOfService} seasons of service, so it is not a minimum-salary signing.");
+                ? $"A minimum-salary signing is available to every team regardless of payroll. With {ExplanationText.Count(seasonsOfService, "season")} of service this player's minimum is {ExplanationText.Money(floor.SmallestUnits)}."
+                : $"This offer pays {ExplanationText.Money(offer.FirstSeasonCompensation.SmallestUnits)} in its first season, above the {ExplanationText.Money(floor.SmallestUnits)} minimum for a player with {ExplanationText.Count(seasonsOfService, "season")} of service, so it is not a minimum-salary signing.");
     }
 
     private static SigningRouteEvaluation CapRoom(
@@ -171,8 +171,8 @@ public static class SigningRouteTable
             room,
             permits ? PermittedCapRoomCode : InsufficientCapRoomCode,
             permits
-                ? $"The team has {room.SmallestUnits} of room below the soft cap, which covers this offer's first season of {offer.FirstSeasonCompensation.SmallestUnits}."
-                : $"The team has {room.SmallestUnits} of room below the soft cap and this offer's first season is {offer.FirstSeasonCompensation.SmallestUnits}, which is {offer.FirstSeasonCompensation.SmallestUnits - room.SmallestUnits} more than the room covers.");
+                ? $"The team has {ExplanationText.Money(room.SmallestUnits)} of room below the soft cap, which covers this offer's first season of {ExplanationText.Money(offer.FirstSeasonCompensation.SmallestUnits)}."
+                : $"The team has {ExplanationText.Money(room.SmallestUnits)} of room below the soft cap and this offer's first season is {ExplanationText.Money(offer.FirstSeasonCompensation.SmallestUnits)}, which is {ExplanationText.Money(offer.FirstSeasonCompensation.SmallestUnits - room.SmallestUnits)} more than the room covers.");
     }
 
     private static SigningRouteEvaluation StandardAllowance(
@@ -208,7 +208,7 @@ public static class SigningRouteTable
                     Permits: false,
                     Money.Zero,
                     AllowanceWithdrawnCode,
-                    $"The team's payroll of {payrollBeforeSigning.SmallestUnits} is above the {Describe(limitKind)} of {limit.SmallestUnits}, and this league withdraws the standard allowance above that line. This team has nothing to offer but a pitch.");
+                    $"The team's payroll of {ExplanationText.Money(payrollBeforeSigning.SmallestUnits)} is above the {Describe(limitKind)} of {ExplanationText.Money(limit.SmallestUnits)}, and this league withdraws the standard allowance above that line. This team has nothing to offer but a pitch.");
             }
         }
 
@@ -233,8 +233,8 @@ public static class SigningRouteTable
             remaining,
             permits ? PermittedAllowanceCode : InsufficientAllowanceCode,
             permits
-                ? $"The team has {remaining.SmallestUnits} of its standard over-cap allowance left, which covers this offer's first season of {offer.FirstSeasonCompensation.SmallestUnits}."
-                : $"The team has {remaining.SmallestUnits} of its standard over-cap allowance left, and this offer's first season is {offer.FirstSeasonCompensation.SmallestUnits}.");
+                ? $"The team has {ExplanationText.Money(remaining.SmallestUnits)} of its standard over-cap allowance left, which covers this offer's first season of {ExplanationText.Money(offer.FirstSeasonCompensation.SmallestUnits)}."
+                : $"The team has {ExplanationText.Money(remaining.SmallestUnits)} of its standard over-cap allowance left, and this offer's first season is {ExplanationText.Money(offer.FirstSeasonCompensation.SmallestUnits)}.");
     }
 
     /// <summary>
@@ -286,7 +286,7 @@ public static class SigningRouteTable
                     Permits: false,
                     Money.Zero,
                     ReducedAllowanceWithdrawnCode,
-                    $"The team's payroll of {payrollBeforeSigning.SmallestUnits} is above the {Describe(limitKind)} of {limit.SmallestUnits}, where this league withdraws the reduced allowance too.");
+                    $"The team's payroll of {ExplanationText.Money(payrollBeforeSigning.SmallestUnits)} is above the {Describe(limitKind)} of {ExplanationText.Money(limit.SmallestUnits)}, where this league withdraws the reduced allowance too.");
             }
         }
 
@@ -300,8 +300,8 @@ public static class SigningRouteTable
             remaining,
             permits ? PermittedReducedAllowanceCode : InsufficientReducedAllowanceCode,
             permits
-                ? $"Past the standard allowance's cut-off the team keeps a reduced allowance, {remaining.SmallestUnits} of it left, which covers this offer's first season of {offer.FirstSeasonCompensation.SmallestUnits}."
-                : $"The team's reduced over-cap allowance has {remaining.SmallestUnits} left, and this offer's first season is {offer.FirstSeasonCompensation.SmallestUnits}.");
+                ? $"Past the standard allowance's cut-off the team keeps a reduced allowance, {ExplanationText.Money(remaining.SmallestUnits)} of it left, which covers this offer's first season of {ExplanationText.Money(offer.FirstSeasonCompensation.SmallestUnits)}."
+                : $"The team's reduced over-cap allowance has {ExplanationText.Money(remaining.SmallestUnits)} left, and this offer's first season is {ExplanationText.Money(offer.FirstSeasonCompensation.SmallestUnits)}.");
     }
 
     /// <summary>

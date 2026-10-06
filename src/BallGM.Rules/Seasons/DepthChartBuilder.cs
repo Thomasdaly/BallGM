@@ -160,7 +160,7 @@ public sealed class DepthChartBuilder
 
             warnings.Add(new RuleFinding(
                 ShortHandedCode,
-                $"Team '{teamId.Value}' has {count} available player(s), fewer than the {MinutesAllocationBounds.MinimumRotationWithinBounds} needed to cover {MinutesAllocationBounds.TeamMinutesPerGame} minutes inside the {MinutesAllocationBounds.MaximumMinutesPerPlayer}-minute per-player maximum. Everyone plays {minutes.Max()} minutes.",
+                $"Team '{teamId.Value}' has {ExplanationText.Count(count, "available player")}, fewer than the {MinutesAllocationBounds.MinimumRotationWithinBounds} needed to cover {MinutesAllocationBounds.TeamMinutesPerGame} minutes inside the {MinutesAllocationBounds.MaximumMinutesPerPlayer}-minute per-player maximum. Everyone plays {minutes.Max()} minutes.",
                 teamId));
 
             return minutes;

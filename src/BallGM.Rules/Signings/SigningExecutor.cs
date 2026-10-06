@@ -97,7 +97,7 @@ public sealed class SigningExecutor
                 contractResult.Value.Id,
                 offer.FirstSeasonCompensation,
                 route,
-                $"{context.Player.FullName} signed with {context.Team.Name} for {offer.SeasonCount} season(s), {assessment.PermittingRoute.Explanation}"),
+                $"{context.Player.FullName} signed with {context.Team.Name} for {ExplanationText.Count(offer.SeasonCount, "season")}, {assessment.PermittingRoute.Explanation}"),
         };
 
         return DomainOperationResult<SigningExecution>.Success(
