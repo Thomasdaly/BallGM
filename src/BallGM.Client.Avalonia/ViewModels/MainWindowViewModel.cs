@@ -221,6 +221,8 @@ public sealed class MainWindowViewModel : ViewModelBase
                 FrontOffice.Team = value;
             }
 
+            Trade?.FollowViewedTeam(value);
+
             if (Season is not null)
             {
                 Season.ViewedTeamName = value?.TeamName;

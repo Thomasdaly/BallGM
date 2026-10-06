@@ -84,6 +84,27 @@ public sealed class TradeProposalViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Points the sending side at the team the shell is viewing — a GM opening the trade screen is
+    /// trading for their own team. Only a change of team moves the form: re-selecting the same team
+    /// (or the league refreshing it) keeps whatever the GM has built. If the receiving side was that
+    /// team, it moves to the next team so the form never pits a team against itself.
+    /// </summary>
+    public void FollowViewedTeam(TeamSummary? viewed)
+    {
+        if (viewed is null || viewed.TeamId == _sendingTeam?.TeamId)
+        {
+            return;
+        }
+
+        SendingTeam = Teams.FirstOrDefault(team => team.TeamId == viewed.TeamId) ?? viewed;
+
+        if (_receivingTeam is null || _receivingTeam.TeamId == viewed.TeamId)
+        {
+            ReceivingTeam = Teams.FirstOrDefault(team => team.TeamId != viewed.TeamId);
+        }
+    }
+
     public TeamSummary? ReceivingTeam
     {
         get => _receivingTeam;
