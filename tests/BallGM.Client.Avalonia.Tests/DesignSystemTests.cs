@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
+using BallGM.Application.Leagues;
 using BallGM.Client.Avalonia.Theming;
 using BallGM.Client.Avalonia.ViewModels;
 
@@ -59,6 +60,29 @@ public sealed class DesignSystemTests
     {
         Assert.Equal(Color.Parse("#0D1522"), TeamPaint.InkOn(Color.Parse("#FDB927")));
         Assert.Equal(Colors.White, TeamPaint.InkOn(Color.Parse("#7A1FA2")));
+    }
+
+    [Fact]
+    public void TeamPaint_TakesAPacksStatedPrimaryColour()
+    {
+        var paint = TeamPaint.FromStated(new TeamColours("#C8102E", "#FDB927"));
+
+        Assert.Equal(Color.Parse("#C8102E"), paint);
+    }
+
+    [Fact]
+    public void TeamPaint_TakesTheSecondaryWhenThePrimaryIsGrey()
+    {
+        // A black-and-gold team paints in gold; black would lift to a featureless grey.
+        var paint = TeamPaint.FromStated(new TeamColours("#000000", "#FFB81C"));
+
+        Assert.Equal(Color.Parse("#FFB81C"), paint);
+    }
+
+    [Fact]
+    public void TeamPaint_WithNoStatedColoursFallsBackToTheLogo()
+    {
+        Assert.Null(TeamPaint.FromStated(null));
     }
 
     [Theory]

@@ -355,8 +355,10 @@ def build(args):
             player["contract"] = contract_for(row, ruleset)
         players.append(player)
 
+    # Teams pass through from the alignment as written, so an alignment team may carry "logo",
+    # "taxRepeater", and (schema version 2) "colours": {"primary": "#RRGGBB", "secondary": ...}.
     pack = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "name": alignment.get("name", "Local League Pack"),
         "season": season_start,
         "rulesetFile": "ruleset.json",

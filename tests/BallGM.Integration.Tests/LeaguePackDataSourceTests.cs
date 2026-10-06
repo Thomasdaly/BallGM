@@ -125,6 +125,67 @@ public sealed class LeaguePackDataSourceTests : IDisposable
     }
 
     [Fact]
+    public void Pack_Version1WithoutColours_StillLoads()
+    {
+        var snapshot = Load(SamplePack()).Value;
+
+        Assert.Empty(snapshot.Artwork.TeamColours);
+    }
+
+    [Fact]
+    public void Pack_LoadsTeamColoursAndCarriesThemToTheOverview()
+    {
+        var pack = SamplePack();
+        pack["schemaVersion"] = 2;
+        pack["teams"]![0]!["colours"] = new JsonObject { ["primary"] = "#c8102e", ["secondary"] = "#FDB927" };
+        pack["teams"]![1]!["colours"] = new JsonObject { ["primary"] = "#00538C" };
+
+        var session = Session(Write(pack));
+        var overview = session.Load().Value;
+
+        var red = overview.Teams.Single(team => team.TeamName == "RED Team");
+        var blue = overview.Teams.Single(team => team.TeamName == "BLU Team");
+        var green = overview.Teams.Single(team => team.TeamName == "GRN Team");
+        Assert.Equal(new TeamColours("#C8102E", "#FDB927"), red.Colours);
+        Assert.Equal(new TeamColours("#00538C"), blue.Colours);
+        Assert.Null(green.Colours);
+    }
+
+    [Theory]
+    [InlineData("red")]
+    [InlineData("#C8102")]
+    [InlineData("#GG102E")]
+    [InlineData("C8102E")]
+    public void Pack_RefusesAColourThatIsNotHex(string colour)
+    {
+        var pack = SamplePack();
+        pack["schemaVersion"] = 2;
+        pack["teams"]![0]!["colours"] = new JsonObject { ["primary"] = colour };
+
+        AssertFails(Load(pack), "league_pack.invalid_colour");
+    }
+
+    [Fact]
+    public void Pack_RefusesColoursWithoutAPrimary()
+    {
+        var pack = SamplePack();
+        pack["schemaVersion"] = 2;
+        pack["teams"]![0]!["colours"] = new JsonObject { ["secondary"] = "#FDB927" };
+
+        AssertFails(Load(pack), "league_pack.invalid_colour");
+    }
+
+    [Fact]
+    public void Pack_RefusesColoursInAVersion1File()
+    {
+        // Colours arrived in version 2; a version-1 file stating them is mislabelled, not upgraded.
+        var pack = SamplePack();
+        pack["teams"]![0]!["colours"] = new JsonObject { ["primary"] = "#C8102E" };
+
+        AssertFails(Load(pack), "league_pack.invalid_colour");
+    }
+
+    [Fact]
     public void Pack_RefusesAFieldThisBuildDoesNotKnow()
     {
         var pack = SamplePack();

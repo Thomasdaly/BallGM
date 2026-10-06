@@ -36,7 +36,13 @@ namespace BallGM.Infrastructure.LeaguePacks;
 /// </summary>
 public sealed class LeaguePackDataSource : ILeagueDataSource
 {
-    public const int CurrentSchemaVersion = 1;
+    /// <summary>
+    /// Version 2 added optional team colours. Version 1 is a strict subset, so this build still reads
+    /// it; a version-1 file that states colours is refused rather than half-read.
+    /// </summary>
+    public const int CurrentSchemaVersion = 2;
+
+    public const int OldestSupportedSchemaVersion = 1;
 
     private const string MissingFileCode = "league_pack.file_missing";
     private const string UnreadableFileCode = "league_pack.file_unreadable";
@@ -48,6 +54,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
     private const string ContractMismatchCode = "league_pack.contract_mismatch";
     private const string InvalidImageCode = "league_pack.invalid_image_path";
     private const string InvalidPickTradeCode = "league_pack.invalid_pick_trade";
+    private const string InvalidColourCode = "league_pack.invalid_colour";
 
     private static readonly string[] ImageExtensions = [".png", ".jpg", ".jpeg"];
 
@@ -93,11 +100,11 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             return Fail(MalformedFileCode, $"The league pack at '{_packFilePath}' is empty.");
         }
 
-        if (envelope.SchemaVersion != CurrentSchemaVersion)
+        if (envelope.SchemaVersion is < OldestSupportedSchemaVersion or > CurrentSchemaVersion)
         {
             return Fail(
                 UnsupportedSchemaVersionCode,
-                $"The league pack is schema version {envelope.SchemaVersion}; this build reads version {CurrentSchemaVersion}.");
+                $"The league pack is schema version {envelope.SchemaVersion}; this build reads versions {OldestSupportedSchemaVersion} to {CurrentSchemaVersion}.");
         }
 
         var rulesetPath = envelope.RulesetFile is null
@@ -146,6 +153,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
 
         var teamKeys = new HashSet<string>(StringComparer.Ordinal);
         var logosByKey = new Dictionary<string, string>(StringComparer.Ordinal);
+        var coloursByKey = new Dictionary<string, TeamColours>(StringComparer.Ordinal);
         foreach (var (plan, index) in teamPlans.Select((plan, index) => (plan, index)))
         {
             if (string.IsNullOrWhiteSpace(plan.Key) || string.IsNullOrWhiteSpace(plan.Name) || string.IsNullOrWhiteSpace(plan.FranchiseName))
@@ -162,6 +170,11 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             if (ResolveImage(plan.Logo, packDirectory, $"teams[{index}] ('{plan.Key}') logo", errors) is string logo)
             {
                 logosByKey[plan.Key] = logo;
+            }
+
+            if (ParseColours(plan.Colours, envelope.SchemaVersion, $"teams[{index}] ('{plan.Key}') colours", errors) is { } colours)
+            {
+                coloursByKey[plan.Key] = colours;
             }
         }
 
@@ -186,7 +199,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             return DomainOperationResult<LeagueSnapshot>.Failure(errors.ToArray());
         }
 
-        return BuildLeague(envelope, ruleset, season, teamPlans, parsedPlayers, logosByKey);
+        return BuildLeague(envelope, ruleset, season, teamPlans, parsedPlayers, logosByKey, coloursByKey);
     }
 
     private static DomainOperationResult<LeagueSnapshot> BuildLeague(
@@ -195,7 +208,8 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
         Season season,
         IReadOnlyList<LeaguePackTeamEnvelope> teamPlans,
         IReadOnlyList<ParsedPlayer> parsedPlayers,
-        IReadOnlyDictionary<string, string> logosByKey)
+        IReadOnlyDictionary<string, string> logosByKey,
+        IReadOnlyDictionary<string, TeamColours> coloursByKey)
     {
         var errors = new List<DomainError>();
         var ledger = new TransactionLedger(new SteppingClock(
@@ -206,6 +220,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
         var portraits = new Dictionary<string, string>(StringComparer.Ordinal);
         var careers = new Dictionary<string, IReadOnlyList<CareerSeasonLine>>(StringComparer.Ordinal);
         var logos = new Dictionary<string, string>(StringComparer.Ordinal);
+        var teamColours = new Dictionary<string, TeamColours>(StringComparer.Ordinal);
         var repeaters = new HashSet<string>(StringComparer.Ordinal);
         var playersByTeam = teamPlans.ToDictionary(plan => plan.Key!, _ => new List<(Player Player, ParsedPlayer Plan)>(), StringComparer.Ordinal);
 
@@ -279,6 +294,11 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             if (logosByKey.TryGetValue(teamPlan.Key!, out var logo))
             {
                 logos[teamResult.Value.Id.Value] = logo;
+            }
+
+            if (coloursByKey.TryGetValue(teamPlan.Key!, out var colours))
+            {
+                teamColours[teamResult.Value.Id.Value] = colours;
             }
 
             if (teamPlan.TaxRepeater)
@@ -363,7 +383,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
                 ledger,
                 ruleset.ToConfiguration())
             {
-                Artwork = new LeagueArtwork(logos, portraits),
+                Artwork = new LeagueArtwork(logos, portraits) { TeamColours = teamColours },
                 CareerHistory = careers,
                 TaxRepeaterTeams = repeaters,
             });
@@ -784,6 +804,47 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
     /// the client at an arbitrary file on disk. A well-formed path to a file that is not there is not
     /// an error: artwork is optional, and the screen falls back to drawing without it.
     /// </summary>
+    /// <summary>
+    /// A team's stated colours, normalised to upper-case <c>#RRGGBB</c>; null when none are stated or
+    /// they are invalid (with the problem added to <paramref name="errors"/>).
+    /// </summary>
+    private static TeamColours? ParseColours(LeaguePackColoursEnvelope? stated, int schemaVersion, string label, List<DomainError> errors)
+    {
+        if (stated is null)
+        {
+            return null;
+        }
+
+        if (schemaVersion < 2)
+        {
+            errors.Add(new DomainError(InvalidColourCode, $"{label}: team colours arrived in schema version 2; this pack declares version {schemaVersion}."));
+            return null;
+        }
+
+        var primary = NormaliseColour(stated.Primary);
+        if (primary is null)
+        {
+            errors.Add(new DomainError(InvalidColourCode, $"{label}: primary must be a #RRGGBB colour, but was '{stated.Primary}'."));
+        }
+
+        string? secondary = null;
+        if (stated.Secondary is not null)
+        {
+            secondary = NormaliseColour(stated.Secondary);
+            if (secondary is null)
+            {
+                errors.Add(new DomainError(InvalidColourCode, $"{label}: secondary must be a #RRGGBB colour when stated, but was '{stated.Secondary}'."));
+            }
+        }
+
+        return primary is null || (stated.Secondary is not null && secondary is null) ? null : new TeamColours(primary, secondary);
+    }
+
+    private static string? NormaliseColour(string? stated) =>
+        stated is { Length: 7 } && stated[0] == '#' && stated.Skip(1).All(char.IsAsciiHexDigit)
+            ? stated.ToUpperInvariant()
+            : null;
+
     private static string? ResolveImage(string? statedPath, string packDirectory, string label, List<DomainError> errors)
     {
         if (statedPath is null)

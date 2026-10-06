@@ -101,7 +101,8 @@ public sealed class GetLeagueOverviewQuery(
                 team.RosterCount,
                 roster,
                 capSheetResult.Value,
-                snapshot.Artwork.LogoFor(team.Id)));
+                snapshot.Artwork.LogoFor(team.Id),
+                snapshot.Artwork.ColoursFor(team.Id)));
         }
 
         var pickBoardResult = BuildPickBoard(snapshot, franchisesById);

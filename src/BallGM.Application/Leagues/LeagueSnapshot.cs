@@ -74,7 +74,18 @@ public sealed record LeagueArtwork(
     public string? LogoFor(TeamId teamId) => TeamLogos.TryGetValue(teamId.Value, out var path) ? path : null;
 
     public string? PortraitFor(PlayerId playerId) => PlayerPortraits.TryGetValue(playerId.Value, out var path) ? path : null;
+
+    /// <summary>Team colours by <see cref="TeamId"/> value, for a data source that states them. Empty means none do.</summary>
+    public IReadOnlyDictionary<string, TeamColours> TeamColours { get; init; } = new Dictionary<string, TeamColours>();
+
+    public TeamColours? ColoursFor(TeamId teamId) => TeamColours.TryGetValue(teamId.Value, out var colours) ? colours : null;
 }
+
+/// <summary>
+/// A team's colours, each a normalised <c>#RRGGBB</c> string a data source has already validated.
+/// Like the rest of <see cref="LeagueArtwork"/>, drawn by a screen and never read by a rule.
+/// </summary>
+public sealed record TeamColours(string Primary, string? Secondary = null);
 
 /// <summary>
 /// The subset of a league's configured ruleset the Application layer needs, expressed in Domain

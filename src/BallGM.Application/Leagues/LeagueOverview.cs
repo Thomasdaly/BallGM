@@ -25,7 +25,8 @@ public sealed record TeamSummary(
     int RosterCount,
     IReadOnlyList<RosterSpot> Roster,
     TeamCapSummary CapSheet,
-    string? LogoPath = null);
+    string? LogoPath = null,
+    TeamColours? Colours = null);
 
 public sealed record RosterSpot(
     string PlayerId,

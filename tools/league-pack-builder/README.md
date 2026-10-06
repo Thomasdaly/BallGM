@@ -17,7 +17,7 @@ The tool itself is content-neutral. It ships no league data and knows no league.
 | `--players` | CSV of per-player season stats. Column names from common exports are recognised (see `ALIASES` in `build_pack.py`): name, team, age, GP, MIN, FGM, FGA, 3PM, 3PA, FTM, FTA, OREB, DREB, AST, STL, BLK, TOV, PF, PTS; optional position, height (inches), weight, experience, salary. Traded players: an aggregate row (`TOT`/`2TM`) is used for stats if present, otherwise team rows are summed; the last team row decides the roster. |
 | `--per-mode` | `totals` (default) or `per-game`. |
 | `--teams` | CSV of team records: a key column (abbreviation, alias, or full team name) plus `W`, `L`. |
-| `--alignment` | JSON: `name`, `conferences` → `divisions` → team keys, `teams` (`key`, `name`, `franchiseName`, optional `aliases`), and `rulesetOverrides` applied to `data/rulesets/default-league.json` (`null` removes a rule). |
+| `--alignment` | JSON: `name`, `conferences` → `divisions` → team keys, `teams` (`key`, `name`, `franchiseName`, optional `aliases`, `logo`, `taxRepeater`, and `colours` — `{"primary": "#RRGGBB", "secondary": "#RRGGBB"}`, secondary optional; packs are written at schema version 2), and `rulesetOverrides` applied to `data/rulesets/default-league.json` (`null` removes a rule). |
 | `--season` | the year the season starts in (2024 for 2024-25). |
 
 ## Build, tune, play

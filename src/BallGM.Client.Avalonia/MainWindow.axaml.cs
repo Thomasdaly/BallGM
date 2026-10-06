@@ -28,7 +28,7 @@ public sealed partial class MainWindow : Window
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-            TeamPaint.Apply(_viewModel.SelectedTeam?.LogoPath);
+            TeamPaint.Apply(_viewModel.SelectedTeam?.Colours, _viewModel.SelectedTeam?.LogoPath);
         }
     }
 
@@ -37,7 +37,7 @@ public sealed partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainWindowViewModel.SelectedTeam))
         {
-            TeamPaint.Apply(_viewModel?.SelectedTeam?.LogoPath);
+            TeamPaint.Apply(_viewModel?.SelectedTeam?.Colours, _viewModel?.SelectedTeam?.LogoPath);
         }
     }
 }

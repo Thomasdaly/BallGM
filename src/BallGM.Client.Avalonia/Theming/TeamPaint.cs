@@ -4,13 +4,15 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using BallGM.Application.Leagues;
 
 namespace BallGM.Client.Avalonia.Theming;
 
 /// <summary>
-/// The client's one accent is the selected team's colour - its "paint". Packs state no team colours,
-/// so it is read from the team's logo: the most common strongly coloured hue, lifted until it reads
-/// on the navy surfaces. Presentation only; nothing a rule reads.
+/// The client's one accent is the selected team's colour - its "paint". A pack that states team
+/// colours (schema version 2) is taken at its word; otherwise the colour is read from the team's logo:
+/// the most common strongly coloured hue. Either way it is lifted until it reads on the navy
+/// surfaces. Presentation only; nothing a rule reads.
 /// <para>
 /// Applied by setting <see cref="SolidColorBrush.Color"/> on the existing Accent* brush instances
 /// from <c>Tokens.axaml</c>, so every <c>StaticResource</c> user follows without a resource lookup
@@ -113,7 +115,10 @@ internal static class TeamPaint
     }
 
     /// <summary>Repaints the accent brushes for a team's logo file; a missing or colourless logo restores the fallback.</summary>
-    public static void Apply(string? logoPath)
+    public static void Apply(string? logoPath) => Apply(null, logoPath);
+
+    /// <summary>Repaints the accent brushes for a team: its stated colours first, then its logo, then the fallback.</summary>
+    public static void Apply(TeamColours? colours, string? logoPath)
     {
         var application = global::Avalonia.Application.Current;
         if (application?.TryFindResource("AccentBrush", out var accentResource) != true || accentResource is not SolidColorBrush accent)
@@ -122,7 +127,8 @@ internal static class TeamPaint
         }
 
         _fallback ??= accent.Color;
-        var paint = ReadLogo(logoPath) ?? _fallback.Value;
+        var stated = FromStated(colours);
+        var paint = stated is { } statedColour ? Legible(statedColour) : ReadLogo(logoPath) ?? _fallback.Value;
 
         accent.Color = paint;
         Set(application, "AccentHoverBrush", Mix(paint, Colors.White, 0.18));
@@ -134,9 +140,33 @@ internal static class TeamPaint
         if (application.TryFindResource("BannerBrush", out var bannerResource) && bannerResource is LinearGradientBrush banner && banner.GradientStops.Count == 3)
         {
             _bannerStart ??= banner.GradientStops[0].Color;
-            banner.GradientStops[1].Color = Mix(_bannerStart.Value, paint, 0.14);
-            banner.GradientStops[2].Color = Mix(_bannerStart.Value, paint, 0.42);
+            // The band takes the stated colour as the team wears it, not the lifted text-safe version.
+            var bandColour = stated ?? paint;
+            banner.GradientStops[1].Color = Mix(_bannerStart.Value, bandColour, 0.14);
+            banner.GradientStops[2].Color = Mix(_bannerStart.Value, bandColour, 0.42);
         }
+    }
+
+    /// <summary>
+    /// The colour to paint with from a pack's stated pair: the primary, unless it is close to grey
+    /// (black, white, silver) and the secondary carries more colour, as a black-and-gold team's gold.
+    /// </summary>
+    internal static Color? FromStated(TeamColours? colours)
+    {
+        if (colours is null || !Color.TryParse(colours.Primary, out var primary))
+        {
+            return null;
+        }
+
+        if (colours.Secondary is not null
+            && Color.TryParse(colours.Secondary, out var secondary)
+            && primary.ToHsl().S < 0.2
+            && secondary.ToHsl().S > primary.ToHsl().S)
+        {
+            return secondary;
+        }
+
+        return primary;
     }
 
     private static Color? ReadLogo(string? logoPath)

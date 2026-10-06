@@ -60,14 +60,25 @@ public sealed record LeaguePackDivisionEnvelope(
 /// <summary>
 /// One team, keyed by a pack-local string. The key only links players and divisions to the team
 /// inside this file; the loaded league mints its own identifiers, like every other load path.
-/// <see cref="Logo"/> is an optional image path relative to the pack file (png or jpg).
+/// <see cref="Logo"/> is an optional image path relative to the pack file (png or jpg), and
+/// <see cref="Colours"/> the team's optional colours (schema version 2 onwards).
 /// </summary>
 public sealed record LeaguePackTeamEnvelope(
     string? Key,
     string? FranchiseName,
     string? Name,
     string? Logo = null,
-    bool TaxRepeater = false);
+    bool TaxRepeater = false,
+    LeaguePackColoursEnvelope? Colours = null);
+
+/// <summary>
+/// A team's colours as <c>#RRGGBB</c> hex: <see cref="Primary"/> is required when the block is
+/// stated, <see cref="Secondary"/> optional. Presentation only — a screen draws them, no rule reads
+/// them.
+/// </summary>
+public sealed record LeaguePackColoursEnvelope(
+    string? Primary,
+    string? Secondary = null);
 
 /// <summary>
 /// One player. <see cref="Team"/> is a team key, or absent for a free agent — the same "on no roster

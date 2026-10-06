@@ -25,7 +25,22 @@ surnames = ["Ashdown", "Brackett", "Coldwell", "Dunleavy", "Everly", "Fairbairn"
             "Stanhope", "Thackeray", "Underhill", "Varley", "Whitlock", "Yardley"]
 
 keys = [f"T{index:02d}" for index in range(30)]
-teams = [{"key": key, "name": f"{places[i]} {nicknames[i]}", "franchiseName": f"{places[i]} Basketball Club"} for i, key in enumerate(keys)]
+# Fictional colours, one evenly spaced hue per team, so the sample exercises pack colours too.
+def hue_hex(hue, saturation, lightness):
+    import colorsys
+    red, green, blue = colorsys.hls_to_rgb(hue, lightness, saturation)
+    return "#{:02X}{:02X}{:02X}".format(round(red * 255), round(green * 255), round(blue * 255))
+
+
+teams = [
+    {
+        "key": key,
+        "name": f"{places[i]} {nicknames[i]}",
+        "franchiseName": f"{places[i]} Basketball Club",
+        "colours": {"primary": hue_hex(i / 30, 0.65, 0.45), "secondary": hue_hex((i / 30 + 0.5) % 1, 0.55, 0.6)},
+    }
+    for i, key in enumerate(keys)
+]
 conferences = []
 for c, conference in enumerate(["Northern", "Southern"]):
     divisions = []
