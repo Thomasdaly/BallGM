@@ -39,19 +39,41 @@ public sealed partial class ExplanationNames
         return new ExplanationNames(names);
     }
 
+    /// <summary>
+    /// This set of names plus one more, for an entity the league snapshot does not hold — a draft
+    /// prospect in a generated preview class has a name but is not a player yet.
+    /// </summary>
+    public ExplanationNames With(string identifier, string name)
+    {
+        ArgumentNullException.ThrowIfNull(identifier);
+        ArgumentNullException.ThrowIfNull(name);
+
+        return new ExplanationNames(new Dictionary<string, string>(_names, StringComparer.Ordinal) { [identifier] = name });
+    }
+
     public string Humanize(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
 
-        // "Team '<id>'" / "player '<id>'" / "'<id>'" → the name alone; then any bare identifier.
+        // "Team '<id>'" / "player '<id>'" / "'<id>'" → the name alone; then any bare identifier. A
+        // possessive follows the name: "Boston Celtics'" rather than "Boston Celtics's".
         var quoted = QuotedIdentifier().Replace(text, match =>
-            _names.TryGetValue(match.Groups["id"].Value, out var name) ? name : match.Value);
+        {
+            if (!_names.TryGetValue(match.Groups["id"].Value, out var name))
+            {
+                return match.Value;
+            }
+
+            return match.Groups["possessive"].Success
+                ? name.EndsWith('s') ? name + "'" : name + "'s"
+                : name;
+        });
         return BareIdentifier().Replace(quoted, match =>
             _names.TryGetValue(match.Value, out var name) ? name : match.Value);
     }
 
     // SortableId values are 26-character Crockford base-32 ULIDs.
-    [GeneratedRegex(@"(?:\b(?:[Tt]eam|[Pp]layer|[Ff]ranchise) )?'(?<id>[0-9A-HJKMNP-TV-Z]{26})'")]
+    [GeneratedRegex(@"(?:\b(?:[Tt]eam|[Pp]layer|[Ff]ranchise) )?'(?<id>[0-9A-HJKMNP-TV-Z]{26})'(?<possessive>'s\b)?")]
     private static partial Regex QuotedIdentifier();
 
     [GeneratedRegex(@"\b[0-9A-HJKMNP-TV-Z]{26}\b")]

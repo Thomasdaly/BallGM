@@ -87,7 +87,7 @@ public static class RosterNeedsCalculator
                 position,
                 NeedSeverity.Starter,
                 NoPlayerAtPositionCode,
-                $"Team '{teamId.Value}' has nobody listed at {position} at all.");
+                $"Team '{teamId.Value}' has nobody listed at {ExplanationText.Position(position)} at all.");
         }
 
         var starterSlot = slots.FirstOrDefault(slot => slot.IsStarter);
@@ -101,7 +101,7 @@ public static class RosterNeedsCalculator
                 position,
                 NeedSeverity.Starter,
                 WeakStarterCode,
-                $"Team '{teamId.Value}''s {position} starter rates {starterOverall} Overall, below the {WeakStarterOverallThreshold} this reading treats as starter quality.");
+                $"Team '{teamId.Value}''s {ExplanationText.Position(position)} starter rates {starterOverall} Overall, below the {WeakStarterOverallThreshold} this reading treats as starter quality.");
         }
 
         if (slots.Count == 1)
@@ -110,7 +110,7 @@ public static class RosterNeedsCalculator
                 position,
                 NeedSeverity.Depth,
                 NoBackupCode,
-                $"Team '{teamId.Value}' has no backup at {position} behind its starter.");
+                $"Team '{teamId.Value}' has no backup at {ExplanationText.Position(position)} behind its starter.");
         }
 
         return null;

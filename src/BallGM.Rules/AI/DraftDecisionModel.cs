@@ -79,7 +79,7 @@ public static class DraftDecisionModel
             matchedAPosition
                 ? new RuleFinding(
                     NeedsMatchCode,
-                    $"Team '{teamId.Value}' needs a {chosen.Prospect.Position}, and '{chosen.Prospect.Id.Value}' plays there.",
+                    $"Team '{teamId.Value}' needs a {ExplanationText.Position(chosen.Prospect.Position)}, and '{chosen.Prospect.Id.Value}' plays there.",
                     teamId)
                 : new RuleFinding(
                     BestAvailableCode,
@@ -87,7 +87,7 @@ public static class DraftDecisionModel
                     teamId),
             new RuleFinding(
                 ScoutedQualityCode,
-                $"'{chosen.Prospect.Id.Value}' scouts {chosen.Range.LowerBound}-{chosen.Range.UpperBound} Overall at {chosen.Range.Confidence}% confidence, a midpoint reading of {Midpoint(chosen.Range)} — the true rating is never read.",
+                $"'{chosen.Prospect.Id.Value}' scouts {chosen.Range.LowerBound}-{chosen.Range.UpperBound} Overall at {chosen.Range.Confidence}% confidence, a midpoint reading of {Midpoint(chosen.Range)}. The true rating is never read.",
                 teamId),
         };
 

@@ -194,11 +194,11 @@ public static class TradeTargetingModel
         {
             new(
                 NeedsMatchCode,
-                $"Team '{shoppingTeamId.Value}' would receive '{incomingPlayerId.Value}' for {shoppingNeed.Position} ({shoppingNeed.Explanation}) and send '{outgoingPlayerId.Value}' for {counterpartyNeed.Position}, which addresses team '{counterpartyTeamId.Value}''s own stated need there.",
+                $"Team '{shoppingTeamId.Value}' would get '{incomingPlayerId.Value}' to fill its need at {ExplanationText.Position(shoppingNeed.Position)}, and send '{outgoingPlayerId.Value}' to fill team '{counterpartyTeamId.Value}''s need at {ExplanationText.Position(counterpartyNeed.Position)}.",
                 shoppingTeamId),
             new(
                 ValueParityCode,
-                $"Player '{incomingPlayerId.Value}' ({incomingProduction} production) and player '{outgoingPlayerId.Value}' ({outgoingProduction} production) sit within this model's {ProductionParityTolerance}-point parity tolerance.",
+                $"Player '{incomingPlayerId.Value}' (production {incomingProduction}) and player '{outgoingPlayerId.Value}' (production {outgoingProduction}) are within {ProductionParityTolerance} points of each other, close enough for this model to call it a fair swap.",
                 shoppingTeamId),
         };
 

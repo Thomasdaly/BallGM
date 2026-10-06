@@ -135,11 +135,11 @@ public static class FreeAgentTargetingModel
         {
             new(
                 NeedsMatchCode,
-                $"Team '{shoppingTeamId.Value}' needs a {need.Position} ({need.Explanation}), and '{freeAgent.Id.Value}' plays there.",
+                $"Team '{shoppingTeamId.Value}' needs a {ExplanationText.Position(need.Position)}, and '{freeAgent.Id.Value}' plays there.",
                 shoppingTeamId),
             new(
                 AskingPriceOfferCode,
-                $"Offer prices at '{freeAgent.Id.Value}''s asking price of {ExplanationText.Money(ask.SmallestUnits)} for {ExplanationText.Count(termSeasons, "season")}: where this league's configured range places their quality.",
+                $"The offer pays '{freeAgent.Id.Value}''s asking price of {ExplanationText.Money(ask.SmallestUnits)} for {ExplanationText.Count(termSeasons, "season")}, which is where this league's salary range places their quality.",
                 shoppingTeamId),
         };
 

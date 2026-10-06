@@ -88,7 +88,7 @@ public static class AssetValuationModel
             PickValuationFactorKind.Round,
             roundReading,
             RoundCode,
-            $"Pick '{pick.Id.Value}' is a round {pick.Round} selection.");
+            $"The {pick.DraftSeason.Year} pick (originally franchise '{pick.OriginalFranchiseId.Value}') is a round {pick.Round} selection, and later rounds are worth less.");
 
         var yearsOut = Math.Max(0, pick.DraftSeason.Year - currentSeason.Year);
         var yearsOutReading = PickValuationContribution.Clamp(100 - yearsOut * YearsOutPenalty);
@@ -96,7 +96,7 @@ public static class AssetValuationModel
             PickValuationFactorKind.YearsOut,
             yearsOutReading,
             YearsOutCode,
-            $"Pick '{pick.Id.Value}' is {ExplanationText.Count(yearsOut, "season")} out from the {currentSeason.Year} draft, and uncertainty grows with distance.");
+            $"The {pick.DraftSeason.Year} round {pick.Round} pick (originally franchise '{pick.OriginalFranchiseId.Value}') is {ExplanationText.Count(yearsOut, "season")} out from the {currentSeason.Year} draft, and uncertainty grows with distance.");
 
         return new PickValuation(pick.Id, [roundFinding, yearsOutFinding]);
     }
@@ -203,6 +203,6 @@ public static class AssetValuationModel
             ValuationFactorKind.Control,
             ValuationContribution.Clamp(yearsRemaining * 100 / MaximumMeaningfulControlYears),
             ControlCode,
-            $"Contract '{contract.Id.Value}' runs through {contract.LastSeason.Year}, {ExplanationText.Count(yearsRemaining, "season")} of control from {currentSeason.Year}.");
+            $"Player '{contract.PlayerId.Value}''s contract runs through {contract.LastSeason.Year}, {ExplanationText.Count(yearsRemaining, "season")} of control from {currentSeason.Year}.");
     }
 }

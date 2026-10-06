@@ -31,6 +31,36 @@ public sealed class FixtureFrontOfficeAdvisoryTests
         Assert.Contains(result.Errors, error => error.Code == "ai_advisory.unknown_team");
     }
 
+    [Theory]
+    [InlineData("Old Foundry Bellringers")]
+    [InlineData("Cascade Falls Ironworks")]
+    [InlineData("Harbourline Tidewatch")]
+    public void EveryAdvisorySentence_NamesThingsInsteadOfQuotingIdentifiers(string teamName)
+    {
+        // Regression: draft-preview rationale quoted the prospect's identifier, pick and contract
+        // valuations quoted theirs, positions read as enum names ("no backup at PointGuard"), and a
+        // team name ending in s took "'s" ("Boston Celtics's need").
+        var session = NewSession(out var overview);
+        var team = overview.Teams.Single(candidate => candidate.TeamName == teamName);
+        var advisory = session.FrontOfficeAdvisory(team.TeamId).Value;
+
+        var sentences = advisory.Direction.Factors.Select(finding => finding.Explanation)
+            .Concat(advisory.Needs.PositionalNeeds.Select(need => need.Explanation))
+            .Concat(advisory.Needs.Notes.Select(finding => finding.Explanation))
+            .Concat(advisory.TradeTargets.SelectMany(target => target.Rationale).Select(finding => finding.Explanation))
+            .Concat(advisory.FreeAgentTargets.SelectMany(target => target.Rationale).Select(finding => finding.Explanation))
+            .Concat(advisory.DraftPreview?.Rationale.Select(finding => finding.Explanation) ?? [])
+            .ToList();
+
+        Assert.NotEmpty(sentences);
+        Assert.All(sentences, sentence =>
+        {
+            Assert.DoesNotMatch(@"\b[0-9A-HJKMNP-TV-Z]{26}\b", sentence);
+            Assert.DoesNotMatch(@"PointGuard|ShootingGuard|SmallForward|PowerForward|\bCenter\b", sentence);
+            Assert.DoesNotContain("s's ", sentence, StringComparison.Ordinal);
+        });
+    }
+
     [Fact]
     public void RealTeam_ReadsAllFourSectionsWithoutChangingTheLeague()
     {

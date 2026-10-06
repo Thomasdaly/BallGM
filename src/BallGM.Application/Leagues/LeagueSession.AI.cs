@@ -126,7 +126,9 @@ public sealed partial class LeagueSession
                 preview.Prospect.Id.Value,
                 preview.Prospect.FullName,
                 GetLeagueOverviewQuery.DescribePosition(preview.Prospect.Position),
-                preview.Recommendation.Rationale.Select(finding => ToAILine(finding, teamNames, names)).ToList());
+                preview.Recommendation.Rationale
+                    .Select(finding => ToAILine(finding, teamNames, names.With(preview.Prospect.Id.Value, preview.Prospect.FullName)))
+                    .ToList());
         }
         else if (!_snapshot.Configuration.HasDraft || !_snapshot.Configuration.GeneratesDraftClasses)
         {
@@ -222,7 +224,7 @@ public sealed partial class LeagueSession
 
             notes.Add(new AIFindingLine(
                 AiTurnTradeExecutionFailedCode,
-                $"The best available trade could not be executed after all: {string.Join("; ", executionResult.Errors.Select(error => error.Message))}",
+                $"The best available trade could not be executed after all: {string.Join("; ", executionResult.Errors.Select(error => names.Humanize(error.Message)))}",
                 null));
         }
 
@@ -246,7 +248,7 @@ public sealed partial class LeagueSession
 
             notes.Add(new AIFindingLine(
                 AiTurnSigningExecutionFailedCode,
-                $"The best available free-agent offer could not be executed after all: {string.Join("; ", executionResult.Errors.Select(error => error.Message))}",
+                $"The best available free-agent offer could not be executed after all: {string.Join("; ", executionResult.Errors.Select(error => names.Humanize(error.Message)))}",
                 null));
         }
 
