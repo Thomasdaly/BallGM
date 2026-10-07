@@ -5,6 +5,7 @@
   Text:    display, h1, h2, h3, section (a block's heading), eyebrow (a field or stat label),
            body, dim, faint, num (Barlow Condensed, tabular), code, good/warn/bad/accent
   Boxes:   panel, card, callout, stat, pill, ovr (colour set by OverallTierConverter), crest
+  Season:  ribbon-* (the season ribbon), Button.daycell (month grid), matchup, venue, form
   Tables:  Grid.thead (header row), ItemsControl.table (zebra rows), ListBox.table
   Buttons: default (ghost), primary
   Nav:     ListBox.nav
@@ -468,6 +469,145 @@
     <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
     <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
     <Setter Property="Foreground" Value="{StaticResource TextFaintBrush}" />
+  </Style>
+
+  <!-- The season ribbon: every day of the season in one strip. Phases are alternating bands, the
+       current one tinted in paint; a win is a bar above the centre line, a loss one below it. -->
+  <Style Selector="Border.ribbon-phase">
+    <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
+  </Style>
+  <Style Selector="Border.ribbon-phase.alt">
+    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
+  </Style>
+  <Style Selector="Border.ribbon-phase.current">
+    <Setter Property="Background" Value="{StaticResource AccentFaintBrush}" />
+  </Style>
+  <Style Selector="Border.ribbon-label">
+    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1,0,0,0" />
+    <Setter Property="Padding" Value="6,4,4,0" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector="Border.ribbon-label.current">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.ribbon-win">
+    <Setter Property="Background" Value="{StaticResource GoodBrush}" />
+    <Setter Property="Margin" Value="0.5,0" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
+  </Style>
+  <Style Selector="Border.ribbon-loss">
+    <Setter Property="Background" Value="{StaticResource BadBrush}" />
+    <Setter Property="Margin" Value="0.5,0" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+  </Style>
+  <Style Selector="Border.ribbon-tick">
+    <Setter Property="Background" Value="{StaticResource TextFaintBrush}" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="Margin" Value="0.5,0" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.ribbon-today">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="MinWidth" Value="2" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+  </Style>
+
+  <!-- The month grid: a cell per day. A game day is a raised square with a result rule down its
+       left edge; a day outside the season is bare floor; today is ringed in paint. -->
+  <Style Selector="Button.daycell">
+    <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="2" />
+    <Setter Property="Height" Value="74" />
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.daycell.game">
+    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
+  </Style>
+  <Style Selector="Button.daycell:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Bg3Brush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource TextFaintBrush}" />
+  </Style>
+  <Style Selector="Button.daycell:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.daycell.off:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.daycell.today">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="Button.daycell.today:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.daycell.today:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.result-rule">
+    <Setter Property="Width" Value="3" />
+    <Setter Property="Background" Value="{StaticResource Bg4Brush}" />
+  </Style>
+  <Style Selector="Border.result-rule.win">
+    <Setter Property="Background" Value="{StaticResource GoodBrush}" />
+  </Style>
+  <Style Selector="Border.result-rule.loss">
+    <Setter Property="Background" Value="{StaticResource BadBrush}" />
+  </Style>
+
+  <!-- A fixture still to play: venue mark large, home games ruled in paint. -->
+  <Style Selector="Border.matchup">
+    <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Bg4Brush}" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
+    <Setter Property="Padding" Value="14,10" />
+  </Style>
+  <Style Selector="Border.matchup.home">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="TextBlock.venue">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontSize" Value="26" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
+  </Style>
+  <Style Selector="TextBlock.venue.home">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.pill.warn">
+    <Setter Property="Background" Value="{StaticResource WarnSoftBrush}" />
+  </Style>
+  <Style Selector="Border.pill.warn TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource WarnBrush}" />
+  </Style>
+  <!-- One result in a form strip. -->
+  <Style Selector="Border.form">
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="Background" Value="{StaticResource BadPillBrush}" />
+  </Style>
+  <Style Selector="Border.form.win">
+    <Setter Property="Background" Value="{StaticResource GoodSoftBrush}" />
+  </Style>
+  <Style Selector="Border.form TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.form.win TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
   </Style>
 
   <!-- Profile tabs: condensed labels with a paint underline on the open one. -->

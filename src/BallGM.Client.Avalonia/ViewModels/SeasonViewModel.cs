@@ -13,6 +13,11 @@ namespace BallGM.Client.Avalonia.ViewModels;
 /// time of year it is.
 /// </para>
 /// <para>
+/// The season is read from the viewed team's chair as well as the league's: a ribbon of every day of
+/// the season with that team's results on it, a month grid of its games, and the run of fixtures
+/// ahead — all projected by <see cref="SeasonOutlook"/> from the schedule and the table.
+/// </para>
+/// <para>
 /// The notes panel is not decoration either. It carries the rules this league does not configure and
 /// the standings ties its stated sequence did not resolve, which is the one place in the game where
 /// a silently invented answer would look completely ordinary.
@@ -21,6 +26,7 @@ namespace BallGM.Client.Avalonia.ViewModels;
 public sealed class SeasonViewModel : ViewModelBase
 {
     private string? _viewedTeamName;
+    private string? _viewedTeamId;
     private static readonly int[] AdvanceChoices = [1, 7, 14, 30];
 
     /// <summary>How many days behind the current day the results strip looks for played games.</summary>
@@ -30,6 +36,9 @@ public sealed class SeasonViewModel : ViewModelBase
     private readonly Action<LeagueOverview> _onLeagueChanged;
 
     private SeasonSummary? _season;
+    private IReadOnlyList<ScheduleDayLine> _schedule = [];
+    private SeasonOutlook? _outlook;
+    private DateOnly _displayedMonth;
     private SeasonAdvanceSummary? _lastAdvance;
     private BoxScoreSummary? _boxScore;
     private FixtureRow? _selectedFixture;
@@ -45,6 +54,9 @@ public sealed class SeasonViewModel : ViewModelBase
         StartSeasonCommand = new RelayCommand(StartSeason);
         AdvanceCommand = new RelayCommand(Advance);
         AdvanceToEndCommand = new RelayCommand(AdvanceToEnd);
+        PreviousMonthCommand = new RelayCommand(() => ShowMonth(_displayedMonth.AddMonths(-1)));
+        NextMonthCommand = new RelayCommand(() => ShowMonth(_displayedMonth.AddMonths(1)));
+        ShowGameCommand = new ParameterCommand<string>(ShowGame);
 
         Refresh();
     }
@@ -56,6 +68,13 @@ public sealed class SeasonViewModel : ViewModelBase
     public ICommand AdvanceCommand { get; }
 
     public ICommand AdvanceToEndCommand { get; }
+
+    public ICommand PreviousMonthCommand { get; }
+
+    public ICommand NextMonthCommand { get; }
+
+    /// <summary>Opens a game's box score from anywhere on the screen, by game identifier.</summary>
+    public ICommand ShowGameCommand { get; }
 
     public IReadOnlyList<int> AdvanceOptions => AdvanceChoices;
 
@@ -111,8 +130,66 @@ public sealed class SeasonViewModel : ViewModelBase
         }
     }
 
-    public IReadOnlyList<CalendarPhaseRow> Phases =>
-        _season is null ? [] : _season.Calendar.Phases.Select(CalendarPhaseRow.From).ToList();
+    /// <summary>The team the season is read for: its games on the ribbon, the month grid, and the road ahead.</summary>
+    public string? ViewedTeamId
+    {
+        get => _viewedTeamId;
+        set
+        {
+            if (SetProperty(ref _viewedTeamId, value))
+            {
+                RebuildOutlook(keepMonth: true);
+            }
+        }
+    }
+
+    public bool HasViewedTeam => _outlook is { HasTeam: true };
+
+    public bool HasNoViewedTeam => _season is not null && !HasViewedTeam;
+
+    public string TeamSeasonHeadline => HasViewedTeam ? $"{_outlook!.TeamName} — the season so far" : string.Empty;
+
+    public string TeamRecord => _outlook?.Record ?? "—";
+
+    public string TeamStreak => _outlook?.Streak ?? "—";
+
+    public string TeamGamesRemaining => _outlook is null ? "—" : _outlook.GamesRemaining.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    public IReadOnlyList<FormChip> Form => _outlook?.Form() ?? [];
+
+    public bool HasForm => Form.Count > 0;
+
+    /// <summary>Every day of the season, left to right, with the viewed team's results on it.</summary>
+    public IReadOnlyList<RibbonDay> RibbonDays => _outlook?.RibbonDays() ?? [];
+
+    public IReadOnlyList<RibbonPhase> RibbonPhases => _outlook?.RibbonPhases() ?? [];
+
+    public string MonthTitle => _outlook is null ? string.Empty : _displayedMonth.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture);
+
+    public string MonthSummary => HasViewedTeam ? _outlook!.MonthSummary(_displayedMonth) : string.Empty;
+
+    public IReadOnlyList<CalendarDayCell> MonthCells => _outlook?.Month(_displayedMonth) ?? [];
+
+    public bool CanGoToPreviousMonth => _outlook is not null && _displayedMonth > _outlook.FirstMonth;
+
+    public bool CanGoToNextMonth => _outlook is not null && _displayedMonth < _outlook.LastMonth;
+
+    /// <summary>The viewed team's next few games, one card each.</summary>
+    public IReadOnlyList<MatchupCard> RoadAhead => _outlook?.RoadAhead() ?? [];
+
+    public bool HasRoadAhead => RoadAhead.Count > 0;
+
+    public string RoadAheadEmptyMessage => HasViewedTeam && !HasRoadAhead
+        ? "Nothing on the schedule for this team. Postseason rounds are drawn one at a time, so a later game appears once the round before it is decided."
+        : string.Empty;
+
+    public string StretchVenues => _outlook?.StretchVenues ?? "—";
+
+    public string StretchBackToBacks => _outlook is null ? "—" : _outlook.StretchBackToBacks.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    public string StretchOpponents => _outlook?.StretchOpponents ?? "—";
+
+    public string StretchLabel => $"Next {SeasonOutlook.StretchGames} games";
 
     public IReadOnlyList<StandingsRowDisplay> Standings =>
         _season is null ? [] : _season.Standings.Rows.Select(row => StandingsRowDisplay.From(row, ViewedTeamName)).ToList();
@@ -167,23 +244,14 @@ public sealed class SeasonViewModel : ViewModelBase
 
             var currentDay = _season.Calendar.CurrentDay;
             var fromDay = Math.Max(0, currentDay - RecentResultsDaysShown);
-            var dayCount = currentDay - fromDay;
 
-            if (dayCount <= 0)
-            {
-                return [];
-            }
-
-            var schedule = _session.Schedule(fromDay, dayCount);
-
-            return schedule.IsFailure
-                ? []
-                : schedule.Value
-                    .SelectMany(day => day.Fixtures)
-                    .Where(fixture => fixture.Played)
-                    .Reverse()
-                    .Select(FixtureRow.From)
-                    .ToList();
+            return _schedule
+                .Where(day => day.Day >= fromDay && day.Day < currentDay)
+                .SelectMany(day => day.Fixtures)
+                .Where(fixture => fixture.Played)
+                .Reverse()
+                .Select(FixtureRow.From)
+                .ToList();
         }
     }
 
@@ -285,12 +353,9 @@ public sealed class SeasonViewModel : ViewModelBase
             return;
         }
 
-        _season = result.Value;
         _lastAdvance = null;
-        _selectedFixture = null;
-        _boxScore = null;
+        Refresh();
         Report(["Season started."], isError: false);
-        RaiseAll();
         PreviewAdvance();
     }
 
@@ -355,6 +420,63 @@ public sealed class SeasonViewModel : ViewModelBase
         RaisePropertyChanged(nameof(HasWarnings));
     }
 
+    private void ShowMonth(DateOnly month)
+    {
+        if (_outlook is null)
+        {
+            return;
+        }
+
+        _displayedMonth = _outlook.Clamp(month);
+        RaiseMonth();
+    }
+
+    /// <summary>Selects a game for the box-score panel, whether it was clicked on the grid, a card, or the results list.</summary>
+    private void ShowGame(string gameId)
+    {
+        var fixture = _schedule.SelectMany(day => day.Fixtures).FirstOrDefault(line => line.GameId == gameId);
+        if (fixture is not null)
+        {
+            SelectedFixture = FixtureRow.From(fixture);
+        }
+    }
+
+    private void RebuildOutlook(bool keepMonth)
+    {
+        _outlook = _season is null ? null : SeasonOutlook.Build(_season, _schedule, _viewedTeamId);
+        if (_outlook is not null)
+        {
+            _displayedMonth = keepMonth && _displayedMonth != default ? _outlook.Clamp(_displayedMonth) : _outlook.CurrentMonth;
+        }
+
+        RaisePropertyChanged(nameof(HasViewedTeam));
+        RaisePropertyChanged(nameof(HasNoViewedTeam));
+        RaisePropertyChanged(nameof(TeamSeasonHeadline));
+        RaisePropertyChanged(nameof(TeamRecord));
+        RaisePropertyChanged(nameof(TeamStreak));
+        RaisePropertyChanged(nameof(TeamGamesRemaining));
+        RaisePropertyChanged(nameof(Form));
+        RaisePropertyChanged(nameof(HasForm));
+        RaisePropertyChanged(nameof(RibbonDays));
+        RaisePropertyChanged(nameof(RibbonPhases));
+        RaisePropertyChanged(nameof(RoadAhead));
+        RaisePropertyChanged(nameof(HasRoadAhead));
+        RaisePropertyChanged(nameof(RoadAheadEmptyMessage));
+        RaisePropertyChanged(nameof(StretchVenues));
+        RaisePropertyChanged(nameof(StretchBackToBacks));
+        RaisePropertyChanged(nameof(StretchOpponents));
+        RaiseMonth();
+    }
+
+    private void RaiseMonth()
+    {
+        RaisePropertyChanged(nameof(MonthTitle));
+        RaisePropertyChanged(nameof(MonthSummary));
+        RaisePropertyChanged(nameof(MonthCells));
+        RaisePropertyChanged(nameof(CanGoToPreviousMonth));
+        RaisePropertyChanged(nameof(CanGoToNextMonth));
+    }
+
     private void LoadBoxScore()
     {
         _boxScore = _selectedFixture is { Played: true } fixture && _session.BoxScore(fixture.GameId) is { IsSuccess: true } result
@@ -375,8 +497,13 @@ public sealed class SeasonViewModel : ViewModelBase
     {
         var season = _session.Season();
         _season = season.IsSuccess ? season.Value : null;
+
+        var schedule = _season is null ? null : _session.Schedule(0, _season.Calendar.LengthInDays);
+        _schedule = schedule is { IsSuccess: true } ? schedule.Value : [];
+
         _selectedFixture = null;
         _boxScore = null;
+        RebuildOutlook(keepMonth: false);
         RaiseAll();
     }
 
@@ -395,7 +522,6 @@ public sealed class SeasonViewModel : ViewModelBase
         RaisePropertyChanged(nameof(HasNoSeason));
         RaisePropertyChanged(nameof(Headline));
         RaisePropertyChanged(nameof(PhaseLine));
-        RaisePropertyChanged(nameof(Phases));
         RaisePropertyChanged(nameof(Standings));
         RaisePropertyChanged(nameof(TieBreakLine));
         RaisePropertyChanged(nameof(UpcomingFixtures));

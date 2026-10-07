@@ -66,6 +66,8 @@ Presentation, input, navigation, view models, localisation, accessibility, and d
 
 The shell groups navigation under Squad / Market / League (`NavGroup`, one list per heading, ignoring the null a list pushes when another takes the selection), moves the team picker into the sidebar because it is a navigation choice, and gives the identity band four scoreboard figures (record, payroll, distance to the soft cap, roster count).
 
+**The calendar screen reads the season from the viewed team's chair.** `ViewModels/SeasonOutlook` projects the whole schedule (`LeagueSession.Schedule(0, length)`) and the table into three views: a *season ribbon* — every day of the season as one slice, phases as bands sized by their days (`Theming/SpanPanel`, because a `UniformGrid` can only do equal widths and Grid columns cannot be bound), wins as bars above a centre line and losses below it, height scaled by margin and capped at 30; a *month grid*, Monday first, one cell per day with the opponent's crest initials and the result, any game cell opening the box-score panel; and a *road ahead* of the next five games with rest days, back-to-backs, season series, and a ten-game stretch summary. Two decisions worth not re-deriving: **opponent strength is shown only once that opponent has played**, because before then the table orders level teams by identifier and a position read off it would look like a judgement of the opponent; and **none of it is a rule** — rest days and back-to-backs are counted from fixture days for display, and nothing in Rules or Simulation reads them. The date for a day with no fixture is the season start plus the index, the same mapping `LeagueCalendar.DateOn` states as presentation-only.
+
 ## Current project references
 
 ```text

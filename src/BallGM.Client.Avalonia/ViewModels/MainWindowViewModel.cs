@@ -226,6 +226,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (Season is not null)
             {
                 Season.ViewedTeamName = value?.TeamName;
+                Season.ViewedTeamId = value?.TeamId;
             }
 
             if (Contracts is not null)
@@ -322,6 +323,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         if (Season is not null)
         {
             Season.ViewedTeamName = _selectedTeam?.TeamName;
+            Season.ViewedTeamId = _selectedTeam?.TeamId;
         }
 
         _pickBoard.Team = _selectedTeam;

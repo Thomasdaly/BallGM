@@ -60,21 +60,6 @@ public sealed record FixtureRow(string GameId, string Day, string Matchup, strin
     }
 }
 
-/// <summary>One phase of the calendar, marked if the league is currently in it.</summary>
-public sealed record CalendarPhaseRow(string Phase, string Days, string Dates, bool IsCurrent)
-{
-    public static CalendarPhaseRow From(CalendarPhaseLine line)
-    {
-        ArgumentNullException.ThrowIfNull(line);
-
-        return new CalendarPhaseRow(
-            DisplayText.Words(line.Phase),
-            $"days {line.StartDay}–{line.EndDayExclusive - 1}",
-            $"{line.StartDate} to {line.EndDate}",
-            line.IsCurrent);
-    }
-}
-
 /// <summary>One thing the season rules had to say, as the screen shows it.</summary>
 public sealed record SeasonFindingRow(string Code, string Explanation, string Scope)
 {
