@@ -36,6 +36,18 @@ public sealed class PlayerProfileViewModelTests
     }
 
     [Fact]
+    public void Career_ListsAPlayoffRowSeparatelyAndLeavesItOutOfTheCareerTotals()
+    {
+        var playoffs = new CareerSeasonLine("2024-25", "Old Team", 8, 280, 200, 40, 30, IsPostseason: true);
+        var summary = Sample() with { Career = [.. Sample().Career, playoffs] };
+
+        var profile = new PlayerProfileViewModel(summary, () => { });
+
+        Assert.Equal("2024-25 playoffs", profile.Career[^1].Season);
+        Assert.StartsWith("Career: 1 season · 70 games", profile.CareerTotalsLine);
+    }
+
+    [Fact]
     public void Career_ShowsPerGameAveragesAndMarksTheCurrentSeason()
     {
         var current = new CareerSeasonLine("2026-27", "Test Team", 10, 300, 250, 40, 60, IsCurrent: true);

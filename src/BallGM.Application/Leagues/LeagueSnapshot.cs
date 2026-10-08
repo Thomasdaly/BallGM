@@ -45,18 +45,25 @@ public sealed record LeagueSnapshot(
 
     /// <summary>
     /// Past seasons per player, keyed by <see cref="PlayerId"/> value: whatever a data source states
-    /// (a pack's history) plus every season concluded in this session. Presentation content, like
-    /// <see cref="Artwork"/>: no rule reads it, and a load path with none leaves it empty.
+    /// (a pack's history) plus every season concluded in this session. League state, unlike
+    /// <see cref="Artwork"/>: <c>required</c>, so every construction site — every loader and the save —
+    /// has to supply it rather than silently defaulting to nothing (the version-2 save bug).
     /// </summary>
-    public IReadOnlyDictionary<string, IReadOnlyList<Players.CareerSeasonLine>> CareerHistory { get; init; } =
-        new Dictionary<string, IReadOnlyList<Players.CareerSeasonLine>>();
+    public required IReadOnlyDictionary<string, IReadOnlyList<Players.CareerSeasonLine>> CareerHistory { get; init; }
 
     /// <summary>
     /// Teams (by <see cref="TeamId"/> value) charged the repeater tax schedule — a status earned by
     /// paying tax in past seasons, which this build does not yet track itself, so a data source
     /// states it. Empty means nobody is a repeater.
     /// </summary>
-    public IReadOnlySet<string> TaxRepeaterTeams { get; init; } = new HashSet<string>();
+    public required IReadOnlySet<string> TaxRepeaterTeams { get; init; }
+
+    /// <summary>No career history and no repeaters: what a data source that states neither supplies.</summary>
+    public static IReadOnlyDictionary<string, IReadOnlyList<Players.CareerSeasonLine>> NoCareerHistory { get; } =
+        new Dictionary<string, IReadOnlyList<Players.CareerSeasonLine>>();
+
+    /// <summary>The empty repeater set.</summary>
+    public static IReadOnlySet<string> NoTaxRepeaters { get; } = new HashSet<string>();
 }
 
 /// <summary>

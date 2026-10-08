@@ -1,4 +1,6 @@
+using System.Text.Json.Nodes;
 using BallGM.Application.Leagues;
+using BallGM.Application.Players;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
@@ -92,14 +94,14 @@ public sealed class SaveGameSerializerTests
     {
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
 
-        Assert.Contains("\"schemaVersion\": 2", saved.Value, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": 3", saved.Value, StringComparison.Ordinal);
     }
 
     [Fact]
     public void SaveFromAFutureSchema_ExplainsItselfInsteadOfLoadingHalfOfIt()
     {
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
-        var mutated = saved.Value.Replace("\"schemaVersion\": 2", "\"schemaVersion\": 99", StringComparison.Ordinal);
+        var mutated = saved.Value.Replace("\"schemaVersion\": 3", "\"schemaVersion\": 99", StringComparison.Ordinal);
 
         var result = _serializer.Load(mutated);
 
@@ -127,6 +129,84 @@ public sealed class SaveGameSerializerTests
 
         Assert.True(result.IsFailure);
         Assert.Equal("save_game.malformed_file", Assert.Single(result.Errors).Code);
+    }
+
+    [Fact]
+    public void SaveFromBeforeCareerHistoryWasSaved_IsRefusedRatherThanLoadedShort()
+    {
+        var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
+        var node = JsonNode.Parse(saved.Value)!.AsObject();
+        node["schemaVersion"] = 2;
+        node.Remove("careerHistory");
+        node.Remove("taxRepeaterTeams");
+
+        var result = _serializer.Load(node.ToJsonString());
+
+        Assert.Equal("save_game.unsupported_schema_version", Assert.Single(result.Errors).Code);
+    }
+
+    [Theory]
+    [InlineData("missing career list")]
+    [InlineData("career for nobody in the save")]
+    [InlineData("career named twice")]
+    [InlineData("career season missing a total")]
+    [InlineData("career season with a negative total")]
+    [InlineData("career season with a blank label")]
+    [InlineData("missing repeater list")]
+    [InlineData("repeater for no team in the save")]
+    [InlineData("repeater named twice")]
+    public void SaveWithUnreadableCareerOrRepeaterContent_IsRefusedWithAStructuredError(string defect)
+    {
+        var snapshot = LoadFixture();
+        var playerId = snapshot.Players.First().Id.Value;
+        var teamId = snapshot.Teams.First().Id.Value;
+        snapshot = snapshot with
+        {
+            CareerHistory = new Dictionary<string, IReadOnlyList<CareerSeasonLine>>
+            {
+                [playerId] = [new CareerSeasonLine("2029-30", "Old Club", 70, 2100, 1400, 500, 300)],
+            },
+            TaxRepeaterTeams = new HashSet<string> { teamId },
+        };
+        var node = JsonNode.Parse(_serializer.Save(snapshot, null, new Dictionary<string, Negotiation>()).Value)!.AsObject();
+        var career = node["careerHistory"]!.AsArray();
+        var season = career[0]!["seasons"]![0]!.AsObject();
+
+        switch (defect)
+        {
+            case "missing career list": node.Remove("careerHistory"); break;
+            case "career for nobody in the save": career[0]!["playerId"] = "NOBODY"; break;
+            case "career named twice": career.Add(career[0]!.DeepClone()); break;
+            case "career season missing a total": season.Remove("points"); break;
+            case "career season with a negative total": season["minutes"] = -1; break;
+            case "career season with a blank label": season["season"] = " "; break;
+            case "missing repeater list": node.Remove("taxRepeaterTeams"); break;
+            case "repeater for no team in the save": node["taxRepeaterTeams"] = new JsonArray("NOT-A-TEAM"); break;
+            case "repeater named twice": node["taxRepeaterTeams"] = new JsonArray(teamId, teamId); break;
+        }
+
+        var result = _serializer.Load(node.ToJsonString());
+
+        Assert.True(result.IsFailure, defect);
+        Assert.Equal("save_game.invalid_field", Assert.Single(result.Errors).Code);
+    }
+
+    [Fact]
+    public void EveryLeagueSnapshotPropertyIsSavedOrDeliberatelyNot()
+    {
+        // The career-history loss happened because LeagueSnapshot's init properties are optional, so
+        // nothing forced the loader to supply them. A new one must be added to one of these lists.
+        string[] saved = [nameof(LeagueSnapshot.CareerHistory), nameof(LeagueSnapshot.TaxRepeaterTeams)];
+        string[] deliberatelyNotSaved = [nameof(LeagueSnapshot.Artwork)];
+        var positional = typeof(LeagueSnapshot).GetConstructors().Single().GetParameters().Select(parameter => parameter.Name!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var initOnly = typeof(LeagueSnapshot).GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
+            .Where(property => property.Name != "EqualityContract" && !positional.Contains(property.Name))
+            .Select(property => property.Name)
+            .Order(StringComparer.Ordinal);
+
+        Assert.Equal(saved.Concat(deliberatelyNotSaved).Order(StringComparer.Ordinal), initOnly);
     }
 
     private static LeagueSnapshot LoadFixture()

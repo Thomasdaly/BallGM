@@ -81,7 +81,7 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
 
     /// <summary>The latest stated (not simulated) season that carries metrics, e.g. last real season.</summary>
     private static CareerSeasonLine? LastStated(PlayerProfileSummary profile) =>
-        profile.Career.LastOrDefault(season => !season.IsCurrent && season.Metrics is { Count: > 0 });
+        profile.Career.LastOrDefault(season => !season.IsCurrent && !season.IsPostseason && season.Metrics is { Count: > 0 });
 
     public bool HasStatedStats => LastStated(profile) is not null;
 
@@ -175,7 +175,7 @@ public sealed record CareerRow(
         string Metric(string code, Func<double, string> format) => m.TryGetValue(code, out var value) ? format(value) : "–";
 
         return new CareerRow(
-            line.Season,
+            line.IsPostseason ? $"{line.Season} playoffs" : line.Season,
             line.TeamName ?? "–",
             line.GamesPlayed.ToString(CultureInfo.InvariantCulture),
             PlayerProfileViewModel.PerGame(line.Minutes, line.GamesPlayed),
@@ -191,8 +191,10 @@ public sealed record CareerRow(
             Metric("PIE", value => Pct(value)));
     }
 
-    public static string TotalsLine(IReadOnlyList<CareerSeasonLine> career)
+    /// <summary>Career totals over regular seasons only; playoff rows are listed but never summed in.</summary>
+    public static string TotalsLine(IReadOnlyList<CareerSeasonLine> allRows)
     {
+        var career = allRows.Where(line => !line.IsPostseason).ToList();
         var games = career.Sum(line => line.GamesPlayed);
         return string.Create(
             CultureInfo.InvariantCulture,

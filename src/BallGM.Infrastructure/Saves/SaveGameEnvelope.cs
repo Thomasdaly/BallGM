@@ -1,3 +1,5 @@
+using BallGM.Infrastructure.Careers;
+
 namespace BallGM.Infrastructure.Saves;
 
 /// <summary>
@@ -36,7 +38,9 @@ public sealed record SaveGameEnvelope(
     string DraftAssets,
     TransactionLedgerEnvelope Ledger,
     string? Season,
-    IReadOnlyList<string> Negotiations)
+    IReadOnlyList<string> Negotiations,
+    IReadOnlyList<PlayerCareerEnvelope>? CareerHistory,
+    IReadOnlyList<string?>? TaxRepeaterTeams)
 {
     /// <summary>
     /// Moved 1 → 2 when <c>PlayerEnvelope</c> traded its single <c>Overall</c> field for the five
@@ -44,6 +48,13 @@ public sealed record SaveGameEnvelope(
     /// player's attribute split, and rather than inventing one on load (four of five attributes
     /// guessed at, silently), <see cref="SaveGameSerializer"/> refuses a mismatched version outright —
     /// no production save has existed before this version moved, so there is nothing to migrate.
+    /// <para>
+    /// Moved 2 → 3 when the save started carrying <see cref="CareerHistory"/> and
+    /// <see cref="TaxRepeaterTeams"/>. Both live on <c>LeagueSnapshot</c> as init properties and were
+    /// silently dropped by every version-2 save, so loading one wiped every concluded season from
+    /// every player's career and reset every repeater taxpayer to a first-time one. A version-2 save
+    /// cannot say what it lost, so it is refused rather than loaded short.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 }

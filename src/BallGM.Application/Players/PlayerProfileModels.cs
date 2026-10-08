@@ -105,6 +105,8 @@ public sealed record RecentGameLine(
 /// label is the one thing both can state honestly. <see cref="Metrics"/> carries any further
 /// statistics a data source states for that season, keyed by stat code ("USG_PCT", "NET_RATING",
 /// "DEFLECTIONS", ...) — open-ended so a pack can say more than the engine itself counts.
+/// <see cref="IsPostseason"/> marks a playoff line: a season concludes into a regular-season row and,
+/// for a player who reached the postseason, a separate playoff row, never one mixed total.
 /// </summary>
 public sealed record CareerSeasonLine(
     string Season,
@@ -115,4 +117,5 @@ public sealed record CareerSeasonLine(
     int Rebounds,
     int Assists,
     bool IsCurrent = false,
-    IReadOnlyDictionary<string, double>? Metrics = null);
+    IReadOnlyDictionary<string, double>? Metrics = null,
+    bool IsPostseason = false);

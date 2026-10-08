@@ -218,7 +218,11 @@ public sealed class LeagueSessionTests
                     SalaryMatchAllowance: new Money(250_000),
                     InjuredPlayerTradeEligibility: InjuredPlayerTradeEligibility.AllowedWithWarning,
                     SecondApronBlocksSalaryIncrease: true,
-                    Negotiation: NegotiationConfiguration.OpenMarket));
+                    Negotiation: NegotiationConfiguration.OpenMarket))
+            {
+                CareerHistory = LeagueSnapshot.NoCareerHistory,
+                TaxRepeaterTeams = LeagueSnapshot.NoTaxRepeaters,
+            };
 
             DataSource = new StubLeagueDataSource(DomainOperationResult<LeagueSnapshot>.Success(Snapshot));
         }

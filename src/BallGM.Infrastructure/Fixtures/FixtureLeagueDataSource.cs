@@ -476,7 +476,11 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
                 contracts,
                 draftAssetsResult.Value,
                 ledger,
-                configuration));
+                configuration)
+            {
+                CareerHistory = LeagueSnapshot.NoCareerHistory,
+                TaxRepeaterTeams = LeagueSnapshot.NoTaxRepeaters,
+            });
     }
 
     /// <summary>

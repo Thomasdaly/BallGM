@@ -716,7 +716,11 @@ public sealed class GetLeagueOverviewQueryTests
                 _contracts,
                 BuildDraftAssets(league.Id),
                 _ledger,
-                configuration);
+                configuration)
+            {
+                CareerHistory = LeagueSnapshot.NoCareerHistory,
+                TaxRepeaterTeams = LeagueSnapshot.NoTaxRepeaters,
+            };
 
             return new StubLeagueDataSource(DomainOperationResult<LeagueSnapshot>.Success(snapshot));
         }

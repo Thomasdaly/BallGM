@@ -68,8 +68,8 @@ public interface ISeasonEngine
     /// <summary>The table as the recorded results leave it.</summary>
     Standings Standings(SeasonRun run, LeagueSnapshot snapshot);
 
-    /// <summary>Every player's season totals, summed from the box scores recorded so far.</summary>
-    IReadOnlyList<PlayerSeasonStatLine> PlayerSeasonStats(SeasonRun run);
+    /// <summary>Every player's totals for one phase, summed from the box scores recorded so far.</summary>
+    IReadOnlyList<PlayerSeasonStatLine> PlayerSeasonStats(SeasonRun run, SeasonPhase phase);
 
     /// <summary>The rotation a team would field on a given day.</summary>
     DomainOperationResult<DepthChartOutcome> DepthChart(SeasonRun run, LeagueSnapshot snapshot, TeamId teamId, SeasonDay day);

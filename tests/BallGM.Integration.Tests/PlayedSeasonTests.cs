@@ -51,6 +51,23 @@ public sealed class PlayedSeasonTests
     }
 
     [Fact]
+    public void SeasonTotalsCountRegularSeasonGamesOnlyAndPlayoffsSeparately()
+    {
+        // Regression: season totals used to sum every box score, so a playoff team's players carried
+        // more games (and inflated totals) than the regular season has.
+        var session = NewSession();
+        Assert.True(session.StartSeason(seed: 2031).IsSuccess);
+        Assert.True(session.AdvanceDays(session.Season().Value.Calendar.LengthInDays).IsSuccess);
+
+        var mostTeamGames = session.Season().Value.Standings.Rows.Max(row => row.GamesPlayed);
+        var regular = session.PlayerSeasonTotals(BallGM.Domain.Seasons.SeasonPhase.RegularSeason);
+        var playoffs = session.PlayerSeasonTotals(BallGM.Domain.Seasons.SeasonPhase.Postseason);
+
+        Assert.All(regular.Values, line => Assert.True(line.GamesPlayed <= mostTeamGames, $"{line.PlayerId} has {line.GamesPlayed} regular-season games; no team played more than {mostTeamGames}."));
+        Assert.NotEmpty(playoffs);
+    }
+
+    [Fact]
     public void ThePlayedSeasonProducesATableThatLooksLikeABasketballSeason()
     {
         var session = NewSession();

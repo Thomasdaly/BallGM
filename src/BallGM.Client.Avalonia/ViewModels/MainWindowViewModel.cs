@@ -1,4 +1,5 @@
 using BallGM.Application.Leagues;
+using BallGM.Domain.Seasons;
 
 namespace BallGM.Client.Avalonia.ViewModels;
 
@@ -38,7 +39,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             : $"{overview.Teams.Count} teams · {overview.RegularSeasonGameCount}-game regular season · ruleset \"{overview.RulesetName}\"";
 
         _teams = overview.Teams;
-        _roster = new RosterViewModel(overview, session.PlayerSeasonTotals, session.PlayerProfile);
+        _roster = new RosterViewModel(overview, () => session.PlayerSeasonTotals(SeasonPhase.RegularSeason), session.PlayerProfile);
         _capSheet = new CapSheetViewModel(overview);
         _pickBoard = new PickBoardViewModel(overview);
         Trade = new TradeProposalViewModel(overview, session, ApplyLeagueChange);
@@ -309,7 +310,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         var selectedTeamId = _selectedTeam?.TeamId;
 
         Teams = overview.Teams;
-        _roster = new RosterViewModel(overview, _session is null ? null : _session.PlayerSeasonTotals, _session is null ? null : _session.PlayerProfile);
+        _roster = new RosterViewModel(overview, _session is null ? null : () => _session.PlayerSeasonTotals(SeasonPhase.RegularSeason), _session is null ? null : _session.PlayerProfile);
         _capSheet = new CapSheetViewModel(overview);
         _pickBoard = new PickBoardViewModel(overview);
 

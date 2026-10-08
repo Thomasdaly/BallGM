@@ -492,18 +492,19 @@ public sealed partial class LeagueSession
 
     /// <summary>One game's box score, or an explanation of why there is none.</summary>
     /// <summary>
-    /// Every player's totals for the season in progress, keyed by player identifier. Empty — not a
-    /// failure — before a season starts, because a squad screen reads it on every repaint and "no
-    /// games yet" is an ordinary state, not an error.
+    /// Every player's totals for one phase of the season in progress, keyed by player identifier —
+    /// playoff games are never mixed into the regular season, so the caller names the phase it means.
+    /// Empty — not a failure — before a season starts, because a squad screen reads it on every
+    /// repaint and "no games yet" is an ordinary state, not an error.
     /// </summary>
-    public IReadOnlyDictionary<string, PlayerSeasonTotals> PlayerSeasonTotals()
+    public IReadOnlyDictionary<string, PlayerSeasonTotals> PlayerSeasonTotals(SeasonPhase phase)
     {
         if (_snapshot is null || _seasonRun is null)
         {
             return new Dictionary<string, PlayerSeasonTotals>();
         }
 
-        return _seasonEngine.PlayerSeasonStats(_seasonRun).ToDictionary(
+        return _seasonEngine.PlayerSeasonStats(_seasonRun, phase).ToDictionary(
             line => line.PlayerId.Value,
             line => new PlayerSeasonTotals(line.PlayerId.Value, line.GamesPlayed, line.TotalMinutes, line.TotalPoints, line.TotalRebounds, line.TotalAssists),
             StringComparer.Ordinal);

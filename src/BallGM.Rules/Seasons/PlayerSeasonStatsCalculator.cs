@@ -12,15 +12,21 @@ namespace BallGM.Rules.Seasons;
 /// <c>StandingsCalculator.Calculate</c> already takes its results in — a calculator that only reads
 /// results should only need to be handed results.
 /// </para>
+/// <para>
+/// <b>One phase at a time.</b> Regular-season and postseason lines are never summed together: a
+/// player whose team went deep into the playoffs would otherwise lead the league in totals for games
+/// nobody else got to play, and every per-game average would mix two different levels of opponent.
+/// Callers ask for the phase they mean.
+/// </para>
 /// </summary>
 public static class PlayerSeasonStatsCalculator
 {
-    public static IReadOnlyList<PlayerSeasonStatLine> Calculate(IEnumerable<GameResult> results)
+    public static IReadOnlyList<PlayerSeasonStatLine> Calculate(IEnumerable<GameResult> results, SeasonPhase phase)
     {
         ArgumentNullException.ThrowIfNull(results);
 
         return results
-            .Where(result => result.BoxScore is not null)
+            .Where(result => result.Phase == phase && result.BoxScore is not null)
             .SelectMany(result => result.BoxScore!.Lines)
             .GroupBy(line => line.PlayerId.Value)
             .Select(group => new PlayerSeasonStatLine(

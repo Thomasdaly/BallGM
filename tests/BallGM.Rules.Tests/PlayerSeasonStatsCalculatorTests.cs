@@ -24,7 +24,7 @@ public sealed class PlayerSeasonStatsCalculatorTests
             MakeResult(day: 1, slot: 0, homePoints: 15, awayPoints: 12, homeStarPoints: 15, awayStarPoints: 12),
         };
 
-        var lines = PlayerSeasonStatsCalculator.Calculate(results);
+        var lines = PlayerSeasonStatsCalculator.Calculate(results, SeasonPhase.RegularSeason);
 
         var homeStarLine = Assert.Single(lines, line => line.PlayerId == HomeStar);
         Assert.Equal(2, homeStarLine.GamesPlayed);
@@ -39,7 +39,7 @@ public sealed class PlayerSeasonStatsCalculatorTests
     {
         var results = new[] { MakeResult(day: 0, slot: 0, homePoints: 20, awayPoints: 10, homeStarPoints: 20, awayStarPoints: 10) };
 
-        var lines = PlayerSeasonStatsCalculator.Calculate(results);
+        var lines = PlayerSeasonStatsCalculator.Calculate(results, SeasonPhase.RegularSeason);
 
         Assert.DoesNotContain(lines, line => line.PlayerId.Value == "nobody-played-this-player");
     }
@@ -50,15 +50,31 @@ public sealed class PlayerSeasonStatsCalculatorTests
         var fixture = new Fixture(GameId.For(TestSeason, new SeasonDay(0), 0), new SeasonDay(0), Home, Away, SeasonPhase.RegularSeason);
         var result = GameResult.Create(fixture, homePoints: 20, awayPoints: 10).Value;
 
-        var lines = PlayerSeasonStatsCalculator.Calculate([result]);
+        var lines = PlayerSeasonStatsCalculator.Calculate([result], SeasonPhase.RegularSeason);
 
         Assert.Empty(lines);
     }
 
-    private static GameResult MakeResult(int day, int slot, int homePoints, int awayPoints, int homeStarPoints, int awayStarPoints)
+    [Fact]
+    public void CalculateNeverMixesPostseasonGamesIntoTheRegularSeason()
+    {
+        var results = new[]
+        {
+            MakeResult(day: 0, slot: 0, homePoints: 20, awayPoints: 10, homeStarPoints: 20, awayStarPoints: 10),
+            MakeResult(day: 90, slot: 0, homePoints: 30, awayPoints: 10, homeStarPoints: 30, awayStarPoints: 10, SeasonPhase.Postseason),
+        };
+
+        var regular = Assert.Single(PlayerSeasonStatsCalculator.Calculate(results, SeasonPhase.RegularSeason), line => line.PlayerId == HomeStar);
+        var playoffs = Assert.Single(PlayerSeasonStatsCalculator.Calculate(results, SeasonPhase.Postseason), line => line.PlayerId == HomeStar);
+
+        Assert.Equal((1, 20), (regular.GamesPlayed, regular.TotalPoints));
+        Assert.Equal((1, 30), (playoffs.GamesPlayed, playoffs.TotalPoints));
+    }
+
+    private static GameResult MakeResult(int day, int slot, int homePoints, int awayPoints, int homeStarPoints, int awayStarPoints, SeasonPhase phase = SeasonPhase.RegularSeason)
     {
         var seasonDay = new SeasonDay(day);
-        var fixture = new Fixture(GameId.For(TestSeason, seasonDay, slot), seasonDay, Home, Away, SeasonPhase.RegularSeason);
+        var fixture = new Fixture(GameId.For(TestSeason, seasonDay, slot), seasonDay, Home, Away, phase);
 
         var boxScore = BoxScore.Create(
             fixture.Id,

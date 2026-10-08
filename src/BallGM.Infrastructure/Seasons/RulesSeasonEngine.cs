@@ -86,10 +86,10 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
                 ToOutcome(advanced.Value.Assessment, advanced.Value.Played));
     }
 
-    public IReadOnlyList<PlayerSeasonStatLine> PlayerSeasonStats(SeasonRun run)
+    public IReadOnlyList<PlayerSeasonStatLine> PlayerSeasonStats(SeasonRun run, SeasonPhase phase)
     {
         ArgumentNullException.ThrowIfNull(run);
-        return PlayerSeasonStatsCalculator.Calculate(run.Results);
+        return PlayerSeasonStatsCalculator.Calculate(run.Results, phase);
     }
 
     public Standings Standings(SeasonRun run, LeagueSnapshot snapshot)

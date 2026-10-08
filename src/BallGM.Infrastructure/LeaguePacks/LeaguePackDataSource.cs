@@ -10,6 +10,7 @@ using BallGM.Domain.Leagues;
 using BallGM.Domain.Players;
 using BallGM.Domain.Teams;
 using BallGM.Domain.Transactions;
+using BallGM.Infrastructure.Careers;
 using BallGM.Infrastructure.Fixtures;
 using BallGM.Infrastructure.Rulesets;
 using BallGM.Infrastructure.Time;
@@ -506,7 +507,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
     }
 
     private static IReadOnlyList<CareerSeasonLine> ParseCareer(
-        IReadOnlyList<LeaguePackCareerSeasonEnvelope>? career,
+        IReadOnlyList<CareerSeasonEnvelope>? career,
         string label,
         List<DomainError> errors)
     {
@@ -518,30 +519,15 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
         var lines = new List<CareerSeasonLine>(career.Count);
         foreach (var (season, index) in career.Select((season, index) => (season, index)))
         {
-            int?[] totals = [season.GamesPlayed, season.Minutes, season.Points, season.Rebounds, season.Assists];
-            if (string.IsNullOrWhiteSpace(season.Season) || totals.Any(total => total is not int value || value < 0))
+            var line = CareerSeasonParser.TryParse(season);
+
+            if (line is null)
             {
-                errors.Add(Invalid(
-                    $"{label} career[{index}]",
-                    "A career season needs a season label and non-negative gamesPlayed, minutes, points, rebounds, and assists."));
+                errors.Add(Invalid($"{label} career[{index}]", CareerSeasonParser.Requirement));
                 continue;
             }
 
-            if (season.Metrics is { } metrics && metrics.Any(metric => string.IsNullOrWhiteSpace(metric.Key) || !double.IsFinite(metric.Value)))
-            {
-                errors.Add(Invalid($"{label} career[{index}]", "Every career metric needs a stat code and a finite number."));
-                continue;
-            }
-
-            lines.Add(new CareerSeasonLine(
-                season.Season.Trim(),
-                string.IsNullOrWhiteSpace(season.Team) ? null : season.Team.Trim(),
-                season.GamesPlayed!.Value,
-                season.Minutes!.Value,
-                season.Points!.Value,
-                season.Rebounds!.Value,
-                season.Assists!.Value,
-                Metrics: season.Metrics is { Count: > 0 } stated ? new Dictionary<string, double>(stated, StringComparer.Ordinal) : null));
+            lines.Add(line);
         }
 
         return lines;

@@ -423,7 +423,7 @@ public sealed class LeaguePackDataSourceTests : IDisposable
 
         Assert.True(session.ConcludeSeason().IsSuccess);
         var afterConclusion = session.PlayerProfile(star.PlayerId).Value;
-        var concluded = Assert.Single(afterConclusion.Career);
+        var concluded = Assert.Single(afterConclusion.Career, line => !line.IsPostseason);
         Assert.False(concluded.IsCurrent);
         Assert.Equal(profile.CurrentSeason!.GamesPlayed, concluded.GamesPlayed);
         Assert.Empty(afterConclusion.RecentGames);
@@ -468,7 +468,7 @@ public sealed class LeaguePackDataSourceTests : IDisposable
         Assert.Equal(detail.Points, (2 * (detail.FieldGoalsMade - detail.ThreesMade)) + (3 * detail.ThreesMade) + detail.FreeThrowsMade);
 
         Assert.True(session.ConcludeSeason().IsSuccess);
-        var concluded = Assert.Single(session.PlayerProfile(star.PlayerId).Value.Career);
+        var concluded = Assert.Single(session.PlayerProfile(star.PlayerId).Value.Career, line => !line.IsPostseason);
         Assert.Equal(detail.FieldGoalsAttempted, concluded.Metrics!["FGA"]);
         Assert.True(concluded.Metrics.ContainsKey("TS_PCT"));
     }
@@ -502,6 +502,84 @@ public sealed class LeaguePackDataSourceTests : IDisposable
         Assert.Contains(red.Restrictions!, line => line.RuleCode == "cap_status.apron_salary_matching");
         var blue = overview.Value.Teams.Single(team => team.TeamName == "BLU Team").CapSheet;
         Assert.Equal(0, blue.TaxBill!.TaxOwed);
+    }
+
+    [Fact]
+    public void Save_KeepsPackAndConcludedCareerSeasonsAcrossALoad()
+    {
+        // Regression: version-2 saves dropped LeagueSnapshot.CareerHistory, so loading a save wiped
+        // every concluded season and every pack-stated one from every profile.
+        var pack = SamplePack();
+        pack["players"]![0]!["career"] = new JsonArray(
+            new JsonObject { ["season"] = "2038-39", ["team"] = "Old Club", ["gamesPlayed"] = 70, ["minutes"] = 2100, ["points"] = 1400, ["rebounds"] = 500, ["assists"] = 300, ["metrics"] = new JsonObject { ["STL"] = 88.0 } });
+        var session = Session(Write(pack));
+        var overview = session.Load().Value;
+        var star = overview.Teams.SelectMany(team => team.Roster).Single(spot => spot.FullName == "Player T0-S0");
+        Assert.True(session.StartSeason(seed: 3).IsSuccess);
+        Assert.True(session.AdvanceToEndOfSeason().IsSuccess);
+        Assert.True(session.ConcludeSeason().IsSuccess);
+        var before = session.PlayerProfile(star.PlayerId).Value.Career;
+
+        var saved = session.Save();
+        Assert.True(saved.IsSuccess, string.Join("; ", saved.Errors.Select(error => error.Message)));
+        var reloaded = Session(Write(SamplePack()));
+        Assert.True(reloaded.LoadSave(saved.Value).IsSuccess);
+        var after = reloaded.PlayerProfile(star.PlayerId).Value.Career;
+
+        Assert.Equal(2, before.Count(line => !line.IsPostseason));
+        Assert.Equal(before.Select(line => (line.Season, line.TeamName, line.GamesPlayed, line.Minutes, line.Points, line.Rebounds, line.Assists, line.IsPostseason)),
+            after.Select(line => (line.Season, line.TeamName, line.GamesPlayed, line.Minutes, line.Points, line.Rebounds, line.Assists, line.IsPostseason)));
+        Assert.Equal(88.0, after[0].Metrics!["STL"]);
+        Assert.Equal(before[1].Metrics!.OrderBy(m => m.Key, StringComparer.Ordinal), after[1].Metrics!.OrderBy(m => m.Key, StringComparer.Ordinal));
+
+        // Byte-stable: saving the reloaded league writes exactly what was loaded.
+        Assert.Equal(saved.Value, reloaded.Save().Value);
+    }
+
+    [Fact]
+    public void ConcludingASeason_KeepsPlayoffGamesInTheirOwnCareerRow()
+    {
+        var session = Session(Write(SamplePack()));
+        session.Load();
+        Assert.True(session.StartSeason(seed: 3).IsSuccess);
+        Assert.True(session.AdvanceToEndOfSeason().IsSuccess);
+        var playoffs = session.PlayerSeasonTotals(BallGM.Domain.Seasons.SeasonPhase.Postseason);
+        var regular = session.PlayerSeasonTotals(BallGM.Domain.Seasons.SeasonPhase.RegularSeason);
+        var (playerId, playoffLine) = playoffs.First();
+        Assert.True(session.ConcludeSeason().IsSuccess);
+
+        var career = session.PlayerProfile(playerId).Value.Career;
+
+        var playoffRow = Assert.Single(career, line => line.IsPostseason);
+        var regularRow = Assert.Single(career, line => !line.IsPostseason);
+        Assert.Equal((playoffLine.GamesPlayed, playoffLine.Points), (playoffRow.GamesPlayed, playoffRow.Points));
+        Assert.Equal((regular[playerId].GamesPlayed, regular[playerId].Points), (regularRow.GamesPlayed, regularRow.Points));
+    }
+
+    [Fact]
+    public void Save_KeepsARepeaterTaxpayerARepeaterAcrossALoad()
+    {
+        var ruleset = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "rulesets", "default-league.json")))!.AsObject();
+        ruleset["capMechanics"] = System.Text.Json.Nodes.JsonNode.Parse("""
+            { "taxBracketSize": 5000000, "taxRatesPercent": [150, 175], "repeaterTaxRatesPercent": [250, 275], "taxRateIncrementPercent": 50 }
+            """);
+        File.WriteAllText(Path.Combine(_directory, "ruleset.json"), ruleset.ToJsonString());
+        var pack = SamplePack();
+        pack["rulesetFile"] = "ruleset.json";
+        pack["teams"]![0]!["taxRepeater"] = true;
+        foreach (var player in pack["players"]!.AsArray().Where(player => player!["team"]?.GetValue<string>() == "RED"))
+        {
+            player!["contract"] = new JsonObject { ["salaries"] = new JsonArray(16_000_000L) };
+        }
+
+        var session = Session(Write(pack));
+        Assert.True(session.Load().IsSuccess);
+        var saved = session.Save().Value;
+
+        var reloaded = Session(Write(SamplePack())).LoadSave(saved);
+
+        Assert.True(reloaded.IsSuccess, string.Join("; ", reloaded.Errors.Select(error => error.Message)));
+        Assert.True(reloaded.Value.Teams.Single(team => team.TeamName == "RED Team").CapSheet.TaxBill!.IsRepeater);
     }
 
     [Fact]

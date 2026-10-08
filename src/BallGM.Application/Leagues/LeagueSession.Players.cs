@@ -62,19 +62,15 @@ public sealed partial class LeagueSession
                 .Select(entry => ToRecentGame(entry.Result, entry.Line!, teamNames, _seasonRun))
                 .ToList();
 
-            if (played.Count > 0)
+            // Recent form is every game, playoffs included; the season line is the regular season only.
+            var regularSeason = played
+                .Where(entry => entry.Result.Phase == SeasonPhase.RegularSeason)
+                .Select(entry => (entry.Result, entry.Line!))
+                .ToList();
+            if (regularSeason.Count > 0)
             {
-                seasonDetail = SeasonDetail(played.Select(entry => (entry.Result, entry.Line!)).ToList());
-                currentSeason = new CareerSeasonLine(
-                    SeasonLabel(_seasonRun.Season.Year),
-                    team?.Name,
-                    played.Count,
-                    played.Sum(entry => entry.Line!.Minutes),
-                    played.Sum(entry => entry.Line!.Points),
-                    played.Sum(entry => entry.Line!.Rebounds),
-                    played.Sum(entry => entry.Line!.Assists),
-                    IsCurrent: true,
-                    Metrics: MetricsFrom(seasonDetail));
+                seasonDetail = SeasonDetail(regularSeason);
+                currentSeason = CareerLine(_seasonRun.Season.Year, team?.Name, seasonDetail, SeasonPhase.RegularSeason, isCurrent: true);
             }
         }
 
@@ -225,37 +221,35 @@ public sealed partial class LeagueSession
 
     /// <summary>
     /// Folds a season about to be concluded into every player's career history, so the profile keeps
-    /// it after the season run itself is cleared. Called by <see cref="ConcludeSeason"/>.
+    /// it after the season run itself is cleared: one regular-season row for everyone who played, and
+    /// a separate playoff row for everyone who reached the postseason. Called by <see cref="ConcludeSeason"/>.
     /// </summary>
-    private LeagueSnapshot WithConcludedSeason(LeagueSnapshot snapshot, SeasonRun run)
+    private static LeagueSnapshot WithConcludedSeason(LeagueSnapshot snapshot, SeasonRun run)
     {
         var teamOf = snapshot.Teams
             .SelectMany(team => team.PlayerIds.Select(id => (id.Value, team.Name)))
             .ToDictionary(entry => entry.Value, entry => entry.Name, StringComparer.Ordinal);
 
         var history = snapshot.CareerHistory.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.Ordinal);
-        var gamesByPlayer = run.ResultsInPlayOrder
-            .Where(result => result.BoxScore is not null)
-            .SelectMany(result => result.BoxScore!.Lines.Select(line => (Result: result, Line: line)))
-            .GroupBy(entry => entry.Line.PlayerId.Value, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => (IReadOnlyList<(GameResult, PlayerStatLine)>)group.ToList(), StringComparer.Ordinal);
-        foreach (var line in _seasonEngine.PlayerSeasonStats(run))
-        {
-            if (!history.TryGetValue(line.PlayerId.Value, out var seasons))
-            {
-                seasons = [];
-                history[line.PlayerId.Value] = seasons;
-            }
 
-            seasons.Add(new CareerSeasonLine(
-                SeasonLabel(run.Season.Year),
-                teamOf.GetValueOrDefault(line.PlayerId.Value),
-                line.GamesPlayed,
-                line.TotalMinutes,
-                line.TotalPoints,
-                line.TotalRebounds,
-                line.TotalAssists,
-                Metrics: gamesByPlayer.TryGetValue(line.PlayerId.Value, out var games) ? MetricsFrom(SeasonDetail(games)) : null));
+        foreach (var phase in new[] { SeasonPhase.RegularSeason, SeasonPhase.Postseason })
+        {
+            var gamesByPlayer = run.ResultsInPlayOrder
+                .Where(result => result.Phase == phase && result.BoxScore is not null)
+                .SelectMany(result => result.BoxScore!.Lines.Select(line => (Result: result, Line: line)))
+                .GroupBy(entry => entry.Line.PlayerId.Value, StringComparer.Ordinal)
+                .OrderBy(group => group.Key, StringComparer.Ordinal);
+
+            foreach (var games in gamesByPlayer)
+            {
+                if (!history.TryGetValue(games.Key, out var seasons))
+                {
+                    seasons = [];
+                    history[games.Key] = seasons;
+                }
+
+                seasons.Add(CareerLine(run.Season.Year, teamOf.GetValueOrDefault(games.Key), SeasonDetail(games.ToList()), phase, isCurrent: false));
+            }
         }
 
         return snapshot with
@@ -263,6 +257,20 @@ public sealed partial class LeagueSession
             CareerHistory = history.ToDictionary(entry => entry.Key, entry => (IReadOnlyList<CareerSeasonLine>)entry.Value, StringComparer.Ordinal),
         };
     }
+
+    /// <summary>One season of one phase as a career row: the live profile line and a concluded one are built the same way.</summary>
+    private static CareerSeasonLine CareerLine(int seasonYear, string? teamName, SeasonDetailLine detail, SeasonPhase phase, bool isCurrent) =>
+        new(
+            SeasonLabel(seasonYear),
+            teamName,
+            detail.Games,
+            detail.Minutes,
+            detail.Points,
+            detail.Rebounds,
+            detail.Assists,
+            isCurrent,
+            MetricsFrom(detail),
+            IsPostseason: phase == SeasonPhase.Postseason);
 
     private static RecentGameLine ToRecentGame(
         GameResult result,

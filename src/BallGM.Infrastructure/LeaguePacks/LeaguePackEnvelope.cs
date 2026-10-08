@@ -96,22 +96,7 @@ public sealed record LeaguePackPlayerEnvelope(
     string? Injury,
     LeaguePackContractEnvelope? Contract,
     string? Portrait = null,
-    IReadOnlyList<LeaguePackCareerSeasonEnvelope>? Career = null);
-
-/// <summary>
-/// One past season of a player's career, as totals, for the profile's history table. Presentation
-/// content: no rule reads it. <see cref="Team"/> is free text (a team from before the pack's own
-/// league existed need not be one of its teams).
-/// </summary>
-public sealed record LeaguePackCareerSeasonEnvelope(
-    string? Season,
-    string? Team,
-    int? GamesPlayed,
-    int? Minutes,
-    int? Points,
-    int? Rebounds,
-    int? Assists,
-    IReadOnlyDictionary<string, double>? Metrics = null);
+    IReadOnlyList<Careers.CareerSeasonEnvelope>? Career = null);
 
 public sealed record LeaguePackRatingEnvelope(
     int? Height,

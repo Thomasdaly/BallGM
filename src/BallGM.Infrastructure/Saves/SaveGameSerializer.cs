@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using BallGM.Application.Leagues;
+using BallGM.Application.Players;
 using BallGM.Application.Saves;
 using BallGM.Domain.Common;
 using BallGM.Domain.Contracts;
@@ -13,6 +14,7 @@ using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 using BallGM.Domain.Transactions;
+using BallGM.Infrastructure.Careers;
 using BallGM.Infrastructure.Contracts;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Negotiations;
@@ -86,7 +88,12 @@ public sealed class SaveGameSerializer : ISaveGameStore
             negotiations.Values
                 .OrderBy(negotiation => negotiation.Id.Value, StringComparer.Ordinal)
                 .Select(negotiation => new NegotiationSerializer().Serialize(negotiation))
-                .ToList());
+                .ToList(),
+            snapshot.CareerHistory
+                .OrderBy(entry => entry.Key, StringComparer.Ordinal)
+                .Select(entry => new PlayerCareerEnvelope(entry.Key, entry.Value.Select(CareerSeasonParser.ToEnvelope).ToList()))
+                .ToList(),
+            snapshot.TaxRepeaterTeams.Order(StringComparer.Ordinal).ToList());
 
         return DomainOperationResult<string>.Success(JsonSerializer.Serialize(envelope, Options));
     }
@@ -169,6 +176,18 @@ public sealed class SaveGameSerializer : ISaveGameStore
                 return DomainOperationResult<SaveGameContents>.Failure(ledgerResult.Errors.ToArray());
             }
 
+            var careerResult = BuildCareerHistory(envelope.CareerHistory, playersResult.Value);
+            if (careerResult.IsFailure)
+            {
+                return DomainOperationResult<SaveGameContents>.Failure(careerResult.Errors.ToArray());
+            }
+
+            var repeatersResult = BuildTaxRepeaters(envelope.TaxRepeaterTeams, teamsResult.Value);
+            if (repeatersResult.IsFailure)
+            {
+                return DomainOperationResult<SaveGameContents>.Failure(repeatersResult.Errors.ToArray());
+            }
+
             var snapshot = new LeagueSnapshot(
                 leagueResult.Value,
                 new Season(envelope.CurrentSeasonYear),
@@ -178,7 +197,11 @@ public sealed class SaveGameSerializer : ISaveGameStore
                 contractsResult.Value,
                 draftAssetsResult.Value,
                 ledgerResult.Value,
-                configuration);
+                configuration)
+            {
+                CareerHistory = careerResult.Value,
+                TaxRepeaterTeams = repeatersResult.Value,
+            };
 
             SeasonRun? season = null;
             if (envelope.Season is not null)
@@ -452,6 +475,77 @@ public sealed class SaveGameSerializer : ISaveGameStore
         }
 
         return DomainOperationResult<Dictionary<string, Negotiation>>.Success(negotiations);
+    }
+
+    /// <summary>
+    /// Every career row in the file, each one tied to a player the save actually holds: a row for an
+    /// unknown player would never be shown and would be written out again on every save, and a row
+    /// under a corrupted identifier would leave the real player with no history and no error.
+    /// </summary>
+    private static DomainOperationResult<Dictionary<string, IReadOnlyList<CareerSeasonLine>>> BuildCareerHistory(
+        IReadOnlyList<PlayerCareerEnvelope>? envelopes,
+        IReadOnlyCollection<Player> players)
+    {
+        if (envelopes is null)
+        {
+            return Fail<Dictionary<string, IReadOnlyList<CareerSeasonLine>>>(InvalidFieldCode, "The save has no careerHistory list.");
+        }
+
+        var known = players.Select(player => player.Id.Value).ToHashSet(StringComparer.Ordinal);
+        var history = new Dictionary<string, IReadOnlyList<CareerSeasonLine>>(StringComparer.Ordinal);
+
+        foreach (var envelope in envelopes)
+        {
+            if (envelope?.PlayerId is not { } playerId || !known.Contains(playerId) || history.ContainsKey(playerId) || envelope.Seasons is null)
+            {
+                return Fail<Dictionary<string, IReadOnlyList<CareerSeasonLine>>>(
+                    InvalidFieldCode,
+                    $"Career history entry for player '{envelope?.PlayerId}' names nobody in this save, repeats a player, or has no seasons list.");
+            }
+
+            var seasons = new List<CareerSeasonLine>(envelope.Seasons.Count);
+            foreach (var season in envelope.Seasons)
+            {
+                var line = CareerSeasonParser.TryParse(season);
+
+                if (line is null)
+                {
+                    return Fail<Dictionary<string, IReadOnlyList<CareerSeasonLine>>>(
+                        InvalidFieldCode,
+                        $"Player '{playerId}' has an unreadable career season. {CareerSeasonParser.Requirement}");
+                }
+
+                seasons.Add(line);
+            }
+
+            history[playerId] = seasons;
+        }
+
+        return DomainOperationResult<Dictionary<string, IReadOnlyList<CareerSeasonLine>>>.Success(history);
+    }
+
+    /// <summary>Repeater taxpayers, each one a team the save holds, each named once.</summary>
+    private static DomainOperationResult<HashSet<string>> BuildTaxRepeaters(IReadOnlyList<string?>? teamIds, IReadOnlyCollection<Team> teams)
+    {
+        if (teamIds is null)
+        {
+            return Fail<HashSet<string>>(InvalidFieldCode, "The save has no taxRepeaterTeams list.");
+        }
+
+        var known = teams.Select(team => team.Id.Value).ToHashSet(StringComparer.Ordinal);
+        var repeaters = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var teamId in teamIds)
+        {
+            if (teamId is null || !known.Contains(teamId) || !repeaters.Add(teamId))
+            {
+                return Fail<HashSet<string>>(
+                    InvalidFieldCode,
+                    $"Tax repeater '{teamId}' names no team in this save, or is listed twice.");
+            }
+        }
+
+        return DomainOperationResult<HashSet<string>>.Success(repeaters);
     }
 
     private static LeagueEnvelope ToEnvelope(League league) =>

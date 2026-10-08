@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using BallGM.Application.Leagues;
 using BallGM.Application.Seasons;
+using BallGM.Domain.Seasons;
 
 namespace BallGM.Client.Avalonia.ViewModels;
 
@@ -494,7 +495,7 @@ public sealed class SeasonViewModel : ViewModelBase
             fixtures,
             _season.Standings.Rows.GroupBy(row => row.TeamId, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal),
             _teamArt,
-            _session.PlayerSeasonTotals(),
+            _session.PlayerSeasonTotals(SeasonPhase.RegularSeason),
             new Dictionary<string, IReadOnlyList<BoxScoreSummary>>(StringComparer.Ordinal)
             {
                 [game.AwayTeamId] = Recent(game.AwayTeamId),
