@@ -18,7 +18,7 @@ the field/mechanism doesn't exist yet (see patch ID). `/sim-regress` should repo
 | 7-ortg | ortg (pooled, with home-court) | 115.0 | [112.0, 117.0] | done (P-4b/c mechanics + P-5 retune; measured ≈116.8) |
 | 8-winspread | sd_team_win_pct | 0.150 | [0.135, 0.165] | done (P-1b, P-2, P-6; measured ≈0.147 after P-6's nudge) |
 | 9-nollscully | noll_scully (this league's actual 78-game season, not the formula's default 82) | 2.70 | [2.50, 3.00] | done (P-6; measured ≈2.60) |
-| 10-margin | sd_game_margin | 13.5 | [12.5, 14.5] | done (P-4b/c mechanics + P-5 retune; measured ≈13.45-13.5) |
+| 10-margin | sd_game_margin: SD of the **signed** home − away margin, league games (restated 2026-10-08: P-5 measured the SD of the absolute margin, ≈0.6× the signed figure — see `docs/stats-audit.md` §14) | 13.5 | [12.5, 14.5] | S1 retune (baseline signed SD 24.2 league / 21.7 controlled — was failing unnoticed) |
 | 11-pc1 | first_pc_variance_share (rating covariance) | 0.45 | [0.20, 0.70] | done (P-3: multi-attribute `PlayerRating`); match-engine/box-score half of battery 4 still owed |
 | 12-dynasty | 50-season chained `LeagueSession` run | 0 `EmptyRotationCode` failures | exact | done (P-1a: roster-floor auto-resign; P-1b: draft-day wiring) |
 | 13-tov | tov_pct = TOV / (FGA + 0.44·FTA + TOV) | 0.128 | [0.120, 0.140] | S3 (P-9) |

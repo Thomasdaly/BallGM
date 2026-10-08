@@ -87,15 +87,16 @@ public sealed class MatchModelBoundsTests
         Assert.True(MatchModelBounds.MaximumUsageFactor > 100);
 
         Assert.True(
-            MatchModelBounds.DefensiveReboundShare > MatchModelBounds.OffensiveReboundShare,
+            MatchModelBounds.OffensiveReboundRate * 2 < MatchModelBounds.ProbabilityScale,
             "A miss is rebounded by the defence more often than by the team that took the shot.");
 
-        Assert.True(
-            MatchModelBounds.DefensiveReboundShare + MatchModelBounds.OffensiveReboundShare
-                <= MatchModelBounds.ProbabilityScale,
-            "A missed shot cannot be rebounded more than once.");
+        Assert.InRange(MatchModelBounds.TeamReboundShare, 1, MatchModelBounds.ProbabilityScale / 10);
 
-        Assert.InRange(MatchModelBounds.AssistShareOfMadeFieldGoals, 1, MatchModelBounds.ProbabilityScale);
+        // Every possession provably ends: a run of offensive rebounds is capped, and the cap is far
+        // past anything the rebound rate makes plausible (each extra shot needs another offensive board).
+        Assert.InRange(MatchModelBounds.MaximumShotsPerPossession, 4, 20);
+
+        Assert.InRange(MatchModelBounds.AssistChance, 1, MatchModelBounds.ProbabilityScale);
         Assert.InRange(MatchModelBounds.ThreePointAttemptShare, 1, MatchModelBounds.ProbabilityScale);
     }
 

@@ -282,16 +282,14 @@ public sealed class GameResultTests
         var away = new TeamId("TEAM-2");
         var gameId = GameId.For(Season, SeasonDay.Opening, 0);
 
-        var result = BoxScore.Create(
-            gameId,
-            home,
-            away,
-            100,
-            98,
-            [
-                new PlayerStatLine(new PlayerId("P1"), home, 30, 40, 2, 3, 3, 100, 0, 0, 0, 0, 40, 40, true),
-                new PlayerStatLine(new PlayerId("P2"), away, 30, 98, 1, 3, 2, 100, 0, 0, 0, 0, 98, 98, true),
-            ]);
+        PlayerStatLine[] lines =
+        [
+            new PlayerStatLine(new PlayerId("P1"), home, 30, 40, 2, 3, 0, 100, 0, 0, 0, 0, 40, 40, true),
+            new PlayerStatLine(new PlayerId("P2"), away, 30, 98, 1, 3, 0, 100, 0, 0, 0, 0, 98, 98, true),
+        ];
+        var (homeLine, awayLine) = BalancedTeamLines.For(home, away, lines);
+
+        var result = BoxScore.Create(gameId, 100, 98, lines, homeLine, awayLine);
 
         Assert.True(result.IsFailure);
         Assert.Equal("box_score.points_do_not_match_result", result.Errors[0].Code);

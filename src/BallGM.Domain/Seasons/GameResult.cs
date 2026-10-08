@@ -76,6 +76,20 @@ public sealed record GameResult
                 $"The box score supplied for game '{fixture.Id.Value}' is for game '{boxScore.GameId.Value}'."));
         }
 
+        if (boxScore is not null && (boxScore.HomeTeamId != fixture.HomeTeamId || boxScore.AwayTeamId != fixture.AwayTeamId))
+        {
+            errors.Add(new DomainError(
+                BoxScoreMismatchCode,
+                $"The box score supplied for game '{fixture.Id.Value}' has '{boxScore.HomeTeamId.Value}' at home and '{boxScore.AwayTeamId.Value}' away, but the fixture has '{fixture.HomeTeamId.Value}' and '{fixture.AwayTeamId.Value}'."));
+        }
+
+        if (boxScore is not null && (boxScore.PointsFor(fixture.HomeTeamId) != homePoints || boxScore.PointsFor(fixture.AwayTeamId) != awayPoints))
+        {
+            errors.Add(new DomainError(
+                BoxScoreMismatchCode,
+                $"Game '{fixture.Id.Value}' is recorded {homePoints}-{awayPoints}, but its box score adds up to {boxScore.PointsFor(fixture.HomeTeamId)}-{boxScore.PointsFor(fixture.AwayTeamId)}."));
+        }
+
         return errors.Count > 0
             ? DomainOperationResult<GameResult>.Failure(errors.ToArray())
             : DomainOperationResult<GameResult>.Success(new GameResult(

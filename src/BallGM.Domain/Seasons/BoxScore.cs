@@ -76,6 +76,11 @@ public sealed record PlayerStatLine
             throw new ArgumentOutOfRangeException(nameof(threePointsMade), threePointsMade, "A player cannot make more threes than they attempted.");
         }
 
+        if (threePointsMade > fieldGoalsMade)
+        {
+            throw new ArgumentOutOfRangeException(nameof(threePointsMade), threePointsMade, "A made three is a made field goal, so threes made cannot exceed field goals made.");
+        }
+
         if (freeThrowsMade > freeThrowsAttempted)
         {
             throw new ArgumentOutOfRangeException(nameof(freeThrowsMade), freeThrowsMade, "A player cannot make more free throws than they attempted.");
@@ -156,45 +161,90 @@ public sealed record PlayerStatLine
 }
 
 /// <summary>
-/// Every player line from one game, and nothing else. The team totals are not stored: a box score
-/// whose totals could disagree with its lines is two accounts of one game, and the derived answer
-/// is the one that cannot drift.
+/// What one team did in a game that belongs to no single player: rebounds credited to the team (a
+/// ball out of bounds off the other side, a blocked shot that leaves the floor) and the free-throw
+/// trips that ended in a live miss. Neither is a player's figure, yet without them the rebounds in a
+/// box score cannot be reconciled with its misses — every live miss ends in exactly one rebound, and
+/// a box score that drops some has silently lost part of the game.
+/// </summary>
+public sealed record TeamStatLine
+{
+    public TeamStatLine(TeamId teamId, int teamOffensiveRebounds, int teamDefensiveRebounds, int liveFreeThrowMisses)
+    {
+        ArgumentNullException.ThrowIfNull(teamId);
+        ArgumentOutOfRangeException.ThrowIfNegative(teamOffensiveRebounds);
+        ArgumentOutOfRangeException.ThrowIfNegative(teamDefensiveRebounds);
+        ArgumentOutOfRangeException.ThrowIfNegative(liveFreeThrowMisses);
+
+        TeamId = teamId;
+        TeamOffensiveRebounds = teamOffensiveRebounds;
+        TeamDefensiveRebounds = teamDefensiveRebounds;
+        LiveFreeThrowMisses = liveFreeThrowMisses;
+    }
+
+    public TeamId TeamId { get; }
+
+    /// <summary>The team's own misses it kept without a player securing the ball.</summary>
+    public int TeamOffensiveRebounds { get; }
+
+    /// <summary>The opponent's misses this team took possession of without a player securing the ball.</summary>
+    public int TeamDefensiveRebounds { get; }
+
+    /// <summary>Free-throw trips (including and-ones) whose last shot was missed and stayed live.</summary>
+    public int LiveFreeThrowMisses { get; }
+
+    public int TeamRebounds => TeamOffensiveRebounds + TeamDefensiveRebounds;
+}
+
+/// <summary>
+/// Every player line from one game, plus each side's <see cref="TeamStatLine"/>. Team totals are not
+/// stored: a box score whose totals could disagree with its lines is two accounts of one game, and
+/// the derived answer is the one that cannot drift.
+/// <para>
+/// <b>The box-score identities are checked here, at construction,</b> not measured afterwards:
+/// points add up to the result; usage shares add up to a whole team; every live miss is accounted for
+/// by exactly one rebound (<c>(FGA − FGM) + live FT misses = own OREB + own team OREB + opponent DREB +
+/// opponent team DREB</c>); and an assist is always on a teammate's basket (<c>AST ≤ team FGM − own FGM</c>).
+/// A game that breaks one of these is a bug the season would otherwise inherit silently.
+/// </para>
 /// </summary>
 public sealed class BoxScore
 {
     private const string PointsDoNotMatchCode = "box_score.points_do_not_match_result";
     private const string UnknownTeamCode = "box_score.line_for_team_not_playing";
     private const string UsagePercentDoesNotSumToWholeCode = "box_score.usage_percent_does_not_sum_to_whole";
+    private const string ReboundsDoNotAccountForMissesCode = "box_score.rebounds_do_not_account_for_misses";
+    private const string AssistsExceedTeammateMakesCode = "box_score.assists_exceed_teammate_makes";
+    private const string TeamLineForWrongTeamCode = "box_score.team_line_for_wrong_team";
 
     private readonly List<PlayerStatLine> _lines;
 
-    private BoxScore(GameId gameId, TeamId homeTeamId, TeamId awayTeamId, List<PlayerStatLine> lines)
+    private BoxScore(GameId gameId, TeamStatLine home, TeamStatLine away, List<PlayerStatLine> lines)
     {
         GameId = gameId;
-        HomeTeamId = homeTeamId;
-        AwayTeamId = awayTeamId;
+        HomeTeamId = home.TeamId;
+        AwayTeamId = away.TeamId;
+        Home = home;
+        Away = away;
         _lines = lines;
     }
 
     /// <summary>
-    /// Builds a box score, refusing lines from a team that is not in the game, refusing totals that
-    /// disagree with the stated result, and refusing a team whose usage shares do not sum to exactly
-    /// 100 (a team with no lines at all is not checked — there is nothing to sum). The points check is
-    /// the original point of the type: a game whose final score and whose player points differ is a
-    /// bug the standings would inherit silently. Usage is the same shape of bug one level down.
+    /// Builds a box score, refusing anything that breaks a box-score identity (see the type summary).
+    /// A team with no player lines is not checked for usage — there is nothing to sum.
     /// </summary>
     public static DomainOperationResult<BoxScore> Create(
         GameId gameId,
-        TeamId homeTeamId,
-        TeamId awayTeamId,
         int homePoints,
         int awayPoints,
-        IEnumerable<PlayerStatLine> lines)
+        IEnumerable<PlayerStatLine> lines,
+        TeamStatLine home,
+        TeamStatLine away)
     {
         ArgumentNullException.ThrowIfNull(gameId);
-        ArgumentNullException.ThrowIfNull(homeTeamId);
-        ArgumentNullException.ThrowIfNull(awayTeamId);
         ArgumentNullException.ThrowIfNull(lines);
+        ArgumentNullException.ThrowIfNull(home);
+        ArgumentNullException.ThrowIfNull(away);
 
         var supplied = lines.ToList();
         if (supplied.Any(line => line is null))
@@ -204,43 +254,72 @@ public sealed class BoxScore
 
         var errors = new List<DomainError>();
 
-        foreach (var line in supplied.Where(line => line.TeamId != homeTeamId && line.TeamId != awayTeamId))
+        if (home.TeamId == away.TeamId)
         {
-            errors.Add(new DomainError(
-                UnknownTeamCode,
-                $"Player '{line.PlayerId.Value}' has a line in game '{gameId.Value}' for team '{line.TeamId.Value}', which is not playing in it."));
+            errors.Add(new DomainError(TeamLineForWrongTeamCode, $"Game '{gameId.Value}' names team '{home.TeamId.Value}' on both sides."));
         }
 
-        var homeLineTotal = supplied.Where(line => line.TeamId == homeTeamId).Sum(line => line.Points);
-        var awayLineTotal = supplied.Where(line => line.TeamId == awayTeamId).Sum(line => line.Points);
-
-        if (homeLineTotal != homePoints || awayLineTotal != awayPoints)
+        // One pass over the lines builds both teams' totals; every identity below reads them.
+        var totals = new TeamTotals[2];
+        foreach (var line in supplied)
         {
-            errors.Add(new DomainError(
-                PointsDoNotMatchCode,
-                $"Game '{gameId.Value}' finished {homePoints}-{awayPoints} but its player lines add up to {homeLineTotal}-{awayLineTotal}."));
-        }
-
-        foreach (var teamId in new[] { homeTeamId, awayTeamId })
-        {
-            var teamLines = supplied.Where(line => line.TeamId == teamId).ToList();
-            if (teamLines.Count == 0)
+            var side = line.TeamId == home.TeamId ? 0 : line.TeamId == away.TeamId ? 1 : -1;
+            if (side < 0)
             {
+                errors.Add(new DomainError(
+                    UnknownTeamCode,
+                    $"Player '{line.PlayerId.Value}' has a line in game '{gameId.Value}' for team '{line.TeamId.Value}', which is not playing in it."));
                 continue;
             }
 
-            var usageTotal = teamLines.Sum(line => line.UsagePercent);
-            if (usageTotal != 100)
+            totals[side].Add(line);
+        }
+
+        if (totals[0].Points != homePoints || totals[1].Points != awayPoints)
+        {
+            errors.Add(new DomainError(
+                PointsDoNotMatchCode,
+                $"Game '{gameId.Value}' finished {homePoints}-{awayPoints} but its player lines add up to {totals[0].Points}-{totals[1].Points}."));
+        }
+
+        TeamStatLine[] teams = [home, away];
+        for (var side = 0; side < 2; side++)
+        {
+            var team = teams[side];
+            var opponent = teams[1 - side];
+            var own = totals[side];
+
+            if (own.Lines > 0 && own.Usage != 100)
             {
                 errors.Add(new DomainError(
                     UsagePercentDoesNotSumToWholeCode,
-                    $"Team '{teamId.Value}' in game '{gameId.Value}' has usage shares summing to {usageTotal}, not 100."));
+                    $"Team '{team.TeamId.Value}' in game '{gameId.Value}' has usage shares summing to {own.Usage}, not 100."));
+            }
+
+            var liveMisses = own.FieldGoalsAttempted - own.FieldGoalsMade + team.LiveFreeThrowMisses;
+            var rebounds = own.OffensiveRebounds + team.TeamOffensiveRebounds + totals[1 - side].DefensiveRebounds + opponent.TeamDefensiveRebounds;
+            if (liveMisses != rebounds)
+            {
+                errors.Add(new DomainError(
+                    ReboundsDoNotAccountForMissesCode,
+                    $"Team '{team.TeamId.Value}' in game '{gameId.Value}' had {liveMisses} live misses but {rebounds} rebounds were recorded off them."));
+            }
+        }
+
+        foreach (var line in supplied)
+        {
+            var side = line.TeamId == home.TeamId ? 0 : line.TeamId == away.TeamId ? 1 : -1;
+            if (side >= 0 && line.Assists > totals[side].FieldGoalsMade - line.FieldGoalsMade)
+            {
+                errors.Add(new DomainError(
+                    AssistsExceedTeammateMakesCode,
+                    $"Player '{line.PlayerId.Value}' has {line.Assists} assists in game '{gameId.Value}', more than the {totals[side].FieldGoalsMade - line.FieldGoalsMade} baskets made by teammates."));
             }
         }
 
         return errors.Count > 0
             ? DomainOperationResult<BoxScore>.Failure(errors.ToArray())
-            : DomainOperationResult<BoxScore>.Success(new BoxScore(gameId, homeTeamId, awayTeamId, supplied));
+            : DomainOperationResult<BoxScore>.Success(new BoxScore(gameId, home, away, supplied));
     }
 
     public GameId GameId { get; }
@@ -249,7 +328,18 @@ public sealed class BoxScore
 
     public TeamId AwayTeamId { get; }
 
+    public TeamStatLine Home { get; }
+
+    public TeamStatLine Away { get; }
+
     public IReadOnlyList<PlayerStatLine> Lines => _lines;
+
+    public TeamStatLine TeamLineFor(TeamId teamId)
+    {
+        ArgumentNullException.ThrowIfNull(teamId);
+        return teamId == HomeTeamId ? Home : teamId == AwayTeamId ? Away
+            : throw new ArgumentException($"Team '{teamId.Value}' did not play in game '{GameId.Value}'.", nameof(teamId));
+    }
 
     public IReadOnlyList<PlayerStatLine> LinesFor(TeamId teamId)
     {
@@ -267,5 +357,27 @@ public sealed class BoxScore
     {
         ArgumentNullException.ThrowIfNull(teamId);
         return _lines.Where(line => line.TeamId == teamId).Sum(line => line.Points);
+    }
+
+    private struct TeamTotals
+    {
+        public int Lines;
+        public int Points;
+        public int Usage;
+        public int FieldGoalsAttempted;
+        public int FieldGoalsMade;
+        public int OffensiveRebounds;
+        public int DefensiveRebounds;
+
+        public void Add(PlayerStatLine line)
+        {
+            Lines++;
+            Points += line.Points;
+            Usage += line.UsagePercent;
+            FieldGoalsAttempted += line.FieldGoalsAttempted;
+            FieldGoalsMade += line.FieldGoalsMade;
+            OffensiveRebounds += line.OffensiveRebounds;
+            DefensiveRebounds += line.DefensiveRebounds;
+        }
     }
 }

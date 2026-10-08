@@ -87,8 +87,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
         var possessions = MatchModelBounds.BasePossessionsPerGame +
             random.NextInt32(-MatchModelBounds.PossessionSpread, MatchModelBounds.PossessionSpread + 1);
 
-        PlayPeriod(home, homeEfficiency, possessions, random);
-        PlayPeriod(away, awayEfficiency, possessions, random);
+        PlayPeriod(home, away, homeEfficiency, awayEfficiency, possessions, random);
 
         // A drawn game is refused by GameResult, every standings tie-break assumes a winner, and a
         // postseason series that could not be won would never end. So the tie is played out rather
@@ -98,8 +97,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
         while (home.Points == away.Points && overtimePeriods < MatchModelBounds.MaximumOvertimePeriods)
         {
             overtimePeriods++;
-            PlayPeriod(home, homeEfficiency, MatchModelBounds.OvertimePossessions, random);
-            PlayPeriod(away, awayEfficiency, MatchModelBounds.OvertimePossessions, random);
+            PlayPeriod(home, away, homeEfficiency, awayEfficiency, MatchModelBounds.OvertimePossessions, random);
         }
 
         if (home.Points == away.Points)
@@ -114,18 +112,15 @@ public sealed class PossessionMatchEngine : IMatchEngine
         AwardOvertimeMinutes(home, overtimePeriods);
         AwardOvertimeMinutes(away, overtimePeriods);
 
-        FinishSide(home, away, random);
-        FinishSide(away, home, random);
-
         var lines = home.ToStatLines().Concat(away.ToStatLines()).ToList();
 
         var boxScoreResult = BoxScore.Create(
             setup.Fixture.Id,
-            setup.Fixture.HomeTeamId,
-            setup.Fixture.AwayTeamId,
             home.Points,
             away.Points,
-            lines);
+            lines,
+            home.ToTeamLine(),
+            away.ToTeamLine());
 
         if (boxScoreResult.IsFailure)
         {
@@ -172,52 +167,152 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// and one that does is a real field-goal attempt at a real percentage, not a single blended
     /// score/miss draw.
     /// </summary>
-    private static void PlayPeriod(Side side, int efficiency, int possessions, IRandomSource random)
+    private static void PlayPeriod(Side home, Side away, int homeEfficiency, int awayEfficiency, int possessions, IRandomSource random)
     {
-        var (baseFg2Percent, baseFg3Percent) = FieldGoalPercentagesFor(efficiency);
+        // Each side's hot or cold night is drawn once for the whole period, home first, before a
+        // single possession: a night moves every shot together (see GameShootingVarianceRange).
+        var homeShooting = NightlyShooting(homeEfficiency, random);
+        var awayShooting = NightlyShooting(awayEfficiency, random);
 
-        // One shared draw for the whole period, not per shot: a hot or cold night moves every shot
-        // together, which is what gives games the score-to-score variance a real season has (see
-        // MatchModelBounds.GameShootingVarianceRange).
-        var nightlyVariance = random.NextInt32(-MatchModelBounds.GameShootingVarianceRange, MatchModelBounds.GameShootingVarianceRange + 1);
-
-        var fg2Percent = Math.Clamp(
-            baseFg2Percent + nightlyVariance,
-            MatchModelBounds.MinimumFieldGoalPercentage,
-            MatchModelBounds.MaximumFieldGoalPercentage);
-
-        var fg3Percent = Math.Clamp(
-            baseFg3Percent + nightlyVariance,
-            MatchModelBounds.MinimumFieldGoalPercentage,
-            MatchModelBounds.MaximumFieldGoalPercentage);
-
+        // Possessions alternate, as they do on a court, so that whoever is on the floor at any moment
+        // is on the floor for both ends of it.
         for (var possession = 0; possession < possessions; possession++)
         {
-            if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) >= MatchModelBounds.FieldGoalAttemptRate)
-            {
-                continue;
-            }
+            PlayPossession(home, away, homeShooting, random);
+            PlayPossession(away, home, awayShooting, random);
+        }
+    }
 
-            var isThree = random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.ThreePointAttemptShare;
-            var shooter = side.PickBy(side.UsageWeights, random);
+    /// <summary>
+    /// One side's shooting for one period: the efficiency-adjusted base percentages, moved together
+    /// by one shared draw rather than per shot, which is what gives games the score-to-score variance
+    /// a real season has (see <see cref="MatchModelBounds.GameShootingVarianceRange"/>).
+    /// </summary>
+    private static (int Fg2Percent, int Fg3Percent) NightlyShooting(int efficiency, IRandomSource random)
+    {
+        var (baseFg2Percent, baseFg3Percent) = FieldGoalPercentagesFor(efficiency);
+        var nightlyVariance = random.NextInt32(-MatchModelBounds.GameShootingVarianceRange, MatchModelBounds.GameShootingVarianceRange + 1);
 
-            side.FieldGoalsAttempted[shooter]++;
-            if (isThree)
-            {
-                side.ThreePointsAttempted[shooter]++;
-            }
+        return (
+            Math.Clamp(baseFg2Percent + nightlyVariance, MatchModelBounds.MinimumFieldGoalPercentage, MatchModelBounds.MaximumFieldGoalPercentage),
+            Math.Clamp(baseFg3Percent + nightlyVariance, MatchModelBounds.MinimumFieldGoalPercentage, MatchModelBounds.MaximumFieldGoalPercentage));
+    }
 
-            var made = random.NextInt32(0, MatchModelBounds.ProbabilityScale) < (isThree ? fg3Percent : fg2Percent);
+    /// <summary>
+    /// One possession, every event recorded where it happens. It may not reach a shot at all (the
+    /// unmodeled stand-in for a turnover, see <see cref="MatchModelBounds.FieldGoalAttemptRate"/>);
+    /// once it does, it lasts as long as the offence keeps the ball — every offensive rebound is a
+    /// second chance on the same possession.
+    /// </summary>
+    private static void PlayPossession(Side offence, Side defence, (int Fg2Percent, int Fg3Percent) shooting, IRandomSource random)
+    {
+        if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) >= MatchModelBounds.FieldGoalAttemptRate)
+        {
+            return;
+        }
 
-            if (made)
+        for (var shot = 0; shot < MatchModelBounds.MaximumShotsPerPossession; shot++)
+        {
+            if (!TakeShot(offence, defence, shooting, random))
             {
-                AwardMake(side, shooter, isThree, random);
-            }
-            else
-            {
-                ResolveMiss(side, shooter, isThree, random);
+                return;
             }
         }
+    }
+
+    /// <summary>
+    /// One shot and everything it leads to. Returns whether the offence still has the ball — only an
+    /// offensive rebound (a player's or the team's) keeps the possession alive.
+    /// <para>
+    /// The attempt is charged only once its outcome is known: a shooting foul on a miss is a trip to
+    /// the line, not a field-goal attempt, by the scoring convention every box score follows. Charging
+    /// it first, as this engine once did, put a phantom miss in the box score that no rebound could
+    /// ever account for.
+    /// </para>
+    /// </summary>
+    private static bool TakeShot(Side offence, Side defence, (int Fg2Percent, int Fg3Percent) shooting, IRandomSource random)
+    {
+        var isThree = random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.ThreePointAttemptShare;
+        var shooter = offence.PickBy(offence.UsageWeights, random);
+        var made = random.NextInt32(0, MatchModelBounds.ProbabilityScale) <
+            MakePercentage(isThree ? shooting.Fg3Percent : shooting.Fg2Percent, offence, defence);
+
+        if (made)
+        {
+            ChargeAttempt(offence, shooter, isThree);
+            AwardMake(offence, shooter, isThree);
+
+            if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.AssistChance)
+            {
+                offence.AssistsBy[offence.PickTeammate(offence.AssistWeights, shooter, random)]++;
+            }
+
+            // An and-one: a make that also draws a single free throw. Missed, it is a live ball.
+            return random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.AndOneChanceOnMake &&
+                ResolveFreeThrowTrip(offence, shooter, shots: 1, random) &&
+                Rebound(offence, defence, random);
+        }
+
+        if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.ShootingFoulChanceOnMiss)
+        {
+            return ResolveFreeThrowTrip(offence, shooter, isThree ? 3 : 2, random) && Rebound(offence, defence, random);
+        }
+
+        ChargeAttempt(offence, shooter, isThree);
+        return Rebound(offence, defence, random);
+    }
+
+    /// <summary>The period's percentage for this shot, pushed by the score at this moment (see <see cref="MatchModelBounds.LeadPressurePerPoint"/>).</summary>
+    private static int MakePercentage(int periodPercentage, Side offence, Side defence)
+    {
+        var pressure = Math.Clamp(
+            (defence.Points - offence.Points) * MatchModelBounds.LeadPressurePerPoint,
+            -MatchModelBounds.MaximumLeadPressure,
+            MatchModelBounds.MaximumLeadPressure);
+
+        return Math.Clamp(periodPercentage + pressure, MatchModelBounds.MinimumFieldGoalPercentage, MatchModelBounds.MaximumFieldGoalPercentage);
+    }
+
+    private static void ChargeAttempt(Side side, int shooter, bool isThree)
+    {
+        side.FieldGoalsAttempted[shooter]++;
+        if (isThree)
+        {
+            side.ThreePointsAttempted[shooter]++;
+        }
+    }
+
+    /// <summary>
+    /// A live miss, resolved to exactly one rebound — one draw decides which end and whether a player
+    /// or the team secured it. Returns whether the offence kept the ball.
+    /// </summary>
+    private static bool Rebound(Side offence, Side defence, IRandomSource random)
+    {
+        const int offensiveTeam = MatchModelBounds.OffensiveReboundRate * MatchModelBounds.TeamReboundShare / MatchModelBounds.ProbabilityScale;
+        const int defensiveTeam = (MatchModelBounds.ProbabilityScale - MatchModelBounds.OffensiveReboundRate) * MatchModelBounds.TeamReboundShare / MatchModelBounds.ProbabilityScale;
+
+        var roll = random.NextInt32(0, MatchModelBounds.ProbabilityScale);
+
+        if (roll < offensiveTeam)
+        {
+            offence.TeamOffensiveRebounds++;
+            return true;
+        }
+
+        if (roll < MatchModelBounds.OffensiveReboundRate)
+        {
+            offence.OffensiveReboundsBy[offence.PickBy(offence.ReboundWeights, random)]++;
+            return true;
+        }
+
+        if (roll < MatchModelBounds.OffensiveReboundRate + defensiveTeam)
+        {
+            defence.TeamDefensiveRebounds++;
+            return false;
+        }
+
+        defence.DefensiveReboundsBy[defence.PickBy(defence.ReboundWeights, random)]++;
+        return false;
     }
 
     /// <summary>
@@ -245,64 +340,36 @@ public sealed class PossessionMatchEngine : IMatchEngine
         return (fg2Percent, fg3Percent);
     }
 
-    /// <summary>Awards a synthetic made basket to whoever the usage weights pick — the overtime-tie terminal rule's only caller.</summary>
+    /// <summary>
+    /// Awards a synthetic made basket to whoever the usage weights pick — the overtime-tie terminal
+    /// rule's only caller. One usage draw and nothing else: no assist, no and-one, so the rule decides
+    /// the game without inventing a play.
+    /// </summary>
     private static void AwardBasket(Side side, bool isThree, IRandomSource random)
     {
         var shooter = side.PickBy(side.UsageWeights, random);
-
-        side.FieldGoalsAttempted[shooter]++;
-        if (isThree)
-        {
-            side.ThreePointsAttempted[shooter]++;
-        }
-
-        AwardMake(side, shooter, isThree, random);
+        ChargeAttempt(side, shooter, isThree);
+        AwardMake(side, shooter, isThree);
     }
 
-    private static void AwardMake(Side side, int shooter, bool isThree, IRandomSource random)
+    private static void AwardMake(Side side, int shooter, bool isThree)
     {
         var points = isThree ? 3 : 2;
 
         side.Points += points;
         side.PointsBy[shooter] += points;
         side.FieldGoalsMade[shooter]++;
-        side.MadeFieldGoals++;
 
         if (isThree)
         {
             side.ThreePointsMade[shooter]++;
         }
-
-        // An and-one: a made basket that also draws a single free throw. A missed and-one is a live
-        // ball, exactly like a missed final free throw on a shooting foul below.
-        if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.AndOneChanceOnMake &&
-            ResolveFreeThrowTrip(side, shooter, shots: 1, random))
-        {
-            side.Misses++;
-        }
     }
 
     /// <summary>
-    /// A missed field-goal attempt: either a clean miss, or a shooting foul that sends the shooter to
-    /// the line instead. Only a trip that ends on a miss re-joins the reboundable-miss pool — a made
-    /// final free throw is a dead ball, the same rule <see cref="AwardMake"/>'s and-one uses.
+    /// Draws every shot of one free-throw trip. Returns whether the trip ended on a miss — a live
+    /// ball, counted so the box score can account for the rebound that follows it.
     /// </summary>
-    private static void ResolveMiss(Side side, int shooter, bool isThree, IRandomSource random)
-    {
-        if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.ShootingFoulChanceOnMiss)
-        {
-            if (ResolveFreeThrowTrip(side, shooter, isThree ? 3 : 2, random))
-            {
-                side.Misses++;
-            }
-
-            return;
-        }
-
-        side.Misses++;
-    }
-
-    /// <summary>Draws every shot of one free-throw trip. Returns whether the trip ended on a miss.</summary>
     private static bool ResolveFreeThrowTrip(Side side, int shooter, int shots, IRandomSource random)
     {
         var madeLastShot = false;
@@ -320,40 +387,12 @@ public sealed class PossessionMatchEngine : IMatchEngine
             }
         }
 
+        if (!madeLastShot)
+        {
+            side.LiveFreeThrowMisses++;
+        }
+
         return !madeLastShot;
-    }
-
-    /// <summary>
-    /// Rebounds and assists, counted off the possessions that actually happened rather than drawn
-    /// independently. A box score whose rebounds bore no relation to its misses would be two accounts
-    /// of one game.
-    /// <para>
-    /// Offensive and defensive boards were always two separate counts here — <paramref name="side"/>'s
-    /// own misses feed one share, <paramref name="opponent"/>'s misses feed the other — this just stops
-    /// merging them into one number before <c>ToStatLines</c> reads it.
-    /// </para>
-    /// </summary>
-    private static void FinishSide(Side side, Side opponent, IRandomSource random)
-    {
-        var defensiveRebounds = opponent.Misses * MatchModelBounds.DefensiveReboundShare / MatchModelBounds.ProbabilityScale;
-        var offensiveRebounds = side.Misses * MatchModelBounds.OffensiveReboundShare / MatchModelBounds.ProbabilityScale;
-
-        for (var index = 0; index < defensiveRebounds; index++)
-        {
-            side.DefensiveReboundsBy[side.PickBy(side.ReboundWeights, random)]++;
-        }
-
-        for (var index = 0; index < offensiveRebounds; index++)
-        {
-            side.OffensiveReboundsBy[side.PickBy(side.ReboundWeights, random)]++;
-        }
-
-        var assists = side.MadeFieldGoals * MatchModelBounds.AssistShareOfMadeFieldGoals / MatchModelBounds.ProbabilityScale;
-
-        for (var index = 0; index < assists; index++)
-        {
-            side.AssistsBy[side.PickBy(side.AssistWeights, random)]++;
-        }
     }
 
     /// <summary>
@@ -532,9 +571,51 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         public int Points { get; set; }
 
-        public int Misses { get; set; }
+        public int TeamOffensiveRebounds { get; set; }
 
-        public int MadeFieldGoals { get; set; }
+        public int TeamDefensiveRebounds { get; set; }
+
+        public int LiveFreeThrowMisses { get; set; }
+
+        public TeamStatLine ToTeamLine() => new(TeamId, TeamOffensiveRebounds, TeamDefensiveRebounds, LiveFreeThrowMisses);
+
+        /// <summary>
+        /// A teammate of <paramref name="excluded"/>, drawn by the supplied weights with the excluded
+        /// player's weight taken out — how an assist is credited, so nobody assists their own basket.
+        /// Falls back to the excluded player only on a one-player rotation, where no teammate exists
+        /// and <c>BoxScore.Create</c> would refuse the assist; the engine never fields one.
+        /// </summary>
+        public int PickTeammate(IReadOnlyList<int> weights, int excluded, IRandomSource random)
+        {
+            var total = 0;
+            for (var index = 0; index < weights.Count; index++)
+            {
+                total += index == excluded ? 0 : weights[index];
+            }
+
+            if (total <= 0)
+            {
+                return excluded;
+            }
+
+            var roll = random.NextInt32(0, total);
+
+            for (var index = 0; index < weights.Count; index++)
+            {
+                if (index == excluded)
+                {
+                    continue;
+                }
+
+                roll -= weights[index];
+                if (roll < 0)
+                {
+                    return index;
+                }
+            }
+
+            return excluded;
+        }
 
         /// <summary>
         /// One player, drawn in proportion to the supplied weights. Walks the weights in a fixed

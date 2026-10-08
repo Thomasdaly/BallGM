@@ -211,10 +211,15 @@ public sealed class SeasonSerializer
 
             if (saved.BoxScore is not null)
             {
+                if (saved.HomeTeam is null || saved.AwayTeam is null)
+                {
+                    return DomainOperationResult<IReadOnlyList<GameResult>>.Failure(new DomainError(
+                        InvalidFieldCode,
+                        $"The save records a box score for game '{saved.GameId}' without both teams' team lines."));
+                }
+
                 var boxScoreResult = BoxScore.Create(
                     fixture.Id,
-                    fixture.HomeTeamId,
-                    fixture.AwayTeamId,
                     saved.HomePoints,
                     saved.AwayPoints,
                     saved.BoxScore.Select(line => new PlayerStatLine(
@@ -232,7 +237,9 @@ public sealed class SeasonSerializer
                         line.ThreePointsMade,
                         line.FreeThrowsAttempted,
                         line.FreeThrowsMade,
-                        line.Started)));
+                        line.Started)),
+                    ToTeamLine(fixture.HomeTeamId, saved.HomeTeam),
+                    ToTeamLine(fixture.AwayTeamId, saved.AwayTeam));
 
                 if (boxScoreResult.IsFailure)
                 {
@@ -278,5 +285,13 @@ public sealed class SeasonSerializer
                         line.FreeThrowsAttempted,
                         line.FreeThrowsMade,
                         line.Started))
-                    .ToList());
+                    .ToList(),
+            result.BoxScore is null ? null : ToEnvelope(result.BoxScore.Home),
+            result.BoxScore is null ? null : ToEnvelope(result.BoxScore.Away));
+
+    private static TeamStatLineEnvelope ToEnvelope(TeamStatLine line) =>
+        new(line.TeamOffensiveRebounds, line.TeamDefensiveRebounds, line.LiveFreeThrowMisses);
+
+    private static TeamStatLine ToTeamLine(TeamId teamId, TeamStatLineEnvelope saved) =>
+        new(teamId, saved.TeamOffensiveRebounds, saved.TeamDefensiveRebounds, saved.LiveFreeThrowMisses);
 }

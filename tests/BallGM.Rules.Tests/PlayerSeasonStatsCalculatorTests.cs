@@ -76,23 +76,30 @@ public sealed class PlayerSeasonStatsCalculatorTests
         var seasonDay = new SeasonDay(day);
         var fixture = new Fixture(GameId.For(TestSeason, seasonDay, slot), seasonDay, Home, Away, phase);
 
-        var boxScore = BoxScore.Create(
-            fixture.Id,
-            Home,
-            Away,
-            homePoints,
-            awayPoints,
-            [
-                new PlayerStatLine(
-                    HomeStar, Home, minutes: 20, points: homeStarPoints, offensiveRebounds: 1, defensiveRebounds: 2,
-                    assists: 2, usagePercent: 100, fieldGoalsAttempted: 0, fieldGoalsMade: 0, threePointsAttempted: 0,
-                    threePointsMade: 0, freeThrowsAttempted: homeStarPoints, freeThrowsMade: homeStarPoints, started: true),
-                new PlayerStatLine(
-                    AwayStar, Away, minutes: 18, points: awayStarPoints, offensiveRebounds: 1, defensiveRebounds: 3,
-                    assists: 1, usagePercent: 100, fieldGoalsAttempted: 0, fieldGoalsMade: 0, threePointsAttempted: 0,
-                    threePointsMade: 0, freeThrowsAttempted: awayStarPoints, freeThrowsMade: awayStarPoints, started: true),
-            ]).Value;
+        // Each star's assists are on a teammate's baskets: a box score refuses an assist nobody else scored.
+        PlayerStatLine[] lines =
+        [
+            new PlayerStatLine(
+                HomeStar, Home, minutes: 20, points: homeStarPoints, offensiveRebounds: 1, defensiveRebounds: 2,
+                assists: 2, usagePercent: 50, fieldGoalsAttempted: 0, fieldGoalsMade: 0, threePointsAttempted: 0,
+                threePointsMade: 0, freeThrowsAttempted: homeStarPoints, freeThrowsMade: homeStarPoints, started: true),
+            Teammate(new PlayerId("player-home-mate"), Home, madeTwos: 2),
+            new PlayerStatLine(
+                AwayStar, Away, minutes: 18, points: awayStarPoints, offensiveRebounds: 1, defensiveRebounds: 3,
+                assists: 1, usagePercent: 50, fieldGoalsAttempted: 0, fieldGoalsMade: 0, threePointsAttempted: 0,
+                threePointsMade: 0, freeThrowsAttempted: awayStarPoints, freeThrowsMade: awayStarPoints, started: true),
+            Teammate(new PlayerId("player-away-mate"), Away, madeTwos: 1),
+        ];
+        homePoints += 4;
+        awayPoints += 2;
+        var (homeLine, awayLine) = BalancedTeamLines.For(Home, Away, lines);
+        var boxScore = BoxScore.Create(fixture.Id, homePoints, awayPoints, lines, homeLine, awayLine).Value;
 
         return GameResult.Create(fixture, homePoints, awayPoints, boxScore).Value;
     }
+
+    private static PlayerStatLine Teammate(PlayerId playerId, TeamId teamId, int madeTwos) =>
+        new(playerId, teamId, minutes: 10, points: 2 * madeTwos, offensiveRebounds: 0, defensiveRebounds: 0, assists: 0,
+            usagePercent: 50, fieldGoalsAttempted: madeTwos, fieldGoalsMade: madeTwos, threePointsAttempted: 0,
+            threePointsMade: 0, freeThrowsAttempted: 0, freeThrowsMade: 0, started: false);
 }

@@ -50,9 +50,9 @@ public sealed class BoxScoreTests
             homePoints: 10,
             awayPoints: 5,
             [
-                Line(new PlayerId("H1"), Home, 20, 6, 1, 1, 1, 60),
-                Line(new PlayerId("H2"), Home, 20, 4, 1, 1, 1, 40),
-                Line(new PlayerId("A1"), Away, 20, 5, 1, 1, 1, 100),
+                Line(new PlayerId("H1"), Home, 20, 6, 1, 1, 0, 60),
+                Line(new PlayerId("H2"), Home, 20, 4, 1, 1, 0, 40),
+                Line(new PlayerId("A1"), Away, 20, 5, 1, 1, 0, 100),
             ]);
 
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
@@ -65,9 +65,9 @@ public sealed class BoxScoreTests
             homePoints: 10,
             awayPoints: 5,
             [
-                Line(new PlayerId("H1"), Home, 20, 6, 1, 1, 1, 60),
-                Line(new PlayerId("H2"), Home, 20, 4, 1, 1, 1, 30),
-                Line(new PlayerId("A1"), Away, 20, 5, 1, 1, 1, 100),
+                Line(new PlayerId("H1"), Home, 20, 6, 1, 1, 0, 60),
+                Line(new PlayerId("H2"), Home, 20, 4, 1, 1, 0, 30),
+                Line(new PlayerId("A1"), Away, 20, 5, 1, 1, 0, 100),
             ]);
 
         Assert.True(result.IsFailure);
@@ -83,15 +83,86 @@ public sealed class BoxScoreTests
             homePoints: 5,
             awayPoints: 0,
             [
-                Line(new PlayerId("H1"), Home, 20, 5, 1, 1, 1, 100),
+                Line(new PlayerId("H1"), Home, 20, 5, 1, 1, 0, 100),
             ]);
 
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
     }
 
+    [Fact]
+    public void ThreesMadeCannotExceedFieldGoalsMade()
+    {
+        // 5 FGA, 1 FGM, 5 3PA, 3 3PM would mean negative two-point makes, yet it adds up to 5 points.
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerStatLine(
+            new PlayerId("P1"), Home, minutes: 20, points: 5, offensiveRebounds: 0, defensiveRebounds: 0,
+            assists: 0, usagePercent: 100, fieldGoalsAttempted: 5, fieldGoalsMade: 1, threePointsAttempted: 5,
+            threePointsMade: 3, freeThrowsAttempted: 0, freeThrowsMade: 0, started: true));
+    }
+
+    [Fact]
+    public void CreateRefusesALiveMissThatNoReboundAccountsFor()
+    {
+        // Home misses 3 field goals; only 2 rebounds are recorded off them, and no team rebound.
+        PlayerStatLine[] lines =
+        [
+            Shooter(new PlayerId("H1"), Home, fga: 5, fgm: 2, oreb: 1, dreb: 0, ast: 0),
+            Shooter(new PlayerId("A1"), Away, fga: 2, fgm: 2, oreb: 0, dreb: 1, ast: 0),
+        ];
+
+        var result = BoxScore.Create(
+            GameId.For(Season, SeasonDay.Opening, 0), 4, 4 + 1, lines,
+            new TeamStatLine(Home, 0, 0, 0), new TeamStatLine(Away, 0, 0, 0));
+
+        Assert.Contains(result.Errors, error => error.Code == "box_score.rebounds_do_not_account_for_misses");
+    }
+
+    [Fact]
+    public void CreateAcceptsMissesAccountedForByPlayerTeamAndFreeThrowRebounds()
+    {
+        // Home: 3 missed FGs + 1 live FT miss = 4 = own OREB 1 + own team OREB 1 + away DREB 1 + away team DREB 1.
+        PlayerStatLine[] lines =
+        [
+            Shooter(new PlayerId("H1"), Home, fga: 5, fgm: 2, oreb: 1, dreb: 0, ast: 0, ftm: 0, fta: 1),
+            Shooter(new PlayerId("A1"), Away, fga: 2, fgm: 2, oreb: 0, dreb: 1, ast: 0),
+        ];
+
+        var result = BoxScore.Create(
+            GameId.For(Season, SeasonDay.Opening, 0), 4, 4, lines,
+            new TeamStatLine(Home, 1, 0, 1), new TeamStatLine(Away, 0, 1, 0));
+
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
+    }
+
+    [Fact]
+    public void CreateRefusesAnAssistOnAPlayersOwnBasket()
+    {
+        // The only home basket is H1's own; H1 cannot have assisted it.
+        PlayerStatLine[] lines =
+        [
+            Shooter(new PlayerId("H1"), Home, fga: 1, fgm: 1, oreb: 0, dreb: 0, ast: 1, usage: 50),
+            Shooter(new PlayerId("H2"), Home, fga: 0, fgm: 0, oreb: 0, dreb: 0, ast: 0, usage: 50),
+            Shooter(new PlayerId("A1"), Away, fga: 0, fgm: 0, oreb: 0, dreb: 0, ast: 0),
+        ];
+        var (home, away) = BalancedTeamLines.For(Home, Away, lines);
+
+        var result = BoxScore.Create(GameId.For(Season, SeasonDay.Opening, 0), 2, 0, lines, home, away);
+
+        Assert.Contains(result.Errors, error => error.Code == "box_score.assists_exceed_teammate_makes");
+    }
+
+    private static PlayerStatLine Shooter(
+        PlayerId playerId, TeamId teamId, int fga, int fgm, int oreb, int dreb, int ast, int ftm = 0, int fta = 0, int usage = 100) =>
+        new(
+            playerId, teamId, minutes: 20, points: (2 * fgm) + ftm, oreb, dreb, ast, usage,
+            fieldGoalsAttempted: fga, fieldGoalsMade: fgm, threePointsAttempted: 0, threePointsMade: 0,
+            freeThrowsAttempted: fta, freeThrowsMade: ftm, started: true);
+
     private static DomainOperationResult<BoxScore> Build(
-        int homePoints, int awayPoints, IEnumerable<PlayerStatLine> lines) =>
-        BoxScore.Create(GameId.For(Season, SeasonDay.Opening, 0), Home, Away, homePoints, awayPoints, lines);
+        int homePoints, int awayPoints, IReadOnlyCollection<PlayerStatLine> lines)
+    {
+        var (home, away) = BalancedTeamLines.For(Home, Away, lines);
+        return BoxScore.Create(GameId.For(Season, SeasonDay.Opening, 0), homePoints, awayPoints, lines, home, away);
+    }
 
     /// <summary>
     /// A line whose shooting composition does not matter to the test that builds it — every point

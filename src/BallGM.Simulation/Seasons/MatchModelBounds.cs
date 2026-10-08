@@ -109,7 +109,7 @@ public static class MatchModelBounds
     /// "shots" (the categories below) to be two different numbers, the way they are in real
     /// basketball.
     /// </summary>
-    public const int FieldGoalAttemptRate = 9_200;
+    public const int FieldGoalAttemptRate = 8_620;
 
     /// <summary>
     /// What share of field-goal <em>attempts</em> are three-pointers, in <see cref="ProbabilityScale"/>
@@ -124,7 +124,7 @@ public static class MatchModelBounds
     /// by <see cref="FieldGoalPercentSwingAtMaximumStrength"/> the same way the old scoring rate used
     /// to move with efficiency — a better team, not a team that shoots more often.
     /// </summary>
-    public const int BaseTwoPointPercentage = 5_300;
+    public const int BaseTwoPointPercentage = 4_790;
 
     /// <summary>
     /// League-average three-point percentage at a neutral efficiency. Lower than
@@ -132,7 +132,7 @@ public static class MatchModelBounds
     /// than closes — a team having a good night gets better at both shots together, not selectively
     /// better from three.
     /// </summary>
-    public const int BaseThreePointPercentage = 3_700;
+    public const int BaseThreePointPercentage = 3_340;
 
     /// <summary>
     /// How many percentage points a field-goal percentage may move, at the maximum possible strength
@@ -154,7 +154,7 @@ public static class MatchModelBounds
     /// throw line for two (a two-point attempt) or three (a three-point attempt) shots rather than
     /// leaving the shot a clean miss.
     /// </summary>
-    public const int ShootingFoulChanceOnMiss = 1_500;
+    public const int ShootingFoulChanceOnMiss = 1_300;
 
     /// <summary>Chance a made field goal draws an additional single free throw — an "and-one."</summary>
     public const int AndOneChanceOnMake = 500;
@@ -175,16 +175,53 @@ public static class MatchModelBounds
     /// measured to do here. This is the deliberate source of that missing correlation, not a residual
     /// noise term — see <c>docs/architecture.md</c> for the measurement that motivated it.
     /// </summary>
-    public const int GameShootingVarianceRange = 850;
+    public const int GameShootingVarianceRange = 250;
 
-    /// <summary>Share of an opponent's missed possessions a team rebounds, in probability units.</summary>
-    public const int DefensiveReboundShare = 7_400;
+    /// <summary>
+    /// How much the scoreboard pushes back on a lead, per point of it, in <see cref="ProbabilityScale"/>
+    /// units of field-goal percentage: the trailing side shoots this much better per point it is
+    /// behind, the leading side this much worse per point it is ahead, up to
+    /// <see cref="MaximumLeadPressure"/>. Real games regress within themselves — a side well ahead
+    /// eases off and plays its bench, a side well behind presses — and without that, independent
+    /// possessions alone produce margins far wider than the sport's (measured: a signed margin SD of
+    /// about 17 between two equal teams against a target of about 13.5 across a whole league).
+    /// Possessions alternate, so the score this reads is the score at that moment of the game.
+    /// </summary>
+    public const int LeadPressurePerPoint = 25;
 
-    /// <summary>Share of its own missed possessions a team rebounds, in probability units.</summary>
-    public const int OffensiveReboundShare = 2_400;
+    /// <summary>The most the score can move a field-goal percentage, either way — a bounded rubber band, never a guarantee.</summary>
+    public const int MaximumLeadPressure = 500;
 
-    /// <summary>Share of made field goals credited to an assist, in probability units.</summary>
-    public const int AssistShareOfMadeFieldGoals = 5_800;
+    /// <summary>
+    /// Chance a live miss is rebounded by the shooting side, in <see cref="ProbabilityScale"/> units —
+    /// drawn once per live miss, as it happens, so an offensive rebound genuinely extends the
+    /// possession (a second chance, scored or not) rather than being dealt out after the game. Of
+    /// player rebounds this is exactly the offensive-rebound share (<c>orb_pct</c>), because
+    /// <see cref="TeamReboundShare"/> is taken from both ends in the same proportion.
+    /// </summary>
+    public const int OffensiveReboundRate = 2_650;
+
+    /// <summary>
+    /// Share of rebounds, at either end, credited to the team rather than a player — the ball out of
+    /// bounds, the loose ball nobody secured. Without it every live miss would need a player's name
+    /// on it; with it, every live miss still ends in exactly one rebound, which is the identity
+    /// <c>BoxScore.Create</c> enforces.
+    /// </summary>
+    public const int TeamReboundShare = 500;
+
+    /// <summary>
+    /// A possession ends after this many shots even if every one of them was rebounded by the
+    /// offence. Reachable only on a run of offensive rebounds whose probability is far below one in a
+    /// million, but stated so the loop provably terminates rather than probably does.
+    /// </summary>
+    public const int MaximumShotsPerPossession = 8;
+
+    /// <summary>
+    /// Chance a made field goal was assisted, in <see cref="ProbabilityScale"/> units — decided per
+    /// make, with the assist credited to a teammate on the floor, never the shooter. Drawn per make
+    /// rather than dealt out of a total afterwards, so assists vary game to game the way they do.
+    /// </summary>
+    public const int AssistChance = 6_100;
 
     /// <summary>
     /// The floor and ceiling on how far a player's share of their team's scoring may sit from an

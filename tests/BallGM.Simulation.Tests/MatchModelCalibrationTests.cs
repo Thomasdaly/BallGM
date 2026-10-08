@@ -29,6 +29,19 @@ namespace BallGM.Simulation.Tests;
 /// sim-audit's own <c>sd_game_margin</c> target drove, not a convenience widening to make a failure
 /// disappear.
 /// </para>
+/// <para>
+/// <b>The P-5 widening was undone by the S1 event-loop retune (deep-stats S1).</b> P-5 measured the
+/// standard deviation of the <em>absolute</em> margin (≈0.6× the signed figure the target means), so it
+/// tuned the hot/cold-night term to a margin about 60% wider than the sport's: a signed SD of 21.7
+/// between two equal teams. S1 measured the signed figure, cut the night term (±850 → ±250 bp) and added
+/// the bounded lead-pressure term (<c>MatchModelBounds.LeadPressurePerPoint</c>), landing a signed SD of
+/// ≈12.3 between equal teams and ≈13.7 across the league, team-score SD ≈12.8. So: the score p95
+/// ceiling goes back to its pre-P-5 142; the mean-margin band becomes 8–15 (equal teams: a normal
+/// margin with SD 12.3 has mean |margin| ≈ 9.8 — the league-wide figure, with talent spread, is
+/// higher); and the within-five band becomes 20–40%, because evenly matched teams with that SD
+/// finish within five about 34% of the time (measured 35%), above the ~30% a whole league with
+/// mismatches in it produces.
+/// </para>
 /// </summary>
 public sealed class MatchModelCalibrationTests
 {
@@ -47,7 +60,7 @@ public sealed class MatchModelCalibrationTests
         // 40-point and 190-point games on the schedule. The top of this band moved for the P-5
         // shooting-variance retune (see the type doc comment).
         Assert.InRange(scores[scores.Length / 20], 78, 100);
-        Assert.InRange(scores[scores.Length * 19 / 20], 118, 145);
+        Assert.InRange(scores[scores.Length * 19 / 20], 118, 142);
     }
 
     [Fact]
@@ -58,12 +71,13 @@ public sealed class MatchModelCalibrationTests
             .OrderBy(margin => margin)
             .ToArray();
 
-        // The top of this band moved for the P-5 shooting-variance retune (see the type doc comment).
-        Assert.InRange(margins.Average(), 9, 19);
+        // Moved by the S1 retune (see the type doc comment): two evenly matched teams.
+        Assert.InRange(margins.Average(), 8, 15);
 
-        // Close games have to be common enough that a season has drama in it.
+        // Close games have to be common enough that a season has drama in it, and not so common that
+        // every game is a coin flip at the buzzer.
         var withinFive = margins.Count(margin => margin <= 5) * 100.0 / margins.Length;
-        Assert.InRange(withinFive, 15, 32);
+        Assert.InRange(withinFive, 20, 40);
     }
 
     [Fact]
@@ -151,8 +165,11 @@ public sealed class MatchModelCalibrationTests
     [Fact]
     public void InjuriesHappenOftenEnoughToMatterAndRarelyEnoughToPlayOn()
     {
-        var outcomes = MatchTestFixtures.PlayMany(1_000);
-        var perGame = outcomes.Sum(outcome => outcome.Injuries.Count) / 1_000.0;
+        // 4,000 games, not 1,000: the shape check below expects ~55.6% of spells to be short
+        // (the shorter of two uniform 2-28 draws), and ~200 spells put that only ~1.6 standard errors
+        // above its 50% line, so any change to draw order could flip it on sampling noise alone.
+        var outcomes = MatchTestFixtures.PlayMany(4_000);
+        var perGame = outcomes.Sum(outcome => outcome.Injuries.Count) / 4_000.0;
 
         Assert.InRange(perGame, 0.02, 0.5);
 

@@ -640,3 +640,26 @@ A design stress-test, folded into the approved plan, found the following. Where 
   - Add `NextBasisPoint()` (bit-identical output).
   - Pick from per-stint prefix sums.
   - Validate `BoxScore.Create` in a single pass.
+
+## 14. Finding during S0/S1: row 10 was measured on the absolute margin
+
+The calibration probe (`scratch/calib`, 6,000 controlled 72-vs-72 games, `main` @ `7d8d303`)
+measured the following:
+
+| Measure | Value | Target (`targets.json`) |
+|---|---|---|
+| SD of the signed home − away margin | **21.70** | 13.5 [12.5, 14.5] |
+| SD of the absolute margin | 13.03 | — |
+| SD of team score | **16.80** | 12.0 [11.0, 13.0] |
+| Mean absolute margin | 17.57 | about 11–12 in the real sport |
+| League games, signed margin SD | 24.20 | 13.5 |
+
+P-5's recorded "sd_game_margin ≈ 13.45" matches the SD of the *absolute* margin, which for a normal
+distribution is about 0.60 × the signed SD. So row 10 has been passing on the wrong statistic, and
+the hot/cold-night term (`GameShootingVarianceRange` = ±850 bp) was tuned to it.
+
+- **Effect:** games are about 60 % noisier than the target, and team scores about 40 % noisier.
+- **What changes:** S1's retune targets the signed definition. `suite.md` row 10 is restated as
+  "signed home − away margin, league games".
+- **Locked bands:** the `MatchModelCalibrationTests` bands that P-5 widened (mean |margin| ceiling
+  17 → 19) are revisited with written reasoning.
