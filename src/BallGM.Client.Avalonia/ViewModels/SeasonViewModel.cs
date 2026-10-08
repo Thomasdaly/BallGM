@@ -38,9 +38,10 @@ public sealed class SeasonViewModel : ViewModelBase
     private SeasonSummary? _season;
     private IReadOnlyList<ScheduleDayLine> _schedule = [];
     private SeasonOutlook? _outlook;
+    private IReadOnlyDictionary<string, TeamArt> _teamArt = new Dictionary<string, TeamArt>();
     private DateOnly _displayedMonth;
     private SeasonAdvanceSummary? _lastAdvance;
-    private BoxScoreSummary? _boxScore;
+    private GameSheet? _sheet;
     private FixtureRow? _selectedFixture;
     private int _advanceDays = 1;
     private string _message = string.Empty;
@@ -57,6 +58,7 @@ public sealed class SeasonViewModel : ViewModelBase
         PreviousMonthCommand = new RelayCommand(() => ShowMonth(_displayedMonth.AddMonths(-1)));
         NextMonthCommand = new RelayCommand(() => ShowMonth(_displayedMonth.AddMonths(1)));
         ShowGameCommand = new ParameterCommand<string>(ShowGame);
+        CloseGameCommand = new RelayCommand(() => SelectedFixture = null);
 
         Refresh();
     }
@@ -73,8 +75,10 @@ public sealed class SeasonViewModel : ViewModelBase
 
     public ICommand NextMonthCommand { get; }
 
-    /// <summary>Opens a game's box score from anywhere on the screen, by game identifier.</summary>
+    /// <summary>Opens a game's sheet from anywhere on the screen, by game identifier.</summary>
     public ICommand ShowGameCommand { get; }
+
+    public ICommand CloseGameCommand { get; }
 
     public IReadOnlyList<int> AdvanceOptions => AdvanceChoices;
 
@@ -255,7 +259,7 @@ public sealed class SeasonViewModel : ViewModelBase
         }
     }
 
-    /// <summary>The fixture a box score is being read for, if one is selected.</summary>
+    /// <summary>The game whose sheet is open, if one is.</summary>
     public FixtureRow? SelectedFixture
     {
         get => _selectedFixture;
@@ -263,47 +267,19 @@ public sealed class SeasonViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedFixture, value))
             {
-                LoadBoxScore();
+                LoadSheet();
             }
         }
     }
 
     public bool HasSelectedFixture => _selectedFixture is not null;
 
-    public string BoxScoreHeadline => _boxScore is null
-        ? string.Empty
-        : $"{_boxScore.AwayTeamName} {_boxScore.AwayPoints} at {_boxScore.HomeTeamName} {_boxScore.HomePoints} · day {_boxScore.Day} · {_boxScore.Date}";
+    /// <summary>
+    /// The open game, both teams side by side: a preview before tip-off, the box score after it.
+    /// </summary>
+    public GameSheet? Sheet => _sheet;
 
-    public bool HasBoxScoreLines => _boxScore is { HasBoxScore: true };
-
-    /// <summary>Why there is nothing to show, when a fixture is selected but no lines came back.</summary>
-    public string BoxScoreUnavailableMessage
-    {
-        get
-        {
-            if (_selectedFixture is null || HasBoxScoreLines)
-            {
-                return string.Empty;
-            }
-
-            if (!_selectedFixture.Played)
-            {
-                return "This game has not been played yet.";
-            }
-
-            return _boxScore is null
-                ? "Could not load this game's box score."
-                : "This result was recorded without player lines.";
-        }
-    }
-
-    public string HomeTeamName => _boxScore?.HomeTeamName ?? string.Empty;
-
-    public string AwayTeamName => _boxScore?.AwayTeamName ?? string.Empty;
-
-    public IReadOnlyList<BoxScoreLine> HomeBoxScoreLines => _boxScore?.HomeLines ?? [];
-
-    public IReadOnlyList<BoxScoreLine> AwayBoxScoreLines => _boxScore?.AwayLines ?? [];
+    public bool IsSheetOpen => _sheet is not null;
 
     public IReadOnlyList<SeasonFindingRow> Notes
     {
@@ -431,7 +407,7 @@ public sealed class SeasonViewModel : ViewModelBase
         RaiseMonth();
     }
 
-    /// <summary>Selects a game for the box-score panel, whether it was clicked on the grid, a card, or the results list.</summary>
+    /// <summary>Opens a game's sheet, whether it was clicked on the grid, a card, a meeting, or the results list.</summary>
     private void ShowGame(string gameId)
     {
         var fixture = _schedule.SelectMany(day => day.Fixtures).FirstOrDefault(line => line.GameId == gameId);
@@ -443,7 +419,7 @@ public sealed class SeasonViewModel : ViewModelBase
 
     private void RebuildOutlook(bool keepMonth)
     {
-        _outlook = _season is null ? null : SeasonOutlook.Build(_season, _schedule, _viewedTeamId);
+        _outlook = _season is null ? null : SeasonOutlook.Build(_season, _schedule, _viewedTeamId, _teamArt);
         if (_outlook is not null)
         {
             _displayedMonth = keepMonth && _displayedMonth != default ? _outlook.Clamp(_displayedMonth) : _outlook.CurrentMonth;
@@ -477,20 +453,57 @@ public sealed class SeasonViewModel : ViewModelBase
         RaisePropertyChanged(nameof(CanGoToNextMonth));
     }
 
-    private void LoadBoxScore()
+    private void LoadSheet()
     {
-        _boxScore = _selectedFixture is { Played: true } fixture && _session.BoxScore(fixture.GameId) is { IsSuccess: true } result
-            ? result.Value
-            : null;
-
+        _sheet = _selectedFixture is null || _season is null ? null : BuildSheet(_selectedFixture.GameId);
         RaisePropertyChanged(nameof(HasSelectedFixture));
-        RaisePropertyChanged(nameof(BoxScoreHeadline));
-        RaisePropertyChanged(nameof(HasBoxScoreLines));
-        RaisePropertyChanged(nameof(BoxScoreUnavailableMessage));
-        RaisePropertyChanged(nameof(HomeTeamName));
-        RaisePropertyChanged(nameof(AwayTeamName));
-        RaisePropertyChanged(nameof(HomeBoxScoreLines));
-        RaisePropertyChanged(nameof(AwayBoxScoreLines));
+        RaisePropertyChanged(nameof(Sheet));
+        RaisePropertyChanged(nameof(IsSheetOpen));
+    }
+
+    private GameSheet? BuildSheet(string gameId)
+    {
+        var fixtures = _schedule.SelectMany(day => day.Fixtures).ToList();
+        var game = fixtures.FirstOrDefault(fixture => fixture.GameId == gameId);
+        if (game is null || _season is null)
+        {
+            return null;
+        }
+
+        var currentDay = _season.Calendar.CurrentDay;
+        var start = DateOnly.TryParseExact(_season.Calendar.SeasonStartDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var parsed)
+            ? parsed
+            : DateOnly.MinValue;
+
+        IReadOnlyList<BoxScoreSummary> Recent(string teamId) =>
+            fixtures
+                .Where(fixture => fixture.Played && fixture.Day < currentDay && (fixture.HomeTeamId == teamId || fixture.AwayTeamId == teamId))
+                .OrderByDescending(fixture => fixture.Day)
+                .Take(GameSheet.RecentGames)
+                .Select(fixture => _session.BoxScore(fixture.GameId))
+                .Where(result => result.IsSuccess)
+                .Select(result => result.Value)
+                .ToList();
+
+        var chart = (string teamId) => _session.DepthChart(teamId) is { IsSuccess: true } result ? result.Value : null;
+        var played = game.Played && _session.BoxScore(game.GameId) is { IsSuccess: true } box ? box.Value : null;
+
+        return GameSheet.Build(new GameSheetInput(
+            game,
+            currentDay,
+            fixtures,
+            _season.Standings.Rows.GroupBy(row => row.TeamId, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal),
+            _teamArt,
+            _session.PlayerSeasonTotals(),
+            new Dictionary<string, IReadOnlyList<BoxScoreSummary>>(StringComparer.Ordinal)
+            {
+                [game.AwayTeamId] = Recent(game.AwayTeamId),
+                [game.HomeTeamId] = Recent(game.HomeTeamId),
+            },
+            chart(game.AwayTeamId),
+            chart(game.HomeTeamId),
+            played,
+            day => start.AddDays(day).ToString("ddd d MMM", System.Globalization.CultureInfo.InvariantCulture)));
     }
 
     private void Refresh()
@@ -499,10 +512,17 @@ public sealed class SeasonViewModel : ViewModelBase
         _season = season.IsSuccess ? season.Value : null;
 
         var schedule = _season is null ? null : _session.Schedule(0, _season.Calendar.LengthInDays);
+
+        // Logos and colours are league content, not season state, but they are read here rather than
+        // once at construction so a reloaded league's art is not left behind.
+        var overview = _session.Overview();
+        _teamArt = overview.IsSuccess
+            ? overview.Value.Teams.ToDictionary(team => team.TeamId, team => TeamArt.For(team.TeamName, team.LogoPath, team.Colours), StringComparer.Ordinal)
+            : new Dictionary<string, TeamArt>();
         _schedule = schedule is { IsSuccess: true } ? schedule.Value : [];
 
         _selectedFixture = null;
-        _boxScore = null;
+        _sheet = null;
         RebuildOutlook(keepMonth: false);
         RaiseAll();
     }
@@ -527,13 +547,9 @@ public sealed class SeasonViewModel : ViewModelBase
         RaisePropertyChanged(nameof(UpcomingFixtures));
         RaisePropertyChanged(nameof(RecentResults));
         RaisePropertyChanged(nameof(HasSelectedFixture));
-        RaisePropertyChanged(nameof(BoxScoreHeadline));
-        RaisePropertyChanged(nameof(HasBoxScoreLines));
-        RaisePropertyChanged(nameof(BoxScoreUnavailableMessage));
-        RaisePropertyChanged(nameof(HomeTeamName));
-        RaisePropertyChanged(nameof(AwayTeamName));
-        RaisePropertyChanged(nameof(HomeBoxScoreLines));
-        RaisePropertyChanged(nameof(AwayBoxScoreLines));
+        RaisePropertyChanged(nameof(SelectedFixture));
+        RaisePropertyChanged(nameof(Sheet));
+        RaisePropertyChanged(nameof(IsSheetOpen));
         RaisePropertyChanged(nameof(Notes));
         RaisePropertyChanged(nameof(Warnings));
         RaisePropertyChanged(nameof(HasNotes));

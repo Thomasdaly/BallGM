@@ -1,4 +1,5 @@
 using Avalonia.Headless.XUnit;
+using BallGM.Application.Leagues;
 using BallGM.Application.Seasons;
 using BallGM.Client.Avalonia.ViewModels;
 
@@ -27,7 +28,7 @@ public sealed class SeasonOutlookTests
 
         Assert.Equal(["1 day rest", "Back-to-back", "3 days rest"], cards.Select(card => card.RestLine));
         Assert.Equal([false, true, false], cards.Select(card => card.IsBackToBack));
-        Assert.Equal(["@", "vs", "@"], cards.Select(card => card.Venue));
+        Assert.Equal(["Away", "Home", "Away"], cards.Select(card => card.Venue));
         Assert.Equal(["Today", "Tomorrow", "In 5 days"], cards.Select(card => card.When));
     }
 
@@ -157,6 +158,43 @@ public sealed class SeasonOutlookTests
     }
 
     [Fact]
+    public void Month_AndRoadAhead_CarryTheOpponentsArtSoTheScreenCanDrawWhoTheGameIsAgainst()
+    {
+        var bravoArt = TeamArt.For("Bravo Town", "/packs/bravo.png", new TeamColours("#1D428A", "#FFC72C"));
+        var outlook = SeasonOutlook.Build(
+            Summary(1, [Played(day: 0, home: Bravo, away: Us, homePoints: 90, awayPoints: 100), Upcoming(day: 2, home: Us, away: Charlie)]),
+            [
+                new ScheduleDayLine(0, Date(0), "Preseason", [Played(day: 0, home: Bravo, away: Us, homePoints: 90, awayPoints: 100)]),
+                new ScheduleDayLine(2, Date(2), "Preseason", [Upcoming(day: 2, home: Us, away: Charlie)]),
+            ],
+            Us,
+            new Dictionary<string, TeamArt> { [Bravo] = bravoArt });
+
+        var cells = outlook.Month(new DateOnly(2031, 7, 1));
+
+        Assert.Same(bravoArt, cells[7].Opponent);
+        Assert.True(cells[7].Opponent!.HasLogo);
+
+        // A team the league states no art for still gets a badge: its initials, on a neutral plate.
+        var charlie = Assert.Single(outlook.RoadAhead()).Opponent;
+        Assert.Equal("CHA", charlie.Initials);
+        Assert.False(charlie.HasLogo);
+        Assert.Null(charlie.Colours);
+        Assert.Null(cells[8].Opponent);
+    }
+
+    [Fact]
+    public void CurrentMonth_OpensOnTheNextGamesMonthWhenTodaysHasNothingLeft()
+    {
+        // Day 0 is 7 July; the team's first game is day 30, 6 August.
+        var summary = Summary(0, [Upcoming(day: 30, home: Us, away: Bravo)]);
+        summary = summary with { Calendar = summary.Calendar with { LengthInDays = 60 } };
+        var outlook = SeasonOutlook.Build(summary, [new ScheduleDayLine(30, Date(30), "RegularSeason", [Upcoming(day: 30, home: Us, away: Bravo)])], Us);
+
+        Assert.Equal(new DateOnly(2031, 8, 1), outlook.CurrentMonth);
+    }
+
+    [Fact]
     public void Month_KeepsNavigationInsideTheSeason()
     {
         var outlook = Outlook(currentDay: 0);
@@ -211,6 +249,19 @@ public sealed class SeasonOutlookTests
 
         Assert.True(season.HasSelectedFixture);
         Assert.Equal(played.GameId, season.SelectedFixture!.GameId);
+        Assert.True(season.IsSheetOpen);
+        Assert.True(season.Sheet!.IsFinal);
+        Assert.True(season.Sheet.Away.HasLineup);
+        Assert.True(season.Sheet.Home.HasLineup);
+
+        // A game still to come opens as a preview with both projected rotations.
+        season.ShowGameCommand.Execute(season.RoadAhead[0].GameId);
+        Assert.True(season.Sheet!.IsPreview);
+        Assert.NotEmpty(season.Sheet.Away.Starters);
+        Assert.NotEmpty(season.Sheet.Home.Starters);
+
+        season.CloseGameCommand.Execute(null);
+        Assert.False(season.IsSheetOpen);
     }
 
     private static IEnumerable<CalendarDayCell> PreviousMonth(SeasonViewModel season)

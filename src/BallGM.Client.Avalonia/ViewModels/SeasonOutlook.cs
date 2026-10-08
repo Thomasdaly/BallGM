@@ -39,14 +39,17 @@ internal sealed class SeasonOutlook
     private readonly IReadOnlyDictionary<int, TeamFixture> _gamesByDay;
     private readonly IReadOnlyDictionary<string, StandingsLine> _standings;
     private readonly StandingsLine? _teamLine;
+    private readonly IReadOnlyDictionary<string, TeamArt> _art;
 
     private SeasonOutlook(
         SeasonCalendarSummary calendar,
         DateOnly start,
         string? teamId,
         IReadOnlyList<TeamFixture> games,
-        IReadOnlyDictionary<string, StandingsLine> standings)
+        IReadOnlyDictionary<string, StandingsLine> standings,
+        IReadOnlyDictionary<string, TeamArt> art)
     {
+        _art = art;
         _calendar = calendar;
         _start = start;
         _games = games;
@@ -75,10 +78,27 @@ internal sealed class SeasonOutlook
 
     public DateOnly LastMonth => FirstOfMonth(DateOn(Math.Max(0, _calendar.LengthInDays - 1)));
 
-    /// <summary>The month the calendar opens on: today's, kept inside the season.</summary>
-    public DateOnly CurrentMonth => Clamp(FirstOfMonth(Today));
+    /// <summary>
+    /// The month the calendar opens on: today's, unless the team has nothing left in it — a preseason
+    /// month of empty squares tells a GM nothing — in which case the month of its next game.
+    /// </summary>
+    public DateOnly CurrentMonth
+    {
+        get
+        {
+            var today = FirstOfMonth(Today);
+            var next = _games.FirstOrDefault(game => game.Day >= _calendar.CurrentDay && !game.Played);
+            return next is not null && FirstOfMonth(DateOn(next.Day)) > today && !_games.Any(game => game.Played && FirstOfMonth(DateOn(game.Day)) == today)
+                ? Clamp(FirstOfMonth(DateOn(next.Day)))
+                : Clamp(today);
+        }
+    }
 
-    public static SeasonOutlook Build(SeasonSummary season, IReadOnlyList<ScheduleDayLine> schedule, string? teamId)
+    public static SeasonOutlook Build(
+        SeasonSummary season,
+        IReadOnlyList<ScheduleDayLine> schedule,
+        string? teamId,
+        IReadOnlyDictionary<string, TeamArt>? art = null)
     {
         ArgumentNullException.ThrowIfNull(season);
         ArgumentNullException.ThrowIfNull(schedule);
@@ -99,7 +119,7 @@ internal sealed class SeasonOutlook
                 .ThenBy(game => game.GameId, StringComparer.Ordinal)
                 .ToList();
 
-        return new SeasonOutlook(season.Calendar, start, known, games, standings);
+        return new SeasonOutlook(season.Calendar, start, known, games, standings, art ?? new Dictionary<string, TeamArt>());
     }
 
     public DateOnly Clamp(DateOnly month) =>
@@ -207,7 +227,7 @@ internal sealed class SeasonOutlook
             if (!inSeason || !_gamesByDay.TryGetValue(day, out var game))
             {
                 var tip = inSeason ? $"Day {day} · {DateLine(day)} · no game" : "Outside this season";
-                cells.Add(new CalendarDayCell(dayOfMonth, inSeason, isToday, false, false, false, false, false, false, string.Empty, string.Empty, string.Empty, marker, null, tip));
+                cells.Add(new CalendarDayCell(dayOfMonth, inSeason, isToday, false, false, false, false, false, false, string.Empty, null, string.Empty, string.Empty, marker, null, tip));
                 continue;
             }
 
@@ -226,6 +246,7 @@ internal sealed class SeasonOutlook
                 game.Played && !game.Won,
                 game.IsHome,
                 $"{(game.IsHome ? "vs" : "@")} {TeamInitialsConverter.Initials(game.OpponentName)}",
+                ArtFor(game),
                 game.Played ? (game.Won ? "W" : "L") : string.Empty,
                 detail,
                 marker,
@@ -271,16 +292,17 @@ internal sealed class SeasonOutlook
             var opponent = _standings.GetValueOrDefault(game.OpponentId);
             var hasForm = opponent is { GamesPlayed: > 0 };
             var opponentDetail = hasForm
-                ? $"{Ordinal(opponent!.Position)} in the table · {PerGame(opponent.PointDifferential, opponent.GamesPlayed)} per game"
+                ? $"{Ordinal(opponent!.Position)} · {PerGame(opponent.PointDifferential, opponent.GamesPlayed)} per game"
                 : "No games played yet";
 
             cards.Add(new MatchupCard(
                 game.GameId,
                 When(game.Day),
                 $"Day {game.Day} · {DateLine(game.Day)}",
-                game.IsHome ? "vs" : "@",
+                game.IsHome ? "Home" : "Away",
                 game.IsHome,
                 game.OpponentName,
+                ArtFor(game),
                 OpponentRecord(game.OpponentId),
                 opponentDetail,
                 hasForm,
@@ -330,7 +352,7 @@ internal sealed class SeasonOutlook
     }
 
     private static CalendarDayCell Blank { get; } =
-        new(string.Empty, false, false, false, false, false, false, false, false, string.Empty, string.Empty, string.Empty, string.Empty, null, string.Empty);
+        new(string.Empty, false, false, false, false, false, false, false, false, string.Empty, null, string.Empty, string.Empty, string.Empty, null, string.Empty);
 
     /// <summary>The unplayed games in order, each with the days of rest before it (null for the team's first game).</summary>
     private IEnumerable<(TeamFixture Game, int? RestDays)> Upcoming()
@@ -355,6 +377,10 @@ internal sealed class SeasonOutlook
             ? "First meeting"
             : $"Season series {meetings.Count(game => game.Won)}-{meetings.Count(game => !game.Won)}";
     }
+
+    /// <summary>The opponent's badge: the art the league states for it, or initials alone when it states none.</summary>
+    private TeamArt ArtFor(TeamFixture game) =>
+        _art.TryGetValue(game.OpponentId, out var art) ? art : TeamArt.For(game.OpponentName);
 
     private string OpponentRecord(string opponentId) =>
         _standings.TryGetValue(opponentId, out var line) ? $"{line.Wins}-{line.Losses}" : "—";

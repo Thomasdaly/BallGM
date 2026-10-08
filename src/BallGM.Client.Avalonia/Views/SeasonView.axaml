@@ -5,7 +5,30 @@
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   xmlns:app="clr-namespace:BallGM.Application.Seasons;assembly=BallGM.Application"
   xmlns:theming="clr-namespace:BallGM.Client.Avalonia.Theming"
+  xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
   x:DataType="vm:SeasonViewModel">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Escape" Command="{Binding CloseGameCommand}" />
+  </UserControl.KeyBindings>
+  <UserControl.Resources>
+    <!-- One player in a game sheet's line-up; the column meanings switch between preview and final. -->
+    <DataTemplate x:Key="LineupRowTemplate" x:DataType="vm:LineupRow">
+      <Grid ColumnDefinitions="34,*,42,38,40,40,40,44" Height="30" ToolTip.Tip="{Binding Tip}">
+        <TextBlock Text="{Binding Position}" Classes="faint small" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="small" Classes.strong="{Binding IsStarter}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+        <Border Grid.Column="2" Classes="ovr small" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}" IsVisible="{Binding HasOverall}">
+          <TextBlock Text="{Binding Overall}" />
+        </Border>
+        <TextBlock Grid.Column="2" Text="—" Classes="faint small" VerticalAlignment="Center" IsVisible="{Binding !HasOverall}" />
+        <TextBlock Grid.Column="3" Text="{Binding Minutes}" Classes="dim small" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="4" Text="{Binding Points}" Classes="num small" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="5" Text="{Binding Rebounds}" Classes="dim small" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="6" Text="{Binding Assists}" Classes="dim small" VerticalAlignment="Center" />
+        <TextBlock Grid.Column="7" Text="{Binding Extra}" Classes="num small" VerticalAlignment="Center" />
+      </Grid>
+    </DataTemplate>
+  </UserControl.Resources>
+  <Panel>
   <ScrollViewer>
     <StackPanel Spacing="18">
 
@@ -182,7 +205,7 @@
                     Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).ShowGameCommand}"
                     CommandParameter="{Binding GameId}"
                     ToolTip.Tip="{Binding Tip}">
-                    <Grid ColumnDefinitions="Auto,*">
+                    <Grid ColumnDefinitions="Auto,*" Background="{Binding Opponent, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=wash, FallbackValue={x:Null}}">
                       <Border Classes="result-rule" Classes.win="{Binding IsWin}" Classes.loss="{Binding IsLoss}" IsVisible="{Binding HasGame}" CornerRadius="2,0,0,2" />
                       <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" Margin="6,4,6,4">
                         <Grid ColumnDefinitions="Auto,*">
@@ -190,7 +213,13 @@
                           <TextBlock Grid.Column="1" Text="Today" Classes="eyebrow accent" HorizontalAlignment="Right" IsVisible="{Binding IsToday}" />
                           <TextBlock Grid.Column="1" Text="{Binding Result}" Classes="num small" Classes.good="{Binding IsWin}" Classes.bad="{Binding IsLoss}" HorizontalAlignment="Right" />
                         </Grid>
-                        <TextBlock Grid.Row="1" Text="{Binding Matchup}" Classes="num" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" IsVisible="{Binding HasGame}">
+                          <Panel Classes="badge small">
+                            <Border Classes="badge-plate" Background="{Binding Opponent, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate, FallbackValue={x:Null}}" IsVisible="{Binding !Opponent.HasLogo, FallbackValue=False}" />
+                            <Image Source="{Binding Opponent.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}, FallbackValue={x:Null}}" IsVisible="{Binding Opponent.HasLogo, FallbackValue=False}" />
+                          </Panel>
+                          <TextBlock Text="{Binding Matchup}" Classes="num" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        </StackPanel>
                         <TextBlock Grid.Row="1" Text="{Binding Marker}" Classes="tiny accent" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding !HasGame}" />
                         <TextBlock Grid.Row="2" Text="{Binding Detail}" Classes="num small" Classes.good="{Binding IsWin}" Classes.bad="{Binding IsLoss}" Classes.faint="{Binding IsUpcoming}" />
                       </Grid>
@@ -199,7 +228,7 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <TextBlock Text="Select a game to see its box score. Upcoming games show the opponent's record." Classes="faint tiny" />
+            <TextBlock Text="Select any game to open it: a preview of both rotations before tip-off, the box score after. Upcoming games show the opponent's record." Classes="faint tiny" />
           </StackPanel>
 
           <StackPanel Spacing="8">
@@ -262,11 +291,23 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:MatchupCard">
+                  <Button
+                    Classes="cardbtn"
+                    Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).ShowGameCommand}"
+                    CommandParameter="{Binding GameId}"
+                    ToolTip.Tip="Open this game">
                   <Border Classes="matchup" Classes.home="{Binding IsHome}">
-                    <Grid ColumnDefinitions="44,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="2">
-                      <TextBlock Grid.RowSpan="2" Classes="venue" Classes.home="{Binding IsHome}" Text="{Binding Venue}" VerticalAlignment="Center" />
+                    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="2">
+                      <Border Grid.ColumnSpan="3" Grid.RowSpan="3" Margin="-14,-10" Background="{Binding Opponent, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=wash}" />
+                      <Panel Grid.RowSpan="2" Classes="badge" VerticalAlignment="Center">
+                        <Border Classes="badge-plate" Background="{Binding Opponent, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Opponent.HasLogo}">
+                          <TextBlock Text="{Binding Opponent.Initials}" Foreground="{Binding Opponent, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=ink}" />
+                        </Border>
+                        <Image Source="{Binding Opponent.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Opponent.HasLogo}" />
+                      </Panel>
                       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                         <TextBlock Classes="eyebrow" Classes.accent="{Binding IsHome}" Text="{Binding When}" />
+                        <TextBlock Classes="eyebrow" Classes.accent="{Binding IsHome}" Text="{Binding Venue}" />
                         <TextBlock Classes="faint tiny" Text="{Binding DayLine}" VerticalAlignment="Center" />
                       </StackPanel>
                       <TextBlock Grid.Row="1" Grid.Column="1" Classes="h3" Text="{Binding OpponentName}" TextTrimming="CharacterEllipsis" />
@@ -282,17 +323,19 @@
                           IsVisible="{Binding HasOpponentForm}"
                           ToolTip.Tip="Opponent's winning percentage" />
                       </StackPanel>
-                      <Grid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" Margin="0,4,0,0">
-                        <TextBlock Classes="dim tiny" Text="{Binding OpponentDetail}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                          <TextBlock Classes="faint tiny" Text="{Binding SeriesLine}" VerticalAlignment="Center" />
-                          <Border Classes="pill" Classes.warn="{Binding IsBackToBack}">
-                            <TextBlock Text="{Binding RestLine}" />
-                          </Border>
-                        </StackPanel>
+                      <Grid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4,0,0">
+                        <TextBlock Classes="dim tiny" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                          <Run Text="{Binding OpponentDetail}" />
+                          <Run Text=" · " />
+                          <Run Text="{Binding SeriesLine}" />
+                        </TextBlock>
+                        <Border Grid.Column="1" Classes="pill" Classes.warn="{Binding IsBackToBack}">
+                          <TextBlock Text="{Binding RestLine}" />
+                        </Border>
                       </Grid>
                     </Grid>
                   </Border>
+                  </Button>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -301,7 +344,7 @@
 
           <StackPanel Spacing="8">
             <TextBlock Classes="section" Text="Recent results" />
-            <TextBlock Text="Select a game to see its box score." Classes="faint tiny" />
+            <TextBlock Text="Select a game to open it." Classes="faint tiny" />
             <ListBox x:Name="RecentResults" ItemsSource="{Binding RecentResults}" SelectedItem="{Binding SelectedFixture}" MaxHeight="260">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="vm:FixtureRow">
@@ -314,64 +357,6 @@
               </ListBox.ItemTemplate>
             </ListBox>
           </StackPanel>
-
-          <Border Classes="panel" IsVisible="{Binding HasSelectedFixture}">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="section" Text="Box score" />
-              <TextBlock Text="{Binding BoxScoreHeadline}" Classes="h3" TextWrapping="Wrap" />
-              <TextBlock
-                Text="{Binding BoxScoreUnavailableMessage}"
-                Classes="dim"
-                TextWrapping="Wrap"
-                IsVisible="{Binding !HasBoxScoreLines}" />
-
-              <StackPanel Spacing="4" IsVisible="{Binding HasBoxScoreLines}">
-                <TextBlock Text="{Binding AwayTeamName}" Classes="strong" />
-                <Grid Classes="thead" ColumnDefinitions="*,40,40,40,40">
-                  <TextBlock Text="Player" />
-                  <TextBlock Grid.Column="1" Text="MIN" />
-                  <TextBlock Grid.Column="2" Text="PTS" />
-                  <TextBlock Grid.Column="3" Text="REB" />
-                  <TextBlock Grid.Column="4" Text="AST" />
-                </Grid>
-                <ItemsControl Classes="table" ItemsSource="{Binding AwayBoxScoreLines}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="app:BoxScoreLine">
-                      <Grid ColumnDefinitions="*,40,40,40,40" Height="24">
-                        <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" Classes="small" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="1" Text="{Binding Minutes}" VerticalAlignment="Center" Classes="dim small" />
-                        <TextBlock Grid.Column="2" Text="{Binding Points}" VerticalAlignment="Center" Classes="num small" />
-                        <TextBlock Grid.Column="3" Text="{Binding Rebounds}" VerticalAlignment="Center" Classes="dim small" />
-                        <TextBlock Grid.Column="4" Text="{Binding Assists}" VerticalAlignment="Center" Classes="dim small" />
-                      </Grid>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-
-                <TextBlock Text="{Binding HomeTeamName}" Classes="strong" Margin="0,10,0,0" />
-                <Grid Classes="thead" ColumnDefinitions="*,40,40,40,40">
-                  <TextBlock Text="Player" />
-                  <TextBlock Grid.Column="1" Text="MIN" />
-                  <TextBlock Grid.Column="2" Text="PTS" />
-                  <TextBlock Grid.Column="3" Text="REB" />
-                  <TextBlock Grid.Column="4" Text="AST" />
-                </Grid>
-                <ItemsControl Classes="table" ItemsSource="{Binding HomeBoxScoreLines}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="app:BoxScoreLine">
-                      <Grid ColumnDefinitions="*,40,40,40,40" Height="24">
-                        <TextBlock Text="{Binding FullName}" VerticalAlignment="Center" Classes="small" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="1" Text="{Binding Minutes}" VerticalAlignment="Center" Classes="dim small" />
-                        <TextBlock Grid.Column="2" Text="{Binding Points}" VerticalAlignment="Center" Classes="num small" />
-                        <TextBlock Grid.Column="3" Text="{Binding Rebounds}" VerticalAlignment="Center" Classes="dim small" />
-                        <TextBlock Grid.Column="4" Text="{Binding Assists}" VerticalAlignment="Center" Classes="dim small" />
-                      </Grid>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </StackPanel>
-            </StackPanel>
-          </Border>
 
           <StackPanel Spacing="8" IsVisible="{Binding HasNoViewedTeam}">
             <TextBlock Classes="section" Text="Next up" />
@@ -421,4 +406,223 @@
       </StackPanel>
     </StackPanel>
   </ScrollViewer>
+  <!-- The game sheet: one game, both teams side by side. Opens over the calendar from any game on it. -->
+  <Panel IsVisible="{Binding IsSheetOpen}">
+    <Button Classes="scrim" Command="{Binding CloseGameCommand}" ToolTip.Tip="Close" />
+    <Border Classes="sheet" DataContext="{Binding Sheet}" x:DataType="vm:GameSheet">
+      <ScrollViewer>
+        <StackPanel Spacing="18" Margin="24,20">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="{Binding Status}" Classes="eyebrow accent" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding DayLine}" Classes="dim small" VerticalAlignment="Center" />
+            </StackPanel>
+            <Button Grid.Column="1" Content="Close" Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).CloseGameCommand}" />
+          </Grid>
+
+          <!-- Scoreboard: away on the left, home on the right, the score or the venue mark between them. -->
+          <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="24">
+            <Border Margin="-24,-8,0,-8" Background="{Binding Away.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=wash-left}" />
+            <Border Grid.Column="2" Margin="0,-8,-24,-8" Background="{Binding Home.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=wash}" />
+                  <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Left">
+                    <Panel Classes="badge large">
+                      <Border Classes="badge-plate" Background="{Binding Away.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Away.Art.HasLogo}">
+                        <TextBlock Text="{Binding Away.Art.Initials}" Foreground="{Binding Away.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=ink}" />
+                      </Border>
+                      <Image Source="{Binding Away.Art.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Away.Art.HasLogo}" />
+                    </Panel>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left">
+                      <TextBlock Text="Away" Classes="eyebrow" HorizontalAlignment="Left" />
+                      <TextBlock Text="{Binding Away.TeamName}" Classes="h2" HorizontalAlignment="Left" TextWrapping="Wrap" TextAlignment="Left" />
+                      <TextBlock Text="{Binding Away.Record}" Classes="num dim" HorizontalAlignment="Left" />
+                    </StackPanel>
+                  </StackPanel>
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
+              <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center" IsVisible="{Binding IsFinal}">
+                <TextBlock Text="{Binding Away.Score}" Classes="display" Classes.dim="{Binding !Away.IsWinner}" />
+                <TextBlock Text="–" Classes="display faint" />
+                <TextBlock Text="{Binding Home.Score}" Classes="display" Classes.dim="{Binding !Home.IsWinner}" />
+              </StackPanel>
+              <TextBlock Text="@" Classes="display faint" HorizontalAlignment="Center" IsVisible="{Binding IsPreview}" />
+            </StackPanel>
+            <Panel Grid.Column="2">
+                  <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Right">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Right">
+                      <TextBlock Text="Home" Classes="eyebrow" HorizontalAlignment="Right" />
+                      <TextBlock Text="{Binding Home.TeamName}" Classes="h2" HorizontalAlignment="Right" TextWrapping="Wrap" TextAlignment="Right" />
+                      <TextBlock Text="{Binding Home.Record}" Classes="num dim" HorizontalAlignment="Right" />
+                    </StackPanel>
+                    <Panel Classes="badge large">
+                      <Border Classes="badge-plate" Background="{Binding Home.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Home.Art.HasLogo}">
+                        <TextBlock Text="{Binding Home.Art.Initials}" Foreground="{Binding Home.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=ink}" />
+                      </Border>
+                      <Image Source="{Binding Home.Art.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Home.Art.HasLogo}" />
+                    </Panel>
+                  </StackPanel>
+            </Panel>
+          </Grid>
+
+          <!-- The tale of the tape. -->
+          <Border Classes="panel">
+            <Grid ColumnDefinitions="*,160,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="16">
+              <TextBlock Grid.Row="0" Text="{Binding Away.PointsFor}" Classes="num" HorizontalAlignment="Right" FontSize="18" />
+              <TextBlock Grid.Row="0" Grid.Column="1" Text="Points per game" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Home.PointsFor}" Classes="num" HorizontalAlignment="Left" FontSize="18" />
+              <TextBlock Grid.Row="1" Text="{Binding Away.PointsAgainst}" Classes="num" HorizontalAlignment="Right" FontSize="18" />
+              <TextBlock Grid.Row="1" Grid.Column="1" Text="Allowed per game" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Home.PointsAgainst}" Classes="num" HorizontalAlignment="Left" FontSize="18" />
+              <TextBlock Grid.Row="2" Text="{Binding Away.Differential}" Classes="num" HorizontalAlignment="Right" FontSize="18" />
+              <TextBlock Grid.Row="2" Grid.Column="1" Text="Margin per game" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Home.Differential}" Classes="num" HorizontalAlignment="Left" FontSize="18" />
+              <Panel Grid.Row="3">
+                      <ItemsControl ItemsSource="{Binding Away.Form}" HorizontalAlignment="Right">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="3" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:FormChip">
+                            <Border Classes="form" Classes.win="{Binding IsWin}" ToolTip.Tip="{Binding Tip}">
+                              <TextBlock Text="{Binding Letter}" />
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                <TextBlock Text="No games yet" Classes="faint tiny" HorizontalAlignment="Right" IsVisible="{Binding !Away.HasForm}" />
+              </Panel>
+              <TextBlock Grid.Row="3" Grid.Column="1" Text="Last 5 games" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              <Panel Grid.Row="3" Grid.Column="2">
+                      <ItemsControl ItemsSource="{Binding Home.Form}" HorizontalAlignment="Left">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="3" />
+                          </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:FormChip">
+                            <Border Classes="form" Classes.win="{Binding IsWin}" ToolTip.Tip="{Binding Tip}">
+                              <TextBlock Text="{Binding Letter}" />
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                <TextBlock Text="No games yet" Classes="faint tiny" HorizontalAlignment="Left" IsVisible="{Binding !Home.HasForm}" />
+              </Panel>
+            </Grid>
+          </Border>
+
+          <!-- The season series: every other meeting, played or to come. -->
+          <StackPanel Spacing="8">
+            <TextBlock Classes="section" Text="Season series" />
+            <TextBlock Text="First meeting this season, and the only one scheduled." Classes="dim" IsVisible="{Binding !HasMeetings}" />
+            <ItemsControl ItemsSource="{Binding Meetings}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:MeetingRow">
+                  <Button
+                    Classes="meeting"
+                    Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).ShowGameCommand}"
+                    CommandParameter="{Binding GameId}"
+                    ToolTip.Tip="Open this meeting">
+                    <StackPanel Spacing="1">
+                      <TextBlock Text="{Binding DayLine}" Classes="faint tiny" />
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="{Binding Matchup}" Classes="small strong" />
+                        <TextBlock Text="{Binding Score}" Classes="num small" Classes.faint="{Binding !IsPlayed}" />
+                      </StackPanel>
+                      <TextBlock Text="{Binding Winner}" Classes="dim tiny" IsVisible="{Binding IsPlayed}" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+
+          <!-- The two line-ups, side by side. -->
+          <StackPanel Spacing="8">
+            <TextBlock Classes="section" Text="{Binding LineupHeading}" />
+            <TextBlock Text="{Binding LineupNote}" Classes="faint tiny" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="28">
+                  <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Panel Classes="badge small">
+                        <Border Classes="badge-plate" Background="{Binding Away.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Away.Art.HasLogo}" />
+                        <Image Source="{Binding Away.Art.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Away.Art.HasLogo}" />
+                      </Panel>
+                      <TextBlock Text="{Binding Away.TeamName}" Classes="h3" />
+                    </StackPanel>
+                    <Grid Classes="thead" ColumnDefinitions="34,*,42,38,40,40,40,44" IsVisible="{Binding IsPreview}">
+                      <TextBlock Text="Pos" />
+                      <TextBlock Grid.Column="1" Text="Player" />
+                      <TextBlock Grid.Column="2" Text="OVR" />
+                      <TextBlock Grid.Column="3" Text="MIN" />
+                      <TextBlock Grid.Column="4" Text="PPG" />
+                      <TextBlock Grid.Column="5" Text="RPG" />
+                      <TextBlock Grid.Column="6" Text="APG" />
+                      <TextBlock Grid.Column="7" Text="L5 PTS" />
+                    </Grid>
+                    <Grid Classes="thead" ColumnDefinitions="34,*,42,38,40,40,40,44" IsVisible="{Binding IsFinal}">
+                      <TextBlock Text="Pos" />
+                      <TextBlock Grid.Column="1" Text="Player" />
+                      <TextBlock Grid.Column="2" Text="OVR" />
+                      <TextBlock Grid.Column="3" Text="MIN" />
+                      <TextBlock Grid.Column="4" Text="PTS" />
+                      <TextBlock Grid.Column="5" Text="REB" />
+                      <TextBlock Grid.Column="6" Text="AST" />
+                      <TextBlock Grid.Column="7" Text="PPG" />
+                    </Grid>
+                    <TextBlock Text="Starters" Classes="eyebrow" Margin="0,4,0,0" IsVisible="{Binding Away.HasLineup}" />
+                    <ItemsControl Classes="table" ItemsSource="{Binding Away.Starters}" ItemTemplate="{StaticResource LineupRowTemplate}" />
+                    <TextBlock Text="Bench" Classes="eyebrow" Margin="0,6,0,0" IsVisible="{Binding Away.HasLineup}" />
+                    <ItemsControl Classes="table" ItemsSource="{Binding Away.Bench}" ItemTemplate="{StaticResource LineupRowTemplate}" />
+                    <TextBlock Text="{Binding Away.LineupNote}" Classes="dim" TextWrapping="Wrap" IsVisible="{Binding !Away.HasLineup}" />
+                  </StackPanel>
+              <Panel Grid.Column="1">
+                  <StackPanel Spacing="4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <Panel Classes="badge small">
+                        <Border Classes="badge-plate" Background="{Binding Home.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Home.Art.HasLogo}" />
+                        <Image Source="{Binding Home.Art.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Home.Art.HasLogo}" />
+                      </Panel>
+                      <TextBlock Text="{Binding Home.TeamName}" Classes="h3" />
+                    </StackPanel>
+                    <Grid Classes="thead" ColumnDefinitions="34,*,42,38,40,40,40,44" IsVisible="{Binding IsPreview}">
+                      <TextBlock Text="Pos" />
+                      <TextBlock Grid.Column="1" Text="Player" />
+                      <TextBlock Grid.Column="2" Text="OVR" />
+                      <TextBlock Grid.Column="3" Text="MIN" />
+                      <TextBlock Grid.Column="4" Text="PPG" />
+                      <TextBlock Grid.Column="5" Text="RPG" />
+                      <TextBlock Grid.Column="6" Text="APG" />
+                      <TextBlock Grid.Column="7" Text="L5 PTS" />
+                    </Grid>
+                    <Grid Classes="thead" ColumnDefinitions="34,*,42,38,40,40,40,44" IsVisible="{Binding IsFinal}">
+                      <TextBlock Text="Pos" />
+                      <TextBlock Grid.Column="1" Text="Player" />
+                      <TextBlock Grid.Column="2" Text="OVR" />
+                      <TextBlock Grid.Column="3" Text="MIN" />
+                      <TextBlock Grid.Column="4" Text="PTS" />
+                      <TextBlock Grid.Column="5" Text="REB" />
+                      <TextBlock Grid.Column="6" Text="AST" />
+                      <TextBlock Grid.Column="7" Text="PPG" />
+                    </Grid>
+                    <TextBlock Text="Starters" Classes="eyebrow" Margin="0,4,0,0" IsVisible="{Binding Home.HasLineup}" />
+                    <ItemsControl Classes="table" ItemsSource="{Binding Home.Starters}" ItemTemplate="{StaticResource LineupRowTemplate}" />
+                    <TextBlock Text="Bench" Classes="eyebrow" Margin="0,6,0,0" IsVisible="{Binding Home.HasLineup}" />
+                    <ItemsControl Classes="table" ItemsSource="{Binding Home.Bench}" ItemTemplate="{StaticResource LineupRowTemplate}" />
+                    <TextBlock Text="{Binding Home.LineupNote}" Classes="dim" TextWrapping="Wrap" IsVisible="{Binding !Home.HasLineup}" />
+                  </StackPanel>
+              </Panel>
+            </Grid>
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+  </Panel>
+  </Panel>
 </UserControl>

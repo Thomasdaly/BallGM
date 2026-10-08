@@ -1,7 +1,9 @@
+using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using BallGM.Application.Leagues;
+using BallGM.Client.Avalonia.Converters;
 using BallGM.Client.Avalonia.Theming;
 using BallGM.Client.Avalonia.ViewModels;
 
@@ -68,6 +70,26 @@ public sealed class DesignSystemTests
         var paint = TeamPaint.FromStated(new TeamColours("#C8102E", "#FDB927"));
 
         Assert.Equal(Color.Parse("#C8102E"), paint);
+    }
+
+    [AvaloniaFact]
+    public void TeamShade_PlatesATeamInItsStatedColourWithInkThatReads()
+    {
+        var art = TeamArt.For("Bravo Town", colours: new TeamColours("#FDB927"));
+
+        var plate = Assert.IsAssignableFrom<ISolidColorBrush>(TeamShadeConverter.Instance.Convert(art, typeof(IBrush), "plate", CultureInfo.InvariantCulture));
+        var ink = Assert.IsAssignableFrom<ISolidColorBrush>(TeamShadeConverter.Instance.Convert(art, typeof(IBrush), "ink", CultureInfo.InvariantCulture));
+
+        Assert.Equal(Color.Parse("#FDB927"), plate.Color);
+        Assert.Equal(Color.Parse("#0D1522"), ink.Color);
+    }
+
+    [AvaloniaFact]
+    public void TeamShade_WashesNothingForATeamWithNoColourAndNoLogo()
+    {
+        var wash = TeamShadeConverter.Instance.Convert(TeamArt.For("Bravo Town"), typeof(IBrush), "wash", CultureInfo.InvariantCulture);
+
+        Assert.Same(Brushes.Transparent, wash);
     }
 
     [Fact]

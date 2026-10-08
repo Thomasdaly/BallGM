@@ -5,7 +5,7 @@
   Text:    display, h1, h2, h3, section (a block's heading), eyebrow (a field or stat label),
            body, dim, faint, num (Barlow Condensed, tabular), code, good/warn/bad/accent
   Boxes:   panel, card, callout, stat, pill, ovr (colour set by OverallTierConverter), crest
-  Season:  ribbon-* (the season ribbon), Button.daycell (month grid), matchup, venue, form
+  Season:  ribbon-* (the season ribbon), Button.daycell (month grid), matchup, form, badge; Button.cardbtn, Button.scrim + Border.sheet (the game sheet), Button.meeting
   Tables:  Grid.thead (header row), ItemsControl.table (zebra rows), ListBox.table
   Buttons: default (ghost), primary
   Nav:     ListBox.nav
@@ -562,7 +562,7 @@
     <Setter Property="Background" Value="{StaticResource BadBrush}" />
   </Style>
 
-  <!-- A fixture still to play: venue mark large, home games ruled in paint. -->
+  <!-- A fixture still to play, washed in the opponent's colour; home games ruled in paint. -->
   <Style Selector="Border.matchup">
     <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
     <Setter Property="BorderBrush" Value="{StaticResource Bg4Brush}" />
@@ -573,21 +573,101 @@
   <Style Selector="Border.matchup.home">
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
   </Style>
-  <Style Selector="TextBlock.venue">
-    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
-    <Setter Property="FontSize" Value="26" />
-    <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
-  </Style>
-  <Style Selector="TextBlock.venue.home">
-    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
-  </Style>
   <Style Selector="Border.pill.warn">
     <Setter Property="Background" Value="{StaticResource WarnSoftBrush}" />
   </Style>
   <Style Selector="Border.pill.warn TextBlock">
     <Setter Property="Foreground" Value="{StaticResource WarnBrush}" />
   </Style>
+  <!-- A team badge: its pack logo, or a plate in its own colour (TeamShadeConverter) with its initials. -->
+  <Style Selector="Panel.badge">
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
+  </Style>
+  <Style Selector="Panel.badge.small">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+  </Style>
+  <Style Selector="Border.badge-plate">
+    <Setter Property="CornerRadius" Value="20" />
+  </Style>
+  <Style Selector="Panel.badge.small Border.badge-plate">
+    <Setter Property="CornerRadius" Value="8" />
+  </Style>
+  <Style Selector="Border.badge-plate TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Panel.badge Image">
+    <Setter Property="Stretch" Value="Uniform" />
+  </Style>
+  <Style Selector="Panel.badge.large">
+    <Setter Property="Width" Value="64" />
+    <Setter Property="Height" Value="64" />
+  </Style>
+  <Style Selector="Panel.badge.large Border.badge-plate">
+    <Setter Property="CornerRadius" Value="32" />
+  </Style>
+  <Style Selector="Panel.badge.large Border.badge-plate TextBlock">
+    <Setter Property="FontSize" Value="20" />
+  </Style>
+
+  <!-- A card that opens something: the card draws itself, the button only adds hover and press. -->
+  <Style Selector="Button.cardbtn">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="FontWeight" Value="Normal" />
+  </Style>
+  <Style Selector="Button.cardbtn:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.cardbtn:pointerover Border.matchup">
+    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
+  </Style>
+  <Style Selector="Button.cardbtn:pressed Border.matchup">
+    <Setter Property="Background" Value="{StaticResource Bg3Brush}" />
+  </Style>
+
+  <!-- A sheet over the screen: the scrim behind closes it, the sheet itself is a raised panel. -->
+  <Style Selector="Button.scrim">
+    <Setter Property="Background" Value="{StaticResource ScrimBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Cursor" Value="Arrow" />
+  </Style>
+  <Style Selector="Button.scrim:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.scrim:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource ScrimBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.sheet">
+    <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Bg4Brush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
+    <Setter Property="MaxWidth" Value="1120" />
+    <Setter Property="Margin" Value="24,16" />
+    <Setter Property="ClipToBounds" Value="True" />
+    <Setter Property="BoxShadow" Value="0 16 48 0 #99000000" />
+  </Style>
+  <!-- One meeting in a season series: a small raised tile. -->
+  <Style Selector="Button.meeting">
+    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="Margin" Value="0,0,8,8" />
+    <Setter Property="FontWeight" Value="Normal" />
+  </Style>
+
   <!-- One result in a form strip. -->
   <Style Selector="Border.form">
     <Setter Property="Width" Value="22" />

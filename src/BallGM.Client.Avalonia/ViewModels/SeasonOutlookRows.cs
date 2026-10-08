@@ -1,4 +1,18 @@
+using BallGM.Application.Leagues;
+
 namespace BallGM.Client.Avalonia.ViewModels;
+
+/// <summary>
+/// What a screen needs to draw a team's badge: its pack logo if it has one, its stated colours if it
+/// has them, and the crest initials either way. Presentation only.
+/// </summary>
+public sealed record TeamArt(string Initials, string? LogoPath, TeamColours? Colours)
+{
+    public bool HasLogo => !string.IsNullOrEmpty(LogoPath);
+
+    public static TeamArt For(string teamName, string? logoPath = null, TeamColours? colours = null) =>
+        new(Converters.TeamInitialsConverter.Initials(teamName), logoPath, colours);
+}
 
 /// <summary>
 /// One day of the season ribbon. A played game for the viewed team is a bar above the centre line
@@ -28,6 +42,7 @@ public sealed record CalendarDayCell(
     bool IsLoss,
     bool IsHome,
     string Matchup,
+    TeamArt? Opponent,
     string Result,
     string Detail,
     string Marker,
@@ -42,6 +57,7 @@ public sealed record MatchupCard(
     string Venue,
     bool IsHome,
     string OpponentName,
+    TeamArt Opponent,
     string OpponentRecord,
     string OpponentDetail,
     bool HasOpponentForm,

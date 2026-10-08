@@ -169,6 +169,23 @@ internal static class TeamPaint
         return primary;
     }
 
+    /// <summary>
+    /// Any team's colour as it wears it, for drawing that team rather than painting the client: the
+    /// stated colours first, then its logo, else none. Not lifted — a caller setting text on it uses
+    /// <see cref="InkOn"/>. Logo reads are cached, since a schedule draws the same opponents often.
+    /// </summary>
+    internal static Color? Shade(TeamColours? colours, string? logoPath)
+    {
+        if (FromStated(colours) is { } stated)
+        {
+            return stated;
+        }
+
+        return string.IsNullOrEmpty(logoPath) ? null : LogoShades.GetOrAdd(logoPath, ReadLogo);
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Color?> LogoShades = new(StringComparer.Ordinal);
+
     private static Color? ReadLogo(string? logoPath)
     {
         if (string.IsNullOrEmpty(logoPath) || !File.Exists(logoPath))
