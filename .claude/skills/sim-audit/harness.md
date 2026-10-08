@@ -1,68 +1,57 @@
 # sim-audit harness recipe
 
 A standalone console project drives the real engine directly (no game-code edits). It lives outside
-the solution at `scratch/audit/harness/` so it never touches `src/`.
+the solution at `scratch/audit/harness/` (gitignored) so it never touches `src/`.
 
 1. **Project**: `scratch/audit/harness/Harness.csproj` — `net10.0` console app, `ProjectReference`s to
    `BallGM.Application`, `BallGM.Domain`, `BallGM.Infrastructure`, `BallGM.Mods`, `BallGM.Rules`,
-   `BallGM.Simulation` (same set `BallGM.Integration.Tests` uses). It also copies
-   `data/rulesets/*.json` to its own output directory (`LinkBase="data\rulesets"`,
-   `CopyToOutputDirectory=PreserveNewest`) — `FixtureLeagueDataSource` resolves rulesets relative to
-   `AppContext.BaseDirectory`, so without this copy `session.Load()` fails.
+   `BallGM.Simulation`. It copies `data/rulesets/*.json` to its output (`LinkBase="data\rulesets"`) —
+   `FixtureLeagueDataSource` resolves rulesets relative to `AppContext.BaseDirectory`.
 
-2. **Program.cs** exposes subcommands via `args[0]` (`all`, `prospects`, `seasons`, `calibration`,
-   `dynasty`, `debugstrength`). Build once with `dotnet build -c Release`, then run from
-   `scratch/audit/harness/bin/Release/net10.0/` with `dotnet Harness.dll <mode>`. Output CSVs land in
-   `./out/` next to the built DLL — copy them to the scratchpad before analysis (they can be large;
-   `player_lines.csv` at 1000 seasons is ~400MB).
+2. **Session construction** (changed in M9 — check `tests/BallGM.Integration.Tests/DynastyIntegrationTests.cs`
+   for the current argument list if it fails to compile): `new LeagueSession(dataSource, new RulesCapLedger(),
+   new RulesDraftAssetLedger(), new RulesTradeEngine(), new RulesSigningEngine(), new RulesFreeAgencyMarket(),
+   new RulesSeasonEngine(matchEngine), new SaveGameSerializer(), new RulesFrontOfficeAdvisor(new RulesCapLedger()))`.
+   `RulesSeasonEngine` takes an optional `IMatchEngine` — that is the injection point for instrumentation.
 
-3. **Independent season replays** (`RunSeasons`): construct a fresh `LeagueSession` (new
-   `FixtureLeagueDataSource`, `RulesCapLedger`, `RulesDraftAssetLedger`, `RulesTradeEngine`,
-   `RulesSigningEngine`, `RulesFreeAgencyMarket`, `RulesSeasonEngine`, `SaveGameSerializer`) and call
-   `.Load()` for every season index. `StartSeason(seed: i)` → `AdvanceToEndOfSeason()` →
-   `Standings()`/`BoxScoresOn(day)` for `day in 0..Calendar.LengthInDays` → `ConcludeSeason()` (captures
-   `ChampionTeamId` for Battery 6.4). A fresh session per season is required because
-   `FixtureLeagueDataSource` mints new identifiers every `Load()` (see CLAUDE.md), and because nothing
-   in this codebase re-signs free agents automatically — chaining seasons in one session runs out of
-   rostered players by season 3–4 (see `dynasty` below).
+3. **Instrumented replica (how internal quantities are recovered)**: `ReplicaMatchEngine.cs` is a copy of
+   `src/BallGM.Simulation/Seasons/PossessionMatchEngine.cs` with only counters added (possessions, dead
+   possessions, clean/fouled misses, FT trips and trips ending in a miss, internal reboundable misses, boards
+   awarded, OT periods, terminal-rule flag, side strength/efficiency). RNG call order is untouched.
+   `InstrumentedEngine : IMatchEngine` plays every game through the real engine **and** the replica with the
+   same `MatchSetup` and throws if a single score, stat line, or injury count differs — so the replica's
+   counters are trustworthy for exactly those games. **Re-copy the engine file and re-apply the counters
+   whenever `PossessionMatchEngine.cs` changes** (the comparison will throw if you forget). Replica was built
+   from engine sha256 `32bb84cc…` (commit 5945b94).
 
-4. **Chained multi-season run** (`RunDynasty`): one `LeagueSession`, loop
-   `StartSeason`→`AdvanceToEndOfSeason`→record standings/roster→`ConcludeSeason`→next `StartSeason`.
-   Demonstrates directly that nothing auto-re-signs departing free agents: by season 4 a team has
-   "nobody available" and the loop aborts. Useful for Battery 5, but only for ~3 usable seasons.
+4. **Modes** (`dotnet build -c Release`, then from `bin/Release/net10.0/`: `dotnet Harness.dll <mode> …`;
+   output in `./out/`):
+   - `league N` — N independent replays of the shipped 6-team league, fresh session per season (identifiers
+     are re-minted per `Load()`), season seed = i. ~1 min for 1000 seasons.
+   - `chain L S` — L leagues × S chained seasons through `ConcludeSeason` (draft, AI turn, auto-resign now keep
+     chained runs alive; 10×20 completed with no failures). Seeds `7_000_000 + 100·L + s`.
+   - `pack N <pack.json>` — independent replays of a league pack. The only fictional 30-team pack on disk is the
+     user's local, gitignored `local-packs/sample/`; its ruleset is schema 9 and this build refuses it, so copy
+     it to `scratch/audit/pack-sample/` with `schemaVersion` bumped to 10 (the reader's own error message says
+     that is sufficient). **Never use `local-packs/nba-*`** — real-league content, outside the project's legal
+     boundary. Seeds 101..100+N.
+   - `controlled` — synthetic two-team `MatchSetup`s straight into the engine: strength gaps −70..+70 (past the
+     ±40 efficiency clamp), rest days 1–3, rosters of 5–10 available players, plus 100k equal-strength games to
+     sample overtime / the six-OT terminal rule. Seeds `HashSeed(gap,i)`, `HashSeed(424242,i)`.
+   Each mode writes `b1_team_games_<mode>.csv` (one row per team-game, box-score totals + replica counters) and
+   `b1_summary_<mode>.txt` (player-level checks, season-totals vs box-score sums, standings PF/PA vs games).
 
-5. **Controlled two-team matchups** (`RunCalibration`): build `MatchSetup`s directly against
-   `PossessionMatchEngine` (bypassing `LeagueSession`/`SeasonEngine` entirely), mirroring
-   `MatchTestFixtures.Team()` — a 10-player roster per side, `Overall = topRating - 3*index`, run
-   through `DepthChartBuilder`. Sweep `homeRating`/`awayRating` independently (not `delta/2` split —
-   bucket by the *signed* `homeRating - awayRating` gap when analyzing, not by an internal "high/low"
-   label, or a sign bug silently averages the win-favors-the-strong-team effect with its mirror image
-   into ~50%). 4000 games per gap value, seeded via a simple hash of `(gap, i)`.
+5. **Analysis**: `python3 scratch/audit/analyze_b1.py out/b1_team_games_*.csv` — Battery 1 violation rates with
+   Wilson 95% CIs, rebound-leak / phantom-miss decomposition. Pure stdlib Python (no numpy/scipy, no network).
 
-6. **Recovering possessions without touching game code**: `PossessionMatchEngine.Play` makes its first
-   random draw as `BasePossessionsPerGame + random.NextInt32(-PossessionSpread, PossessionSpread+1)`
-   from a `SeededRandomSource(setup.Seed)` it owns internally, and that value is never returned on the
-   output. Since `SeededRandomSource` is a pure deterministic function of its seed, a second, entirely
-   separate `SeededRandomSource(seed)` constructed in the harness and given the identical first call
-   reproduces the same draw. This is how `pace`/`ortg` were recovered for controlled matchups (not
-   available for real `LeagueSession` games, since the per-game seed there is
-   `SeedMixer.Mix(seasonSeed, gameId)` and the harness does not currently replicate that mixing).
+6. **Battery 1 halts the audit** while 1.4 is violated (see the latest `reports/sim-audit-*.md`). The pre-M9
+   harness modes for Batteries 2–7 (talent-generator sampling, win-prob-vs-gap sweeps, dynasty runs) are kept for
+   reference in `scratch/audit/harness/Program.prev.cs.txt` — they predate the shot/rebound split, so port them
+   onto the replica rather than reviving them as-is.
 
-7. **Talent-generator sampling** (`RunProspects`): call `BallGM.Rules.Draft.ProspectGenerator.Generate`
-   directly, thousands of times with incrementing seeds, against a manually-supplied
-   `DraftClassRules.Create(classSize: 1, minimumRating: 40, maximumRating: 99, prospectAgeYears: 19)` —
-   the shipped ruleset (`data/rulesets/default-league.json`, schema v9) does not itself configure draft
-   class generation, so this bypasses that and exercises the generator's functional form directly.
-
-8. **Analysis**: pure Python 3 (no numpy/scipy available in this environment and no network access to
-   install them — `pip install` fails with PEP 668 externally-managed-environment). All statistics
-   (mean/sd/skew/excess-kurtosis/Pearson r/OLS/Hill estimator/logistic fit via OLS-on-logit) were
-   hand-rolled in `scratch/audit/analyze.py`-style scripts, streaming the large `player_lines.csv`
-   rather than loading it whole.
-
-9. **Known trap**: when bucketing controlled matchups by `abs(delta)` where `delta` can be negative,
-   check that "the stronger side" is derived from the actual numeric ratings in each row, not from a
-   boolean flag whose meaning silently flips sign when `delta < 0`. This cost a full re-run: an
-   internal `high`/`low` labeling bug made the win-probability-vs-strength curve look almost flat
-   (~50% at every gap) until re-derived from `homeRating - awayRating` directly, at which point it
-   showed a clean, strongly monotonic, near-logistic response (R² > 0.99 on the logit scale).
+7. **Known traps**:
+   - When bucketing controlled matchups by gap, derive "the stronger side" from the numeric ratings on each
+     row, never from a flag whose meaning flips sign when the gap is negative (cost a full re-run once).
+   - In `controlled` mode, `GameId.For(season, day, i % 900)` collides; key buffered games by id **and** seed.
+   - `FieldGoalsAttempted` in the box score includes shooting-fouled misses (charged before the foul is drawn),
+     so `FGA − FGM` is not the count of live-ball misses — use the replica's `clean_miss + ft_trip_miss`.

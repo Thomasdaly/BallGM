@@ -1,7 +1,7 @@
 # Frozen regression suite
 
 Written by `/sim-patch` from `reports/sim-audit-5a6d4d6e-6b09-4056-9535-6ffd4c70cedf.md`.
-12 assertions. Battery-1 rows (1-5) always run regardless of this file per `/sim-regress`'s own rule;
+22 assertions (12 original, 10 added 2026-10-08 by the deep-stats plan, `docs/stats-audit.md` §8.3). Battery-1 rows (1-5) always run regardless of this file per `/sim-regress`'s own rule;
 listed here too so tolerance/format is in one place. Rows marked `needs:` are currently uncomputable —
 the field/mechanism doesn't exist yet (see patch ID). `/sim-regress` should report those as
 **untestable**, not FAIL, until the named patch lands.
@@ -12,7 +12,7 @@ the field/mechanism doesn't exist yet (see patch ID). `/sim-regress` should repo
 | 1-mp | Σ player.Minutes per team == 240 + 25×OT | 0 violations | exact | — (already computable) |
 | 2-fgm | Σ player.MadeTwoPt×2+MadeThreePt×3+MadeFT per team == team score | 0 mismatches | exact | done (P-4a/c; enforced at `PlayerStatLine` construction, not just checked after the fact) |
 | 3-ast | player.Assists <= player.MadeFieldGoals, all players | 0 violations | exact | done (P-4a: FGM now a real per-player figure) |
-| 4-reb | ORB+DRB per team == opponent-misses accounted, no leak/dup | 0 mismatches | exact | done (P-4e split plus P-4b/c FGA/FTA — see notes) |
+| 4-reb | **strict**: per team, (FGA−FGM) + trip-ending FT misses == own OREB + own team OREB + opp DREB + opp team DREB | 0 mismatches | exact | S1 (P-7). Restated 2026-10-08: the old form compared boards to the engine's own floored miss counter and passed vacuously; the strict form fails 100% of team-games at baseline (`reports/sim-audit-4d6d61ff-…md` 1.4) |
 | 5-usg | Σ USG% per team per stint | 100 | exact | done (P-4e; "per game" not "per stint" — the engine has no lineup-stint granularity) |
 | 6-pace | pace_poss_per_48 | 99.0 | [96.0, 101.0] | — (already computable via controlled matchups; real-game pace still needs seed-mixing exposed) |
 | 7-ortg | ortg (pooled, with home-court) | 115.0 | [112.0, 117.0] | done (P-4b/c mechanics + P-5 retune; measured ≈116.8) |
@@ -21,6 +21,16 @@ the field/mechanism doesn't exist yet (see patch ID). `/sim-regress` should repo
 | 10-margin | sd_game_margin | 13.5 | [12.5, 14.5] | done (P-4b/c mechanics + P-5 retune; measured ≈13.45-13.5) |
 | 11-pc1 | first_pc_variance_share (rating covariance) | 0.45 | [0.20, 0.70] | done (P-3: multi-attribute `PlayerRating`); match-engine/box-score half of battery 4 still owed |
 | 12-dynasty | 50-season chained `LeagueSession` run | 0 `EmptyRotationCode` failures | exact | done (P-1a: roster-floor auto-resign; P-1b: draft-day wiring) |
+| 13-tov | tov_pct = TOV / (FGA + 0.44·FTA + TOV) | 0.128 | [0.120, 0.140] | S3 (P-9) |
+| 14-stl | stl_per_game (team) | 7.4 | [6.6, 8.2] | S3 (P-9) |
+| 15-blk | blk_per_game (team) | 4.9 | [4.2, 5.6] | S4 (P-10) |
+| 16-pf | pf_per_game (team) | 19.5 | [17.5, 21.5] | S5 (P-11) |
+| 17-ast | ast_per_fgm (league pooled) | 0.61 | [0.57, 0.65] | S1 (P-7) |
+| 18-orb | orb_pct = OREB / (OREB + opp DREB) | 0.265 | [0.25, 0.29] | S1 (P-7) |
+| 19-ids | STL_A ≤ opp TOV; BLK_A ≤ opp (FGA−FGM); Σ +/- = 5·margin; PF ≤ stored foul limit | 0 violations | exact | S2–S5 (each clause from the slice that adds the stat) |
+| 20-fg3a | fg3a_per_fga | 0.40 | [0.33, 0.44] | — (computable now; zones in S7 must keep it) |
+| 21-replay | same seed ⇒ identical box score, every field, every player | 0 diffs | exact | — (computable now) |
+| 22-time | season sim time, `scratch/bench` (M1, 6-team fixture league, 5×200 seasons median) | ≤ 16.9 ms | ≤ 1.25 × baseline 13.5 ms | — (computable now) |
 
 ## Notes for `/sim-regress`
 
