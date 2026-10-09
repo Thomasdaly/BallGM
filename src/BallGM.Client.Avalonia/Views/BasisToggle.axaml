@@ -1,0 +1,14 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.BasisToggle"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:StatBasisChoice">
+  <!-- Per game / per 36 / totals: one component on every stat surface that offers the choice. -->
+  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space2}">
+    <TextBlock Text="Show" Classes="dim small" VerticalAlignment="Center" />
+    <RadioButton Classes="chip small" Theme="{StaticResource {x:Type ToggleButton}}" Content="Per game" AutomationProperties.Name="Show stats per game" IsChecked="{Binding IsPerGame}" />
+    <RadioButton Classes="chip small" Theme="{StaticResource {x:Type ToggleButton}}" Content="Per 36" AutomationProperties.Name="Show stats per 36 minutes" IsChecked="{Binding IsPer36}" />
+    <RadioButton Classes="chip small" Theme="{StaticResource {x:Type ToggleButton}}" Content="Totals" AutomationProperties.Name="Show stats totals" IsChecked="{Binding IsTotals}" />
+  </StackPanel>
+</UserControl>

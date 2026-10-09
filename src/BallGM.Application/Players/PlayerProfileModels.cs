@@ -40,8 +40,7 @@ public sealed record SeasonDetailLine(
     CountingStats Team,
     CountingStats Opponent,
     int DoubleDoubles,
-    int TripleDoubles,
-    double UsagePercent);
+    int TripleDoubles);
 
 /// <summary>
 /// A contract in depth: every remaining season with its guarantee and option, the player's place

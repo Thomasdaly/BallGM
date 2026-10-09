@@ -19,7 +19,6 @@ public sealed record PlayerStatLineEnvelope(
     int OffensiveRebounds,
     int DefensiveRebounds,
     int Assists,
-    int UsagePercent,
     int FieldGoalsAttempted,
     int FieldGoalsMade,
     int ThreePointsAttempted,
@@ -27,7 +26,9 @@ public sealed record PlayerStatLineEnvelope(
     int FreeThrowsAttempted,
     int FreeThrowsMade,
     bool Started,
-    int? PlusMinus = null);
+    int? PlusMinus = null,
+    int? Steals = null,
+    int? Turnovers = null);
 
 /// <summary>One side's team-level figures: team rebounds and free-throw trips that ended on a live miss.</summary>
 public sealed record TeamStatLineEnvelope(int TeamOffensiveRebounds, int TeamDefensiveRebounds, int LiveFreeThrowMisses);
@@ -97,8 +98,16 @@ public sealed record SeasonEnvelope
     /// refuses a side whose minutes do not fill the game or whose plus-minus is not five times its
     /// margin. A version-4 box score cannot pass either check, so it is refused, not migrated.
     /// </para>
+    /// <para>
+    /// Version 6 adds each line's <c>Steals</c> and <c>Turnovers</c>: a possession can now end in a
+    /// turnover charged to its ball handler, and <c>BoxScore.Create</c> refuses a side with more steals
+    /// than the other side has turnovers. It also drops <c>UsagePercent</c>: once usage became each
+    /// player's observed share of the plays (FGA, FTA, TOV) the line already carries, the stored figure
+    /// was derivable, and usage is now read through <c>StatFormulas.UsagePercent</c>. Refused, not
+    /// migrated.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 5;
+    public const int CurrentSchemaVersion = 6;
 
     public SeasonEnvelope(
         int schemaVersion,

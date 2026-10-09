@@ -537,6 +537,25 @@
             </Grid>
           </Border>
 
+          <!-- A final game's four factors, away on the left and home on the right, the tale of the tape's layout. -->
+          <Border Classes="panel" IsVisible="{Binding HasFourFactors}">
+            <StackPanel Spacing="{StaticResource Space2}">
+              <TextBlock Text="Four factors" Classes="section" HorizontalAlignment="Center" />
+              <TextBlock Text="The better figure in each row is brighter; for turnover %, lower is better" Classes="faint small" HorizontalAlignment="Center" />
+              <ItemsControl ItemsSource="{Binding FourFactors}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FactorRow">
+                    <Grid ColumnDefinitions="*,160,*" ColumnSpacing="16" Margin="0,4" ToolTip.Tip="{Binding Tooltip}" AutomationProperties.Name="{Binding AccessibleName}">
+                      <TextBlock Text="{Binding Away}" Classes="num" Classes.dim="{Binding AwayTrails}" HorizontalAlignment="Right" />
+                      <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="{Binding Home}" Classes="num" Classes.dim="{Binding HomeTrails}" HorizontalAlignment="Left" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+
           <!-- The season series: every other meeting, played or to come. -->
           <StackPanel Spacing="8">
             <TextBlock Classes="section" Text="Season series" />
@@ -568,16 +587,11 @@
             </ItemsControl>
           </StackPanel>
 
-          <!-- The two line-ups, side by side. -->
+          <!-- The two line-ups, one above the other: a full stat line per player is too wide to sit side by side. -->
           <StackPanel Spacing="8">
             <TextBlock Classes="section" Text="{Binding LineupHeading}" />
             <TextBlock Text="{Binding LineupNote}" Classes="faint tiny" TextWrapping="Wrap" />
-            <!-- Before tip-off the two projected rotations sit side by side; a full box score is too wide for that and stacks. -->
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="28" IsVisible="{Binding IsPreview}">
-              <ContentControl Content="{Binding Away}" ContentTemplate="{StaticResource SideLineupTemplate}" />
-              <ContentControl Grid.Column="1" Content="{Binding Home}" ContentTemplate="{StaticResource SideLineupTemplate}" />
-            </Grid>
-            <StackPanel Spacing="{StaticResource Space5}" IsVisible="{Binding IsFinal}">
+            <StackPanel Spacing="{StaticResource Space5}">
               <ContentControl Content="{Binding Away}" ContentTemplate="{StaticResource SideLineupTemplate}" />
               <ContentControl Content="{Binding Home}" ContentTemplate="{StaticResource SideLineupTemplate}" />
             </StackPanel>

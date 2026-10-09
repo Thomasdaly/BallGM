@@ -33,7 +33,7 @@ public static class DepthChartSupport
         var available = team.PlayerIds
             .Select(playerId => playersById.GetValueOrDefault(playerId))
             .Where(player => player is not null && !player.IsInjured && !player.IsRetired)
-            .Select(player => new AvailablePlayer(player!.Id, player.Position, player.Rating.Overall))
+            .Select(player => new AvailablePlayer(player!.Id, player.Position, player.Rating))
             .ToList();
 
         var result = new DepthChartBuilder().Build(team.Id, available, rosterLimits, team.PlayerIds.Count);

@@ -24,36 +24,44 @@ internal static class MatchTestFixtures
         int homeSquadSize = 10,
         int awaySquadSize = 10)
     {
-        var home = new TeamId("TEAM-HOME");
-        var away = new TeamId("TEAM-AWAY");
-
-        var fixture = new Fixture(
-            GameId.For(Season, GameDay, Math.Abs(seed) % 900),
-            GameDay,
-            home,
-            away,
-            SeasonPhase.RegularSeason);
-
         return new MatchSetup(
-            fixture,
-            Team(home, homeRating, homeRestDays, homeSquadSize),
-            Team(away, awayRating, awayRestDays, awaySquadSize),
+            FixtureFor(seed),
+            Team(Home, homeRating, homeRestDays, homeSquadSize),
+            Team(Away, awayRating, awayRestDays, awaySquadSize),
             seed);
     }
+
+    /// <summary>
+    /// Two fully rested squads of ten in which every player carries the same <see cref="PlayerRating"/>
+    /// — so a test can hold Overall level and vary only a side's attribute shape.
+    /// </summary>
+    public static MatchSetup Setup(int seed, PlayerRating homeEveryone, PlayerRating awayEveryone) =>
+        new(FixtureFor(seed), Squad(Home, _ => homeEveryone), Squad(Away, _ => awayEveryone), seed);
+
+    private static readonly TeamId Home = new("TEAM-HOME");
+
+    private static readonly TeamId Away = new("TEAM-AWAY");
+
+    private static Fixture FixtureFor(int seed) =>
+        new(GameId.For(Season, GameDay, Math.Abs(seed) % 900), GameDay, Home, Away, SeasonPhase.RegularSeason);
 
     /// <summary>
     /// A squad whose best player is <paramref name="topRating"/> and which falls away three points a
     /// place, covering all five positions before it doubles up.
     /// </summary>
-    public static MatchTeam Team(TeamId teamId, int topRating, int restDays, int squadSize = 10)
+    public static MatchTeam Team(TeamId teamId, int topRating, int restDays, int squadSize = 10) =>
+        Squad(
+            teamId,
+            index => new PlayerRating(Math.Clamp(topRating - (index * 3), PlayerRating.MinimumOverall, PlayerRating.MaximumOverall)),
+            restDays,
+            squadSize);
+
+    private static MatchTeam Squad(TeamId teamId, Func<int, PlayerRating> ratingAt, int restDays = MatchModelBounds.FullyRestedDays, int squadSize = 10)
     {
         var positions = Enum.GetValues<Position>();
 
         var players = Enumerable.Range(0, squadSize)
-            .Select(index => new AvailablePlayer(
-                new PlayerId($"{teamId.Value}-P{index:D2}"),
-                positions[index % positions.Length],
-                Math.Clamp(topRating - (index * 3), PlayerRating.MinimumOverall, PlayerRating.MaximumOverall)))
+            .Select(index => new AvailablePlayer(new PlayerId($"{teamId.Value}-P{index:D2}"), positions[index % positions.Length], ratingAt(index)))
             .ToList();
 
         var build = new DepthChartBuilder().Build(teamId, players, new RosterSizeLimits(5, 15), players.Count);

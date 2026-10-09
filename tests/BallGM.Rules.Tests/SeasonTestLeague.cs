@@ -83,7 +83,7 @@ internal static class SeasonTestLeague
             .Select(index => new AvailablePlayer(
                 new PlayerId($"{teamId.Value}-P{index:D2}"),
                 positions[index % positions.Length],
-                Math.Max(40, topRating - index)))
+                new PlayerRating(Math.Max(40, topRating - index))))
             .ToList();
     }
 

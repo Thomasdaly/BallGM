@@ -127,7 +127,7 @@ internal static class SeasonTestFixtures
             .Select(index => new AvailablePlayer(
                 new PlayerId($"{teamId.Value}-P{index:D2}"),
                 positions[index % positions.Length],
-                80 - index))
+                new PlayerRating(80 - index)))
             .ToList();
     }
 }

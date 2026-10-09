@@ -168,10 +168,10 @@ public sealed class PossessionMatchEngine : IMatchEngine
     }
 
     /// <summary>
-    /// Plays a run of possessions for one side. Not every possession reaches a shot at all — the
-    /// unmodeled stand-in for a turnover, see <see cref="MatchModelBounds.FieldGoalAttemptRate"/> —
-    /// and one that does is a real field-goal attempt at a real percentage, not a single blended
-    /// score/miss draw.
+    /// Plays a run of possessions, home and away alternating. A possession can be turned over before
+    /// it reaches a shot (charged to the ball handler, sometimes a steal; see
+    /// <see cref="MatchModelBounds.BaseTurnoverRate"/>), and one that reaches a shot is a real
+    /// field-goal attempt at a real percentage, not a single blended score/miss draw.
     /// </summary>
     private static void PlayPeriod(Side home, Side away, int homeEfficiency, int awayEfficiency, int possessions, IRandomSource random)
     {
@@ -208,15 +208,24 @@ public sealed class PossessionMatchEngine : IMatchEngine
     }
 
     /// <summary>
-    /// One possession, every event recorded where it happens. It may not reach a shot at all (the
-    /// unmodeled stand-in for a turnover, see <see cref="MatchModelBounds.FieldGoalAttemptRate"/>);
-    /// once it does, it lasts as long as the offence keeps the ball — every offensive rebound is a
-    /// second chance on the same possession.
+    /// One possession, every event recorded where it happens. It may end in a turnover before any
+    /// shot — charged to the ball handler, and a steal credited to a defender when the ball was taken
+    /// live; once a shot goes up, the possession lasts as long as the offence keeps the ball — every
+    /// offensive rebound is a second chance on the same possession.
     /// </summary>
     private static void PlayPossession(Side offence, Side defence, (int Fg2Percent, int Fg3Percent) shooting, IRandomSource random)
     {
-        if (random.NextBasisPoint() >= MatchModelBounds.FieldGoalAttemptRate)
+        var handler = offence.PickOnFloor(offence.UsageFactors, random);
+
+        if (random.NextBasisPoint() < TurnoverRate(offence, defence, handler))
         {
+            offence.TurnoversBy[handler]++;
+
+            if (random.NextBasisPoint() < MatchModelBounds.StealShareOfTurnovers)
+            {
+                defence.StealsBy[defence.PickOnFloor(defence.StealFactors, random)]++;
+            }
+
             return;
         }
 
@@ -227,6 +236,26 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// The chance this possession is turned over: the base rate, moved by the handler's passing shape
+    /// and by the two fives' quickness shapes against each other. Each term is capped on its own, so
+    /// the rate stays within the base plus or minus both caps (asserted in <c>MatchModelBoundsTests</c>).
+    /// </summary>
+    private static int TurnoverRate(Side offence, Side defence, int handler)
+    {
+        var passing = Math.Clamp(
+            -offence.PassingShape[handler] * MatchModelBounds.TurnoverPerPassingPoint,
+            -MatchModelBounds.MaximumTurnoverPassingSwing,
+            MatchModelBounds.MaximumTurnoverPassingSwing);
+
+        var quickness = Math.Clamp(
+            (defence.OnFloorQuickness - offence.OnFloorQuickness) * MatchModelBounds.TurnoverPerQuicknessPoint,
+            -MatchModelBounds.MaximumTurnoverQuicknessSwing,
+            MatchModelBounds.MaximumTurnoverQuicknessSwing);
+
+        return MatchModelBounds.BaseTurnoverRate + passing + quickness;
     }
 
     /// <summary>
@@ -488,10 +517,32 @@ public sealed class PossessionMatchEngine : IMatchEngine
             PlannedMinutes = Players.Select(slot => slot.Minutes).ToArray();
             Minutes = new int[count];
             PlusMinusBy = new int[count];
+            StealsBy = new int[count];
+            TurnoversBy = new int[count];
             _regulationOn = new int[count];
             _overtimeOn = new int[count];
             OnFloor = [];
-            Overalls = Players.Select(slot => team.OverallOf(slot.PlayerId) ?? 0).ToArray();
+            Overalls = new int[count];
+            PassingShape = new int[count];
+            QuicknessShape = new int[count];
+            StealFactors = new int[count];
+
+            // Shape, not level: each attribute measured against the player's own Overall, so these
+            // terms redistribute what happens without adding to how good a side is. A player missing
+            // from the available list rates zero everywhere.
+            for (var index = 0; index < count; index++)
+            {
+                var rating = team.RatingOf(Players[index].PlayerId) ?? new PlayerRating(0);
+                var overall = rating.Overall;
+                Overalls[index] = overall;
+                PassingShape[index] = rating.Passing - overall;
+                QuicknessShape[index] = ((rating.Speed + rating.LateralQuickness) / 2) - overall;
+                StealFactors[index] = Math.Clamp(
+                    100 + (QuicknessShape[index] * MatchModelBounds.StealWeightPerQuicknessPoint),
+                    MatchModelBounds.MinimumStealWeight,
+                    MatchModelBounds.MaximumStealWeight);
+            }
+
             PointsBy = new int[count];
             OffensiveReboundsBy = new int[count];
             DefensiveReboundsBy = new int[count];
@@ -565,12 +616,19 @@ public sealed class PossessionMatchEngine : IMatchEngine
         {
             OnFloor = _closers ?? _plan[possession];
             var counts = _closers is null ? _regulationOn : _overtimeOn;
+            var quickness = 0;
 
             foreach (var index in OnFloor)
             {
                 counts[index]++;
+                quickness += QuicknessShape[index];
             }
+
+            OnFloorQuickness = quickness / Math.Max(1, OnFloor.Length);
         }
+
+        /// <summary>The mean quickness shape of the five on the floor for this possession.</summary>
+        public int OnFloorQuickness { get; private set; }
 
         /// <summary>Turns the possessions each player was on the floor for into the minutes the box score credits.</summary>
         public void CreditMinutes(int regulationPossessions, int overtimePeriods)
@@ -592,6 +650,16 @@ public sealed class PossessionMatchEngine : IMatchEngine
         public int[] Minutes { get; }
 
         public int[] PlusMinusBy { get; }
+
+        public int[] StealsBy { get; }
+
+        public int[] TurnoversBy { get; }
+
+        public int[] PassingShape { get; }
+
+        public int[] QuicknessShape { get; }
+
+        public int[] StealFactors { get; }
 
         public int[] Overalls { get; }
 
@@ -680,9 +748,6 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         public IEnumerable<PlayerStatLine> ToStatLines()
         {
-            // Each player's share of the team's plays: their usage factor for every minute they played.
-            var usagePercent = ApportionToHundred(Enumerable.Range(0, Players.Count).Select(index => Minutes[index] * UsageFactors[index]).ToArray());
-
             return Enumerable.Range(0, Players.Count).Select(index => new PlayerStatLine(
                 Players[index].PlayerId,
                 TeamId,
@@ -691,7 +756,6 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 OffensiveReboundsBy[index],
                 DefensiveReboundsBy[index],
                 AssistsBy[index],
-                usagePercent[index],
                 FieldGoalsAttempted[index],
                 FieldGoalsMade[index],
                 ThreePointsAttempted[index],
@@ -699,17 +763,9 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 FreeThrowsAttempted[index],
                 FreeThrowsMade[index],
                 Players[index].IsStarter,
-                PlusMinusBy[index]));
-        }
-
-        /// <summary>Whole percentage points summing to exactly 100 (see <see cref="Apportion.LargestRemainder"/>).</summary>
-        private static int[] ApportionToHundred(IReadOnlyList<int> weights)
-        {
-            long total = weights.Sum();
-
-            return total <= 0
-                ? new int[weights.Count]
-                : Apportion.LargestRemainder(weights.Select(weight => weight * 100L).ToArray(), total, 100);
+                PlusMinusBy[index],
+                StealsBy[index],
+                TurnoversBy[index]));
         }
 
         /// <summary>

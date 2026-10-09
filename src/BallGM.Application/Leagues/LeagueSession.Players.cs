@@ -119,7 +119,8 @@ public sealed partial class LeagueSession
             ["PLUS_MINUS"] = detail.Totals.PlusMinus,
             ["DD2"] = detail.DoubleDoubles,
             ["TD3"] = detail.TripleDoubles,
-            ["USG_PCT"] = detail.UsagePercent / 100,
+            ["STL"] = detail.Totals.Steals,
+            ["TOV"] = detail.Totals.Turnovers,
         };
 
         void Add(string code, double? value)
@@ -130,6 +131,8 @@ public sealed partial class LeagueSession
             }
         }
 
+        Add("USG_PCT", StatFormulas.UsagePercent(detail.Totals, detail.Team));
+        Add("TM_TOV_PCT", StatFormulas.TurnoverPercent(detail.Totals) * 100);
         Add("TS_PCT", StatFormulas.TrueShooting(detail.Totals));
         Add("EFG_PCT", StatFormulas.EffectiveFieldGoal(detail.Totals));
         Add("AST_PCT", StatFormulas.AssistPercent(detail.Totals.Assists, detail.Totals.Minutes, detail.Team.Minutes, detail.Team.FieldGoalsMade, detail.Totals.FieldGoalsMade));
@@ -156,8 +159,7 @@ public sealed partial class LeagueSession
             CountingStats.Sum(games.Select(game => game.Result.BoxScore!.TotalsFor(game.Line.TeamId))),
             CountingStats.Sum(games.Select(game => game.Result.BoxScore!.TotalsFor(OpponentOf(game.Result, game.Line.TeamId)))),
             games.Count(game => TenOrMore(game.Line, 2)),
-            games.Count(game => TenOrMore(game.Line, 3)),
-            totals.Minutes == 0 ? 0 : games.Sum(game => (double)game.Line.UsagePercent * game.Line.Minutes) / totals.Minutes);
+            games.Count(game => TenOrMore(game.Line, 3)));
     }
 
     /// <summary>The contract seen against the league's scales: share of the cap, place between min and max, free agency.</summary>

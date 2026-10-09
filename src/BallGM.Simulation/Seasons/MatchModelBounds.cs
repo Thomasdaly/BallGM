@@ -38,8 +38,7 @@ public static class MatchModelBounds
     /// What a team scores per hundred possessions before anything about either side is considered,
     /// in <see cref="EfficiencyScale"/> units — so 11,500 is 115.0 points per hundred possessions.
     /// Retuned from 10,800 once real shot attempts and free throws replaced a single blended
-    /// scoring-rate draw (see <see cref="FieldGoalAttemptRate"/> and the field-goal percentages
-    /// below) — the sim audit's own target for this figure, unreachable by the old mechanism no
+    /// scoring-rate draw (see the field-goal percentages below) — the sim audit's own target for this figure, unreachable by the old mechanism no
     /// matter how its one dial was turned.
     /// </summary>
     public const int BaseOffensiveEfficiency = 11_500;
@@ -105,14 +104,48 @@ public static class MatchModelBounds
     public const int MaximumOvertimePeriods = 6;
 
     /// <summary>
-    /// What share of possessions produce a field-goal attempt at all, in <see cref="ProbabilityScale"/>
-    /// units. The rest score nothing and touch no player's line — the unmodeled stand-in for a
-    /// turnover, kept deliberately nameless rather than exposed as a tracked category: nothing in this
-    /// build's frozen calibration suite needs a turnover rate, only a way for "possessions" (pace) and
-    /// "shots" (the categories below) to be two different numbers, the way they are in real
-    /// basketball.
+    /// Chance a possession ends in a turnover before any shot, in <see cref="ProbabilityScale"/> units,
+    /// for a neutral ball handler against a neutral defence. Charged to the handler — the player on
+    /// the floor the usage factors pick — so a turnover is a credited event, not an unexplained empty
+    /// possession. Tuned with the scoring terms: turnovers and shooting share the same possessions.
     /// </summary>
-    public const int FieldGoalAttemptRate = 8_620;
+    public const int BaseTurnoverRate = 1_480;
+
+    /// <summary>
+    /// How much a ball handler's passing shape moves the turnover chance, per point their Passing sits
+    /// above or below their own Overall — a better passer for their level turns it over less. Shape,
+    /// not level: level already enters through the strength term, and reading it again here would count
+    /// one player's quality twice.
+    /// </summary>
+    public const int TurnoverPerPassingPoint = 15;
+
+    /// <summary>The most the handler's passing may move the turnover chance, either way.</summary>
+    public const int MaximumTurnoverPassingSwing = 300;
+
+    /// <summary>
+    /// How much the two fives' quickness moves the turnover chance, per point the defence's mean
+    /// quickness shape ((Speed + Lateral quickness) / 2 − Overall) exceeds the offence's — a difference
+    /// between the sides, so a league on any rating scale is unaffected.
+    /// </summary>
+    public const int TurnoverPerQuicknessPoint = 10;
+
+    /// <summary>The most the quickness difference may move the turnover chance, either way.</summary>
+    public const int MaximumTurnoverQuicknessSwing = 250;
+
+    /// <summary>Share of turnovers that are steals — a live ball taken by a defender, who is credited.</summary>
+    public const int StealShareOfTurnovers = 5_100;
+
+    /// <summary>
+    /// How strongly a defender's quickness shape decides who gets the steal: a weight of 100 plus this
+    /// per point of shape, clamped to <see cref="MinimumStealWeight"/>–<see cref="MaximumStealWeight"/>.
+    /// </summary>
+    public const int StealWeightPerQuicknessPoint = 6;
+
+    /// <summary>The floor and ceiling on a defender's steal weight (100 is neutral).</summary>
+    public const int MinimumStealWeight = 25;
+
+    /// <inheritdoc cref="MinimumStealWeight"/>
+    public const int MaximumStealWeight = 300;
 
     /// <summary>
     /// What share of field-goal <em>attempts</em> are three-pointers, in <see cref="ProbabilityScale"/>
@@ -127,7 +160,7 @@ public static class MatchModelBounds
     /// by <see cref="FieldGoalPercentSwingAtMaximumStrength"/> the same way the old scoring rate used
     /// to move with efficiency — a better team, not a team that shoots more often.
     /// </summary>
-    public const int BaseTwoPointPercentage = 4_790;
+    public const int BaseTwoPointPercentage = 4_820;
 
     /// <summary>
     /// League-average three-point percentage at a neutral efficiency. Lower than
@@ -135,7 +168,7 @@ public static class MatchModelBounds
     /// than closes — a team having a good night gets better at both shots together, not selectively
     /// better from three.
     /// </summary>
-    public const int BaseThreePointPercentage = 3_340;
+    public const int BaseThreePointPercentage = 3_360;
 
     /// <summary>
     /// How many percentage points a field-goal percentage may move, at the maximum possible strength

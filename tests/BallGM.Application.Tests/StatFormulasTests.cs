@@ -64,4 +64,48 @@ public sealed class StatFormulasTests
         Assert.Null(StatFormulas.Per36(10, 0));
         Assert.Null(StatFormulas.PointsDistribution(0, 0, 0, 0));
     }
+
+    [Fact]
+    public void PossessionsRatingsUsageStealsAndFourFactors_FollowTheirGlossaryDefinitions()
+    {
+        var team = BallGM.Domain.Seasons.CountingStats.None with
+        {
+            Games = 1,
+            Minutes = 240,
+            Points = 110,
+            FieldGoalsMade = 40,
+            FieldGoalsAttempted = 88,
+            ThreePointsMade = 12,
+            FreeThrowsMade = 18,
+            FreeThrowsAttempted = 25,
+            OffensiveRebounds = 10,
+            DefensiveRebounds = 33,
+            Turnovers = 14,
+            Assists = 25,
+        };
+        var opponent = team with { Points = 104, DefensiveRebounds = 30, OffensiveRebounds = 9, Turnovers = 15 };
+        var player = BallGM.Domain.Seasons.CountingStats.None with
+        {
+            Games = 1,
+            Minutes = 36,
+            FieldGoalsAttempted = 20,
+            FreeThrowsAttempted = 5,
+            Turnovers = 3,
+            Steals = 2,
+            Assists = 8,
+        };
+
+        Assert.Equal(88 + (0.44 * 25) - 10 + 14, StatFormulas.Possessions(team), 10);
+        Assert.Equal(100.0 * 110 / 103, StatFormulas.Rating(team)!.Value, 10);
+        Assert.Equal(3 / (20 + 2.2 + 3), StatFormulas.TurnoverPercent(player)!.Value, 10);
+        Assert.Equal(8 / 3.0, StatFormulas.AssistToTurnover(player)!.Value, 10);
+        Assert.Equal((20 + 2.2 + 3) * 48 / (36 * (88 + 11.0 + 14)), StatFormulas.UsagePercent(player, team)!.Value, 10);
+        Assert.Equal(2 * 48 / (36 * StatFormulas.Possessions(opponent)), StatFormulas.StealPercent(player, team, opponent)!.Value, 10);
+
+        var factors = StatFormulas.FourFactorsFor(team, opponent);
+        Assert.Equal((40 + 6) / 88.0, factors.EffectiveFieldGoal!.Value, 10);
+        Assert.Equal(10 / 40.0, factors.OffensiveReboundPercent!.Value, 10);
+        Assert.Equal(18 / 88.0, factors.FreeThrowsPerFieldGoal!.Value, 10);
+        Assert.Null(StatFormulas.UsagePercent(BallGM.Domain.Seasons.CountingStats.None, team));
+    }
 }

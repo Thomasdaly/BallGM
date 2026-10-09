@@ -32,7 +32,6 @@ public sealed record PlayerStatLine
         int offensiveRebounds,
         int defensiveRebounds,
         int assists,
-        int usagePercent,
         int fieldGoalsAttempted,
         int fieldGoalsMade,
         int threePointsAttempted,
@@ -40,7 +39,9 @@ public sealed record PlayerStatLine
         int freeThrowsAttempted,
         int freeThrowsMade,
         bool started,
-        int plusMinus)
+        int plusMinus,
+        int steals,
+        int turnovers)
     {
         ArgumentNullException.ThrowIfNull(playerId);
         ArgumentNullException.ThrowIfNull(teamId);
@@ -56,11 +57,8 @@ public sealed record PlayerStatLine
         ThrowIfNegative(threePointsMade, nameof(threePointsMade));
         ThrowIfNegative(freeThrowsAttempted, nameof(freeThrowsAttempted));
         ThrowIfNegative(freeThrowsMade, nameof(freeThrowsMade));
-
-        if (usagePercent < 0 || usagePercent > 100)
-        {
-            throw new ArgumentOutOfRangeException(nameof(usagePercent), usagePercent, "Usage share must be between 0 and 100.");
-        }
+        ThrowIfNegative(steals, nameof(steals));
+        ThrowIfNegative(turnovers, nameof(turnovers));
 
         if (fieldGoalsMade > fieldGoalsAttempted)
         {
@@ -102,7 +100,6 @@ public sealed record PlayerStatLine
         OffensiveRebounds = offensiveRebounds;
         DefensiveRebounds = defensiveRebounds;
         Assists = assists;
-        UsagePercent = usagePercent;
         FieldGoalsAttempted = fieldGoalsAttempted;
         FieldGoalsMade = fieldGoalsMade;
         ThreePointsAttempted = threePointsAttempted;
@@ -111,6 +108,8 @@ public sealed record PlayerStatLine
         FreeThrowsMade = freeThrowsMade;
         Started = started;
         PlusMinus = plusMinus;
+        Steals = steals;
+        Turnovers = turnovers;
     }
 
     public PlayerId PlayerId { get; }
@@ -129,15 +128,6 @@ public sealed record PlayerStatLine
     public int Rebounds => OffensiveRebounds + DefensiveRebounds;
 
     public int Assists { get; }
-
-    /// <summary>
-    /// This player's share of their team's shots, 0-100. Every team's lines sum to exactly 100 —
-    /// enforced by <see cref="BoxScore.Create"/>, the same way team points are enforced to sum to the
-    /// final score — because a usage share that does not add up to a whole team is not usable by
-    /// anything that reads it. Per game, not per lineup-stint: nothing in this engine tracks a
-    /// possession's five-man unit separately from the game it belongs to.
-    /// </summary>
-    public int UsagePercent { get; }
 
     public int FieldGoalsAttempted { get; }
 
@@ -159,6 +149,12 @@ public sealed record PlayerStatLine
     /// to five times its margin, which <see cref="BoxScore.Create"/> enforces.
     /// </summary>
     public int PlusMinus { get; }
+
+    /// <summary>Live-ball turnovers this player forced. A side's steals are never more than the other side's turnovers.</summary>
+    public int Steals { get; }
+
+    /// <summary>Possessions this player lost without a shot.</summary>
+    public int Turnovers { get; }
 
     private static void ThrowIfNegative(int value, string parameterName)
     {
@@ -221,13 +217,13 @@ public sealed class BoxScore
 {
     private const string PointsDoNotMatchCode = "box_score.points_do_not_match_result";
     private const string UnknownTeamCode = "box_score.line_for_team_not_playing";
-    private const string UsagePercentDoesNotSumToWholeCode = "box_score.usage_percent_does_not_sum_to_whole";
     private const string ReboundsDoNotAccountForMissesCode = "box_score.rebounds_do_not_account_for_misses";
     private const string AssistsExceedTeammateMakesCode = "box_score.assists_exceed_teammate_makes";
     private const string TeamLineForWrongTeamCode = "box_score.team_line_for_wrong_team";
     private const string MinutesDoNotFillTheGameCode = "box_score.minutes_do_not_fill_the_game";
     private const string PlusMinusDoesNotMatchMarginCode = "box_score.plus_minus_does_not_match_margin";
     private const string NegativeOvertimeCode = "box_score.negative_overtime";
+    private const string StealsExceedTurnoversCode = "box_score.steals_exceed_opponent_turnovers";
 
     /// <summary>The players on the floor for a side at once; a side's minutes and plus-minus are counted in fives.</summary>
     public const int PlayersOnFloor = 5;
@@ -348,11 +344,13 @@ public sealed class BoxScore
                 }
             }
 
-            if (own.Lines > 0 && own.Usage != 100)
+            // A steal is the other side's turnover, so a side cannot steal the ball more often than
+            // the other side lost it.
+            if (own.Steals > totals[1 - side].Turnovers)
             {
                 errors.Add(new DomainError(
-                    UsagePercentDoesNotSumToWholeCode,
-                    $"Team '{team.TeamId.Value}' in game '{gameId.Value}' has usage shares summing to {own.Usage}, not 100."));
+                    StealsExceedTurnoversCode,
+                    $"Team '{team.TeamId.Value}' in game '{gameId.Value}' has {own.Steals} steals, more than the {totals[1 - side].Turnovers} turnovers its opponent committed."));
             }
 
             var liveMisses = own.FieldGoalsAttempted - own.FieldGoalsMade + team.LiveFreeThrowMisses;
@@ -415,18 +413,23 @@ public sealed class BoxScore
     }
 
     /// <summary>
-    /// One team's counting totals for this game — one game, however many players took part, and its
-    /// plus-minus is its margin (the players' plus-minus sums to that times the five on the floor).
+    /// One team's counting totals for this game, as a box score's team row reads: one game, however
+    /// many players took part; every player line plus the team rebounds no player secured, so a
+    /// team's rebounds account for every miss it took back (and the rates built on them — rebound
+    /// shares, possessions, ratings, the four factors — count every board); and its plus-minus is its
+    /// margin (the players' plus-minus sums to that times the five on the floor).
     /// </summary>
     public CountingStats TotalsFor(TeamId teamId)
     {
-        ArgumentNullException.ThrowIfNull(teamId);
+        var team = TeamLineFor(teamId);
         var opponent = teamId == HomeTeamId ? AwayTeamId : HomeTeamId;
         var own = CountingStats.Sum(_lines.Where(line => line.TeamId == teamId));
         return own with
         {
             Games = 1,
             Starts = 0,
+            OffensiveRebounds = own.OffensiveRebounds + team.TeamOffensiveRebounds,
+            DefensiveRebounds = own.DefensiveRebounds + team.TeamDefensiveRebounds,
             PlusMinus = own.Points - PointsFor(opponent),
         };
     }
@@ -443,7 +446,8 @@ public sealed class BoxScore
         public int Points;
         public int Minutes;
         public int PlusMinus;
-        public int Usage;
+        public int Steals;
+        public int Turnovers;
         public int FieldGoalsAttempted;
         public int FieldGoalsMade;
         public int OffensiveRebounds;
@@ -455,7 +459,8 @@ public sealed class BoxScore
             Points += line.Points;
             Minutes += line.Minutes;
             PlusMinus += line.PlusMinus;
-            Usage += line.UsagePercent;
+            Steals += line.Steals;
+            Turnovers += line.Turnovers;
             FieldGoalsAttempted += line.FieldGoalsAttempted;
             FieldGoalsMade += line.FieldGoalsMade;
             OffensiveRebounds += line.OffensiveRebounds;

@@ -1,0 +1,56 @@
+using BallGM.Domain.Leagues;
+using BallGM.Domain.Players;
+using BallGM.Domain.Seasons;
+using BallGM.Domain.Teams;
+using BallGM.Rules.Seasons;
+using BallGM.Simulation.Seasons;
+
+namespace BallGM.Simulation.Tests;
+
+/// <summary>
+/// The engine reads a player's shape — an attribute against their own Overall — not just their level.
+/// Each coupling is checked between two sides of identical Overall, so only the shape differs.
+/// </summary>
+public sealed class AttributeCouplingTests
+{
+    private static readonly PossessionMatchEngine Engine = new();
+
+    private static readonly Lazy<(int HomeTurnovers, int AwaySteals)> Neutral = new(() => Totals(Rating(), Rating()));
+
+    [Fact]
+    public void BetterPassersForTheirLevelTurnTheBallOverLess()
+    {
+        // Both sides are Overall 70. One has its passing raised 15 and its strength lowered 15.
+        var passers = Totals(home: Rating(passing: +15, strength: -15), away: Rating()).HomeTurnovers;
+
+        Assert.True(passers < Neutral.Value.HomeTurnovers * 0.95, $"passers {passers} vs neutral {Neutral.Value.HomeTurnovers}");
+    }
+
+    [Fact]
+    public void AQuickerDefenceForcesMoreTurnoversAndStealsMore()
+    {
+        var quickDefence = Totals(home: Rating(), away: Rating(speed: +10, lateral: +10, height: -10, strength: -10));
+
+        Assert.True(quickDefence.HomeTurnovers > Neutral.Value.HomeTurnovers * 1.03, $"{quickDefence.HomeTurnovers} vs {Neutral.Value.HomeTurnovers}");
+        Assert.True(quickDefence.AwaySteals > Neutral.Value.AwaySteals, $"{quickDefence.AwaySteals} vs {Neutral.Value.AwaySteals}");
+    }
+
+    private static (int HomeTurnovers, int AwaySteals) Totals(PlayerRating home, PlayerRating away)
+    {
+        var turnovers = 0;
+        var steals = 0;
+        for (var seed = 0; seed < 600; seed++)
+        {
+            var setup = MatchTestFixtures.Setup(seed, home, away);
+            var box = Engine.Play(setup).Value.Result.BoxScore!;
+            turnovers += box.LinesFor(setup.Home.TeamId).Sum(line => line.Turnovers);
+            steals += box.LinesFor(setup.Away.TeamId).Sum(line => line.Steals);
+        }
+
+        return (turnovers, steals);
+    }
+
+    /// <summary>A rating of Overall 70 with the given shape: the deltas must sum to zero to keep the level.</summary>
+    private static PlayerRating Rating(int height = 0, int speed = 0, int strength = 0, int passing = 0, int lateral = 0) =>
+        new(70 + height, 70 + speed, 70 + strength, 70 + passing, 70 + lateral);
+}

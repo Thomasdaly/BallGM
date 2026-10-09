@@ -102,6 +102,35 @@ public sealed class GameSheetTests
     }
 
     [Fact]
+    public void Final_ShowsTheFourFactorsWithTheLosingSideOfEachDimmed()
+    {
+        var game = Played("g-final", day: 3, away: Away, home: Home, awayPoints: 96, homePoints: 104);
+        var shooting = CountingStats.None with { Games = 1, FieldGoalsMade = 40, FieldGoalsAttempted = 80, FreeThrowsMade = 16, OffensiveRebounds = 10, DefensiveRebounds = 30 };
+        var box = new BoxScoreSummary(
+            "g-final", 3, "2031-07-10", Home, "Home Side", 104, Away, "Away Side", 96, true, [], [],
+
+            // Home: 50.0 eFG%, 10 turnovers. Away: 45.0 eFG%, 14 turnovers; level at the line.
+            new BoxScoreTeamLine(shooting with { Points = 104, Turnovers = 10 }, 0, 0),
+            new BoxScoreTeamLine(shooting with { Points = 96, FieldGoalsMade = 36, Turnovers = 14 }, 0, 0));
+
+        var factors = GameSheet.Build(Input(game, currentDay: 6, fixtures: [game], played: box)).FourFactors;
+
+        var effective = factors.Single(row => row.Label == "Effective FG%");
+        Assert.Equal(("45.0", "50.0"), (effective.Away, effective.Home));
+        Assert.True(effective.AwayTrails);
+        Assert.False(effective.HomeTrails);
+
+        // Fewer turnovers is the better side.
+        var turnovers = factors.Single(row => row.Label == "Turnover %");
+        Assert.True(turnovers.AwayTrails);
+        Assert.EndsWith("home better", turnovers.AccessibleName, StringComparison.Ordinal);
+
+        var line = factors.Single(row => row.Label == "Free throws per FGA");
+        Assert.Equal(("20.0", "20.0"), (line.Away, line.Home));
+        Assert.False(line.AwayTrails || line.HomeTrails);
+    }
+
+    [Fact]
     public void Meetings_ListTheOtherGamesBetweenTheSameTwoTeamsOnly()
     {
         var first = Played("g-1", day: 1, away: Home, home: Away, awayPoints: 90, homePoints: 100);

@@ -5,8 +5,15 @@ using BallGM.Domain.Teams;
 
 namespace BallGM.Rules.Seasons;
 
-/// <summary>One player the allocator may use: who they are, where they play, and how good they are.</summary>
-public sealed record AvailablePlayer(PlayerId PlayerId, Position Position, int Overall);
+/// <summary>
+/// One player the allocator may use: who they are, where they play, and how good they are — the full
+/// rating, because the match engine reads a player's shape (passing, quickness, size) as well as
+/// their level. The rotation itself is still built from <see cref="Overall"/>.
+/// </summary>
+public sealed record AvailablePlayer(PlayerId PlayerId, Position Position, PlayerRating Rating)
+{
+    public int Overall => Rating.Overall;
+}
 
 /// <summary>
 /// A built rotation, with everything the rules had to say about building it — a position nobody on

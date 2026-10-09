@@ -27,12 +27,12 @@ public sealed record MatchTeam(
     IReadOnlyList<AvailablePlayer> Available,
     int RestDays)
 {
-    /// <summary>The rating of one player in this rotation, or null for somebody not in it.</summary>
-    public int? OverallOf(PlayerId playerId)
+    /// <summary>The full rating of one player in this rotation, or null for somebody not in it.</summary>
+    public PlayerRating? RatingOf(PlayerId playerId)
     {
         ArgumentNullException.ThrowIfNull(playerId);
 
-        return Available.FirstOrDefault(player => player.PlayerId == playerId)?.Overall;
+        return Available.FirstOrDefault(player => player.PlayerId == playerId)?.Rating;
     }
 }
 

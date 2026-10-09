@@ -27,7 +27,8 @@ public sealed class GameSheet
         string dayLine,
         GameSheetSide away,
         GameSheetSide home,
-        IReadOnlyList<MeetingRow> meetings)
+        IReadOnlyList<MeetingRow> meetings,
+        IReadOnlyList<FactorRow> fourFactors)
     {
         GameId = gameId;
         IsFinal = isFinal;
@@ -36,6 +37,7 @@ public sealed class GameSheet
         Away = away;
         Home = home;
         Meetings = meetings;
+        FourFactors = fourFactors;
     }
 
     public string GameId { get; }
@@ -58,6 +60,14 @@ public sealed class GameSheet
 
     public bool HasMeetings => Meetings.Count > 0;
 
+    /// <summary>
+    /// The four factors for a final game, away and home — the team-level explanation of the result:
+    /// who shot better, looked after the ball, crashed the glass, and got to the line.
+    /// </summary>
+    public IReadOnlyList<FactorRow> FourFactors { get; }
+
+    public bool HasFourFactors => FourFactors.Count > 0;
+
     public string LineupHeading => IsFinal ? "Box score" : "Projected rotations";
 
     // The sheet's three columns that are not counting stats of the row's own line: each defined once,
@@ -67,7 +77,7 @@ public sealed class GameSheet
     private static readonly StatHeader SeasonPpgHeader = new("PPG", "Season points per game, regular season.", 44);
 
     private static readonly IReadOnlyList<StatColumn> PreviewSeasonColumns =
-        [StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists, StatColumns.PlusMinus, StatColumns.FieldGoalPercent];
+        [StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists, StatColumns.Steals, StatColumns.Turnovers, StatColumns.PlusMinus, StatColumns.FieldGoalPercent, StatColumns.TrueShooting];
 
     private static readonly IReadOnlyList<StatHeader> FinalHeaders =
         [.. StatColumns.Headers(StatColumns.BoxScore), SeasonPpgHeader];
@@ -113,7 +123,31 @@ public sealed class GameSheet
             $"Day {game.Day} · {input.DateLine(game.Day)}",
             Side(input, game.AwayTeamId, game.AwayTeamName, isFinal ? game.AwayPoints : null, isFinal && awayWon, input.AwayChart, input.Played?.AwayLines, input.Played?.AwayTeam),
             Side(input, game.HomeTeamId, game.HomeTeamName, isFinal ? game.HomePoints : null, isFinal && !awayWon, input.HomeChart, input.Played?.HomeLines, input.Played?.HomeTeam),
-            meetings);
+            meetings,
+            input.Played is { AwayTeam: { } awayTeam, HomeTeam: { } homeTeam } ? FactorRows(awayTeam.Totals, homeTeam.Totals) : []);
+    }
+
+    private static IReadOnlyList<FactorRow> FactorRows(CountingStats away, CountingStats home)
+    {
+        var a = StatFormulas.FourFactorsFor(away, home);
+        var h = StatFormulas.FourFactorsFor(home, away);
+
+        // Two sides whose figures print the same are level; otherwise the raw values decide, with
+        // turnover % the one factor where lower is better (see FourFactors).
+        static FactorRow Row(string label, double? away, double? home, string tooltip, bool lowerIsBetter = false)
+        {
+            var (shownAway, shownHome) = (StatColumns.Percent(away), StatColumns.Percent(home));
+            var edge = shownAway == shownHome || away is not { } x || home is not { } y ? 0 : Math.Sign(lowerIsBetter ? x - y : y - x);
+            return new(label, shownAway, shownHome, tooltip, edge);
+        }
+
+        return
+        [
+            Row("Effective FG%", a.EffectiveFieldGoal, h.EffectiveFieldGoal, "Shooting: (FGM + 0.5 × 3PM) / FGA."),
+            Row("Turnover %", a.TurnoverPercent, h.TurnoverPercent, "Ball security: TOV / (FGA + 0.44 × FTA + TOV).", lowerIsBetter: true),
+            Row("Offensive rebound %", a.OffensiveReboundPercent, h.OffensiveReboundPercent, "Second chances: OREB / (OREB + opponent DREB)."),
+            Row("Free throws per FGA", a.FreeThrowsPerFieldGoal, h.FreeThrowsPerFieldGoal, "Getting to the line: FTM per 100 field-goal attempts."),
+        ];
     }
 
     private static GameSheetSide Side(
@@ -163,7 +197,7 @@ public sealed class GameSheet
             totals = teamLine is null ? [] : [.. StatColumns.Cells(teamLine.Totals, StatColumns.BoxScore), SeasonPpgHeader.Cell(string.Empty)];
             teamRebounds = teamLine is null
                 ? string.Empty
-                : string.Create(CultureInfo.InvariantCulture, $"Team rebounds: {teamLine.TeamRebounds} ({teamLine.TeamOffensiveRebounds} offensive, {teamLine.TeamDefensiveRebounds} defensive) — boards no player secured, counted so every miss is accounted for.");
+                : string.Create(CultureInfo.InvariantCulture, $"Team rebounds: {teamLine.TeamRebounds} ({teamLine.TeamOffensiveRebounds} offensive, {teamLine.TeamDefensiveRebounds} defensive) — boards no player secured, included in the team row so every miss is accounted for.");
             note = string.Empty;
         }
         else if (input.Game.Played)
@@ -356,6 +390,23 @@ public sealed record LineupRow(
     bool HasOverall,
     IReadOnlyList<StatValue> Stats,
     string Tip);
+
+/// <summary>One of the four factors, both sides' figures, and what it measures.</summary>
+/// <remarks><see cref="Edge"/> is which side won the factor: negative away, positive home, zero level or unknown.</remarks>
+public sealed record FactorRow(string Label, string Away, string Home, string Tooltip, int Edge)
+{
+    /// <summary>The side that lost the factor is set dimmed; weight and ink only, never team paint or status colour.</summary>
+    public bool AwayTrails => Edge > 0;
+
+    public bool HomeTrails => Edge < 0;
+
+    public string AccessibleName => $"{Label}: away {Away}, home {Home}" + Edge switch
+    {
+        < 0 => ", away better",
+        > 0 => ", home better",
+        _ => string.Empty,
+    };
+}
 
 /// <summary>Another meeting between the same two teams this season.</summary>
 public sealed record MeetingRow(string GameId, string DayLine, string Matchup, string Score, bool IsPlayed, string Winner)

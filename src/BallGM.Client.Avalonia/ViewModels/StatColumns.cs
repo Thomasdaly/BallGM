@@ -74,6 +74,9 @@ public static class StatColumns
     public static readonly StatColumn Rebounds = Counting("REB", "Rebounds, offensive and defensive", stats => stats.Rebounds);
     public static readonly StatColumn Assists = Counting("AST", "Assists: passes leading directly to a teammate's basket", stats => stats.Assists);
 
+    public static readonly StatColumn Steals = Counting("STL", "Steals: live-ball turnovers forced", stats => stats.Steals);
+    public static readonly StatColumn Turnovers = Counting("TOV", "Turnovers: possessions lost without a shot", stats => stats.Turnovers);
+
     /// <summary>Signed: the score difference while this player was on the floor.</summary>
     public static readonly StatColumn PlusMinus = Counting(
         "+/-", "Plus-minus: points scored minus points allowed while this player was on the floor", stats => stats.PlusMinus, Wide, signed: true);
@@ -89,11 +92,11 @@ public static class StatColumns
 
     /// <summary>One game's line, as a box score shows it.</summary>
     public static IReadOnlyList<StatColumn> BoxScore { get; } =
-        [Minutes, Points, FieldGoals, Threes, FreeThrows, OffensiveRebounds, DefensiveRebounds, Rebounds, Assists, PlusMinus];
+        [Minutes, Points, FieldGoals, Threes, FreeThrows, OffensiveRebounds, DefensiveRebounds, Rebounds, Assists, Steals, Turnovers, PlusMinus];
 
     /// <summary>A run of games, as a roster or a preview shows it: averages and shooting rates.</summary>
     public static IReadOnlyList<StatColumn> Season { get; } =
-        [Games, Minutes, Points, Rebounds, Assists, PlusMinus, FieldGoalPercent, ThreePointPercent, FreeThrowPercent, TrueShooting];
+        [Games, Minutes, Points, Rebounds, Assists, Steals, Turnovers, PlusMinus, FieldGoalPercent, ThreePointPercent, FreeThrowPercent, TrueShooting];
 
     public static IReadOnlyList<StatHeader> Headers(IEnumerable<StatColumn> columns, StatBasis basis = StatBasis.Totals) =>
         columns.Select(column => column.HeaderFor(basis)).ToList();

@@ -16,7 +16,7 @@ public sealed class BoxScoreTests
     [Fact]
     public void ReboundsIsTheSumOfTheOffensiveAndDefensiveSplit()
     {
-        var line = Line(new PlayerId("P1"), Home, minutes: 30, points: 10, offensiveRebounds: 3, defensiveRebounds: 5, assists: 2, usagePercent: 100);
+        var line = Line(new PlayerId("P1"), Home, minutes: 30, points: 10, offensiveRebounds: 3, defensiveRebounds: 5, assists: 2);
 
         Assert.Equal(8, line.Rebounds);
     }
@@ -26,8 +26,8 @@ public sealed class BoxScoreTests
     {
         Assert.Throws<ArgumentException>(() => new PlayerStatLine(
             new PlayerId("P1"), Home, minutes: 20, points: 10, offensiveRebounds: 0, defensiveRebounds: 0,
-            assists: 0, usagePercent: 100, fieldGoalsAttempted: 4, fieldGoalsMade: 4, threePointsAttempted: 0,
-            threePointsMade: 0, freeThrowsAttempted: 0, freeThrowsMade: 0, started: true, plusMinus: 0));
+            assists: 0, fieldGoalsAttempted: 4, fieldGoalsMade: 4, threePointsAttempted: 0,
+            threePointsMade: 0, freeThrowsAttempted: 0, freeThrowsMade: 0, started: true, plusMinus: 0, steals: 0, turnovers: 0));
     }
 
     [Fact]
@@ -37,53 +37,22 @@ public sealed class BoxScoreTests
         // each type) and 1 FTA made.
         var line = new PlayerStatLine(
             new PlayerId("P1"), Home, minutes: 20, points: 6, offensiveRebounds: 0, defensiveRebounds: 0,
-            assists: 0, usagePercent: 100, fieldGoalsAttempted: 2, fieldGoalsMade: 2, threePointsAttempted: 1,
-            threePointsMade: 1, freeThrowsAttempted: 1, freeThrowsMade: 1, started: true, plusMinus: 0);
+            assists: 0, fieldGoalsAttempted: 2, fieldGoalsMade: 2, threePointsAttempted: 1,
+            threePointsMade: 1, freeThrowsAttempted: 1, freeThrowsMade: 1, started: true, plusMinus: 0, steals: 0, turnovers: 0);
 
         Assert.Equal(6, line.Points);
     }
 
     [Fact]
-    public void CreateSucceedsWhenEveryTeamsUsageSharesSumToOneHundred()
+    public void CreateSucceedsWhenEveryLineIsConsistent()
     {
         var result = Build(
             homePoints: 10,
             awayPoints: 5,
             [
-                Line(new PlayerId("H1"), Home, 20, 6, 1, 1, 0, 60),
-                Line(new PlayerId("H2"), Home, 20, 4, 1, 1, 0, 40),
-                Line(new PlayerId("A1"), Away, 20, 5, 1, 1, 0, 100),
-            ]);
-
-        Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
-    }
-
-    [Fact]
-    public void CreateRefusesATeamWhoseUsageSharesDoNotSumToOneHundred()
-    {
-        var result = Build(
-            homePoints: 10,
-            awayPoints: 5,
-            [
-                Line(new PlayerId("H1"), Home, 20, 6, 1, 1, 0, 60),
-                Line(new PlayerId("H2"), Home, 20, 4, 1, 1, 0, 30),
-                Line(new PlayerId("A1"), Away, 20, 5, 1, 1, 0, 100),
-            ]);
-
-        Assert.True(result.IsFailure);
-        Assert.Contains(result.Errors, error => error.Code == "box_score.usage_percent_does_not_sum_to_whole");
-    }
-
-    [Fact]
-    public void CreateDoesNotCheckUsageForATeamWithNoLinesAtAll()
-    {
-        // Nothing to sum is not the same as summing to the wrong number — a team with no lines is
-        // its own, separately reported situation, not a usage-share violation.
-        var result = Build(
-            homePoints: 5,
-            awayPoints: 0,
-            [
-                Line(new PlayerId("H1"), Home, 20, 5, 1, 1, 0, 100),
+                Line(new PlayerId("H1"), Home, 20, 6, 1, 1, 0),
+                Line(new PlayerId("H2"), Home, 20, 4, 1, 1, 0),
+                Line(new PlayerId("A1"), Away, 20, 5, 1, 1, 0),
             ]);
 
         Assert.True(result.IsSuccess, string.Join("; ", result.Errors.Select(error => error.Message)));
@@ -95,8 +64,8 @@ public sealed class BoxScoreTests
         // 5 FGA, 1 FGM, 5 3PA, 3 3PM would mean negative two-point makes, yet it adds up to 5 points.
         Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerStatLine(
             new PlayerId("P1"), Home, minutes: 20, points: 5, offensiveRebounds: 0, defensiveRebounds: 0,
-            assists: 0, usagePercent: 100, fieldGoalsAttempted: 5, fieldGoalsMade: 1, threePointsAttempted: 5,
-            threePointsMade: 3, freeThrowsAttempted: 0, freeThrowsMade: 0, started: true, plusMinus: 0));
+            assists: 0, fieldGoalsAttempted: 5, fieldGoalsMade: 1, threePointsAttempted: 5,
+            threePointsMade: 3, freeThrowsAttempted: 0, freeThrowsMade: 0, started: true, plusMinus: 0, steals: 0, turnovers: 0));
     }
 
     [Fact]
@@ -139,8 +108,8 @@ public sealed class BoxScoreTests
         // The only home basket is H1's own; H1 cannot have assisted it.
         PlayerStatLine[] lines =
         [
-            Shooter(new PlayerId("H1"), Home, fga: 1, fgm: 1, oreb: 0, dreb: 0, ast: 1, usage: 50),
-            Shooter(new PlayerId("H2"), Home, fga: 0, fgm: 0, oreb: 0, dreb: 0, ast: 0, usage: 50),
+            Shooter(new PlayerId("H1"), Home, fga: 1, fgm: 1, oreb: 0, dreb: 0, ast: 1),
+            Shooter(new PlayerId("H2"), Home, fga: 0, fgm: 0, oreb: 0, dreb: 0, ast: 0),
             Shooter(new PlayerId("A1"), Away, fga: 0, fgm: 0, oreb: 0, dreb: 0, ast: 0),
         ];
         var (home, away) = BalancedTeamLines.For(Home, Away, lines);
@@ -156,7 +125,7 @@ public sealed class BoxScoreTests
         // Five free-throw shooters a side; home wins 10-5. Minutes 48 each fills 240; plus-minus is
         // then varied away from 5 × margin = +25.
         PlayerStatLine Line(string id, TeamId team, int minutes, int points, int plusMinus) => new(
-            new PlayerId(id), team, minutes, points, 0, 0, 0, 20, 0, 0, 0, 0, points, points, started: true, plusMinus);
+            new PlayerId(id), team, minutes, points, 0, 0, 0, 0, 0, 0, 0, points, points, started: true, plusMinus, steals: 0, turnovers: 0);
 
         var home = Enumerable.Range(0, 5).Select(index => Line($"H{index}", Home, 48, 2, plusMinus: 5)).ToList();
         var away = Enumerable.Range(0, 5).Select(index => Line($"A{index}", Away, 48, 1, plusMinus: -5)).ToList();
@@ -171,12 +140,28 @@ public sealed class BoxScoreTests
             error => error.Code == "box_score.plus_minus_does_not_match_margin");
     }
 
+    [Fact]
+    public void CreateRefusesMoreStealsThanTheOtherSideHadTurnovers()
+    {
+        // A steal is the other side's turnover: home cannot take the ball away more often than away lost it.
+        PlayerStatLine Line(string id, TeamId team, int steals, int turnovers) => new(
+            new PlayerId(id), team, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, started: true, plusMinus: 0, steals, turnovers);
+
+        DomainOperationResult<BoxScore> Build(int homeSteals, int awayTurnovers) => BoxScore.Create(
+            GameId.For(Season, SeasonDay.Opening, 0), 0, 0,
+            [Line("H", Home, homeSteals, 0), Line("A", Away, 0, awayTurnovers)],
+            new TeamStatLine(Home, 0, 0, 0), new TeamStatLine(Away, 0, 0, 0), overtimePeriods: 0);
+
+        Assert.DoesNotContain(Build(homeSteals: 3, awayTurnovers: 3).Errors, error => error.Code == "box_score.steals_exceed_opponent_turnovers");
+        Assert.Contains(Build(homeSteals: 4, awayTurnovers: 3).Errors, error => error.Code == "box_score.steals_exceed_opponent_turnovers");
+    }
+
     private static PlayerStatLine Shooter(
-        PlayerId playerId, TeamId teamId, int fga, int fgm, int oreb, int dreb, int ast, int ftm = 0, int fta = 0, int usage = 100) =>
+        PlayerId playerId, TeamId teamId, int fga, int fgm, int oreb, int dreb, int ast, int ftm = 0, int fta = 0) =>
         new(
-            playerId, teamId, minutes: 20, points: (2 * fgm) + ftm, oreb, dreb, ast, usage,
+            playerId, teamId, minutes: 20, points: (2 * fgm) + ftm, oreb, dreb, ast,
             fieldGoalsAttempted: fga, fieldGoalsMade: fgm, threePointsAttempted: 0, threePointsMade: 0,
-            freeThrowsAttempted: fta, freeThrowsMade: ftm, started: true, plusMinus: 0);
+            freeThrowsAttempted: fta, freeThrowsMade: ftm, started: true, plusMinus: 0, steals: 0, turnovers: 0);
 
     private static DomainOperationResult<BoxScore> Build(
         int homePoints, int awayPoints, IReadOnlyCollection<PlayerStatLine> lines)
@@ -193,9 +178,9 @@ public sealed class BoxScoreTests
     /// </summary>
     private static PlayerStatLine Line(
         PlayerId playerId, TeamId teamId, int minutes, int points, int offensiveRebounds, int defensiveRebounds,
-        int assists, int usagePercent) =>
+        int assists) =>
         new(
-            playerId, teamId, minutes, points, offensiveRebounds, defensiveRebounds, assists, usagePercent,
+            playerId, teamId, minutes, points, offensiveRebounds, defensiveRebounds, assists,
             fieldGoalsAttempted: 0, fieldGoalsMade: 0, threePointsAttempted: 0, threePointsMade: 0,
-            freeThrowsAttempted: points, freeThrowsMade: points, started: true, plusMinus: 0);
+            freeThrowsAttempted: points, freeThrowsMade: points, started: true, plusMinus: 0, steals: 0, turnovers: 0);
 }

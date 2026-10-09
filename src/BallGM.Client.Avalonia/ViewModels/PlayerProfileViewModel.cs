@@ -10,6 +10,8 @@ namespace BallGM.Client.Avalonia.ViewModels;
 /// </summary>
 public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action back) : ViewModelBase
 {
+    private StatBasisChoice? _basis;
+
     public RelayCommand BackCommand { get; } = new(back);
 
     public string FullName => profile.FullName;
@@ -75,8 +77,13 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
 
     public bool HasSimulatedStats => profile.SeasonDetail is not null;
 
-    public IReadOnlyList<StatGroup> SimulatedGroups { get; } = profile.SeasonDetail is { } detail
-        ? PlayerStatsSections.SimulatedSeason(detail)
+    /// <summary>Per game, per 36 minutes, or totals for the simulated season's panels.</summary>
+    public StatBasisChoice Basis => _basis ??= Redraws(new StatBasisChoice());
+
+    public string SimulatedSample => profile.SeasonDetail is { } detail ? PlayerStatsSections.SimulatedSample(detail) : string.Empty;
+
+    public IReadOnlyList<StatGroup> SimulatedGroups => profile.SeasonDetail is { } detail
+        ? PlayerStatsSections.SimulatedSeason(detail, Basis.Basis)
         : [];
 
     /// <summary>The latest stated (not simulated) season that carries metrics, e.g. last real season.</summary>
@@ -90,6 +97,12 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
     public IReadOnlyList<StatGroup> StatedGroups { get; } = LastStated(profile) is { } stated
         ? PlayerStatsSections.StatedSeason(stated)
         : [];
+
+    private StatBasisChoice Redraws(StatBasisChoice choice)
+    {
+        choice.Changed += () => RaisePropertyChanged(nameof(SimulatedGroups));
+        return choice;
+    }
 
     // Contract, in depth.
     public bool HasContractDetail => profile.ContractDetail is { Years.Count: > 0 };

@@ -4,7 +4,38 @@
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  xmlns:views="clr-namespace:BallGM.Client.Avalonia.Views"
   x:DataType="vm:PlayerProfileViewModel">
+  <UserControl.Resources>
+    <!-- One titled panel of stat tiles, for the simulated and the stated season alike. -->
+    <DataTemplate x:Key="StatGroupTemplate" x:DataType="vm:StatGroup">
+      <Border Classes="panel" Margin="0,0,0,14">
+        <StackPanel Spacing="10">
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="{Binding Title}" Classes="section" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Subtitle}" Classes="faint tiny" VerticalAlignment="Center" />
+          </StackPanel>
+          <ItemsControl ItemsSource="{Binding Cells}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:StatCell">
+                <Border Classes="stat" MinWidth="104" Padding="12,8" ToolTip.Tip="{Binding Definition}" AutomationProperties.Name="{Binding AccessibleName}">
+                  <StackPanel Spacing="1">
+                    <TextBlock Text="{Binding Label}" Classes="eyebrow" />
+                    <TextBlock Text="{Binding Value}" Classes="num statvalue" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+    </DataTemplate>
+  </UserControl.Resources>
   <ScrollViewer>
     <StackPanel Spacing="18">
       <Button Content="‹ Back to roster" Command="{Binding BackCommand}" HorizontalAlignment="Left" />
@@ -124,70 +155,14 @@
           <StackPanel Spacing="8" Margin="0,14,0,0">
             <TextBlock Text="This season, simulated" Classes="section" />
             <TextBlock Text="No games played this season yet. Start or advance the season on the Calendar." Classes="faint small" IsVisible="{Binding !HasSimulatedStats}" />
-              <ItemsControl ItemsSource="{Binding SimulatedGroups}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:StatGroup">
-                    <Border Classes="panel" Margin="0,0,0,14">
-                      <StackPanel Spacing="10">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                          <TextBlock Text="{Binding Title}" Classes="section" VerticalAlignment="Center" />
-                          <TextBlock Text="{Binding Subtitle}" Classes="faint tiny" VerticalAlignment="Center" />
-                        </StackPanel>
-                        <ItemsControl ItemsSource="{Binding Cells}">
-                          <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                              <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
-                            </ItemsPanelTemplate>
-                          </ItemsControl.ItemsPanel>
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:StatCell">
-                              <Border Classes="stat" MinWidth="104" Padding="12,8" ToolTip.Tip="{Binding Definition}">
-                                <StackPanel Spacing="1">
-                                  <TextBlock Text="{Binding Label}" Classes="eyebrow" />
-                                  <TextBlock Text="{Binding Value}" FontSize="19" FontWeight="Black" FontStyle="Italic" />
-                                </StackPanel>
-                              </Border>
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" Margin="0,0,0,6" IsVisible="{Binding HasSimulatedStats}">
+              <views:BasisToggle DataContext="{Binding Basis}" />
+              <TextBlock Text="{Binding SimulatedSample}" Classes="faint small" VerticalAlignment="Center" />
+            </StackPanel>
+            <ItemsControl ItemsSource="{Binding SimulatedGroups}" ItemTemplate="{StaticResource StatGroupTemplate}" />
             <TextBlock Text="{Binding StatedSeasonTitle}" Classes="eyebrow" IsVisible="{Binding HasStatedStats}" Margin="0,10,0,0" />
-              <ItemsControl ItemsSource="{Binding StatedGroups}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:StatGroup">
-                    <Border Classes="panel" Margin="0,0,0,14">
-                      <StackPanel Spacing="10">
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                          <TextBlock Text="{Binding Title}" Classes="section" VerticalAlignment="Center" />
-                          <TextBlock Text="{Binding Subtitle}" Classes="faint tiny" VerticalAlignment="Center" />
-                        </StackPanel>
-                        <ItemsControl ItemsSource="{Binding Cells}">
-                          <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                              <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
-                            </ItemsPanelTemplate>
-                          </ItemsControl.ItemsPanel>
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:StatCell">
-                              <Border Classes="stat" MinWidth="104" Padding="12,8" ToolTip.Tip="{Binding Definition}">
-                                <StackPanel Spacing="1">
-                                  <TextBlock Text="{Binding Label}" Classes="eyebrow" />
-                                  <TextBlock Text="{Binding Value}" FontSize="19" FontWeight="Black" FontStyle="Italic" />
-                                </StackPanel>
-                              </Border>
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            <TextBlock Text="Hover any stat for its definition. Simulated rate stats use the player's share of team minutes, as box scores do not record who shared the floor." Classes="faint tiny" TextWrapping="Wrap" />
+            <ItemsControl ItemsSource="{Binding StatedGroups}" ItemTemplate="{StaticResource StatGroupTemplate}" />
+            <TextBlock Text="Hover any stat for its definition. Simulated rate stats use the player's share of team minutes, the standard box-score estimate." Classes="faint tiny" TextWrapping="Wrap" />
           </StackPanel>
         </TabItem>
 

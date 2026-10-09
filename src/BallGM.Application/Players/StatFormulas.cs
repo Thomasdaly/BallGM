@@ -32,7 +32,7 @@ public static class StatFormulas
     /// <summary>TS% = PTS / (2 × (FGA + 0.44 × FTA)) — scoring efficiency counting threes and free throws.</summary>
     public static double? TrueShooting(int points, int fga, int fta)
     {
-        var attempts = 2 * (fga + (0.44 * fta));
+        var attempts = 2 * (fga + (FreeThrowTripWeight * fta));
         return attempts == 0 ? null : points / attempts;
     }
 
@@ -74,7 +74,7 @@ public static class StatFormulas
     /// opponent DREB), defensive (team DREB + opponent OREB), and total rebounds.
     /// </summary>
     public static double? ReboundPercent(int rebounds, int minutes, int teamMinutes, int availableRebounds) =>
-        minutes == 0 || availableRebounds == 0 ? null : rebounds * (teamMinutes / 5.0) / (minutes * (double)availableRebounds);
+        OnFloorShare(rebounds, minutes, teamMinutes, availableRebounds);
 
     /// <summary>A counting stat per 36 minutes — the standard rate for comparing players across roles.</summary>
     public static double? Per36(int total, int minutes) => minutes == 0 ? null : total * 36.0 / minutes;
@@ -104,4 +104,86 @@ public static class StatFormulas
     public static double? TrueShooting(CountingStats stats) => TrueShooting(stats.Points, stats.FieldGoalsAttempted, stats.FreeThrowsAttempted);
 
     public static double? EffectiveFieldGoal(CountingStats stats) => EffectiveFieldGoal(stats.FieldGoalsMade, stats.ThreePointsMade, stats.FieldGoalsAttempted);
+
+    /// <summary>
+    /// The share of a possession one free-throw attempt stands for in a play or possession count: two-
+    /// and three-shot trips, and-ones and technicals mean an attempt ends about 0.44 of a possession.
+    /// </summary>
+    private const double FreeThrowTripWeight = 0.44;
+
+    /// <summary>Plays a player or side used: FGA + 0.44 × FTA + TOV — every way a possession can end in their hands.</summary>
+    public static double Plays(CountingStats stats)
+    {
+        ArgumentNullException.ThrowIfNull(stats);
+        return stats.FieldGoalsAttempted + (FreeThrowTripWeight * stats.FreeThrowsAttempted) + stats.Turnovers;
+    }
+
+    /// <summary>Possessions a side used, estimated from its box score: plays less offensive rebounds (FGA + 0.44 × FTA − OREB + TOV).</summary>
+    public static double Possessions(CountingStats side) => Plays(side) - side.OffensiveRebounds;
+
+    /// <summary>Points per 100 possessions — offensive rating for a side's own scoring, defensive rating for what it allowed.</summary>
+    public static double? Rating(CountingStats side)
+    {
+        var possessions = Possessions(side);
+        return possessions <= 0 ? null : 100.0 * side.Points / possessions;
+    }
+
+    /// <summary>Net rating: points scored less points allowed, each per 100 possessions.</summary>
+    public static double? NetRating(CountingStats side, CountingStats opponent) => Rating(side) - Rating(opponent);
+
+    /// <summary>TOV% = TOV / (FGA + 0.44 × FTA + TOV): turnovers per play used.</summary>
+    public static double? TurnoverPercent(CountingStats stats)
+    {
+        var plays = Plays(stats);
+        return plays <= 0 ? null : stats.Turnovers / plays;
+    }
+
+    /// <summary>AST/TO: assists per turnover.</summary>
+    public static double? AssistToTurnover(CountingStats stats) => Percent(stats.Assists, stats.Turnovers);
+
+    /// <summary>
+    /// The share of a pool a player took while on the floor, estimated from share of team minutes:
+    /// value × (TmMIN / 5) / (MIN × pool). Rebound, usage and steal percentages are all this shape.
+    /// </summary>
+    public static double? OnFloorShare(double value, int minutes, int teamMinutes, double pool) =>
+        minutes == 0 || pool <= 0 ? null : value * (teamMinutes / 5.0) / (minutes * pool);
+
+    /// <summary>USG%: the share of the team's plays a player used while on the floor.</summary>
+    public static double? UsagePercent(CountingStats player, CountingStats team)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(team);
+        return OnFloorShare(Plays(player), player.Minutes, team.Minutes, Plays(team));
+    }
+
+    /// <summary>STL%: the share of opponent possessions a player ended with a steal while on the floor.</summary>
+    public static double? StealPercent(CountingStats player, CountingStats team, CountingStats opponent)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(team);
+        return OnFloorShare(player.Steals, player.Minutes, team.Minutes, Possessions(opponent));
+    }
+
+    /// <summary>
+    /// The four factors that decide a game, for one side against its opponent: shooting (eFG%),
+    /// ball security (TOV%), offensive rebounding (OREB / (OREB + opponent DREB)) and getting to the
+    /// line (FTM / FGA).
+    /// </summary>
+    public static FourFactors FourFactorsFor(CountingStats side, CountingStats opponent)
+    {
+        ArgumentNullException.ThrowIfNull(side);
+        ArgumentNullException.ThrowIfNull(opponent);
+
+        return new FourFactors(
+            EffectiveFieldGoal(side),
+            TurnoverPercent(side),
+            Percent(side.OffensiveRebounds, side.OffensiveRebounds + opponent.DefensiveRebounds),
+            Percent(side.FreeThrowsMade, side.FieldGoalsAttempted));
+    }
 }
+
+/// <summary>
+/// Dean Oliver's four factors for one side; each null when its denominator is empty. Higher is
+/// better for every factor except <see cref="TurnoverPercent"/>, where lower is.
+/// </summary>
+public sealed record FourFactors(double? EffectiveFieldGoal, double? TurnoverPercent, double? OffensiveReboundPercent, double? FreeThrowsPerFieldGoal);

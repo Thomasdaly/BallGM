@@ -25,7 +25,6 @@ public sealed class RosterViewModel : ViewModelBase
     private bool _sortDescending = true;
     private int _sortStat;
     private IReadOnlyDictionary<string, PlayerSeasonTotals>? _cachedTotals;
-    private StatBasis _basis = StatBasis.PerGame;
 
     public RosterViewModel(
         LeagueOverview overview,
@@ -43,6 +42,11 @@ public sealed class RosterViewModel : ViewModelBase
         SortBySalaryCommand = SortCommand(RosterSortColumn.Salary);
         SortByYearsCommand = SortCommand(RosterSortColumn.Years);
         SortByStatCommand = new ParameterCommand<int>(index => SortBy(RosterSortColumn.Stat, index));
+        Basis.Changed += () =>
+        {
+            RaisePropertyChanged(nameof(StatHeaders));
+            RaisePropertyChanged(nameof(Rows));
+        };
     }
 
     public string Title => "Roster";
@@ -122,77 +126,15 @@ public sealed class RosterViewModel : ViewModelBase
 
     /// <summary>The season stat columns, one header per column, labelled for the chosen basis.</summary>
     public IReadOnlyList<RosterStatHeader> StatHeaders =>
-        StatColumns.Headers(StatColumns.Season, Basis)
+        StatColumns.Headers(StatColumns.Season, Basis.Basis)
             .Select((header, index) => new RosterStatHeader(
                 header,
                 index,
                 _sortColumn == RosterSortColumn.Stat && _sortStat == index ? (_sortDescending ? " ▾" : " ▴") : string.Empty))
             .ToList();
 
-    private void RaiseBasisFlags()
-    {
-        RaisePropertyChanged(nameof(IsPerGame));
-        RaisePropertyChanged(nameof(IsPer36));
-        RaisePropertyChanged(nameof(IsTotals));
-    }
-
-    /// <summary>Per game, per 36 minutes, or totals — the same three choices every stat table offers.</summary>
-    public StatBasis Basis
-    {
-        get => _basis;
-        set
-        {
-            if (_basis == value)
-            {
-                return;
-            }
-
-            _basis = value;
-            RaisePropertyChanged(nameof(Basis));
-            RaiseBasisFlags();
-            RaisePropertyChanged(nameof(StatHeaders));
-            RaisePropertyChanged(nameof(Rows));
-        }
-    }
-
-    /// <summary>One radio chip of three; only a chip being chosen changes the basis.</summary>
-    public bool IsPerGame
-    {
-        get => _basis == StatBasis.PerGame;
-        set
-        {
-            if (value)
-            {
-                Basis = StatBasis.PerGame;
-            }
-        }
-    }
-
-    /// <summary>One radio chip of three; only a chip being chosen changes the basis.</summary>
-    public bool IsPer36
-    {
-        get => _basis == StatBasis.Per36;
-        set
-        {
-            if (value)
-            {
-                Basis = StatBasis.Per36;
-            }
-        }
-    }
-
-    /// <summary>One radio chip of three; only a chip being chosen changes the basis.</summary>
-    public bool IsTotals
-    {
-        get => _basis == StatBasis.Totals;
-        set
-        {
-            if (value)
-            {
-                Basis = StatBasis.Totals;
-            }
-        }
-    }
+    /// <summary>Per game, per 36 minutes, or totals — the shared choice every stat table offers.</summary>
+    public StatBasisChoice Basis { get; } = new();
 
     /// <summary>The roster as table rows in the chosen sort order (best first by default).</summary>
     public IReadOnlyList<RosterRow> Rows
@@ -200,7 +142,7 @@ public sealed class RosterViewModel : ViewModelBase
         get
         {
             var totals = SeasonTotals;
-            var rows = Roster.Select(spot => RosterRow.From(spot, totals.GetValueOrDefault(spot.PlayerId)?.Stats, _basis)).ToList();
+            var rows = Roster.Select(spot => RosterRow.From(spot, totals.GetValueOrDefault(spot.PlayerId)?.Stats, Basis.Basis)).ToList();
             IOrderedEnumerable<RosterRow> ordered = _sortColumn switch
             {
                 RosterSortColumn.Name => Order(rows, row => row.FullName),

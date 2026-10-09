@@ -24,6 +24,8 @@ public sealed class RosterStatColumnsTests
         DefensiveRebounds = 16,
         Assists = 24,
         PlusMinus = 18,
+        Steals = 6,
+        Turnovers = 10,
     };
 
     [Fact]
@@ -33,8 +35,8 @@ public sealed class RosterStatColumnsTests
         var per36 = RosterRow.From(Spot, Season, StatBasis.Per36);
         var totals = RosterRow.From(Spot, Season, StatBasis.Totals);
 
-        Assert.Equal(["GP", "MIN", "PTS", "REB", "AST", "+/-", "FG%", "3P%", "FT%", "TS%"], StatColumns.Season.Select(column => column.Header));
-        Assert.Equal(["4", "30.0", "20.0", "5.0", "6.0", "+4.5", "50.0", "40.0", "75.0", "59.7"], perGame.Stats.Select(cell => cell.Value));
+        Assert.Equal(["GP", "MIN", "PTS", "REB", "AST", "STL", "TOV", "+/-", "FG%", "3P%", "FT%", "TS%"], StatColumns.Season.Select(column => column.Header));
+        Assert.Equal(["4", "30.0", "20.0", "5.0", "6.0", "1.5", "2.5", "+4.5", "50.0", "40.0", "75.0", "59.7"], perGame.Stats.Select(cell => cell.Value));
         Assert.Equal("24.0", per36.Stats[2].Value);
         Assert.Equal("30.0", per36.Stats[1].Value); // minutes stay per game on a per-36 view
         Assert.Equal("80", totals.Stats[2].Value);

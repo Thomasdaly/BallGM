@@ -212,11 +212,11 @@ public sealed class SeasonSerializer
             if (saved.BoxScore is not null)
             {
                 // Fields a version-5 box score always states: a missing one is a malformed file, not a zero.
-                if (saved.OvertimePeriods is null || saved.BoxScore.Any(line => line.PlusMinus is null))
+                if (saved.OvertimePeriods is null || saved.BoxScore.Any(line => line.PlusMinus is null || line.Steals is null || line.Turnovers is null))
                 {
                     return DomainOperationResult<IReadOnlyList<GameResult>>.Failure(new DomainError(
                         InvalidFieldCode,
-                        $"The save records a box score for game '{saved.GameId}' without its overtime count or every line's plus-minus."));
+                        $"The save records a box score for game '{saved.GameId}' without its overtime count or every line's plus-minus, steals and turnovers."));
                 }
 
                 if (saved.HomeTeam is null || saved.AwayTeam is null)
@@ -238,7 +238,6 @@ public sealed class SeasonSerializer
                         line.OffensiveRebounds,
                         line.DefensiveRebounds,
                         line.Assists,
-                        line.UsagePercent,
                         line.FieldGoalsAttempted,
                         line.FieldGoalsMade,
                         line.ThreePointsAttempted,
@@ -246,7 +245,9 @@ public sealed class SeasonSerializer
                         line.FreeThrowsAttempted,
                         line.FreeThrowsMade,
                         line.Started,
-                        line.PlusMinus!.Value)),
+                        line.PlusMinus!.Value,
+                        line.Steals!.Value,
+                        line.Turnovers!.Value)),
                     ToTeamLine(fixture.HomeTeamId, saved.HomeTeam),
                     ToTeamLine(fixture.AwayTeamId, saved.AwayTeam),
                     saved.OvertimePeriods.Value);
@@ -287,7 +288,6 @@ public sealed class SeasonSerializer
                         line.OffensiveRebounds,
                         line.DefensiveRebounds,
                         line.Assists,
-                        line.UsagePercent,
                         line.FieldGoalsAttempted,
                         line.FieldGoalsMade,
                         line.ThreePointsAttempted,
@@ -295,7 +295,9 @@ public sealed class SeasonSerializer
                         line.FreeThrowsAttempted,
                         line.FreeThrowsMade,
                         line.Started,
-                        line.PlusMinus))
+                        line.PlusMinus,
+                        line.Steals,
+                        line.Turnovers))
                     .ToList(),
             result.BoxScore is null ? null : ToEnvelope(result.BoxScore.Home),
             result.BoxScore is null ? null : ToEnvelope(result.BoxScore.Away),

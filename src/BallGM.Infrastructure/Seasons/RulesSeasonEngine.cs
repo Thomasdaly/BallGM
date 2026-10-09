@@ -249,7 +249,7 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
                 team.PlayerIds
                     .Select(playerId => playersById.GetValueOrDefault(playerId))
                     .Where(player => player is not null && !player.IsInjured)
-                    .Select(player => new AvailablePlayer(player!.Id, player.Position, player.Rating.Overall))
+                    .Select(player => new AvailablePlayer(player!.Id, player.Position, player.Rating))
                     .ToList()))
             .ToList();
 

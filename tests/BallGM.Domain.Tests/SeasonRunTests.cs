@@ -284,8 +284,8 @@ public sealed class GameResultTests
 
         PlayerStatLine[] lines =
         [
-            new PlayerStatLine(new PlayerId("P1"), home, 30, 40, 2, 3, 0, 100, 0, 0, 0, 0, 40, 40, true, 0),
-            new PlayerStatLine(new PlayerId("P2"), away, 30, 98, 1, 3, 0, 100, 0, 0, 0, 0, 98, 98, true, 0),
+            new PlayerStatLine(new PlayerId("P1"), home, 30, 40, 2, 3, 0, 0, 0, 0, 0, 40, 40, true, 0, 0, 0),
+            new PlayerStatLine(new PlayerId("P2"), away, 30, 98, 1, 3, 0, 0, 0, 0, 0, 98, 98, true, 0, 0, 0),
         ];
         var (homeLine, awayLine) = BalancedTeamLines.For(home, away, lines);
 

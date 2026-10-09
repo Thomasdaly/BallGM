@@ -227,6 +227,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
 
         var restorePoint = run.Capture();
         var played = new List<GameResult>();
+        var rotations = new RotationMemo();
 
         for (var dayIndex = assessment.FromDay; dayIndex < assessment.ToDay; dayIndex++)
         {
@@ -255,7 +256,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
                 continue;
             }
 
-            var dayResult = PlayDay(run, context, day, played);
+            var dayResult = PlayDay(run, context, day, played, rotations);
             if (dayResult.IsFailure)
             {
                 run.RestoreTo(restorePoint);
@@ -298,7 +299,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         ArgumentNullException.ThrowIfNull(teamId);
         ArgumentNullException.ThrowIfNull(day);
 
-        var built = Rotation(run, context, teamId, day);
+        var built = Rotation(run, context, teamId, day, new RotationMemo());
         return built.IsFailure
             ? DomainOperationResult<DepthChartBuild>.Failure(built.Errors.ToArray())
             : DomainOperationResult<DepthChartBuild>.Success(built.Value.Chart);
@@ -306,10 +307,14 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
 
     /// <summary>
     /// The one way a team's rotation for a day is built — who is fit, and the depth chart built from
-    /// them — for the depth-chart screen and the games actually played alike.
+    /// them — for the depth-chart screen and the games actually played alike. Within one
+    /// <see cref="Advance"/>, <paramref name="memo"/> keeps each team's last chart: a chart is a pure
+    /// function of <see cref="DepthChartBuilder.Build"/>'s arguments — who is fit (identifiers,
+    /// positions and ratings, compared by value), the roster limits (fixed for the call) and the roster
+    /// count — and that rarely changes from one game to the next. A new Build input belongs in the key.
     /// </summary>
     private DomainOperationResult<(DepthChartBuild Chart, IReadOnlyList<AvailablePlayer> Available)> Rotation(
-        SeasonRun run, SeasonContext context, TeamId teamId, SeasonDay day)
+        SeasonRun run, SeasonContext context, TeamId teamId, SeasonDay day, RotationMemo memo)
     {
         var team = context.Team(teamId);
         if (team is null)
@@ -320,7 +325,19 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         }
 
         var available = AvailableFor(team, run, day);
+
+        if (memo.TryGetValue(teamId, out var cached) &&
+            cached.RosterCount == team.RosterCount &&
+            cached.Available.SequenceEqual(available))
+        {
+            return DomainOperationResult<(DepthChartBuild, IReadOnlyList<AvailablePlayer>)>.Success((cached.Chart, cached.Available));
+        }
+
         var chart = _depthChartBuilder.Build(teamId, available, context.Ruleset.RosterLimits, team.RosterCount);
+        if (chart.IsSuccess)
+        {
+            memo[teamId] = (available, team.RosterCount, chart.Value);
+        }
 
         return chart.IsFailure
             ? DomainOperationResult<(DepthChartBuild, IReadOnlyList<AvailablePlayer>)>.Failure(chart.Errors.ToArray())
@@ -328,9 +345,9 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
     }
 
     /// <summary>One side for one game: the rotation and the fit players behind it, and its rest.</summary>
-    private DomainOperationResult<MatchTeam> SideFor(SeasonRun run, SeasonContext context, TeamId teamId, SeasonDay day)
+    private DomainOperationResult<MatchTeam> SideFor(SeasonRun run, SeasonContext context, TeamId teamId, SeasonDay day, RotationMemo rotations)
     {
-        var built = Rotation(run, context, teamId, day);
+        var built = Rotation(run, context, teamId, day, rotations);
         return built.IsFailure
             ? DomainOperationResult<MatchTeam>.Failure(built.Errors.ToArray())
             : DomainOperationResult<MatchTeam>.Success(new MatchTeam(teamId, built.Value.Chart.Chart, built.Value.Available, RestDaysFor(run, teamId, day)));
@@ -340,17 +357,18 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         SeasonRun run,
         SeasonContext context,
         SeasonDay day,
-        List<GameResult> played)
+        List<GameResult> played,
+        RotationMemo rotations)
     {
         foreach (var fixture in run.Schedule.On(day).Where(fixture => !run.HasResult(fixture.Id)))
         {
-            var home = SideFor(run, context, fixture.HomeTeamId, day);
+            var home = SideFor(run, context, fixture.HomeTeamId, day, rotations);
             if (home.IsFailure)
             {
                 return DomainOperationResult.Failure(home.Errors.ToArray());
             }
 
-            var away = SideFor(run, context, fixture.AwayTeamId, day);
+            var away = SideFor(run, context, fixture.AwayTeamId, day, rotations);
             if (away.IsFailure)
             {
                 return DomainOperationResult.Failure(away.Errors.ToArray());
@@ -598,3 +616,6 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         return phase.IsSuccess ? phase.Value.ToString() : "SeasonComplete";
     }
 }
+
+/// <summary>Each team's last rotation within one <see cref="SeasonEngine.Advance"/>; the context, and so the roster limits, is fixed for the call.</summary>
+internal sealed class RotationMemo : Dictionary<TeamId, (IReadOnlyList<AvailablePlayer> Available, int RosterCount, DepthChartBuild Chart)>;

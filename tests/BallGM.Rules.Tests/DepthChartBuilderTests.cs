@@ -110,7 +110,7 @@ public sealed class DepthChartBuilderTests
     {
         // Five guards and nobody else: two of them have to cover the frontcourt.
         var guards = Enumerable.Range(0, 6)
-            .Select(index => new AvailablePlayer(new PlayerId($"G{index}"), Position.PointGuard, 70 - index))
+            .Select(index => new AvailablePlayer(new PlayerId($"G{index}"), Position.PointGuard, new PlayerRating(70 - index)))
             .ToList();
 
         var build = Build(guards, rosterCount: 6);
@@ -150,9 +150,9 @@ public sealed class DepthChartBuilderTests
     public void Rotation_RanksTheBestPlayerAtAPositionAsItsStarter()
     {
         var players = Enum.GetValues<Position>()
-            .Select(position => new AvailablePlayer(new PlayerId($"FILLER-{position}"), position, 60))
-            .Append(new AvailablePlayer(new PlayerId("BACKUP"), Position.Center, 55))
-            .Append(new AvailablePlayer(new PlayerId("STARTER"), Position.Center, 90))
+            .Select(position => new AvailablePlayer(new PlayerId($"FILLER-{position}"), position, new PlayerRating(60)))
+            .Append(new AvailablePlayer(new PlayerId("BACKUP"), Position.Center, new PlayerRating(55)))
+            .Append(new AvailablePlayer(new PlayerId("STARTER"), Position.Center, new PlayerRating(90)))
             .ToList();
 
         var build = Build(players, rosterCount: players.Count);

@@ -178,18 +178,6 @@ public sealed class PossessionMatchEngineTests
     }
 
     [Fact]
-    public void UsagePercentSumsToExactlyOneHundredPerTeamPerGame()
-    {
-        foreach (var outcome in MatchTestFixtures.PlayMany(300))
-        {
-            var boxScore = outcome.Result.BoxScore!;
-
-            Assert.Equal(100, boxScore.LinesFor(outcome.Result.HomeTeamId).Sum(line => line.UsagePercent));
-            Assert.Equal(100, boxScore.LinesFor(outcome.Result.AwayTeamId).Sum(line => line.UsagePercent));
-        }
-    }
-
-    [Fact]
     public void OffensiveAndDefensiveReboundsAreARealSplitNotAConstantOnOneSide()
     {
         // Both categories are real rebound sources (a side's own misses, and its opponent's), so

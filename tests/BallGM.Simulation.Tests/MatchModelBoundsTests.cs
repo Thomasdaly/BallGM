@@ -152,4 +152,32 @@ public sealed class MatchModelBoundsTests
             Assert.Equal(general.NextInt32(0, MatchModelBounds.ProbabilityScale), fast.NextBasisPoint());
         }
     }
+
+    [Fact]
+    public void TheTurnoverChanceStaysARealButMinorityOutcome()
+    {
+        // The rate is the base moved by two independently capped terms, so its whole range is the
+        // base plus or minus both caps: never zero, never more than a quarter of possessions.
+        var lowest = MatchModelBounds.BaseTurnoverRate - MatchModelBounds.MaximumTurnoverPassingSwing - MatchModelBounds.MaximumTurnoverQuicknessSwing;
+        var highest = MatchModelBounds.BaseTurnoverRate + MatchModelBounds.MaximumTurnoverPassingSwing + MatchModelBounds.MaximumTurnoverQuicknessSwing;
+
+        Assert.True(lowest > MatchModelBounds.ProbabilityScale / 20, "Even the best-protected possession can be turned over.");
+        Assert.True(highest < MatchModelBounds.ProbabilityScale / 4, "No mismatch turns the ball over on a quarter of possessions.");
+        Assert.True(MatchModelBounds.MaximumTurnoverPassingSwing + MatchModelBounds.MaximumTurnoverQuicknessSwing < MatchModelBounds.BaseTurnoverRate / 2,
+            "Shape redistributes turnovers; it does not decide whether a team has any.");
+    }
+
+    [Fact]
+    public void TheTurnoverAndStealCapsAreReachableByARealSpecialist()
+    {
+        // A specialist on a 0-100 scale sits well over 20 points from his own Overall in one
+        // attribute; each shape cap must bind before that, or it is dead code.
+        const int SpecialistShape = 20;
+
+        Assert.True(SpecialistShape * MatchModelBounds.TurnoverPerPassingPoint >= MatchModelBounds.MaximumTurnoverPassingSwing);
+        Assert.True(SpecialistShape * 2 * MatchModelBounds.TurnoverPerQuicknessPoint >= MatchModelBounds.MaximumTurnoverQuicknessSwing,
+            "Two fives whose quickness shapes differ by a specialist's margin either way reach the cap.");
+        Assert.True(100 + (SpecialistShape * 2 * MatchModelBounds.StealWeightPerQuicknessPoint) >= MatchModelBounds.MaximumStealWeight);
+        Assert.True(100 - (SpecialistShape * MatchModelBounds.StealWeightPerQuicknessPoint) <= MatchModelBounds.MinimumStealWeight);
+    }
 }

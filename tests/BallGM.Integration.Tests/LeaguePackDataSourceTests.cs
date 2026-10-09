@@ -471,6 +471,13 @@ public sealed class LeaguePackDataSourceTests : IDisposable
         var concluded = Assert.Single(session.PlayerProfile(star.PlayerId).Value.Career, line => !line.IsPostseason);
         Assert.Equal(detail.Totals.FieldGoalsAttempted, concluded.Metrics!["FGA"]);
         Assert.True(concluded.Metrics.ContainsKey("TS_PCT"));
+        Assert.Equal(detail.Totals.Steals, concluded.Metrics["STL"]);
+        Assert.Equal(detail.Totals.Turnovers, concluded.Metrics["TOV"]);
+
+        // Under the codes and scales a data pack states them: turnover rate per hundred plays (the
+        // stats panel reads TM_TOV_PCT), usage as a fraction.
+        Assert.InRange(concluded.Metrics["TM_TOV_PCT"], 1, 50);
+        Assert.InRange(concluded.Metrics["USG_PCT"], 0.01, 1);
     }
 
     [Fact]

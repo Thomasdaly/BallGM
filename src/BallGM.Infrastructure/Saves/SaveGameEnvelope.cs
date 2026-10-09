@@ -55,6 +55,13 @@ public sealed record SaveGameEnvelope(
     /// every player's career and reset every repeater taxpayer to a first-time one. A version-2 save
     /// cannot say what it lost, so it is refused rather than loaded short.
     /// </para>
+    /// <para>
+    /// Moved 3 → 4 when a simulated season's career metrics changed meaning: <c>USG_PCT</c> became
+    /// the minutes-normalised usage estimate (it had been the engine's share of team plays), and
+    /// steals, turnovers and turnover rate joined them. The shape is unchanged, but a version-3 save's
+    /// concluded seasons would sit in one career column beside new ones computed another way, so it is
+    /// refused rather than shown inconsistently.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 4;
 }

@@ -20,9 +20,11 @@ public sealed record CountingStats(
     int OffensiveRebounds,
     int DefensiveRebounds,
     int Assists,
-    int PlusMinus)
+    int PlusMinus,
+    int Steals,
+    int Turnovers)
 {
-    public static CountingStats None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    public static CountingStats None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     public int Rebounds => OffensiveRebounds + DefensiveRebounds;
 
@@ -49,7 +51,9 @@ public sealed record CountingStats(
             line.OffensiveRebounds,
             line.DefensiveRebounds,
             line.Assists,
-            line.PlusMinus);
+            line.PlusMinus,
+            line.Steals,
+            line.Turnovers);
     }
 
     /// <summary>The totals over every supplied game line — accumulated in place, one record at the end.</summary>
@@ -62,7 +66,7 @@ public sealed record CountingStats(
         {
             total.Add(1, line.Started ? 1 : 0, line.Minutes, line.Points, line.FieldGoalsMade, line.FieldGoalsAttempted,
                 line.ThreePointsMade, line.ThreePointsAttempted, line.FreeThrowsMade, line.FreeThrowsAttempted,
-                line.OffensiveRebounds, line.DefensiveRebounds, line.Assists, line.PlusMinus);
+                line.OffensiveRebounds, line.DefensiveRebounds, line.Assists, line.PlusMinus, line.Steals, line.Turnovers);
         }
 
         return total.ToStats();
@@ -78,7 +82,7 @@ public sealed record CountingStats(
         {
             total.Add(run.Games, run.Starts, run.Minutes, run.Points, run.FieldGoalsMade, run.FieldGoalsAttempted,
                 run.ThreePointsMade, run.ThreePointsAttempted, run.FreeThrowsMade, run.FreeThrowsAttempted,
-                run.OffensiveRebounds, run.DefensiveRebounds, run.Assists, run.PlusMinus);
+                run.OffensiveRebounds, run.DefensiveRebounds, run.Assists, run.PlusMinus, run.Steals, run.Turnovers);
         }
 
         return total.ToStats();
@@ -95,11 +99,13 @@ public sealed record CountingStats(
     /// <summary>Running totals for <see cref="Sum(IEnumerable{PlayerStatLine})"/>: no record per line, one at the end.</summary>
     private struct Accumulator
     {
-        private int _games, _starts, _minutes, _points, _fgm, _fga, _tpm, _tpa, _ftm, _fta, _oreb, _dreb, _ast, _plusMinus;
+        private int _games, _starts, _minutes, _points, _fgm, _fga, _tpm, _tpa, _ftm, _fta, _oreb, _dreb, _ast, _plusMinus, _stl, _tov;
 
-        public void Add(int games, int starts, int minutes, int points, int fgm, int fga, int tpm, int tpa, int ftm, int fta, int oreb, int dreb, int ast, int plusMinus)
+        public void Add(int games, int starts, int minutes, int points, int fgm, int fga, int tpm, int tpa, int ftm, int fta, int oreb, int dreb, int ast, int plusMinus, int stl, int tov)
         {
             _plusMinus += plusMinus;
+            _stl += stl;
+            _tov += tov;
             _games += games;
             _starts += starts;
             _minutes += minutes;
@@ -116,6 +122,6 @@ public sealed record CountingStats(
         }
 
         public readonly CountingStats ToStats() =>
-            new(_games, _starts, _minutes, _points, _fgm, _fga, _tpm, _tpa, _ftm, _fta, _oreb, _dreb, _ast, _plusMinus);
+            new(_games, _starts, _minutes, _points, _fgm, _fga, _tpm, _tpa, _ftm, _fta, _oreb, _dreb, _ast, _plusMinus, _stl, _tov);
     }
 }
