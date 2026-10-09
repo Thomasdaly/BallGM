@@ -74,6 +74,10 @@ public static class StatColumns
     public static readonly StatColumn Rebounds = Counting("REB", "Rebounds, offensive and defensive", stats => stats.Rebounds);
     public static readonly StatColumn Assists = Counting("AST", "Assists: passes leading directly to a teammate's basket", stats => stats.Assists);
 
+    /// <summary>Signed: the score difference while this player was on the floor.</summary>
+    public static readonly StatColumn PlusMinus = Counting(
+        "+/-", "Plus-minus: points scored minus points allowed while this player was on the floor", stats => stats.PlusMinus, Wide, signed: true);
+
     public static readonly StatColumn FieldGoals = MadeOf("FG", "Field goals made-attempted", stats => (stats.FieldGoalsMade, stats.FieldGoalsAttempted));
     public static readonly StatColumn Threes = MadeOf("3P", "Three-pointers made-attempted", stats => (stats.ThreePointsMade, stats.ThreePointsAttempted));
     public static readonly StatColumn FreeThrows = MadeOf("FT", "Free throws made-attempted", stats => (stats.FreeThrowsMade, stats.FreeThrowsAttempted));
@@ -85,11 +89,11 @@ public static class StatColumns
 
     /// <summary>One game's line, as a box score shows it.</summary>
     public static IReadOnlyList<StatColumn> BoxScore { get; } =
-        [Minutes, Points, FieldGoals, Threes, FreeThrows, OffensiveRebounds, DefensiveRebounds, Rebounds, Assists];
+        [Minutes, Points, FieldGoals, Threes, FreeThrows, OffensiveRebounds, DefensiveRebounds, Rebounds, Assists, PlusMinus];
 
     /// <summary>A run of games, as a roster or a preview shows it: averages and shooting rates.</summary>
     public static IReadOnlyList<StatColumn> Season { get; } =
-        [Games, Minutes, Points, Rebounds, Assists, FieldGoalPercent, ThreePointPercent, FreeThrowPercent, TrueShooting];
+        [Games, Minutes, Points, Rebounds, Assists, PlusMinus, FieldGoalPercent, ThreePointPercent, FreeThrowPercent, TrueShooting];
 
     public static IReadOnlyList<StatHeader> Headers(IEnumerable<StatColumn> columns, StatBasis basis = StatBasis.Totals) =>
         columns.Select(column => column.HeaderFor(basis)).ToList();
@@ -101,6 +105,9 @@ public static class StatColumns
     /// <summary>The one way a derived figure is printed: one decimal, or a dash when there is nothing to divide by.</summary>
     public static string Fixed(double? value) => value is { } number ? number.ToString("0.0", Invariant) : Missing;
 
+    /// <summary>The one way a signed figure is printed: an explicit sign, one decimal, or a dash.</summary>
+    public static string Signed(double? value) => value is { } number ? number.ToString("+0.0;-0.0;0.0", Invariant) : Missing;
+
     /// <summary>The one way a rate is printed as a percentage: one decimal, or a dash when there were no attempts.</summary>
     public static string Percent(double? rate) => rate is { } value ? (value * 100).ToString("0.0", Invariant) : Missing;
 
@@ -109,18 +116,20 @@ public static class StatColumns
         string tooltip,
         Func<CountingStats, int> total,
         double width = Narrow,
-        Func<StatBasis, StatBasis>? shown = null)
+        Func<StatBasis, StatBasis>? shown = null,
+        bool signed = false)
     {
         StatBasis Shown(StatBasis basis) => shown?.Invoke(basis) ?? basis;
         double? Value(CountingStats stats, StatBasis basis) => StatFormulas.Scaled(total(stats), stats, Shown(basis));
+        string Format(CountingStats stats, StatBasis basis) => (Shown(basis), signed) switch
+        {
+            (StatBasis.Totals, false) => total(stats).ToString(Invariant),
+            (StatBasis.Totals, true) => total(stats).ToString("+0;-0;0", Invariant),
+            (_, false) => Fixed(Value(stats, basis)),
+            _ => Signed(Value(stats, basis)),
+        };
 
-        return new(
-            header,
-            tooltip + ".",
-            width,
-            basis => Shown(basis),
-            (stats, basis) => Shown(basis) == StatBasis.Totals ? total(stats).ToString(Invariant) : Fixed(Value(stats, basis)),
-            Value);
+        return new(header, tooltip + ".", width, basis => Shown(basis), Format, Value);
     }
 
     private static StatColumn MadeOf(string header, string tooltip, Func<CountingStats, (int Made, int Attempted)> pick) =>

@@ -1,3 +1,6 @@
+using BallGM.Domain.Randomness;
+using BallGM.Domain.Seasons;
+
 namespace BallGM.Simulation.Seasons;
 
 /// <summary>
@@ -29,7 +32,7 @@ public static class MatchModelBounds
     public const int EfficiencyScale = 10_000;
 
     /// <summary>The denominator probabilities are expressed against.</summary>
-    public const int ProbabilityScale = 10_000;
+    public const int ProbabilityScale = IRandomSource.BasisPointScale;
 
     /// <summary>
     /// What a team scores per hundred possessions before anything about either side is considered,
@@ -92,7 +95,7 @@ public static class MatchModelBounds
     public const int OvertimePossessions = 11;
 
     /// <summary>Minutes one overtime period adds.</summary>
-    public const int OvertimeMinutes = 5;
+    public const int OvertimeMinutes = BoxScore.OvertimeMinutes;
 
     /// <summary>
     /// How many overtime periods are played before the terminal rule below is applied. Six is far

@@ -742,11 +742,12 @@ public sealed partial class LeagueSession
             result.BoxScore is not null,
             ToLines(result.BoxScore, result.HomeTeamId, playerNames),
             ToLines(result.BoxScore, result.AwayTeamId, playerNames),
-            result.BoxScore is null ? null : ToTeamLine(result.BoxScore.Home),
-            result.BoxScore is null ? null : ToTeamLine(result.BoxScore.Away));
+            result.BoxScore is null ? null : ToTeamLine(result.BoxScore, result.BoxScore.Home),
+            result.BoxScore is null ? null : ToTeamLine(result.BoxScore, result.BoxScore.Away));
     }
 
-    private static BoxScoreTeamLine ToTeamLine(TeamStatLine line) => new(line.TeamOffensiveRebounds, line.TeamDefensiveRebounds);
+    private static BoxScoreTeamLine ToTeamLine(BoxScore boxScore, TeamStatLine line) =>
+        new(boxScore.TotalsFor(line.TeamId), line.TeamOffensiveRebounds, line.TeamDefensiveRebounds);
 
     private static IReadOnlyList<BoxScoreLine> ToLines(
         BoxScore? boxScore,

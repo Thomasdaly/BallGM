@@ -20,4 +20,9 @@
     <ProjectReference Include="..\..\src\BallGM.Rules\BallGM.Rules.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- One copy of the hand-built box-score balancing helper, shared with the Domain tests. -->
+    <Compile Include="..\BallGM.Domain.Tests\BalancedTeamLines.cs" Link="BalancedTeamLines.cs" />
+  </ItemGroup>
+
 </Project>

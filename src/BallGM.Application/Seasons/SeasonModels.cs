@@ -127,8 +127,11 @@ public sealed record BoxScoreLine(
     bool Started,
     CountingStats Stats);
 
-/// <summary>What one side did as a team: its team rebounds, which belong to no player's line.</summary>
-public sealed record BoxScoreTeamLine(int TeamOffensiveRebounds, int TeamDefensiveRebounds)
+/// <summary>
+/// What one side did as a team: its counting totals for the game (plus-minus is its margin) and its
+/// team rebounds, which belong to no player's line.
+/// </summary>
+public sealed record BoxScoreTeamLine(CountingStats Totals, int TeamOffensiveRebounds, int TeamDefensiveRebounds)
 {
     public int TeamRebounds => TeamOffensiveRebounds + TeamDefensiveRebounds;
 }

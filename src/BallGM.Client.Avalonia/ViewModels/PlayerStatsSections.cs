@@ -72,7 +72,7 @@ internal static class PlayerStatsSections
                 Cell("OREB%", Pct(StatFormulas.ReboundPercent(totals.OffensiveRebounds, totals.Minutes, season.Team.Minutes, season.Team.OffensiveRebounds + season.Opponent.DefensiveRebounds)), "Offensive rebound %: share of available offensive rebounds taken while on the floor."),
                 Cell("DREB%", Pct(StatFormulas.ReboundPercent(totals.DefensiveRebounds, totals.Minutes, season.Team.Minutes, season.Team.DefensiveRebounds + season.Opponent.OffensiveRebounds)), "Defensive rebound %: share of available defensive rebounds taken while on the floor."),
                 Cell("REB%", Pct(StatFormulas.ReboundPercent(totals.Rebounds, totals.Minutes, season.Team.Minutes, season.Team.OffensiveRebounds + season.Team.DefensiveRebounds + season.Opponent.OffensiveRebounds + season.Opponent.DefensiveRebounds)), "Rebound %: share of all available rebounds taken while on the floor."),
-                Cell("TEAM +/-", Signed(StatFormulas.PerGame(season.Team.Points - season.Opponent.Points, g)), "Team point margin per game in the games he played (not on-court plus-minus, which the simulation does not track)."),
+                Cell("+/-", Signed(StatFormulas.Scaled(totals.PlusMinus, totals, StatBasis.PerGame)), "Plus-minus per game: points scored minus points allowed while this player was on the floor."),
             ]),
         ];
     }
@@ -165,5 +165,5 @@ internal static class PlayerStatsSections
 
     private static string Pct(double? value) => value is null ? StatColumns.Missing : StatColumns.Percent(value) + "%";
 
-    private static string Signed(double? value) => value is null ? StatColumns.Missing : value.Value.ToString("+0.0;-0.0;0.0", Invariant);
+    private static string Signed(double? value) => StatColumns.Signed(value);
 }

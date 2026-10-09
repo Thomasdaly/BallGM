@@ -21,11 +21,23 @@ public sealed class SeasonSchedule
 
     private readonly List<Fixture> _fixtures;
     private readonly Dictionary<string, Fixture> _byId;
+    private readonly Dictionary<int, IReadOnlyList<Fixture>> _byDay;
+    private readonly Dictionary<string, int[]> _daysByTeam;
 
     private SeasonSchedule(List<Fixture> fixtures)
     {
         _fixtures = fixtures;
         _byId = fixtures.ToDictionary(fixture => fixture.Id.Value, StringComparer.Ordinal);
+
+        // A schedule never changes after it is built (an extension builds a new one), so the two
+        // lookups a season asks of it every game — a day's fixtures, a team's last game — are indexed
+        // once here rather than answered by scanning every fixture each time.
+        _byDay = fixtures.GroupBy(fixture => fixture.Day.Index)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<Fixture>)Array.AsReadOnly(group.ToArray()));
+        _daysByTeam = fixtures
+            .SelectMany(fixture => new[] { (Team: fixture.HomeTeamId.Value, Day: fixture.Day.Index), (Team: fixture.AwayTeamId.Value, Day: fixture.Day.Index) })
+            .GroupBy(entry => entry.Team, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Select(entry => entry.Day).Distinct().Order().ToArray(), StringComparer.Ordinal);
     }
 
     /// <summary>A season with no fixtures at all. What a league that plays no games has.</summary>
@@ -93,7 +105,24 @@ public sealed class SeasonSchedule
     public IReadOnlyList<Fixture> On(SeasonDay day)
     {
         ArgumentNullException.ThrowIfNull(day);
-        return _fixtures.Where(fixture => fixture.Day == day).ToArray();
+        return _byDay.TryGetValue(day.Index, out var fixtures) ? fixtures : [];
+    }
+
+    /// <summary>The day of this team's last scheduled game before <paramref name="day"/>, or null if it has none.</summary>
+    public int? PreviousGameDay(TeamId teamId, SeasonDay day)
+    {
+        ArgumentNullException.ThrowIfNull(teamId);
+        ArgumentNullException.ThrowIfNull(day);
+
+        if (!_daysByTeam.TryGetValue(teamId.Value, out var days))
+        {
+            return null;
+        }
+
+        // The first scheduled day at or after this one (days are distinct); the game before it is the last one before.
+        var at = Array.BinarySearch(days, day.Index);
+        var firstNotBefore = at >= 0 ? at : ~at;
+        return firstNotBefore == 0 ? null : days[firstNotBefore - 1];
     }
 
     /// <summary>Every fixture from <paramref name="fromInclusive"/> up to but not including <paramref name="toExclusive"/>.</summary>

@@ -137,4 +137,19 @@ public sealed class MatchModelBoundsTests
 
         return (fg2, fg3);
     }
+
+    [Fact]
+    public void ProbabilitiesAreBasisPointsTheRandomSourceDrawsDirectly()
+    {
+        // The engine draws every probability with SeededRandomSource.NextBasisPoint, which is only
+        // the same as NextInt32(0, ProbabilityScale) while the two scales agree.
+        Assert.Equal(BallGM.Domain.Randomness.IRandomSource.BasisPointScale, MatchModelBounds.ProbabilityScale);
+
+        var fast = new BallGM.Domain.Randomness.SeededRandomSource(42);
+        var general = new BallGM.Domain.Randomness.SeededRandomSource(42);
+        for (var draw = 0; draw < 10_000; draw++)
+        {
+            Assert.Equal(general.NextInt32(0, MatchModelBounds.ProbabilityScale), fast.NextBasisPoint());
+        }
+    }
 }

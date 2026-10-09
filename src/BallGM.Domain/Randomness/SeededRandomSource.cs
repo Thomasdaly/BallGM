@@ -38,6 +38,27 @@ public sealed class SeededRandomSource(int seed) : IRandomSource
         return checked((int)(minInclusive + (long)(sample % range)));
     }
 
+    private const ulong BasisPointRange = IRandomSource.BasisPointScale;
+    private const ulong BasisPointRejectionThreshold = unchecked(0UL - BasisPointRange) % BasisPointRange;
+
+    /// <summary>
+    /// A draw in [0, 10 000) — exactly <c>NextInt32(0, 10_000)</c>, the same rejection threshold and
+    /// the same sequence, but with a constant range the JIT turns into multiplications. A match draws
+    /// one of these per probability decision, thousands a game.
+    /// </summary>
+    public int NextBasisPoint()
+    {
+        ulong sample;
+
+        do
+        {
+            sample = NextUInt64();
+        }
+        while (sample < BasisPointRejectionThreshold);
+
+        return (int)(sample % BasisPointRange);
+    }
+
     private ulong NextUInt64()
     {
         _state += 0x9E3779B97F4A7C15UL;

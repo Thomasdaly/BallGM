@@ -70,8 +70,8 @@ public sealed class GameSheetTests
                 Line("a-pg", "Point Guard", true, minutes: 35, points: 19, rebounds: 3, assists: 11),
                 Line("a-gone", "Traded Away", false, minutes: 12, points: 4, rebounds: 2, assists: 0),
             ],
-            new BoxScoreTeamLine(1, 2),
-            new BoxScoreTeamLine(0, 3));
+            new BoxScoreTeamLine(CountingStats.None with { Games = 1, Points = 104, PlusMinus = 8 }, 1, 2),
+            new BoxScoreTeamLine(CountingStats.None with { Games = 1, Points = 96, PlusMinus = -8 }, 0, 3));
 
         var sheet = GameSheet.Build(Input(game, currentDay: 6, fixtures: [game], played: box));
 
@@ -87,9 +87,12 @@ public sealed class GameSheetTests
         Assert.Equal("4-9", Cell(sheet.Away, pointGuard, "FG"));
         Assert.Equal("3", Cell(sheet.Away, pointGuard, "DREB"));
 
-        // Team totals add every line up, and the team rebounds no player secured are stated.
-        Assert.Equal("23", sheet.Away.Totals[sheet.Away.Headers.ToList().FindIndex(header => header.Header == "PTS")].Value);
+        // The team row is the team's own totals, and the team rebounds no player secured are stated.
+        Assert.Equal("96", sheet.Away.Totals[sheet.Away.Headers.ToList().FindIndex(header => header.Header == "PTS")].Value);
         Assert.Contains("Team rebounds: 3", sheet.Home.TeamRebounds, StringComparison.Ordinal);
+
+        // The team's plus-minus row is its margin.
+        Assert.Equal("-8", sheet.Away.Totals[sheet.Away.Headers.ToList().FindIndex(header => header.Header == "+/-")].Value);
         Assert.Equal(84, pointGuard.Overall);
         Assert.True(pointGuard.HasOverall);
 

@@ -27,4 +27,27 @@ internal static class BalancedTeamLines
 
         return boards >= misses ? (boards - misses, 0) : (0, misses - boards);
     }
+
+    /// <summary>
+    /// The same lines with minutes and plus-minus that fill the game: the first five of a side (or all
+    /// of a short-handed one) play all 48 minutes and carry the side's margin; anyone else plays none.
+    /// For a test that cares about something else, so it need not hand-balance the floor.
+    /// </summary>
+    public static IReadOnlyList<PlayerStatLine> Normalise(IReadOnlyCollection<PlayerStatLine> lines, TeamId home, int homePoints, int awayPoints)
+    {
+        var seen = new Dictionary<TeamId, int>();
+        return lines.Select(line =>
+        {
+            var order = seen.TryGetValue(line.TeamId, out var count) ? count : 0;
+            seen[line.TeamId] = order + 1;
+            var onFloor = order < BoxScore.PlayersOnFloor;
+            var margin = line.TeamId == home ? homePoints - awayPoints : awayPoints - homePoints;
+
+            return new PlayerStatLine(
+                line.PlayerId, line.TeamId, onFloor ? BoxScore.RegulationMinutes : 0, line.Points, line.OffensiveRebounds,
+                line.DefensiveRebounds, line.Assists, line.UsagePercent, line.FieldGoalsAttempted, line.FieldGoalsMade,
+                line.ThreePointsAttempted, line.ThreePointsMade, line.FreeThrowsAttempted, line.FreeThrowsMade, line.Started,
+                onFloor ? margin : 0);
+        }).ToList();
+    }
 }

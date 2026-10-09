@@ -3,6 +3,7 @@ using BallGM.Domain.Players;
 using BallGM.Domain.Randomness;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
+using BallGM.Rules.Seasons;
 
 namespace BallGM.Simulation.Seasons;
 
@@ -79,7 +80,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         var home = homeResult.Value;
         var away = awayResult.Value;
-        var random = new SeededRandomSource(setup.Seed);
+        IRandomSource random = new SeededRandomSource(setup.Seed);
 
         var homeEfficiency = EfficiencyFor(home, away, isHome: true);
         var awayEfficiency = EfficiencyFor(away, home, isHome: false);
@@ -87,6 +88,8 @@ public sealed class PossessionMatchEngine : IMatchEngine
         var possessions = MatchModelBounds.BasePossessionsPerGame +
             random.NextInt32(-MatchModelBounds.PossessionSpread, MatchModelBounds.PossessionSpread + 1);
 
+        home.PlanRegulation(possessions);
+        away.PlanRegulation(possessions);
         PlayPeriod(home, away, homeEfficiency, awayEfficiency, possessions, random);
 
         // A drawn game is refused by GameResult, every standings tie-break assumes a winner, and a
@@ -97,6 +100,8 @@ public sealed class PossessionMatchEngine : IMatchEngine
         while (home.Points == away.Points && overtimePeriods < MatchModelBounds.MaximumOvertimePeriods)
         {
             overtimePeriods++;
+            home.SendInClosers();
+            away.SendInClosers();
             PlayPeriod(home, away, homeEfficiency, awayEfficiency, MatchModelBounds.OvertimePossessions, random);
         }
 
@@ -105,12 +110,12 @@ public sealed class PossessionMatchEngine : IMatchEngine
             // Six overtimes past anything a real game has needed. The loop has to terminate, so the
             // terminal rule is stated rather than left to a seventh draw: the more efficient side
             // converts one last possession, and the home team holds an exact tie.
-            var winner = awayEfficiency > homeEfficiency ? away : home;
-            AwardBasket(winner, isThree: false, random);
+            var awayWins = awayEfficiency > homeEfficiency;
+            AwardBasket(awayWins ? away : home, awayWins ? home : away, isThree: false, random);
         }
 
-        AwardOvertimeMinutes(home, overtimePeriods);
-        AwardOvertimeMinutes(away, overtimePeriods);
+        home.CreditMinutes(possessions, overtimePeriods);
+        away.CreditMinutes(possessions, overtimePeriods);
 
         var lines = home.ToStatLines().Concat(away.ToStatLines()).ToList();
 
@@ -120,7 +125,8 @@ public sealed class PossessionMatchEngine : IMatchEngine
             away.Points,
             lines,
             home.ToTeamLine(),
-            away.ToTeamLine());
+            away.ToTeamLine(),
+            overtimePeriods);
 
         if (boxScoreResult.IsFailure)
         {
@@ -178,6 +184,9 @@ public sealed class PossessionMatchEngine : IMatchEngine
         // is on the floor for both ends of it.
         for (var possession = 0; possession < possessions; possession++)
         {
+            // One possession at each end, with the same ten players on the floor for both.
+            home.Enter(possession);
+            away.Enter(possession);
             PlayPossession(home, away, homeShooting, random);
             PlayPossession(away, home, awayShooting, random);
         }
@@ -206,7 +215,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// </summary>
     private static void PlayPossession(Side offence, Side defence, (int Fg2Percent, int Fg3Percent) shooting, IRandomSource random)
     {
-        if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) >= MatchModelBounds.FieldGoalAttemptRate)
+        if (random.NextBasisPoint() >= MatchModelBounds.FieldGoalAttemptRate)
         {
             return;
         }
@@ -232,30 +241,30 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// </summary>
     private static bool TakeShot(Side offence, Side defence, (int Fg2Percent, int Fg3Percent) shooting, IRandomSource random)
     {
-        var isThree = random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.ThreePointAttemptShare;
-        var shooter = offence.PickBy(offence.UsageWeights, random);
-        var made = random.NextInt32(0, MatchModelBounds.ProbabilityScale) <
+        var isThree = random.NextBasisPoint() < MatchModelBounds.ThreePointAttemptShare;
+        var shooter = offence.PickOnFloor(offence.UsageFactors, random);
+        var made = random.NextBasisPoint() <
             MakePercentage(isThree ? shooting.Fg3Percent : shooting.Fg2Percent, offence, defence);
 
         if (made)
         {
             ChargeAttempt(offence, shooter, isThree);
-            AwardMake(offence, shooter, isThree);
+            AwardMake(offence, defence, shooter, isThree);
 
-            if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.AssistChance)
+            if (random.NextBasisPoint() < MatchModelBounds.AssistChance)
             {
-                offence.AssistsBy[offence.PickTeammate(offence.AssistWeights, shooter, random)]++;
+                offence.AssistsBy[offence.PickTeammateOnFloor(offence.AssistFactors, shooter, random)]++;
             }
 
             // An and-one: a make that also draws a single free throw. Missed, it is a live ball.
-            return random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.AndOneChanceOnMake &&
-                ResolveFreeThrowTrip(offence, shooter, shots: 1, random) &&
+            return random.NextBasisPoint() < MatchModelBounds.AndOneChanceOnMake &&
+                ResolveFreeThrowTrip(offence, defence, shooter, shots: 1, random) &&
                 Rebound(offence, defence, random);
         }
 
-        if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.ShootingFoulChanceOnMiss)
+        if (random.NextBasisPoint() < MatchModelBounds.ShootingFoulChanceOnMiss)
         {
-            return ResolveFreeThrowTrip(offence, shooter, isThree ? 3 : 2, random) && Rebound(offence, defence, random);
+            return ResolveFreeThrowTrip(offence, defence, shooter, isThree ? 3 : 2, random) && Rebound(offence, defence, random);
         }
 
         ChargeAttempt(offence, shooter, isThree);
@@ -291,7 +300,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
         const int offensiveTeam = MatchModelBounds.OffensiveReboundRate * MatchModelBounds.TeamReboundShare / MatchModelBounds.ProbabilityScale;
         const int defensiveTeam = (MatchModelBounds.ProbabilityScale - MatchModelBounds.OffensiveReboundRate) * MatchModelBounds.TeamReboundShare / MatchModelBounds.ProbabilityScale;
 
-        var roll = random.NextInt32(0, MatchModelBounds.ProbabilityScale);
+        var roll = random.NextBasisPoint();
 
         if (roll < offensiveTeam)
         {
@@ -301,7 +310,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         if (roll < MatchModelBounds.OffensiveReboundRate)
         {
-            offence.OffensiveReboundsBy[offence.PickBy(offence.ReboundWeights, random)]++;
+            offence.OffensiveReboundsBy[offence.PickOnFloor(offence.ReboundFactors, random)]++;
             return true;
         }
 
@@ -311,7 +320,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
             return false;
         }
 
-        defence.DefensiveReboundsBy[defence.PickBy(defence.ReboundWeights, random)]++;
+        defence.DefensiveReboundsBy[defence.PickOnFloor(defence.ReboundFactors, random)]++;
         return false;
     }
 
@@ -341,23 +350,20 @@ public sealed class PossessionMatchEngine : IMatchEngine
     }
 
     /// <summary>
-    /// Awards a synthetic made basket to whoever the usage weights pick — the overtime-tie terminal
+    /// Awards a synthetic made basket to whichever player on the floor the usage factors pick — the overtime-tie terminal
     /// rule's only caller. One usage draw and nothing else: no assist, no and-one, so the rule decides
     /// the game without inventing a play.
     /// </summary>
-    private static void AwardBasket(Side side, bool isThree, IRandomSource random)
+    private static void AwardBasket(Side side, Side opponent, bool isThree, IRandomSource random)
     {
-        var shooter = side.PickBy(side.UsageWeights, random);
+        var shooter = side.PickOnFloor(side.UsageFactors, random);
         ChargeAttempt(side, shooter, isThree);
-        AwardMake(side, shooter, isThree);
+        AwardMake(side, opponent, shooter, isThree);
     }
 
-    private static void AwardMake(Side side, int shooter, bool isThree)
+    private static void AwardMake(Side side, Side opponent, int shooter, bool isThree)
     {
-        var points = isThree ? 3 : 2;
-
-        side.Points += points;
-        side.PointsBy[shooter] += points;
+        Score(side, opponent, shooter, isThree ? 3 : 2);
         side.FieldGoalsMade[shooter]++;
 
         if (isThree)
@@ -367,23 +373,43 @@ public sealed class PossessionMatchEngine : IMatchEngine
     }
 
     /// <summary>
+    /// Points on the board: the scorer's, the team's, and plus-minus for all ten players on the floor
+    /// — every point is +1 to each of the five who scored it and −1 to each of the five who allowed it,
+    /// which is why a team's plus-minus always sums to five times its margin.
+    /// </summary>
+    private static void Score(Side side, Side opponent, int scorer, int points)
+    {
+        side.Points += points;
+        side.PointsBy[scorer] += points;
+
+        foreach (var index in side.OnFloor)
+        {
+            side.PlusMinusBy[index] += points;
+        }
+
+        foreach (var index in opponent.OnFloor)
+        {
+            opponent.PlusMinusBy[index] -= points;
+        }
+    }
+
+    /// <summary>
     /// Draws every shot of one free-throw trip. Returns whether the trip ended on a miss — a live
     /// ball, counted so the box score can account for the rebound that follows it.
     /// </summary>
-    private static bool ResolveFreeThrowTrip(Side side, int shooter, int shots, IRandomSource random)
+    private static bool ResolveFreeThrowTrip(Side side, Side opponent, int shooter, int shots, IRandomSource random)
     {
         var madeLastShot = false;
 
         for (var shot = 0; shot < shots; shot++)
         {
             side.FreeThrowsAttempted[shooter]++;
-            madeLastShot = random.NextInt32(0, MatchModelBounds.ProbabilityScale) < MatchModelBounds.FreeThrowPercentage;
+            madeLastShot = random.NextBasisPoint() < MatchModelBounds.FreeThrowPercentage;
 
             if (madeLastShot)
             {
                 side.FreeThrowsMade[shooter]++;
-                side.Points++;
-                side.PointsBy[shooter]++;
+                Score(side, opponent, shooter, 1);
             }
         }
 
@@ -393,30 +419,6 @@ public sealed class PossessionMatchEngine : IMatchEngine
         }
 
         return !madeLastShot;
-    }
-
-    /// <summary>
-    /// Overtime minutes go to the five who were already playing most. Crude, and deliberately so:
-    /// nothing downstream reads a minutes total for anything but display, and inventing a second
-    /// rotation rule for the extra five minutes would be a rule nobody stated.
-    /// </summary>
-    private static void AwardOvertimeMinutes(Side side, int periods)
-    {
-        if (periods == 0)
-        {
-            return;
-        }
-
-        var closers = Enumerable.Range(0, side.Players.Count)
-            .OrderByDescending(index => side.Minutes[index])
-            .ThenBy(index => side.Players[index].PlayerId.Value, StringComparer.Ordinal)
-            .Take(MinutesOnFloor)
-            .ToArray();
-
-        foreach (var index in closers)
-        {
-            side.Minutes[index] += MatchModelBounds.OvertimeMinutes * periods;
-        }
     }
 
     /// <summary>
@@ -430,9 +432,9 @@ public sealed class PossessionMatchEngine : IMatchEngine
         for (var index = 0; index < side.Players.Count; index++)
         {
             var chance = MatchModelBounds.InjuryChancePerFullGame * side.Minutes[index] /
-                Rules.Seasons.MinutesAllocationBounds.MaximumMinutesPerPlayer;
+                MinutesAllocationBounds.MaximumMinutesPerPlayer;
 
-            if (random.NextInt32(0, MatchModelBounds.ProbabilityScale) >= chance)
+            if (random.NextBasisPoint() >= chance)
             {
                 continue;
             }
@@ -468,10 +470,8 @@ public sealed class PossessionMatchEngine : IMatchEngine
         return DomainOperationResult<Side>.Success(new Side(team));
     }
 
-    private const int MinutesOnFloor = 5;
-
     /// <summary>
-    /// One team as the game is played against it: the rotation flattened into arrays, the weights
+    /// One team as the game is played against it: the rotation flattened into arrays, the factors
     /// each draw uses, and the running totals. Mutable and private, because a game is a loop over a
     /// scoreboard and threading an immutable record through two hundred possessions would allocate
     /// two hundred of them for no gain in clarity.
@@ -485,7 +485,12 @@ public sealed class PossessionMatchEngine : IMatchEngine
             Players = team.Rotation.Slots;
 
             var count = Players.Count;
-            Minutes = Players.Select(slot => slot.Minutes).ToArray();
+            PlannedMinutes = Players.Select(slot => slot.Minutes).ToArray();
+            Minutes = new int[count];
+            PlusMinusBy = new int[count];
+            _regulationOn = new int[count];
+            _overtimeOn = new int[count];
+            OnFloor = [];
             Overalls = Players.Select(slot => team.OverallOf(slot.PlayerId) ?? 0).ToArray();
             PointsBy = new int[count];
             OffensiveReboundsBy = new int[count];
@@ -498,14 +503,14 @@ public sealed class PossessionMatchEngine : IMatchEngine
             FreeThrowsAttempted = new int[count];
             FreeThrowsMade = new int[count];
 
-            var playedMinutes = Minutes.Sum();
+            var playedMinutes = PlannedMinutes.Sum();
 
             // Minutes-weighted, because the rotation already decided who matters. A mean over the
             // roster would rate a team by its twelfth man as much as by its best player.
             Strength = playedMinutes == 0
                 ? 0
                 : Math.Clamp(
-                    Enumerable.Range(0, count).Sum(index => Overalls[index] * Minutes[index]) / playedMinutes,
+                    Enumerable.Range(0, count).Sum(index => Overalls[index] * PlannedMinutes[index]) / playedMinutes,
                     PlayerRating.MinimumOverall,
                     PlayerRating.MaximumOverall);
 
@@ -515,20 +520,63 @@ public sealed class PossessionMatchEngine : IMatchEngine
             // team's average takes rather more than twenty per cent more of its shots, so the
             // relative rating is squared before it becomes a weight — and then clamped, which is
             // where the bound earns its keep: an outlier is a first option, not the whole offence.
-            UsageWeights = Enumerable.Range(0, count)
-                .Select(index => Minutes[index] * Math.Clamp(
+            // Per player, not per minute: a pick is only ever among the five on the floor, so how
+            // long someone plays already decides how often they can be picked.
+            UsageFactors = Enumerable.Range(0, count)
+                .Select(index => Math.Clamp(
                     Overalls[index] * Overalls[index] * 100 / (meanOverall * meanOverall),
                     MatchModelBounds.MinimumUsageFactor,
                     MatchModelBounds.MaximumUsageFactor))
                 .ToArray();
 
-            ReboundWeights = Enumerable.Range(0, count)
-                .Select(index => Minutes[index] * ReboundWeightFor(Players[index].Position))
-                .ToArray();
+            ReboundFactors = Players.Select(slot => ReboundWeightFor(slot.Position)).ToArray();
+            AssistFactors = Players.Select(slot => AssistWeightFor(slot.Position)).ToArray();
 
-            AssistWeights = Enumerable.Range(0, count)
-                .Select(index => Minutes[index] * AssistWeightFor(Players[index].Position))
+            _rotation = Players
+                .Select(slot => new RotationPlayer(slot.PlayerId.Value, slot.Minutes, slot.IsStarter, slot.DepthRank))
                 .ToArray();
+        }
+
+        private readonly RotationPlayer[] _rotation;
+        private readonly int[] _regulationOn;
+        private readonly int[] _overtimeOn;
+        private int[][] _plan = [];
+        private int[]? _closers;
+
+        /// <summary>The indices of the players on the floor for the possession being played.</summary>
+        public int[] OnFloor { get; private set; }
+
+        /// <summary>Plans regulation's lineups, possession by possession (see <see cref="StintPlanner"/>).</summary>
+        public void PlanRegulation(int possessions) => _plan = StintPlanner.Plan(_rotation, possessions);
+
+        /// <summary>
+        /// Overtime belongs to the five the depth chart plays most, ties broken by player identifier:
+        /// a closing five, not a continuation of the regulation rotation.
+        /// </summary>
+        public void SendInClosers() => _closers ??= Enumerable.Range(0, Players.Count)
+            .OrderByDescending(index => PlannedMinutes[index])
+            .ThenBy(index => Players[index].PlayerId.Value, StringComparer.Ordinal)
+            .Take(MinutesAllocationBounds.PlayersOnFloor)
+            .Order()
+            .ToArray();
+
+        /// <summary>Puts the right five on the floor for this possession and counts it toward their minutes.</summary>
+        public void Enter(int possession)
+        {
+            OnFloor = _closers ?? _plan[possession];
+            var counts = _closers is null ? _regulationOn : _overtimeOn;
+
+            foreach (var index in OnFloor)
+            {
+                counts[index]++;
+            }
+        }
+
+        /// <summary>Turns the possessions each player was on the floor for into the minutes the box score credits.</summary>
+        public void CreditMinutes(int regulationPossessions, int overtimePeriods)
+        {
+            var credited = StintPlanner.Minutes(_regulationOn, regulationPossessions, _overtimeOn, overtimePeriods);
+            Array.Copy(credited, Minutes, credited.Length);
         }
 
         public TeamId TeamId { get; }
@@ -537,7 +585,13 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         public IReadOnlyList<DepthChartSlot> Players { get; }
 
+        /// <summary>The depth chart's planned minutes: what the stint planner aims at, and what team strength is weighted by.</summary>
+        public int[] PlannedMinutes { get; }
+
+        /// <summary>The minutes actually credited, from the possessions each player was on the floor for.</summary>
         public int[] Minutes { get; }
+
+        public int[] PlusMinusBy { get; }
 
         public int[] Overalls { get; }
 
@@ -561,11 +615,11 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         public int[] FreeThrowsMade { get; }
 
-        public int[] UsageWeights { get; }
+        public int[] UsageFactors { get; }
 
-        public int[] ReboundWeights { get; }
+        public int[] ReboundFactors { get; }
 
-        public int[] AssistWeights { get; }
+        public int[] AssistFactors { get; }
 
         public int Strength { get; }
 
@@ -580,77 +634,54 @@ public sealed class PossessionMatchEngine : IMatchEngine
         public TeamStatLine ToTeamLine() => new(TeamId, TeamOffensiveRebounds, TeamDefensiveRebounds, LiveFreeThrowMisses);
 
         /// <summary>
-        /// A teammate of <paramref name="excluded"/>, drawn by the supplied weights with the excluded
-        /// player's weight taken out — how an assist is credited, so nobody assists their own basket.
-        /// Falls back to the excluded player only on a one-player rotation, where no teammate exists
-        /// and <c>BoxScore.Create</c> would refuse the assist; the engine never fields one.
+        /// One of the five on the floor, drawn in proportion to the supplied per-player factors.
+        /// Walks the lineup in a fixed order and takes exactly one draw, so the same seed always picks
+        /// the same player.
         /// </summary>
-        public int PickTeammate(IReadOnlyList<int> weights, int excluded, IRandomSource random)
+        public int PickOnFloor(int[] factors, IRandomSource random) => PickTeammateOnFloor(factors, excluded: -1, random);
+
+        /// <summary>
+        /// One of the five on the floor other than <paramref name="excluded"/> — how an assist is
+        /// credited, so nobody assists their own basket. Falls back to the excluded player only when
+        /// nobody else is on the floor, where <c>BoxScore.Create</c> would refuse the assist; the
+        /// engine never fields a team that small.
+        /// </summary>
+        public int PickTeammateOnFloor(int[] factors, int excluded, IRandomSource random)
         {
             var total = 0;
-            for (var index = 0; index < weights.Count; index++)
+            foreach (var index in OnFloor)
             {
-                total += index == excluded ? 0 : weights[index];
+                total += index == excluded ? 0 : factors[index];
             }
 
             if (total <= 0)
             {
-                return excluded;
+                return excluded >= 0 ? excluded : OnFloor[0];
             }
 
             var roll = random.NextInt32(0, total);
 
-            for (var index = 0; index < weights.Count; index++)
+            foreach (var index in OnFloor)
             {
                 if (index == excluded)
                 {
                     continue;
                 }
 
-                roll -= weights[index];
+                roll -= factors[index];
                 if (roll < 0)
                 {
                     return index;
                 }
             }
 
-            return excluded;
-        }
-
-        /// <summary>
-        /// One player, drawn in proportion to the supplied weights. Walks the weights in a fixed
-        /// order and takes exactly one draw, so the same seed always picks the same player.
-        /// </summary>
-        public int PickBy(IReadOnlyList<int> weights, IRandomSource random)
-        {
-            var total = 0;
-            foreach (var weight in weights)
-            {
-                total += weight;
-            }
-
-            if (total <= 0)
-            {
-                return 0;
-            }
-
-            var roll = random.NextInt32(0, total);
-
-            for (var index = 0; index < weights.Count; index++)
-            {
-                roll -= weights[index];
-                if (roll < 0)
-                {
-                    return index;
-                }
-            }
-
-            return weights.Count - 1;
+            return OnFloor[^1];
         }
 
         public IEnumerable<PlayerStatLine> ToStatLines()
         {
-            var usagePercent = ApportionToHundred(UsageWeights);
+            // Each player's share of the team's plays: their usage factor for every minute they played.
+            var usagePercent = ApportionToHundred(Enumerable.Range(0, Players.Count).Select(index => Minutes[index] * UsageFactors[index]).ToArray());
 
             return Enumerable.Range(0, Players.Count).Select(index => new PlayerStatLine(
                 Players[index].PlayerId,
@@ -667,46 +698,18 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 ThreePointsMade[index],
                 FreeThrowsAttempted[index],
                 FreeThrowsMade[index],
-                Players[index].IsStarter));
+                Players[index].IsStarter,
+                PlusMinusBy[index]));
         }
 
-        /// <summary>
-        /// Turns a set of weights into whole percentage points that sum to exactly 100 — the largest-
-        /// remainder method: floor every share, then hand the leftover points, one each, to the shares
-        /// with the largest fractional part. Flooring alone always leaves a shortfall (it never leaves
-        /// a surplus), so this never has more whole points to place than shares to place them on.
-        /// </summary>
+        /// <summary>Whole percentage points summing to exactly 100 (see <see cref="Apportion.LargestRemainder"/>).</summary>
         private static int[] ApportionToHundred(IReadOnlyList<int> weights)
         {
-            var count = weights.Count;
-            var total = weights.Sum();
+            long total = weights.Sum();
 
-            if (total <= 0)
-            {
-                return new int[count];
-            }
-
-            var shares = new int[count];
-            var remainders = new int[count];
-
-            for (var index = 0; index < count; index++)
-            {
-                var scaled = weights[index] * 100;
-                shares[index] = scaled / total;
-                remainders[index] = scaled - (shares[index] * total);
-            }
-
-            var leftover = 100 - shares.Sum();
-
-            foreach (var index in Enumerable.Range(0, count)
-                .OrderByDescending(candidate => remainders[candidate])
-                .ThenBy(candidate => candidate)
-                .Take(leftover))
-            {
-                shares[index]++;
-            }
-
-            return shares;
+            return total <= 0
+                ? new int[weights.Count]
+                : Apportion.LargestRemainder(weights.Select(weight => weight * 100L).ToArray(), total, 100);
         }
 
         /// <summary>

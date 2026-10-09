@@ -39,7 +39,8 @@ public sealed record PlayerStatLine
         int threePointsMade,
         int freeThrowsAttempted,
         int freeThrowsMade,
-        bool started)
+        bool started,
+        int plusMinus)
     {
         ArgumentNullException.ThrowIfNull(playerId);
         ArgumentNullException.ThrowIfNull(teamId);
@@ -109,6 +110,7 @@ public sealed record PlayerStatLine
         FreeThrowsAttempted = freeThrowsAttempted;
         FreeThrowsMade = freeThrowsMade;
         Started = started;
+        PlusMinus = plusMinus;
     }
 
     public PlayerId PlayerId { get; }
@@ -150,6 +152,13 @@ public sealed record PlayerStatLine
     public int FreeThrowsMade { get; }
 
     public bool Started { get; }
+
+    /// <summary>
+    /// The score difference while this player was on the floor: every point their side scored with them
+    /// on it minus every point it allowed. Signed, so never checked for negativity; a team's lines sum
+    /// to five times its margin, which <see cref="BoxScore.Create"/> enforces.
+    /// </summary>
+    public int PlusMinus { get; }
 
     private static void ThrowIfNegative(int value, string parameterName)
     {
@@ -216,12 +225,33 @@ public sealed class BoxScore
     private const string ReboundsDoNotAccountForMissesCode = "box_score.rebounds_do_not_account_for_misses";
     private const string AssistsExceedTeammateMakesCode = "box_score.assists_exceed_teammate_makes";
     private const string TeamLineForWrongTeamCode = "box_score.team_line_for_wrong_team";
+    private const string MinutesDoNotFillTheGameCode = "box_score.minutes_do_not_fill_the_game";
+    private const string PlusMinusDoesNotMatchMarginCode = "box_score.plus_minus_does_not_match_margin";
+    private const string NegativeOvertimeCode = "box_score.negative_overtime";
+
+    /// <summary>The players on the floor for a side at once; a side's minutes and plus-minus are counted in fives.</summary>
+    public const int PlayersOnFloor = 5;
+
+    /// <summary>Minutes in regulation, and in each overtime period.</summary>
+    public const int RegulationMinutes = 48;
+
+    /// <inheritdoc cref="RegulationMinutes"/>
+    public const int OvertimeMinutes = 5;
+
+    /// <summary>
+    /// The minutes a side's lines must add up to: the game's length for each player on the floor —
+    /// five, or everyone on a side short-handed below five. The engine credits minutes to this total
+    /// and <see cref="Create"/> refuses anything else, from the one formula.
+    /// </summary>
+    public static int GameMinutes(int lines, int overtimePeriods) =>
+        Math.Min(lines, PlayersOnFloor) * (RegulationMinutes + (OvertimeMinutes * Math.Max(0, overtimePeriods)));
 
     private readonly List<PlayerStatLine> _lines;
 
-    private BoxScore(GameId gameId, TeamStatLine home, TeamStatLine away, List<PlayerStatLine> lines)
+    private BoxScore(GameId gameId, TeamStatLine home, TeamStatLine away, List<PlayerStatLine> lines, int overtimePeriods)
     {
         GameId = gameId;
+        OvertimePeriods = overtimePeriods;
         HomeTeamId = home.TeamId;
         AwayTeamId = away.TeamId;
         Home = home;
@@ -239,7 +269,8 @@ public sealed class BoxScore
         int awayPoints,
         IEnumerable<PlayerStatLine> lines,
         TeamStatLine home,
-        TeamStatLine away)
+        TeamStatLine away,
+        int overtimePeriods)
     {
         ArgumentNullException.ThrowIfNull(gameId);
         ArgumentNullException.ThrowIfNull(lines);
@@ -253,6 +284,11 @@ public sealed class BoxScore
         }
 
         var errors = new List<DomainError>();
+
+        if (overtimePeriods < 0)
+        {
+            errors.Add(new DomainError(NegativeOvertimeCode, $"Game '{gameId.Value}' cannot have {overtimePeriods} overtime periods."));
+        }
 
         if (home.TeamId == away.TeamId)
         {
@@ -289,6 +325,29 @@ public sealed class BoxScore
             var opponent = teams[1 - side];
             var own = totals[side];
 
+            // Every minute and every point is shared by the players on the floor — five, or everyone on
+            // a side short-handed below five — so a side's minutes are the game's length times that
+            // many, and its plus-minus that many times its margin.
+            if (own.Lines > 0)
+            {
+                var onFloor = Math.Min(own.Lines, PlayersOnFloor);
+                var gameMinutes = GameMinutes(own.Lines, overtimePeriods);
+                if (own.Minutes != gameMinutes)
+                {
+                    errors.Add(new DomainError(
+                        MinutesDoNotFillTheGameCode,
+                        $"Team '{team.TeamId.Value}' in game '{gameId.Value}' has {own.Minutes} minutes; a game with {overtimePeriods} overtime periods has {gameMinutes}."));
+                }
+
+                var margin = own.Points - totals[1 - side].Points;
+                if (own.PlusMinus != onFloor * margin)
+                {
+                    errors.Add(new DomainError(
+                        PlusMinusDoesNotMatchMarginCode,
+                        $"Team '{team.TeamId.Value}' in game '{gameId.Value}' has plus-minus summing to {own.PlusMinus}, not {onFloor} times its margin of {margin}."));
+                }
+            }
+
             if (own.Lines > 0 && own.Usage != 100)
             {
                 errors.Add(new DomainError(
@@ -319,7 +378,7 @@ public sealed class BoxScore
 
         return errors.Count > 0
             ? DomainOperationResult<BoxScore>.Failure(errors.ToArray())
-            : DomainOperationResult<BoxScore>.Success(new BoxScore(gameId, home, away, supplied));
+            : DomainOperationResult<BoxScore>.Success(new BoxScore(gameId, home, away, supplied, overtimePeriods));
     }
 
     public GameId GameId { get; }
@@ -327,6 +386,8 @@ public sealed class BoxScore
     public TeamId HomeTeamId { get; }
 
     public TeamId AwayTeamId { get; }
+
+    public int OvertimePeriods { get; }
 
     public TeamStatLine Home { get; }
 
@@ -353,11 +414,21 @@ public sealed class BoxScore
             .ToArray();
     }
 
-    /// <summary>One team's counting totals for this game — one game, however many players took part.</summary>
+    /// <summary>
+    /// One team's counting totals for this game — one game, however many players took part, and its
+    /// plus-minus is its margin (the players' plus-minus sums to that times the five on the floor).
+    /// </summary>
     public CountingStats TotalsFor(TeamId teamId)
     {
         ArgumentNullException.ThrowIfNull(teamId);
-        return CountingStats.Sum(_lines.Where(line => line.TeamId == teamId)) with { Games = 1, Starts = 0 };
+        var opponent = teamId == HomeTeamId ? AwayTeamId : HomeTeamId;
+        var own = CountingStats.Sum(_lines.Where(line => line.TeamId == teamId));
+        return own with
+        {
+            Games = 1,
+            Starts = 0,
+            PlusMinus = own.Points - PointsFor(opponent),
+        };
     }
 
     public int PointsFor(TeamId teamId)
@@ -370,6 +441,8 @@ public sealed class BoxScore
     {
         public int Lines;
         public int Points;
+        public int Minutes;
+        public int PlusMinus;
         public int Usage;
         public int FieldGoalsAttempted;
         public int FieldGoalsMade;
@@ -380,6 +453,8 @@ public sealed class BoxScore
         {
             Lines++;
             Points += line.Points;
+            Minutes += line.Minutes;
+            PlusMinus += line.PlusMinus;
             Usage += line.UsagePercent;
             FieldGoalsAttempted += line.FieldGoalsAttempted;
             FieldGoalsMade += line.FieldGoalsMade;

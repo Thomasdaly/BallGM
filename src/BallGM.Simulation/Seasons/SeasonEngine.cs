@@ -298,19 +298,42 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         ArgumentNullException.ThrowIfNull(teamId);
         ArgumentNullException.ThrowIfNull(day);
 
+        var built = Rotation(run, context, teamId, day);
+        return built.IsFailure
+            ? DomainOperationResult<DepthChartBuild>.Failure(built.Errors.ToArray())
+            : DomainOperationResult<DepthChartBuild>.Success(built.Value.Chart);
+    }
+
+    /// <summary>
+    /// The one way a team's rotation for a day is built — who is fit, and the depth chart built from
+    /// them — for the depth-chart screen and the games actually played alike.
+    /// </summary>
+    private DomainOperationResult<(DepthChartBuild Chart, IReadOnlyList<AvailablePlayer> Available)> Rotation(
+        SeasonRun run, SeasonContext context, TeamId teamId, SeasonDay day)
+    {
         var team = context.Team(teamId);
         if (team is null)
         {
-            return DomainOperationResult<DepthChartBuild>.Failure(new DomainError(
+            return DomainOperationResult<(DepthChartBuild, IReadOnlyList<AvailablePlayer>)>.Failure(new DomainError(
                 UnknownTeamCode,
                 $"Team '{teamId.Value}' is not a team in this league."));
         }
 
-        return _depthChartBuilder.Build(
-            teamId,
-            AvailableFor(team, run, day),
-            context.Ruleset.RosterLimits,
-            team.RosterCount);
+        var available = AvailableFor(team, run, day);
+        var chart = _depthChartBuilder.Build(teamId, available, context.Ruleset.RosterLimits, team.RosterCount);
+
+        return chart.IsFailure
+            ? DomainOperationResult<(DepthChartBuild, IReadOnlyList<AvailablePlayer>)>.Failure(chart.Errors.ToArray())
+            : DomainOperationResult<(DepthChartBuild, IReadOnlyList<AvailablePlayer>)>.Success((chart.Value, available));
+    }
+
+    /// <summary>One side for one game: the rotation and the fit players behind it, and its rest.</summary>
+    private DomainOperationResult<MatchTeam> SideFor(SeasonRun run, SeasonContext context, TeamId teamId, SeasonDay day)
+    {
+        var built = Rotation(run, context, teamId, day);
+        return built.IsFailure
+            ? DomainOperationResult<MatchTeam>.Failure(built.Errors.ToArray())
+            : DomainOperationResult<MatchTeam>.Success(new MatchTeam(teamId, built.Value.Chart.Chart, built.Value.Available, RestDaysFor(run, teamId, day)));
     }
 
     private DomainOperationResult PlayDay(
@@ -321,27 +344,20 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
     {
         foreach (var fixture in run.Schedule.On(day).Where(fixture => !run.HasResult(fixture.Id)))
         {
-            var homeChart = DepthChartFor(run, context, fixture.HomeTeamId, day);
-            if (homeChart.IsFailure)
+            var home = SideFor(run, context, fixture.HomeTeamId, day);
+            if (home.IsFailure)
             {
-                return DomainOperationResult.Failure(homeChart.Errors.ToArray());
+                return DomainOperationResult.Failure(home.Errors.ToArray());
             }
 
-            var awayChart = DepthChartFor(run, context, fixture.AwayTeamId, day);
-            if (awayChart.IsFailure)
+            var away = SideFor(run, context, fixture.AwayTeamId, day);
+            if (away.IsFailure)
             {
-                return DomainOperationResult.Failure(awayChart.Errors.ToArray());
+                return DomainOperationResult.Failure(away.Errors.ToArray());
             }
 
-            var homeTeam = MatchTeamFor(run, context, fixture.HomeTeamId, homeChart.Value.Chart, day);
-            var awayTeam = MatchTeamFor(run, context, fixture.AwayTeamId, awayChart.Value.Chart, day);
-
-            if (homeTeam is null || awayTeam is null)
-            {
-                return DomainOperationResult.Failure(new DomainError(
-                    UnknownTeamCode,
-                    $"Game '{fixture.Id.Value}' is scheduled between teams this league does not have."));
-            }
+            var homeTeam = home.Value;
+            var awayTeam = away.Value;
 
             // The seed is derived from the game's own identifier and nothing else, so this game plays
             // out the same way whether it is the first thing simulated after a load or the four
@@ -393,21 +409,6 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         }
     }
 
-    /// <summary>One side as the match engine needs it: the rotation, the ratings behind it, and its rest.</summary>
-    private static MatchTeam? MatchTeamFor(
-        SeasonRun run,
-        SeasonContext context,
-        TeamId teamId,
-        DepthChart rotation,
-        SeasonDay day)
-    {
-        var team = context.Team(teamId);
-
-        return team is null
-            ? null
-            : new MatchTeam(teamId, rotation, AvailableFor(team, run, day), RestDaysFor(run, teamId, day));
-    }
-
     /// <summary>
     /// Days since this team last played. A team with no previous game is fully rested rather than
     /// infinitely so, because the fatigue term is bounded and a first game should not be worth more
@@ -415,15 +416,9 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
     /// </summary>
     private static int RestDaysFor(SeasonRun run, TeamId teamId, SeasonDay day)
     {
-        var previous = run.Schedule.Fixtures
-            .Where(fixture => fixture.Day < day && fixture.Involves(teamId))
-            .Select(fixture => fixture.Day.Index)
-            .DefaultIfEmpty(-1)
-            .Max();
-
-        return previous < 0
-            ? MatchModelBounds.FullyRestedDays
-            : day.Index - previous;
+        return run.Schedule.PreviousGameDay(teamId, day) is { } previous
+            ? day.Index - previous
+            : MatchModelBounds.FullyRestedDays;
     }
 
     /// <summary>

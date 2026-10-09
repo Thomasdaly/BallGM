@@ -186,7 +186,7 @@ public sealed record CareerRow(
             Pct(Ratio("FG3M", "FG3A")),
             Metric("TS_PCT", value => Pct(value)),
             Metric("USG_PCT", value => Pct(value)),
-            Metric("NET_RATING", value => value.ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture)),
+            Metric("NET_RATING", value => StatColumns.Signed(value)),
             Metric("PIE", value => Pct(value)));
     }
 

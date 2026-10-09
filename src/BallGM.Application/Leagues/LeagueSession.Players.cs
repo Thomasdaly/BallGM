@@ -102,7 +102,7 @@ public sealed partial class LeagueSession
     /// <summary>
     /// A simulated season as career metrics, under the same stat codes a data pack uses (FGM, TS_PCT,
     /// USG_PCT, ...), so a played season and a stated one read the same in the career table. Only
-    /// what the simulation counts: no steals, blocks, or plus-minus.
+    /// what the simulation counts.
     /// </summary>
     private static IReadOnlyDictionary<string, double> MetricsFrom(SeasonDetailLine detail)
     {
@@ -116,6 +116,7 @@ public sealed partial class LeagueSession
             ["FTA"] = detail.Totals.FreeThrowsAttempted,
             ["OREB"] = detail.Totals.OffensiveRebounds,
             ["DREB"] = detail.Totals.DefensiveRebounds,
+            ["PLUS_MINUS"] = detail.Totals.PlusMinus,
             ["DD2"] = detail.DoubleDoubles,
             ["TD3"] = detail.TripleDoubles,
             ["USG_PCT"] = detail.UsagePercent / 100,

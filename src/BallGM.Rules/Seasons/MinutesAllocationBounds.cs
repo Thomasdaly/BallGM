@@ -1,3 +1,5 @@
+using BallGM.Domain.Seasons;
+
 namespace BallGM.Rules.Seasons;
 
 /// <summary>
@@ -18,10 +20,10 @@ namespace BallGM.Rules.Seasons;
 public static class MinutesAllocationBounds
 {
     /// <summary>Length of a game.</summary>
-    public const int RegulationMinutes = 48;
+    public const int RegulationMinutes = BoxScore.RegulationMinutes;
 
     /// <summary>How many of a team's players are on the floor at once.</summary>
-    public const int PlayersOnFloor = 5;
+    public const int PlayersOnFloor = BoxScore.PlayersOnFloor;
 
     /// <summary>The minutes one team has to distribute across one game.</summary>
     public const int TeamMinutesPerGame = RegulationMinutes * PlayersOnFloor;

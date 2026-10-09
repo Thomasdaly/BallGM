@@ -142,19 +142,39 @@ public sealed class PossessionMatchEngineTests
     }
 
     [Fact]
-    public void OvertimeAddsMinutesOnlyToTheFivePlayingMostOfIt()
+    public void OvertimeIsPlayedByTheClosingFiveAndAddsItsMinutes()
     {
-        // Found by search rather than asserted blind: the point is that a game which went to
-        // overtime hands the extra minutes somewhere, and to exactly five people.
-        var overtime = Enumerable.Range(0, 400)
+        // Found by search rather than asserted blind — and by the game's own overtime count, not by a
+        // high score, which is what this test used to guess from.
+        var overtime = Enumerable.Range(0, 2_000)
             .Select(seed => Engine.Play(MatchTestFixtures.Setup(seed)).Value)
-            .First(outcome => outcome.Result.HomePoints + outcome.Result.AwayPoints > 240);
+            .First(outcome => outcome.Result.BoxScore!.OvertimePeriods > 0);
 
-        var lines = overtime.Result.BoxScore!.LinesFor(overtime.Result.HomeTeamId);
-        var beyondRegulation = lines.Count(line => line.Minutes > Rules.Seasons.MinutesAllocationBounds.MaximumMinutesPerPlayer);
+        var box = overtime.Result.BoxScore!;
+        var lines = box.LinesFor(overtime.Result.HomeTeamId);
 
-        Assert.True(beyondRegulation <= 5);
+        Assert.Equal(240 + (25 * box.OvertimePeriods), lines.Sum(line => line.Minutes));
         Assert.All(lines, line => Assert.True(line.Minutes > 0));
+    }
+
+    [Fact]
+    public void CreditedMinutesStayWithinOneOfTheDepthChart()
+    {
+        for (var seed = 0; seed < 500; seed++)
+        {
+            var setup = MatchTestFixtures.Setup(seed);
+            var played = Engine.Play(setup).Value;
+            if (played.Result.BoxScore!.OvertimePeriods > 0)
+            {
+                continue;
+            }
+
+            foreach (var slot in setup.Home.Rotation.Slots)
+            {
+                var credited = played.Result.BoxScore.Lines.Single(line => line.PlayerId == slot.PlayerId).Minutes;
+                Assert.InRange(credited, slot.Minutes - 1, slot.Minutes + 1);
+            }
+        }
     }
 
     [Fact]

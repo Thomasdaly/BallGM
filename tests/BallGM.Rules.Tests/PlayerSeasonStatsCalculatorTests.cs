@@ -3,6 +3,7 @@ using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
+using BallGM.Domain.Tests;
 using BallGM.Rules.Seasons;
 
 namespace BallGM.Rules.Tests;
@@ -29,7 +30,7 @@ public sealed class PlayerSeasonStatsCalculatorTests
         var homeStarLine = Assert.Single(lines, line => line.PlayerId == HomeStar);
         Assert.Equal(2, homeStarLine.Totals.Games);
         Assert.Equal(35, homeStarLine.Totals.Points);
-        Assert.Equal(40, homeStarLine.Totals.Minutes);
+        Assert.Equal(96, homeStarLine.Totals.Minutes); // two full games on a short-handed side
         Assert.Equal(6, homeStarLine.Totals.Rebounds);
         Assert.Equal(4, homeStarLine.Totals.Assists);
     }
@@ -82,18 +83,19 @@ public sealed class PlayerSeasonStatsCalculatorTests
             new PlayerStatLine(
                 HomeStar, Home, minutes: 20, points: homeStarPoints, offensiveRebounds: 1, defensiveRebounds: 2,
                 assists: 2, usagePercent: 50, fieldGoalsAttempted: 0, fieldGoalsMade: 0, threePointsAttempted: 0,
-                threePointsMade: 0, freeThrowsAttempted: homeStarPoints, freeThrowsMade: homeStarPoints, started: true),
+                threePointsMade: 0, freeThrowsAttempted: homeStarPoints, freeThrowsMade: homeStarPoints, started: true, plusMinus: 0),
             Teammate(new PlayerId("player-home-mate"), Home, madeTwos: 2),
             new PlayerStatLine(
                 AwayStar, Away, minutes: 18, points: awayStarPoints, offensiveRebounds: 1, defensiveRebounds: 3,
                 assists: 1, usagePercent: 50, fieldGoalsAttempted: 0, fieldGoalsMade: 0, threePointsAttempted: 0,
-                threePointsMade: 0, freeThrowsAttempted: awayStarPoints, freeThrowsMade: awayStarPoints, started: true),
+                threePointsMade: 0, freeThrowsAttempted: awayStarPoints, freeThrowsMade: awayStarPoints, started: true, plusMinus: 0),
             Teammate(new PlayerId("player-away-mate"), Away, madeTwos: 1),
         ];
         homePoints += 4;
         awayPoints += 2;
-        var (homeLine, awayLine) = BalancedTeamLines.For(Home, Away, lines);
-        var boxScore = BoxScore.Create(fixture.Id, homePoints, awayPoints, lines, homeLine, awayLine).Value;
+        var floor = BalancedTeamLines.Normalise(lines, Home, homePoints, awayPoints);
+        var (homeLine, awayLine) = BalancedTeamLines.For(Home, Away, floor);
+        var boxScore = BoxScore.Create(fixture.Id, homePoints, awayPoints, floor, homeLine, awayLine, overtimePeriods: 0).Value;
 
         return GameResult.Create(fixture, homePoints, awayPoints, boxScore).Value;
     }
@@ -101,5 +103,5 @@ public sealed class PlayerSeasonStatsCalculatorTests
     private static PlayerStatLine Teammate(PlayerId playerId, TeamId teamId, int madeTwos) =>
         new(playerId, teamId, minutes: 10, points: 2 * madeTwos, offensiveRebounds: 0, defensiveRebounds: 0, assists: 0,
             usagePercent: 50, fieldGoalsAttempted: madeTwos, fieldGoalsMade: madeTwos, threePointsAttempted: 0,
-            threePointsMade: 0, freeThrowsAttempted: 0, freeThrowsMade: 0, started: false);
+            threePointsMade: 0, freeThrowsAttempted: 0, freeThrowsMade: 0, started: false, plusMinus: 0);
 }

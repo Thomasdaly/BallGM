@@ -67,7 +67,7 @@ public sealed class GameSheet
     private static readonly StatHeader SeasonPpgHeader = new("PPG", "Season points per game, regular season.", 44);
 
     private static readonly IReadOnlyList<StatColumn> PreviewSeasonColumns =
-        [StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists, StatColumns.FieldGoalPercent];
+        [StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists, StatColumns.PlusMinus, StatColumns.FieldGoalPercent];
 
     private static readonly IReadOnlyList<StatHeader> FinalHeaders =
         [.. StatColumns.Headers(StatColumns.BoxScore), SeasonPpgHeader];
@@ -160,8 +160,7 @@ public sealed class GameSheet
             var rows = boxScore.Select(line => FromBoxScore(line, depth, input.Totals)).ToList();
             starters = rows.Where(row => row.IsStarter).ToList();
             bench = rows.Where(row => !row.IsStarter).ToList();
-            var sum = CountingStats.Sum(boxScore.Select(line => line.Stats));
-            totals = [.. StatColumns.Cells(sum, StatColumns.BoxScore), SeasonPpgHeader.Cell(string.Empty)];
+            totals = teamLine is null ? [] : [.. StatColumns.Cells(teamLine.Totals, StatColumns.BoxScore), SeasonPpgHeader.Cell(string.Empty)];
             teamRebounds = teamLine is null
                 ? string.Empty
                 : string.Create(CultureInfo.InvariantCulture, $"Team rebounds: {teamLine.TeamRebounds} ({teamLine.TeamOffensiveRebounds} offensive, {teamLine.TeamDefensiveRebounds} defensive) — boards no player secured, counted so every miss is accounted for.");
@@ -206,9 +205,7 @@ public sealed class GameSheet
             form,
             StatColumns.Fixed(standing is null ? null : StatFormulas.PerGame(standing.PointsFor, standing.GamesPlayed)),
             StatColumns.Fixed(standing is null ? null : StatFormulas.PerGame(standing.PointsAgainst, standing.GamesPlayed)),
-            standing is null || StatFormulas.PerGame(standing.PointDifferential, standing.GamesPlayed) is not { } margin
-                ? "—"
-                : margin.ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture),
+            StatColumns.Signed(standing is null ? null : StatFormulas.PerGame(standing.PointDifferential, standing.GamesPlayed)),
             starters,
             bench,
             totals,

@@ -26,7 +26,8 @@ public sealed record PlayerStatLineEnvelope(
     int ThreePointsMade,
     int FreeThrowsAttempted,
     int FreeThrowsMade,
-    bool Started);
+    bool Started,
+    int? PlusMinus = null);
 
 /// <summary>One side's team-level figures: team rebounds and free-throw trips that ended on a live miss.</summary>
 public sealed record TeamStatLineEnvelope(int TeamOffensiveRebounds, int TeamDefensiveRebounds, int LiveFreeThrowMisses);
@@ -41,7 +42,8 @@ public sealed record GameResultEnvelope(
     int AwayPoints,
     IReadOnlyList<PlayerStatLineEnvelope>? BoxScore,
     TeamStatLineEnvelope? HomeTeam = null,
-    TeamStatLineEnvelope? AwayTeam = null);
+    TeamStatLineEnvelope? AwayTeam = null,
+    int? OvertimePeriods = null);
 
 /// <summary>One saved injury spell.</summary>
 public sealed record InjurySpellEnvelope(string PlayerId, string Description, int FromDay, int UntilDayExclusive);
@@ -89,8 +91,14 @@ public sealed record SeasonEnvelope
     /// are what let a box score account for every miss, and <c>BoxScore.Create</c> now refuses one
     /// that cannot. A version-3 box score cannot pass that check, so it is refused, not migrated.
     /// </para>
+    /// <para>
+    /// Version 5 adds each line's <c>PlusMinus</c> and the game's <c>OvertimePeriods</c>: lineups are
+    /// tracked possession by possession, minutes are credited from them, and <c>BoxScore.Create</c>
+    /// refuses a side whose minutes do not fill the game or whose plus-minus is not five times its
+    /// margin. A version-4 box score cannot pass either check, so it is refused, not migrated.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
 
     public SeasonEnvelope(
         int schemaVersion,
