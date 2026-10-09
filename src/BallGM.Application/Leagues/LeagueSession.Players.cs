@@ -2,6 +2,7 @@ using System.Globalization;
 using BallGM.Application.Players;
 using BallGM.Domain.Common;
 using BallGM.Domain.Seasons;
+using BallGM.Domain.Teams;
 
 namespace BallGM.Application.Leagues;
 
@@ -107,14 +108,14 @@ public sealed partial class LeagueSession
     {
         var metrics = new Dictionary<string, double>(StringComparer.Ordinal)
         {
-            ["FGM"] = detail.FieldGoalsMade,
-            ["FGA"] = detail.FieldGoalsAttempted,
-            ["FG3M"] = detail.ThreesMade,
-            ["FG3A"] = detail.ThreesAttempted,
-            ["FTM"] = detail.FreeThrowsMade,
-            ["FTA"] = detail.FreeThrowsAttempted,
-            ["OREB"] = detail.OffensiveRebounds,
-            ["DREB"] = detail.DefensiveRebounds,
+            ["FGM"] = detail.Totals.FieldGoalsMade,
+            ["FGA"] = detail.Totals.FieldGoalsAttempted,
+            ["FG3M"] = detail.Totals.ThreePointsMade,
+            ["FG3A"] = detail.Totals.ThreePointsAttempted,
+            ["FTM"] = detail.Totals.FreeThrowsMade,
+            ["FTA"] = detail.Totals.FreeThrowsAttempted,
+            ["OREB"] = detail.Totals.OffensiveRebounds,
+            ["DREB"] = detail.Totals.DefensiveRebounds,
             ["DD2"] = detail.DoubleDoubles,
             ["TD3"] = detail.TripleDoubles,
             ["USG_PCT"] = detail.UsagePercent / 100,
@@ -128,55 +129,34 @@ public sealed partial class LeagueSession
             }
         }
 
-        Add("TS_PCT", StatFormulas.TrueShooting(detail.Points, detail.FieldGoalsAttempted, detail.FreeThrowsAttempted));
-        Add("EFG_PCT", StatFormulas.EffectiveFieldGoal(detail.FieldGoalsMade, detail.ThreesMade, detail.FieldGoalsAttempted));
-        Add("AST_PCT", StatFormulas.AssistPercent(detail.Assists, detail.Minutes, detail.TeamMinutes, detail.TeamFieldGoalsMade, detail.FieldGoalsMade));
-        Add("REB_PCT", StatFormulas.ReboundPercent(detail.Rebounds, detail.Minutes, detail.TeamMinutes,
-            detail.TeamOffensiveRebounds + detail.TeamDefensiveRebounds + detail.OpponentOffensiveRebounds + detail.OpponentDefensiveRebounds));
+        Add("TS_PCT", StatFormulas.TrueShooting(detail.Totals));
+        Add("EFG_PCT", StatFormulas.EffectiveFieldGoal(detail.Totals));
+        Add("AST_PCT", StatFormulas.AssistPercent(detail.Totals.Assists, detail.Totals.Minutes, detail.Team.Minutes, detail.Team.FieldGoalsMade, detail.Totals.FieldGoalsMade));
+        Add("REB_PCT", StatFormulas.ReboundPercent(detail.Totals.Rebounds, detail.Totals.Minutes, detail.Team.Minutes,
+            detail.Team.OffensiveRebounds + detail.Team.DefensiveRebounds + detail.Opponent.OffensiveRebounds + detail.Opponent.DefensiveRebounds));
         return metrics;
     }
 
-    /// <summary>A player's season totals with the team and opponent totals from the same games.</summary>
+    /// <summary>
+    /// A player's season totals with the team and opponent totals from the same games — every
+    /// counting stat on each, as <see cref="CountingStats"/>, so nothing the engine counts is dropped
+    /// here. Team and opponent totals come from <see cref="BoxScore.TotalsFor"/>, one per game.
+    /// </summary>
     private static SeasonDetailLine SeasonDetail(IReadOnlyList<(GameResult Result, PlayerStatLine Line)> games)
     {
-        int Sum(Func<PlayerStatLine, int> pick) => games.Sum(game => pick(game.Line));
-        int TeamSum(Func<PlayerStatLine, int> pick, bool opponent) => games.Sum(game =>
-        {
-            var teamId = opponent
-                ? (game.Line.TeamId == game.Result.HomeTeamId ? game.Result.AwayTeamId : game.Result.HomeTeamId)
-                : game.Line.TeamId;
-            return game.Result.BoxScore!.LinesFor(teamId).Sum(pick);
-        });
+        static TeamId OpponentOf(GameResult result, TeamId teamId) => teamId == result.HomeTeamId ? result.AwayTeamId : result.HomeTeamId;
 
         bool TenOrMore(PlayerStatLine line, int categories) =>
             new[] { line.Points, line.Rebounds, line.Assists }.Count(value => value >= 10) >= categories;
 
-        var minutes = Sum(line => line.Minutes);
+        var totals = CountingStats.Sum(games.Select(game => game.Line));
         return new SeasonDetailLine(
-            games.Count,
-            games.Count(game => game.Line.Started),
-            minutes,
-            Sum(line => line.Points),
-            Sum(line => line.OffensiveRebounds),
-            Sum(line => line.DefensiveRebounds),
-            Sum(line => line.Assists),
-            Sum(line => line.FieldGoalsMade),
-            Sum(line => line.FieldGoalsAttempted),
-            Sum(line => line.ThreePointsMade),
-            Sum(line => line.ThreePointsAttempted),
-            Sum(line => line.FreeThrowsMade),
-            Sum(line => line.FreeThrowsAttempted),
+            totals,
+            CountingStats.Sum(games.Select(game => game.Result.BoxScore!.TotalsFor(game.Line.TeamId))),
+            CountingStats.Sum(games.Select(game => game.Result.BoxScore!.TotalsFor(OpponentOf(game.Result, game.Line.TeamId)))),
             games.Count(game => TenOrMore(game.Line, 2)),
             games.Count(game => TenOrMore(game.Line, 3)),
-            minutes == 0 ? 0 : games.Sum(game => (double)game.Line.UsagePercent * game.Line.Minutes) / minutes,
-            TeamSum(line => line.Minutes, opponent: false),
-            TeamSum(line => line.FieldGoalsMade, opponent: false),
-            TeamSum(line => line.OffensiveRebounds, opponent: false),
-            TeamSum(line => line.DefensiveRebounds, opponent: false),
-            TeamSum(line => line.OffensiveRebounds, opponent: true),
-            TeamSum(line => line.DefensiveRebounds, opponent: true),
-            TeamSum(line => line.Points, opponent: false),
-            TeamSum(line => line.Points, opponent: true));
+            totals.Minutes == 0 ? 0 : games.Sum(game => (double)game.Line.UsagePercent * game.Line.Minutes) / totals.Minutes);
     }
 
     /// <summary>The contract seen against the league's scales: share of the cap, place between min and max, free agency.</summary>
@@ -263,11 +243,11 @@ public sealed partial class LeagueSession
         new(
             SeasonLabel(seasonYear),
             teamName,
-            detail.Games,
-            detail.Minutes,
-            detail.Points,
-            detail.Rebounds,
-            detail.Assists,
+            detail.Totals.Games,
+            detail.Totals.Minutes,
+            detail.Totals.Points,
+            detail.Totals.Rebounds,
+            detail.Totals.Assists,
             isCurrent,
             MetricsFrom(detail),
             IsPostseason: phase == SeasonPhase.Postseason);
@@ -291,11 +271,6 @@ public sealed partial class LeagueSession
             teamPoints > opponentPoints,
             teamPoints,
             opponentPoints,
-            line.Minutes,
-            line.Points,
-            line.Rebounds,
-            line.Assists,
-            line.FieldGoalsMade,
-            line.FieldGoalsAttempted);
+            CountingStats.Of(line));
     }
 }

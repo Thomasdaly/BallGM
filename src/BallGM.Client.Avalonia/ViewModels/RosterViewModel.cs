@@ -3,13 +3,15 @@ using BallGM.Application.Leagues;
 using BallGM.Application.Players;
 using BallGM.Application.Seasons;
 using BallGM.Domain.Common;
+using BallGM.Domain.Seasons;
 
 namespace BallGM.Client.Avalonia.ViewModels;
 
 /// <summary>
 /// The squad screen: every player with rating, contract, and — once a season is under way — their
-/// season line, sortable by any column the way a management sim's squad view is. Per-game averages
-/// are computed here because they are a display choice; the season totals come from the session.
+/// season line, sortable by any column the way a management sim's squad view is. The stat columns
+/// are the shared <see cref="StatColumns.Season"/> set, on whichever <see cref="StatBasis"/> is chosen;
+/// every figure is derived by <c>StatFormulas</c>, never here.
 /// </summary>
 public sealed class RosterViewModel : ViewModelBase
 {
@@ -21,6 +23,9 @@ public sealed class RosterViewModel : ViewModelBase
     private TeamSummary? _team;
     private RosterSortColumn _sortColumn = RosterSortColumn.Overall;
     private bool _sortDescending = true;
+    private int _sortStat;
+    private IReadOnlyDictionary<string, PlayerSeasonTotals>? _cachedTotals;
+    private StatBasis _basis = StatBasis.PerGame;
 
     public RosterViewModel(
         LeagueOverview overview,
@@ -37,11 +42,7 @@ public sealed class RosterViewModel : ViewModelBase
         SortByPositionCommand = SortCommand(RosterSortColumn.Position);
         SortBySalaryCommand = SortCommand(RosterSortColumn.Salary);
         SortByYearsCommand = SortCommand(RosterSortColumn.Years);
-        SortByGamesCommand = SortCommand(RosterSortColumn.Games);
-        SortByMinutesCommand = SortCommand(RosterSortColumn.Minutes);
-        SortByPointsCommand = SortCommand(RosterSortColumn.Points);
-        SortByReboundsCommand = SortCommand(RosterSortColumn.Rebounds);
-        SortByAssistsCommand = SortCommand(RosterSortColumn.Assists);
+        SortByStatCommand = new ParameterCommand<int>(index => SortBy(RosterSortColumn.Stat, index));
     }
 
     public string Title => "Roster";
@@ -62,6 +63,7 @@ public sealed class RosterViewModel : ViewModelBase
     /// <summary>Re-reads everything derived from the team and the season — after games are played, say.</summary>
     public void Refresh()
     {
+        _cachedTotals = null;
         foreach (var name in new[]
         {
             nameof(TeamName), nameof(FranchiseName), nameof(RosterCountLabel), nameof(Roster), nameof(Rows),
@@ -107,28 +109,105 @@ public sealed class RosterViewModel : ViewModelBase
 
     public IReadOnlyList<RosterSpot> Roster => _team?.Roster ?? [];
 
-    public bool HasSeasonStats => Roster.Any(spot => _seasonTotals().ContainsKey(spot.PlayerId));
+    public bool HasSeasonStats => Roster.Any(spot => SeasonTotals.ContainsKey(spot.PlayerId));
 
-    public string SortLabel => $"Sorted by {_sortColumn.ToString().ToLowerInvariant()}, {(_sortDescending ? "highest" : "lowest")} first · click a column to sort";
+    /// <summary>
+    /// The season's totals, read once per <see cref="Refresh"/> rather than on every sort or basis
+    /// click: re-sorting or re-formatting the same season must not re-sum every box score in it.
+    /// </summary>
+    private IReadOnlyDictionary<string, PlayerSeasonTotals> SeasonTotals => _cachedTotals ??= _seasonTotals();
+
+    public string SortLabel =>
+        $"Sorted by {(_sortColumn == RosterSortColumn.Stat ? StatColumns.Season[_sortStat].Header : _sortColumn.ToString().ToLowerInvariant())}, {(_sortDescending ? "highest" : "lowest")} first · click a column to sort";
+
+    /// <summary>The season stat columns, one header per column, labelled for the chosen basis.</summary>
+    public IReadOnlyList<RosterStatHeader> StatHeaders =>
+        StatColumns.Headers(StatColumns.Season, Basis)
+            .Select((header, index) => new RosterStatHeader(
+                header,
+                index,
+                _sortColumn == RosterSortColumn.Stat && _sortStat == index ? (_sortDescending ? " ▾" : " ▴") : string.Empty))
+            .ToList();
+
+    private void RaiseBasisFlags()
+    {
+        RaisePropertyChanged(nameof(IsPerGame));
+        RaisePropertyChanged(nameof(IsPer36));
+        RaisePropertyChanged(nameof(IsTotals));
+    }
+
+    /// <summary>Per game, per 36 minutes, or totals — the same three choices every stat table offers.</summary>
+    public StatBasis Basis
+    {
+        get => _basis;
+        set
+        {
+            if (_basis == value)
+            {
+                return;
+            }
+
+            _basis = value;
+            RaisePropertyChanged(nameof(Basis));
+            RaiseBasisFlags();
+            RaisePropertyChanged(nameof(StatHeaders));
+            RaisePropertyChanged(nameof(Rows));
+        }
+    }
+
+    /// <summary>One radio chip of three; only a chip being chosen changes the basis.</summary>
+    public bool IsPerGame
+    {
+        get => _basis == StatBasis.PerGame;
+        set
+        {
+            if (value)
+            {
+                Basis = StatBasis.PerGame;
+            }
+        }
+    }
+
+    /// <summary>One radio chip of three; only a chip being chosen changes the basis.</summary>
+    public bool IsPer36
+    {
+        get => _basis == StatBasis.Per36;
+        set
+        {
+            if (value)
+            {
+                Basis = StatBasis.Per36;
+            }
+        }
+    }
+
+    /// <summary>One radio chip of three; only a chip being chosen changes the basis.</summary>
+    public bool IsTotals
+    {
+        get => _basis == StatBasis.Totals;
+        set
+        {
+            if (value)
+            {
+                Basis = StatBasis.Totals;
+            }
+        }
+    }
 
     /// <summary>The roster as table rows in the chosen sort order (best first by default).</summary>
     public IReadOnlyList<RosterRow> Rows
     {
         get
         {
-            var totals = _seasonTotals();
-            var rows = Roster.Select(spot => RosterRow.From(spot, totals.GetValueOrDefault(spot.PlayerId))).ToList();
+            var totals = SeasonTotals;
+            var rows = Roster.Select(spot => RosterRow.From(spot, totals.GetValueOrDefault(spot.PlayerId)?.Stats, _basis)).ToList();
             IOrderedEnumerable<RosterRow> ordered = _sortColumn switch
             {
                 RosterSortColumn.Name => Order(rows, row => row.FullName),
                 RosterSortColumn.Position => Order(rows, row => row.Position),
                 RosterSortColumn.Salary => Order(rows, row => row.SalarySortKey),
                 RosterSortColumn.Years => Order(rows, row => row.YearsSortKey),
-                RosterSortColumn.Games => Order(rows, row => row.GamesSortKey),
-                RosterSortColumn.Minutes => Order(rows, row => row.MinutesSortKey),
-                RosterSortColumn.Points => Order(rows, row => row.PointsSortKey),
-                RosterSortColumn.Rebounds => Order(rows, row => row.ReboundsSortKey),
-                RosterSortColumn.Assists => Order(rows, row => row.AssistsSortKey),
+                RosterSortColumn.Stat => RosterRow.OrderByStat(rows, _sortStat, _sortDescending),
                 _ => Order(rows, row => row.Overall),
             };
             return ordered.ThenBy(row => row.FullName, StringComparer.Ordinal).ToList();
@@ -145,15 +224,8 @@ public sealed class RosterViewModel : ViewModelBase
 
     public RelayCommand SortByYearsCommand { get; }
 
-    public RelayCommand SortByGamesCommand { get; }
-
-    public RelayCommand SortByMinutesCommand { get; }
-
-    public RelayCommand SortByPointsCommand { get; }
-
-    public RelayCommand SortByReboundsCommand { get; }
-
-    public RelayCommand SortByAssistsCommand { get; }
+    /// <summary>Sorts by the season stat column at the index passed as the command parameter.</summary>
+    public ParameterCommand<int> SortByStatCommand { get; }
 
     // Header tiles. Display summaries of the roster, not rules: nothing downstream reads them.
     public string AverageOverall => Roster.Count == 0 ? "–" : Math.Round(Roster.Average(spot => spot.Overall)).ToString("0", CultureInfo.InvariantCulture);
@@ -180,15 +252,20 @@ public sealed class RosterViewModel : ViewModelBase
         Profile = result.IsSuccess ? new PlayerProfileViewModel(result.Value, () => Profile = null) : null;
     }
 
-    private RelayCommand SortCommand(RosterSortColumn column) => new(() =>
+    private RelayCommand SortCommand(RosterSortColumn column) => new(() => SortBy(column, 0));
+
+    private void SortBy(RosterSortColumn column, int stat)
     {
         // Same column again flips the direction; a new column starts from its natural order
         // (names A-Z, numbers highest first).
-        _sortDescending = column == _sortColumn ? !_sortDescending : column is not (RosterSortColumn.Name or RosterSortColumn.Position);
+        var same = column == _sortColumn && (column != RosterSortColumn.Stat || stat == _sortStat);
+        _sortDescending = same ? !_sortDescending : column is not (RosterSortColumn.Name or RosterSortColumn.Position);
         _sortColumn = column;
+        _sortStat = stat;
         RaisePropertyChanged(nameof(Rows));
         RaisePropertyChanged(nameof(SortLabel));
-    });
+        RaisePropertyChanged(nameof(StatHeaders));
+    }
 
     private IOrderedEnumerable<RosterRow> Order<TKey>(IEnumerable<RosterRow> rows, Func<RosterRow, TKey> key) =>
         _sortDescending ? rows.OrderByDescending(key) : rows.OrderBy(key);
@@ -201,11 +278,18 @@ public enum RosterSortColumn
     Position,
     Salary,
     Years,
-    Games,
-    Minutes,
-    Points,
-    Rebounds,
-    Assists,
+
+    /// <summary>One of <see cref="StatColumns.Season"/>, by index.</summary>
+    Stat,
+}
+
+/// <summary>
+/// A sortable stat header on the roster: the shared header, its column index, and an arrow when the
+/// roster is sorted by it — the sort is shown where it applies, not only in the caption below.
+/// </summary>
+public sealed record RosterStatHeader(StatHeader Header, int Index, string SortGlyph)
+{
+    public string Label => Header.Header + SortGlyph;
 }
 
 public sealed record RosterRow(
@@ -218,31 +302,28 @@ public sealed record RosterRow(
     bool IsInjured,
     string? InjuryDescription,
     string? PortraitPath,
-    string Games,
-    string MinutesPerGame,
-    string PointsPerGame,
-    string ReboundsPerGame,
-    string AssistsPerGame)
+    IReadOnlyList<StatValue> Stats,
+    IReadOnlyList<double?> StatSortKeys)
 {
     public long SalarySortKey { get; init; }
 
     public int YearsSortKey { get; init; }
 
-    public int GamesSortKey { get; init; }
-
-    public double MinutesSortKey { get; init; }
-
-    public double PointsSortKey { get; init; }
-
-    public double ReboundsSortKey { get; init; }
-
-    public double AssistsSortKey { get; init; }
-
-    public static RosterRow From(RosterSpot spot, PlayerSeasonTotals? totals = null)
+    /// <summary>
+    /// Rows ordered by one stat column. A player with nothing to rank (no games, no attempts) comes
+    /// after every real figure whichever way the column runs — "no figure" is neither high nor low.
+    /// </summary>
+    public static IOrderedEnumerable<RosterRow> OrderByStat(IEnumerable<RosterRow> rows, int column, bool descending)
     {
-        var games = totals?.GamesPlayed ?? 0;
-        double PerGame(int total) => games == 0 ? 0 : (double)total / games;
-        string Show(int total) => games == 0 ? "–" : PerGame(total).ToString("0.0", CultureInfo.InvariantCulture);
+        var ranked = rows.OrderBy(row => row.StatSortKeys[column] is null);
+        return descending
+            ? ranked.ThenByDescending(row => row.StatSortKeys[column])
+            : ranked.ThenBy(row => row.StatSortKeys[column]);
+    }
+
+    public static RosterRow From(RosterSpot spot, CountingStats? season = null, StatBasis basis = StatBasis.PerGame)
+    {
+        var played = season is { Games: > 0 } ? season : null;
 
         return new RosterRow(
             spot.PlayerId,
@@ -259,19 +340,11 @@ public sealed record RosterRow(
             spot.IsInjured,
             spot.InjuryDescription,
             spot.PortraitPath,
-            games == 0 ? "–" : games.ToString(CultureInfo.InvariantCulture),
-            Show(totals?.Minutes ?? 0),
-            Show(totals?.Points ?? 0),
-            Show(totals?.Rebounds ?? 0),
-            Show(totals?.Assists ?? 0))
+            StatColumns.Cells(played, StatColumns.Season, basis),
+            StatColumns.Season.Select(column => played is null ? null : column.SortKey(played, basis)).ToList())
         {
             SalarySortKey = spot.CapCharge,
             YearsSortKey = spot.ContractSeasonsRemaining,
-            GamesSortKey = games,
-            MinutesSortKey = PerGame(totals?.Minutes ?? 0),
-            PointsSortKey = PerGame(totals?.Points ?? 0),
-            ReboundsSortKey = PerGame(totals?.Rebounds ?? 0),
-            AssistsSortKey = PerGame(totals?.Assists ?? 0),
         };
     }
 }

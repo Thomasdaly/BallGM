@@ -1,4 +1,14 @@
+using BallGM.Domain.Seasons;
+
 namespace BallGM.Application.Players;
+
+/// <summary>How a counting stat is shown: as a total, per game played, or per 36 minutes on the floor.</summary>
+public enum StatBasis
+{
+    Totals = 1,
+    PerGame = 2,
+    Per36 = 3,
+}
 
 /// <summary>
 /// Basketball's derived statistics, as the league's own stats glossary defines them (NBA.com/stats
@@ -70,4 +80,28 @@ public static class StatFormulas
     public static double? Per36(int total, int minutes) => minutes == 0 ? null : total * 36.0 / minutes;
 
     public static double? PerGame(int total, int games) => games == 0 ? null : (double)total / games;
+
+    /// <summary>One counting stat of <paramref name="stats"/> on the requested basis; null when there is nothing to divide by.</summary>
+    public static double? Scaled(int total, CountingStats stats, StatBasis basis)
+    {
+        ArgumentNullException.ThrowIfNull(stats);
+
+        return basis switch
+        {
+            StatBasis.Totals => total,
+            StatBasis.PerGame => PerGame(total, stats.Games),
+            StatBasis.Per36 => Per36(total, stats.Minutes),
+            _ => throw new ArgumentOutOfRangeException(nameof(basis), basis, "Unknown stat basis."),
+        };
+    }
+
+    public static double? FieldGoalPercent(CountingStats stats) => Percent(stats.FieldGoalsMade, stats.FieldGoalsAttempted);
+
+    public static double? ThreePointPercent(CountingStats stats) => Percent(stats.ThreePointsMade, stats.ThreePointsAttempted);
+
+    public static double? FreeThrowPercent(CountingStats stats) => Percent(stats.FreeThrowsMade, stats.FreeThrowsAttempted);
+
+    public static double? TrueShooting(CountingStats stats) => TrueShooting(stats.Points, stats.FieldGoalsAttempted, stats.FreeThrowsAttempted);
+
+    public static double? EffectiveFieldGoal(CountingStats stats) => EffectiveFieldGoal(stats.FieldGoalsMade, stats.ThreePointsMade, stats.FieldGoalsAttempted);
 }

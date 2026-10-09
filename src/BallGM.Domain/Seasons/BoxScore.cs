@@ -353,6 +353,13 @@ public sealed class BoxScore
             .ToArray();
     }
 
+    /// <summary>One team's counting totals for this game — one game, however many players took part.</summary>
+    public CountingStats TotalsFor(TeamId teamId)
+    {
+        ArgumentNullException.ThrowIfNull(teamId);
+        return CountingStats.Sum(_lines.Where(line => line.TeamId == teamId)) with { Games = 1, Starts = 0 };
+    }
+
     public int PointsFor(TeamId teamId)
     {
         ArgumentNullException.ThrowIfNull(teamId);

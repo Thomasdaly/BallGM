@@ -27,11 +27,11 @@ public sealed class PlayerSeasonStatsCalculatorTests
         var lines = PlayerSeasonStatsCalculator.Calculate(results, SeasonPhase.RegularSeason);
 
         var homeStarLine = Assert.Single(lines, line => line.PlayerId == HomeStar);
-        Assert.Equal(2, homeStarLine.GamesPlayed);
-        Assert.Equal(35, homeStarLine.TotalPoints);
-        Assert.Equal(40, homeStarLine.TotalMinutes);
-        Assert.Equal(6, homeStarLine.TotalRebounds);
-        Assert.Equal(4, homeStarLine.TotalAssists);
+        Assert.Equal(2, homeStarLine.Totals.Games);
+        Assert.Equal(35, homeStarLine.Totals.Points);
+        Assert.Equal(40, homeStarLine.Totals.Minutes);
+        Assert.Equal(6, homeStarLine.Totals.Rebounds);
+        Assert.Equal(4, homeStarLine.Totals.Assists);
     }
 
     [Fact]
@@ -67,8 +67,8 @@ public sealed class PlayerSeasonStatsCalculatorTests
         var regular = Assert.Single(PlayerSeasonStatsCalculator.Calculate(results, SeasonPhase.RegularSeason), line => line.PlayerId == HomeStar);
         var playoffs = Assert.Single(PlayerSeasonStatsCalculator.Calculate(results, SeasonPhase.Postseason), line => line.PlayerId == HomeStar);
 
-        Assert.Equal((1, 20), (regular.GamesPlayed, regular.TotalPoints));
-        Assert.Equal((1, 30), (playoffs.GamesPlayed, playoffs.TotalPoints));
+        Assert.Equal((1, 20), (regular.Totals.Games, regular.Totals.Points));
+        Assert.Equal((1, 30), (playoffs.Totals.Games, playoffs.Totals.Points));
     }
 
     private static GameResult MakeResult(int day, int slot, int homePoints, int awayPoints, int homeStarPoints, int awayStarPoints, SeasonPhase phase = SeasonPhase.RegularSeason)

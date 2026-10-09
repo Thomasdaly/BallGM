@@ -62,13 +62,29 @@ public sealed class PlayerProfileViewModelTests
     [Fact]
     public void RecentForm_ReadsLikeAGameLog()
     {
-        var game = new RecentGameLine(20, "Jul 21", "Rivals", IsHome: false, Won: true, 110, 104, 34, 28, 6, 9, 11, 20);
+        var game = new RecentGameLine(20, "Jul 21", "Rivals", IsHome: false, Won: true, 110, 104, BallGM.Domain.Seasons.CountingStats.None with
+        {
+            Games = 1,
+            Minutes = 34,
+            Points = 28,
+            FieldGoalsMade = 11,
+            FieldGoalsAttempted = 20,
+            ThreePointsMade = 2,
+            ThreePointsAttempted = 5,
+            FreeThrowsMade = 4,
+            FreeThrowsAttempted = 5,
+            OffensiveRebounds = 2,
+            DefensiveRebounds = 4,
+            Assists = 9,
+        });
         var profile = new PlayerProfileViewModel(Sample(recent: [game]), () => { });
 
         var row = Assert.Single(profile.RecentGames);
         Assert.Equal("@ Rivals", row.Opponent);
         Assert.Equal("W 110–104", row.Result);
-        Assert.Equal("11-20", row.Shooting);
+        // The full box-score line, in the same columns a game sheet shows.
+        Assert.Equal(["MIN", "PTS", "FG", "3P", "FT", "OREB", "DREB", "REB", "AST"], profile.GameLogHeaders.Select(header => header.Header));
+        Assert.Equal(["34", "28", "11-20", "2-5", "4-5", "2", "4", "6", "9"], row.Stats.Select(cell => cell.Value));
     }
 
     [Fact]

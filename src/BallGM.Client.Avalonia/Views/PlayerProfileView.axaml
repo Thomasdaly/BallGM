@@ -39,7 +39,7 @@
 
       <TabControl Classes="profile">
         <TabItem Header="Overview">
-          <Grid ColumnDefinitions="2*,3*" ColumnSpacing="24" Margin="0,14,0,0">
+          <Grid ColumnDefinitions="2*,3*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="18" Margin="0,14,0,0">
             <StackPanel Spacing="18">
           <Border Classes="panel">
             <StackPanel Spacing="12">
@@ -90,40 +90,33 @@
             </ItemsControl>
           </StackPanel>
 
-          <StackPanel Spacing="8">
+
+            </StackPanel>
+          <!-- Full width: a game log carries the whole box-score line and needs the room. -->
+          <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="8">
             <TextBlock Text="Recent form" Classes="section" />
             <TextBlock Text="Form appears once this player has played in a simulated game." Classes="faint small" IsVisible="{Binding !HasRecentGames}" />
             <StackPanel Spacing="4" IsVisible="{Binding HasRecentGames}">
-              <Grid Classes="thead" ColumnDefinitions="64,*,96,44,44,44,44,56">
+              <Grid Classes="thead" ColumnDefinitions="64,*,96,Auto">
                 <TextBlock Text="Date" />
                 <TextBlock Grid.Column="1" Text="Opponent" />
                 <TextBlock Grid.Column="2" Text="Result" />
-                <TextBlock Grid.Column="3" Text="MIN" />
-                <TextBlock Grid.Column="4" Text="PTS" />
-                <TextBlock Grid.Column="5" Text="REB" />
-                <TextBlock Grid.Column="6" Text="AST" />
-                <TextBlock Grid.Column="7" Text="FG" />
+                <ItemsControl Grid.Column="3" Classes="statheads" ItemsSource="{Binding GameLogHeaders}" />
               </Grid>
               <ItemsControl Classes="table" ItemsSource="{Binding RecentGames}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:RecentGameRow">
-                    <Grid ColumnDefinitions="64,*,96,44,44,44,44,56" Height="30">
+                    <Grid ColumnDefinitions="64,*,96,Auto" Height="30">
                       <TextBlock Text="{Binding Date}" Classes="dim small" VerticalAlignment="Center" />
                       <TextBlock Grid.Column="1" Text="{Binding Opponent}" Classes="strong small" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                       <TextBlock Grid.Column="2" Text="{Binding Result}" Classes="num small" Classes.good="{Binding Won}" Classes.bad="{Binding !Won}" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="3" Text="{Binding Minutes}" Classes="dim small" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="4" Text="{Binding Points}" Classes="num" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="5" Text="{Binding Rebounds}" Classes="small" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="6" Text="{Binding Assists}" Classes="small" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="7" Text="{Binding Shooting}" Classes="dim small" VerticalAlignment="Center" />
+                      <ItemsControl Grid.Column="3" Classes="statrow" ItemsSource="{Binding Stats}" />
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
             </StackPanel>
           </StackPanel>
-
-            </StackPanel>
           </Grid>
         </TabItem>
 

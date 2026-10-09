@@ -1,9 +1,14 @@
+using BallGM.Domain.Seasons;
+
 namespace BallGM.Application.Players;
 
 /// <summary>
 /// Everything the player profile screen shows about one player: who they are, how the ratings
 /// break down, what they are paid, how they have played lately, and what their career has been.
-/// A read model like <c>LeagueOverview</c> — flattened and presentation-facing, never a Domain type.
+/// A read model like <c>LeagueOverview</c> — flattened and presentation-facing, never a Domain
+/// aggregate or entity. The one Domain type it carries is <c>CountingStats</c>, an immutable value
+/// with no identity: mirroring it field for field here would be exactly the kind of copy that once
+/// dropped half the box score on its way to the screen.
 /// </summary>
 public sealed record PlayerProfileSummary(
     string PlayerId,
@@ -31,33 +36,12 @@ public sealed record PlayerProfileSummary(
 /// derives the rest.
 /// </summary>
 public sealed record SeasonDetailLine(
-    int Games,
-    int Starts,
-    int Minutes,
-    int Points,
-    int OffensiveRebounds,
-    int DefensiveRebounds,
-    int Assists,
-    int FieldGoalsMade,
-    int FieldGoalsAttempted,
-    int ThreesMade,
-    int ThreesAttempted,
-    int FreeThrowsMade,
-    int FreeThrowsAttempted,
+    CountingStats Totals,
+    CountingStats Team,
+    CountingStats Opponent,
     int DoubleDoubles,
     int TripleDoubles,
-    double UsagePercent,
-    int TeamMinutes,
-    int TeamFieldGoalsMade,
-    int TeamOffensiveRebounds,
-    int TeamDefensiveRebounds,
-    int OpponentOffensiveRebounds,
-    int OpponentDefensiveRebounds,
-    int TeamPoints,
-    int OpponentPoints)
-{
-    public int Rebounds => OffensiveRebounds + DefensiveRebounds;
-}
+    double UsagePercent);
 
 /// <summary>
 /// A contract in depth: every remaining season with its guarantee and option, the player's place
@@ -92,12 +76,7 @@ public sealed record RecentGameLine(
     bool Won,
     int TeamPoints,
     int OpponentPoints,
-    int Minutes,
-    int Points,
-    int Rebounds,
-    int Assists,
-    int FieldGoalsMade,
-    int FieldGoalsAttempted);
+    CountingStats Stats);
 
 /// <summary>
 /// One season of a career, as totals. <see cref="Season"/> is a label ("2025-26") because career

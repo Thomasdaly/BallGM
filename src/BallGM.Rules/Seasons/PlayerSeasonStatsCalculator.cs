@@ -29,13 +29,7 @@ public static class PlayerSeasonStatsCalculator
             .Where(result => result.Phase == phase && result.BoxScore is not null)
             .SelectMany(result => result.BoxScore!.Lines)
             .GroupBy(line => line.PlayerId.Value)
-            .Select(group => new PlayerSeasonStatLine(
-                group.First().PlayerId,
-                GamesPlayed: group.Count(),
-                TotalMinutes: group.Sum(line => line.Minutes),
-                TotalPoints: group.Sum(line => line.Points),
-                TotalRebounds: group.Sum(line => line.Rebounds),
-                TotalAssists: group.Sum(line => line.Assists)))
+            .Select(group => new PlayerSeasonStatLine(group.First().PlayerId, CountingStats.Sum(group)))
             .OrderBy(line => line.PlayerId.Value, StringComparer.Ordinal)
             .ToArray();
     }

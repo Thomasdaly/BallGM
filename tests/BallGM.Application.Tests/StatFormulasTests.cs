@@ -6,6 +6,17 @@ namespace BallGM.Application.Tests;
 public sealed class StatFormulasTests
 {
     [Fact]
+    public void Scaled_ShowsATotalPerGameOrPer36()
+    {
+        var stats = BallGM.Domain.Seasons.CountingStats.None with { Games = 4, Minutes = 72, Points = 50 };
+
+        Assert.Equal(50, StatFormulas.Scaled(stats.Points, stats, StatBasis.Totals));
+        Assert.Equal(12.5, StatFormulas.Scaled(stats.Points, stats, StatBasis.PerGame));
+        Assert.Equal(25, StatFormulas.Scaled(stats.Points, stats, StatBasis.Per36));
+        Assert.Null(StatFormulas.Scaled(0, BallGM.Domain.Seasons.CountingStats.None, StatBasis.PerGame));
+    }
+
+    [Fact]
     public void TrueShooting_CountsFreeThrowsAtPointFourFour()
     {
         // 30 / (2 × (20 + 0.44 × 5)) = 30 / 44.4

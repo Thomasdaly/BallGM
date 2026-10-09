@@ -504,11 +504,23 @@ public sealed partial class LeagueSession
             return new Dictionary<string, PlayerSeasonTotals>();
         }
 
-        return _seasonEngine.PlayerSeasonStats(_seasonRun, phase).ToDictionary(
+        // Screens read this on every repaint and sheet open; a season's totals only change when a
+        // result is recorded, so they are summed once per results version, not once per read.
+        var version = (_seasonRun, _seasonRun.Results.Count, phase);
+        if (_seasonTotalsCache is { } cached && cached.Version == version)
+        {
+            return cached.Totals;
+        }
+
+        var totals = _seasonEngine.PlayerSeasonStats(_seasonRun, phase).ToDictionary(
             line => line.PlayerId.Value,
-            line => new PlayerSeasonTotals(line.PlayerId.Value, line.GamesPlayed, line.TotalMinutes, line.TotalPoints, line.TotalRebounds, line.TotalAssists),
+            line => new PlayerSeasonTotals(line.PlayerId.Value, line.Totals),
             StringComparer.Ordinal);
+        _seasonTotalsCache = (version, totals);
+        return totals;
     }
+
+    private ((SeasonRun Run, int Results, SeasonPhase Phase) Version, IReadOnlyDictionary<string, PlayerSeasonTotals> Totals)? _seasonTotalsCache;
 
     public DomainOperationResult<BoxScoreSummary> BoxScore(string gameId)
     {
@@ -729,8 +741,12 @@ public sealed partial class LeagueSession
             result.AwayPoints,
             result.BoxScore is not null,
             ToLines(result.BoxScore, result.HomeTeamId, playerNames),
-            ToLines(result.BoxScore, result.AwayTeamId, playerNames));
+            ToLines(result.BoxScore, result.AwayTeamId, playerNames),
+            result.BoxScore is null ? null : ToTeamLine(result.BoxScore.Home),
+            result.BoxScore is null ? null : ToTeamLine(result.BoxScore.Away));
     }
+
+    private static BoxScoreTeamLine ToTeamLine(TeamStatLine line) => new(line.TeamOffensiveRebounds, line.TeamDefensiveRebounds);
 
     private static IReadOnlyList<BoxScoreLine> ToLines(
         BoxScore? boxScore,
@@ -743,10 +759,7 @@ public sealed partial class LeagueSession
                     line.PlayerId.Value,
                     players.TryGetValue(line.PlayerId.Value, out var player) ? player.FullName : line.PlayerId.Value,
                     line.Started,
-                    line.Minutes,
-                    line.Points,
-                    line.Rebounds,
-                    line.Assists))
+                    CountingStats.Of(line)))
                 .ToList();
 
     private static DepthChartSummary ToSummary(

@@ -11,21 +11,46 @@
     <KeyBinding Gesture="Escape" Command="{Binding CloseGameCommand}" />
   </UserControl.KeyBindings>
   <UserControl.Resources>
-    <!-- One player in a game sheet's line-up; the column meanings switch between preview and final. -->
+    <!-- One player in a game sheet's line-up; the stat cells follow the side's Headers (preview or box score). -->
     <DataTemplate x:Key="LineupRowTemplate" x:DataType="vm:LineupRow">
-      <Grid ColumnDefinitions="34,*,42,38,40,40,40,44" Height="30" ToolTip.Tip="{Binding Tip}">
+      <Grid ColumnDefinitions="34,*,42,Auto" Height="30" ToolTip.Tip="{Binding Tip}">
         <TextBlock Text="{Binding Position}" Classes="faint small" VerticalAlignment="Center" />
         <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="small" Classes.strong="{Binding IsStarter}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
         <Border Grid.Column="2" Classes="ovr small" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}" IsVisible="{Binding HasOverall}">
           <TextBlock Text="{Binding Overall}" />
         </Border>
         <TextBlock Grid.Column="2" Text="—" Classes="faint small" VerticalAlignment="Center" IsVisible="{Binding !HasOverall}" />
-        <TextBlock Grid.Column="3" Text="{Binding Minutes}" Classes="dim small" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="4" Text="{Binding Points}" Classes="num small" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="5" Text="{Binding Rebounds}" Classes="dim small" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="6" Text="{Binding Assists}" Classes="dim small" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="7" Text="{Binding Extra}" Classes="num small" VerticalAlignment="Center" />
+        <ItemsControl Grid.Column="3" Classes="statrow" ItemsSource="{Binding Stats}" />
       </Grid>
+    </DataTemplate>
+
+    <!-- One team's side of the sheet: its line-up table, totals, and team rebounds. -->
+    <DataTemplate x:Key="SideLineupTemplate" x:DataType="vm:GameSheetSide">
+      <StackPanel Spacing="{StaticResource Space1}">
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space2}">
+          <Panel Classes="badge small">
+            <Border Classes="badge-plate" Background="{Binding Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Art.HasLogo}" />
+            <Image Source="{Binding Art.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Art.HasLogo}" />
+          </Panel>
+          <TextBlock Text="{Binding TeamName}" Classes="h3" />
+        </StackPanel>
+        <Grid Classes="thead" ColumnDefinitions="34,*,42,Auto" IsVisible="{Binding HasLineup}">
+          <TextBlock Text="Pos" />
+          <TextBlock Grid.Column="1" Text="Player" />
+          <TextBlock Grid.Column="2" Text="OVR" />
+          <ItemsControl Grid.Column="3" Classes="statheads" ItemsSource="{Binding Headers}" />
+        </Grid>
+        <TextBlock Text="Starters" Classes="eyebrow" IsVisible="{Binding HasLineup}" />
+        <ItemsControl Classes="table" ItemsSource="{Binding Starters}" ItemTemplate="{StaticResource LineupRowTemplate}" />
+        <TextBlock Text="Bench" Classes="eyebrow" IsVisible="{Binding HasLineup}" />
+        <ItemsControl Classes="table" ItemsSource="{Binding Bench}" ItemTemplate="{StaticResource LineupRowTemplate}" />
+        <Grid ColumnDefinitions="34,*,42,Auto" Height="30" Margin="10,0" IsVisible="{Binding HasTotals}">
+          <TextBlock Grid.Column="1" Text="Team totals" Classes="small strong" VerticalAlignment="Center" />
+          <ItemsControl Grid.Column="3" Classes="statrow" ItemsSource="{Binding Totals}" />
+        </Grid>
+        <TextBlock Text="{Binding TeamRebounds}" Classes="faint tiny" TextWrapping="Wrap" IsVisible="{Binding HasTeamRebounds}" />
+        <TextBlock Text="{Binding LineupNote}" Classes="dim" TextWrapping="Wrap" IsVisible="{Binding !HasLineup}" />
+      </StackPanel>
     </DataTemplate>
   </UserControl.Resources>
   <Panel>
@@ -547,78 +572,15 @@
           <StackPanel Spacing="8">
             <TextBlock Classes="section" Text="{Binding LineupHeading}" />
             <TextBlock Text="{Binding LineupNote}" Classes="faint tiny" TextWrapping="Wrap" />
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="28">
-                  <StackPanel Spacing="4">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <Panel Classes="badge small">
-                        <Border Classes="badge-plate" Background="{Binding Away.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Away.Art.HasLogo}" />
-                        <Image Source="{Binding Away.Art.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Away.Art.HasLogo}" />
-                      </Panel>
-                      <TextBlock Text="{Binding Away.TeamName}" Classes="h3" />
-                    </StackPanel>
-                    <Grid Classes="thead" ColumnDefinitions="34,*,42,38,40,40,40,44" IsVisible="{Binding IsPreview}">
-                      <TextBlock Text="Pos" />
-                      <TextBlock Grid.Column="1" Text="Player" />
-                      <TextBlock Grid.Column="2" Text="OVR" />
-                      <TextBlock Grid.Column="3" Text="MIN" />
-                      <TextBlock Grid.Column="4" Text="PPG" />
-                      <TextBlock Grid.Column="5" Text="RPG" />
-                      <TextBlock Grid.Column="6" Text="APG" />
-                      <TextBlock Grid.Column="7" Text="L5 PTS" />
-                    </Grid>
-                    <Grid Classes="thead" ColumnDefinitions="34,*,42,38,40,40,40,44" IsVisible="{Binding IsFinal}">
-                      <TextBlock Text="Pos" />
-                      <TextBlock Grid.Column="1" Text="Player" />
-                      <TextBlock Grid.Column="2" Text="OVR" />
-                      <TextBlock Grid.Column="3" Text="MIN" />
-                      <TextBlock Grid.Column="4" Text="PTS" />
-                      <TextBlock Grid.Column="5" Text="REB" />
-                      <TextBlock Grid.Column="6" Text="AST" />
-                      <TextBlock Grid.Column="7" Text="PPG" />
-                    </Grid>
-                    <TextBlock Text="Starters" Classes="eyebrow" Margin="0,4,0,0" IsVisible="{Binding Away.HasLineup}" />
-                    <ItemsControl Classes="table" ItemsSource="{Binding Away.Starters}" ItemTemplate="{StaticResource LineupRowTemplate}" />
-                    <TextBlock Text="Bench" Classes="eyebrow" Margin="0,6,0,0" IsVisible="{Binding Away.HasLineup}" />
-                    <ItemsControl Classes="table" ItemsSource="{Binding Away.Bench}" ItemTemplate="{StaticResource LineupRowTemplate}" />
-                    <TextBlock Text="{Binding Away.LineupNote}" Classes="dim" TextWrapping="Wrap" IsVisible="{Binding !Away.HasLineup}" />
-                  </StackPanel>
-              <Panel Grid.Column="1">
-                  <StackPanel Spacing="4">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                      <Panel Classes="badge small">
-                        <Border Classes="badge-plate" Background="{Binding Home.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Home.Art.HasLogo}" />
-                        <Image Source="{Binding Home.Art.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Home.Art.HasLogo}" />
-                      </Panel>
-                      <TextBlock Text="{Binding Home.TeamName}" Classes="h3" />
-                    </StackPanel>
-                    <Grid Classes="thead" ColumnDefinitions="34,*,42,38,40,40,40,44" IsVisible="{Binding IsPreview}">
-                      <TextBlock Text="Pos" />
-                      <TextBlock Grid.Column="1" Text="Player" />
-                      <TextBlock Grid.Column="2" Text="OVR" />
-                      <TextBlock Grid.Column="3" Text="MIN" />
-                      <TextBlock Grid.Column="4" Text="PPG" />
-                      <TextBlock Grid.Column="5" Text="RPG" />
-                      <TextBlock Grid.Column="6" Text="APG" />
-                      <TextBlock Grid.Column="7" Text="L5 PTS" />
-                    </Grid>
-                    <Grid Classes="thead" ColumnDefinitions="34,*,42,38,40,40,40,44" IsVisible="{Binding IsFinal}">
-                      <TextBlock Text="Pos" />
-                      <TextBlock Grid.Column="1" Text="Player" />
-                      <TextBlock Grid.Column="2" Text="OVR" />
-                      <TextBlock Grid.Column="3" Text="MIN" />
-                      <TextBlock Grid.Column="4" Text="PTS" />
-                      <TextBlock Grid.Column="5" Text="REB" />
-                      <TextBlock Grid.Column="6" Text="AST" />
-                      <TextBlock Grid.Column="7" Text="PPG" />
-                    </Grid>
-                    <TextBlock Text="Starters" Classes="eyebrow" Margin="0,4,0,0" IsVisible="{Binding Home.HasLineup}" />
-                    <ItemsControl Classes="table" ItemsSource="{Binding Home.Starters}" ItemTemplate="{StaticResource LineupRowTemplate}" />
-                    <TextBlock Text="Bench" Classes="eyebrow" Margin="0,6,0,0" IsVisible="{Binding Home.HasLineup}" />
-                    <ItemsControl Classes="table" ItemsSource="{Binding Home.Bench}" ItemTemplate="{StaticResource LineupRowTemplate}" />
-                    <TextBlock Text="{Binding Home.LineupNote}" Classes="dim" TextWrapping="Wrap" IsVisible="{Binding !Home.HasLineup}" />
-                  </StackPanel>
-              </Panel>
+            <!-- Before tip-off the two projected rotations sit side by side; a full box score is too wide for that and stacks. -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="28" IsVisible="{Binding IsPreview}">
+              <ContentControl Content="{Binding Away}" ContentTemplate="{StaticResource SideLineupTemplate}" />
+              <ContentControl Grid.Column="1" Content="{Binding Home}" ContentTemplate="{StaticResource SideLineupTemplate}" />
             </Grid>
+            <StackPanel Spacing="{StaticResource Space5}" IsVisible="{Binding IsFinal}">
+              <ContentControl Content="{Binding Away}" ContentTemplate="{StaticResource SideLineupTemplate}" />
+              <ContentControl Content="{Binding Home}" ContentTemplate="{StaticResource SideLineupTemplate}" />
+            </StackPanel>
           </StackPanel>
         </StackPanel>
       </ScrollViewer>

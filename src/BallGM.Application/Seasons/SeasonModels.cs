@@ -117,15 +117,21 @@ public sealed record StandingsSummary(
     IReadOnlyList<StandingsLine> Rows,
     IReadOnlyList<SeasonFindingLine> Notes);
 
-/// <summary>One player's line in a box score.</summary>
+/// <summary>
+/// One player's line in a box score: every counting stat the game credited, never a subset, so a
+/// screen can show whatever the engine counts without this model deciding for it.
+/// </summary>
 public sealed record BoxScoreLine(
     string PlayerId,
     string FullName,
     bool Started,
-    int Minutes,
-    int Points,
-    int Rebounds,
-    int Assists);
+    CountingStats Stats);
+
+/// <summary>What one side did as a team: its team rebounds, which belong to no player's line.</summary>
+public sealed record BoxScoreTeamLine(int TeamOffensiveRebounds, int TeamDefensiveRebounds)
+{
+    public int TeamRebounds => TeamOffensiveRebounds + TeamDefensiveRebounds;
+}
 
 /// <summary>
 /// One game as a screen shows it. <see cref="HasBoxScore"/> is false for a result recorded without
@@ -143,7 +149,9 @@ public sealed record BoxScoreSummary(
     int AwayPoints,
     bool HasBoxScore,
     IReadOnlyList<BoxScoreLine> HomeLines,
-    IReadOnlyList<BoxScoreLine> AwayLines);
+    IReadOnlyList<BoxScoreLine> AwayLines,
+    BoxScoreTeamLine? HomeTeam = null,
+    BoxScoreTeamLine? AwayTeam = null);
 
 /// <summary>
 /// What advancing did, or would do, plus where the calendar ends up. The same record for both, so
@@ -233,13 +241,7 @@ public sealed record SeasonConclusionSummary(
     IReadOnlyList<SeasonFindingLine> Notes);
 
 /// <summary>
-/// One player's totals for the season in progress. Totals only, like the Domain line it maps: a
-/// per-game average is a display choice, so the screen that shows one decides its rounding.
+/// One player's totals for one phase of the season in progress — every counting stat. Totals only,
+/// like the Domain line it maps: per-game and per-36 figures are derived by <c>StatFormulas</c>.
 /// </summary>
-public sealed record PlayerSeasonTotals(
-    string PlayerId,
-    int GamesPlayed,
-    int Minutes,
-    int Points,
-    int Rebounds,
-    int Assists);
+public sealed record PlayerSeasonTotals(string PlayerId, CountingStats Stats);

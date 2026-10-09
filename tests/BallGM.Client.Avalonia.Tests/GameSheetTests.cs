@@ -1,5 +1,6 @@
 using BallGM.Application.Seasons;
 using BallGM.Client.Avalonia.ViewModels;
+using BallGM.Domain.Seasons;
 
 namespace BallGM.Client.Avalonia.Tests;
 
@@ -25,7 +26,7 @@ public sealed class GameSheetTests
 
         // The bench runs by minutes, and a player the rotation gives no minutes is left out.
         Assert.Equal(["a-6th", "a-7th"], sheet.Away.Bench.Select(row => row.PlayerId));
-        Assert.Equal("30", sheet.Away.Starters[0].Minutes);
+        Assert.Equal("30", Cell(sheet.Away, sheet.Away.Starters[0], "MIN"));
     }
 
     [Fact]
@@ -36,21 +37,24 @@ public sealed class GameSheetTests
         var recent = new BoxScoreSummary(
             "g-1", 1, "2031-07-08", Other, "Other", 99, Away, "Away Side", 101, true,
             [],
-            [new BoxScoreLine("a-pg", "Point Guard", true, 34, 31, 4, 9)]);
+            [Line("a-pg", "Point Guard", true, minutes: 34, points: 31, rebounds: 4, assists: 9)]);
 
         var sheet = GameSheet.Build(Input(
             game,
             currentDay: 4,
             fixtures: [earlier, game],
-            totals: new Dictionary<string, PlayerSeasonTotals> { ["a-pg"] = new("a-pg", 4, 130, 90, 18, 30) },
+            totals: new Dictionary<string, PlayerSeasonTotals>
+            {
+                ["a-pg"] = new("a-pg", CountingStats.None with { Games = 4, Minutes = 130, Points = 90, DefensiveRebounds = 18, Assists = 30 }),
+            },
             recent: new Dictionary<string, IReadOnlyList<BoxScoreSummary>> { [Away] = [recent] }));
 
         var pointGuard = sheet.Away.Starters[0];
-        Assert.Equal("22.5", pointGuard.Points);
-        Assert.Equal("4.5", pointGuard.Rebounds);
-        Assert.Equal("7.5", pointGuard.Assists);
-        Assert.Equal("31.0", pointGuard.Extra);
-        Assert.Equal("—", sheet.Away.Starters[1].Extra);
+        Assert.Equal("22.5", Cell(sheet.Away, pointGuard, "PTS"));
+        Assert.Equal("4.5", Cell(sheet.Away, pointGuard, "REB"));
+        Assert.Equal("7.5", Cell(sheet.Away, pointGuard, "AST"));
+        Assert.Equal("31.0", Cell(sheet.Away, pointGuard, "L5 PTS"));
+        Assert.Equal("—", Cell(sheet.Away, sheet.Away.Starters[1], "L5 PTS"));
         Assert.Equal(["W"], sheet.Away.Form.Select(chip => chip.Letter));
         Assert.Empty(sheet.Home.Form);
     }
@@ -61,11 +65,13 @@ public sealed class GameSheetTests
         var game = Played("g-final", day: 3, away: Away, home: Home, awayPoints: 96, homePoints: 104);
         var box = new BoxScoreSummary(
             "g-final", 3, "2031-07-10", Home, "Home Side", 104, Away, "Away Side", 96, true,
-            [new BoxScoreLine("h-1", "Home Starter", true, 36, 28, 7, 3)],
+            [Line("h-1", "Home Starter", true, minutes: 36, points: 28, rebounds: 7, assists: 3)],
             [
-                new BoxScoreLine("a-pg", "Point Guard", true, 35, 19, 3, 11),
-                new BoxScoreLine("a-gone", "Traded Away", false, 12, 4, 2, 0),
-            ]);
+                Line("a-pg", "Point Guard", true, minutes: 35, points: 19, rebounds: 3, assists: 11),
+                Line("a-gone", "Traded Away", false, minutes: 12, points: 4, rebounds: 2, assists: 0),
+            ],
+            new BoxScoreTeamLine(1, 2),
+            new BoxScoreTeamLine(0, 3));
 
         var sheet = GameSheet.Build(Input(game, currentDay: 6, fixtures: [game], played: box));
 
@@ -77,7 +83,13 @@ public sealed class GameSheetTests
         Assert.False(sheet.Away.IsWinner);
 
         var pointGuard = Assert.Single(sheet.Away.Starters);
-        Assert.Equal("19", pointGuard.Points);
+        Assert.Equal("19", Cell(sheet.Away, pointGuard, "PTS"));
+        Assert.Equal("4-9", Cell(sheet.Away, pointGuard, "FG"));
+        Assert.Equal("3", Cell(sheet.Away, pointGuard, "DREB"));
+
+        // Team totals add every line up, and the team rebounds no player secured are stated.
+        Assert.Equal("23", sheet.Away.Totals[sheet.Away.Headers.ToList().FindIndex(header => header.Header == "PTS")].Value);
+        Assert.Contains("Team rebounds: 3", sheet.Home.TeamRebounds, StringComparison.Ordinal);
         Assert.Equal(84, pointGuard.Overall);
         Assert.True(pointGuard.HasOverall);
 
@@ -167,4 +179,23 @@ public sealed class GameSheetTests
         Home => "Home Side",
         _ => "Other",
     };
+
+    /// <summary>A box-score line whose points come from two-point makes and free throws, all rebounds defensive.</summary>
+    private static BoxScoreLine Line(string playerId, string name, bool started, int minutes, int points, int rebounds, int assists) =>
+        new(playerId, name, started, CountingStats.None with
+        {
+            Games = 1,
+            Starts = started ? 1 : 0,
+            Minutes = minutes,
+            Points = points,
+            FieldGoalsMade = points / 2 / 2,
+            FieldGoalsAttempted = points / 2,
+            FreeThrowsMade = points - (2 * (points / 2 / 2)),
+            FreeThrowsAttempted = points - (2 * (points / 2 / 2)),
+            DefensiveRebounds = rebounds,
+            Assists = assists,
+        });
+
+    private static string Cell(GameSheetSide side, LineupRow row, string header) =>
+        row.Stats[side.Headers.ToList().FindIndex(column => column.Header == header)].Value;
 }

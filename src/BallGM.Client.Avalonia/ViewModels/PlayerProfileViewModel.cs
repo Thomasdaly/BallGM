@@ -125,8 +125,10 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
         ? string.Empty
         : CareerRow.TotalsLine(profile.Career);
 
-    internal static string PerGame(int total, int games) =>
-        games == 0 ? "–" : ((double)total / games).ToString("0.0", CultureInfo.InvariantCulture);
+    internal static string PerGame(int total, int games) => StatColumns.Fixed(StatFormulas.PerGame(total, games));
+
+    /// <summary>The game log's column headers: the same box-score columns a game sheet shows.</summary>
+    public IReadOnlyList<StatHeader> GameLogHeaders { get; } = StatColumns.Headers(StatColumns.BoxScore);
 
     private static string LeagueSeasonLabel(int startYear) =>
         string.Create(CultureInfo.InvariantCulture, $"{startYear}-{(startYear + 1) % 100:00}");
@@ -138,18 +140,15 @@ public sealed record ContractRow(string Season, string Salary, string Note);
 
 public sealed record StatTile(string Label, string Value);
 
-public sealed record RecentGameRow(string Date, string Opponent, string Result, bool Won, string Minutes, string Points, string Rebounds, string Assists, string Shooting)
+/// <summary>One game in the log: when, against whom, the result, and the full box-score line.</summary>
+public sealed record RecentGameRow(string Date, string Opponent, string Result, bool Won, IReadOnlyList<StatValue> Stats)
 {
     public static RecentGameRow From(RecentGameLine game) => new(
         game.Date,
         (game.IsHome ? "vs " : "@ ") + game.Opponent,
         string.Create(CultureInfo.InvariantCulture, $"{(game.Won ? "W" : "L")} {game.TeamPoints}–{game.OpponentPoints}"),
         game.Won,
-        game.Minutes.ToString(CultureInfo.InvariantCulture),
-        game.Points.ToString(CultureInfo.InvariantCulture),
-        game.Rebounds.ToString(CultureInfo.InvariantCulture),
-        game.Assists.ToString(CultureInfo.InvariantCulture),
-        string.Create(CultureInfo.InvariantCulture, $"{game.FieldGoalsMade}-{game.FieldGoalsAttempted}"));
+        StatColumns.Cells(game.Stats, StatColumns.BoxScore));
 }
 
 public sealed record ContractYearRow(string Season, string Salary, string Guaranteed, string Option, string ShareOfCap)
@@ -169,10 +168,10 @@ public sealed record CareerRow(
     public static CareerRow From(CareerSeasonLine line)
     {
         var m = line.Metrics ?? new Dictionary<string, double>();
-        string Pct(double? value) => value is null ? "–" : (value.Value * 100).ToString("0.0", CultureInfo.InvariantCulture);
+        string Pct(double? value) => StatColumns.Percent(value);
         double? Ratio(string made, string attempted) =>
             m.TryGetValue(made, out var numerator) && m.TryGetValue(attempted, out var denominator) && denominator > 0 ? numerator / denominator : null;
-        string Metric(string code, Func<double, string> format) => m.TryGetValue(code, out var value) ? format(value) : "–";
+        string Metric(string code, Func<double, string> format) => m.TryGetValue(code, out var value) ? format(value) : StatColumns.Missing;
 
         return new CareerRow(
             line.IsPostseason ? $"{line.Season} playoffs" : line.Season,

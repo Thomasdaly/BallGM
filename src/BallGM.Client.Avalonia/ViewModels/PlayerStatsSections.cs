@@ -20,46 +20,47 @@ internal static class PlayerStatsSections
 
     public static IReadOnlyList<StatGroup> SimulatedSeason(SeasonDetailLine season)
     {
-        var g = season.Games;
-        string PerGame(int total) => Fixed(StatFormulas.PerGame(total, g));
-        string Per36(int total) => Fixed(StatFormulas.Per36(total, season.Minutes));
-        string MadeAttempted(int made, int attempted) => $"{Fixed(StatFormulas.PerGame(made, g))}-{Fixed(StatFormulas.PerGame(attempted, g))}";
-        var distribution = StatFormulas.PointsDistribution(season.FieldGoalsMade, season.ThreesMade, season.FreeThrowsMade, season.Points);
+        var totals = season.Totals;
+        var g = totals.Games;
+        string PerGame(int total) => Fixed(StatFormulas.Scaled(total, totals, StatBasis.PerGame));
+        string Per36(int total) => Fixed(StatFormulas.Scaled(total, totals, StatBasis.Per36));
+        string MadeAttempted(int made, int attempted) => $"{PerGame(made)}-{PerGame(attempted)}";
+        var distribution = StatFormulas.PointsDistribution(totals.FieldGoalsMade, totals.ThreePointsMade, totals.FreeThrowsMade, totals.Points);
 
         return
         [
-            new("Traditional", $"Per game · {g} games, {season.Starts} starts",
+            new("Traditional", $"Per game · {g} games, {totals.Starts} starts",
             [
-                Cell("MIN", PerGame(season.Minutes), "Minutes played per game."),
-                Cell("PTS", PerGame(season.Points), "Points per game."),
-                Cell("REB", PerGame(season.Rebounds), "Rebounds per game (offensive + defensive)."),
-                Cell("OREB", PerGame(season.OffensiveRebounds), "Offensive rebounds per game."),
-                Cell("DREB", PerGame(season.DefensiveRebounds), "Defensive rebounds per game."),
-                Cell("AST", PerGame(season.Assists), "Assists per game."),
-                Cell("FGM-A", MadeAttempted(season.FieldGoalsMade, season.FieldGoalsAttempted), "Field goals made and attempted per game."),
-                Cell("FG%", Pct(StatFormulas.Percent(season.FieldGoalsMade, season.FieldGoalsAttempted)), "Field goal percentage: FGM / FGA."),
-                Cell("3PM-A", MadeAttempted(season.ThreesMade, season.ThreesAttempted), "Three-pointers made and attempted per game."),
-                Cell("3P%", Pct(StatFormulas.Percent(season.ThreesMade, season.ThreesAttempted)), "Three-point percentage: 3PM / 3PA."),
-                Cell("FTM-A", MadeAttempted(season.FreeThrowsMade, season.FreeThrowsAttempted), "Free throws made and attempted per game."),
-                Cell("FT%", Pct(StatFormulas.Percent(season.FreeThrowsMade, season.FreeThrowsAttempted)), "Free throw percentage: FTM / FTA."),
+                Cell("MIN", PerGame(totals.Minutes), "Minutes played per game."),
+                Cell("PTS", PerGame(totals.Points), "Points per game."),
+                Cell("REB", PerGame(totals.Rebounds), "Rebounds per game (offensive + defensive)."),
+                Cell("OREB", PerGame(totals.OffensiveRebounds), "Offensive rebounds per game."),
+                Cell("DREB", PerGame(totals.DefensiveRebounds), "Defensive rebounds per game."),
+                Cell("AST", PerGame(totals.Assists), "Assists per game."),
+                Cell("FGM-A", MadeAttempted(totals.FieldGoalsMade, totals.FieldGoalsAttempted), "Field goals made and attempted per game."),
+                Cell("FG%", Pct(StatFormulas.FieldGoalPercent(totals)), "Field goal percentage: FGM / FGA."),
+                Cell("3PM-A", MadeAttempted(totals.ThreePointsMade, totals.ThreePointsAttempted), "Three-pointers made and attempted per game."),
+                Cell("3P%", Pct(StatFormulas.ThreePointPercent(totals)), "Three-point percentage: 3PM / 3PA."),
+                Cell("FTM-A", MadeAttempted(totals.FreeThrowsMade, totals.FreeThrowsAttempted), "Free throws made and attempted per game."),
+                Cell("FT%", Pct(StatFormulas.FreeThrowPercent(totals)), "Free throw percentage: FTM / FTA."),
                 Cell("DD2", season.DoubleDoubles.ToString(Invariant), "Double-doubles: 10+ in two of points, rebounds, assists."),
                 Cell("TD3", season.TripleDoubles.ToString(Invariant), "Triple-doubles: 10+ in points, rebounds and assists."),
             ]),
             new("Per 36 minutes", "Production scaled to a starter's minutes",
             [
-                Cell("PTS", Per36(season.Points), "Points per 36 minutes."),
-                Cell("REB", Per36(season.Rebounds), "Rebounds per 36 minutes."),
-                Cell("AST", Per36(season.Assists), "Assists per 36 minutes."),
-                Cell("FGA", Per36(season.FieldGoalsAttempted), "Field goal attempts per 36 minutes."),
-                Cell("3PA", Per36(season.ThreesAttempted), "Three-point attempts per 36 minutes."),
-                Cell("FTA", Per36(season.FreeThrowsAttempted), "Free throw attempts per 36 minutes."),
+                Cell("PTS", Per36(totals.Points), "Points per 36 minutes."),
+                Cell("REB", Per36(totals.Rebounds), "Rebounds per 36 minutes."),
+                Cell("AST", Per36(totals.Assists), "Assists per 36 minutes."),
+                Cell("FGA", Per36(totals.FieldGoalsAttempted), "Field goal attempts per 36 minutes."),
+                Cell("3PA", Per36(totals.ThreePointsAttempted), "Three-point attempts per 36 minutes."),
+                Cell("FTA", Per36(totals.FreeThrowsAttempted), "Free throw attempts per 36 minutes."),
             ]),
             new("Shooting & efficiency", "How the points are scored",
             [
-                Cell("eFG%", Pct(StatFormulas.EffectiveFieldGoal(season.FieldGoalsMade, season.ThreesMade, season.FieldGoalsAttempted)), "Effective FG%: (FGM + 0.5 × 3PM) / FGA — a three counts as one and a half twos."),
-                Cell("TS%", Pct(StatFormulas.TrueShooting(season.Points, season.FieldGoalsAttempted, season.FreeThrowsAttempted)), "True shooting: PTS / (2 × (FGA + 0.44 × FTA)) — efficiency counting threes and free throws."),
-                Cell("3PAr", Pct(StatFormulas.ThreePointRate(season.ThreesAttempted, season.FieldGoalsAttempted)), "Three-point attempt rate: 3PA / FGA."),
-                Cell("FTr", Pct(StatFormulas.FreeThrowRate(season.FreeThrowsAttempted, season.FieldGoalsAttempted)), "Free throw rate: FTA / FGA."),
+                Cell("eFG%", Pct(StatFormulas.EffectiveFieldGoal(totals)), "Effective FG%: (FGM + 0.5 × 3PM) / FGA — a three counts as one and a half twos."),
+                Cell("TS%", Pct(StatFormulas.TrueShooting(totals)), "True shooting: PTS / (2 × (FGA + 0.44 × FTA)) — efficiency counting threes and free throws."),
+                Cell("3PAr", Pct(StatFormulas.ThreePointRate(totals.ThreePointsAttempted, totals.FieldGoalsAttempted)), "Three-point attempt rate: 3PA / FGA."),
+                Cell("FTr", Pct(StatFormulas.FreeThrowRate(totals.FreeThrowsAttempted, totals.FieldGoalsAttempted)), "Free throw rate: FTA / FGA."),
                 Cell("%PTS 2PT", Pct(distribution?.TwoPoint), "Share of points from two-point field goals."),
                 Cell("%PTS 3PT", Pct(distribution?.ThreePoint), "Share of points from three-pointers."),
                 Cell("%PTS FT", Pct(distribution?.FreeThrow), "Share of points from free throws."),
@@ -67,11 +68,11 @@ internal static class PlayerStatsSections
             new("Advanced", "On-floor shares, estimated from share of team minutes",
             [
                 Cell("USG%", Pct(season.UsagePercent / 100), "Usage: the share of team plays a player finishes while on the floor (minutes-weighted)."),
-                Cell("AST%", Pct(StatFormulas.AssistPercent(season.Assists, season.Minutes, season.TeamMinutes, season.TeamFieldGoalsMade, season.FieldGoalsMade)), "Assist %: AST / ((MIN / (TmMIN / 5)) × TmFGM − FGM) — share of team-mates' baskets assisted while on the floor."),
-                Cell("OREB%", Pct(StatFormulas.ReboundPercent(season.OffensiveRebounds, season.Minutes, season.TeamMinutes, season.TeamOffensiveRebounds + season.OpponentDefensiveRebounds)), "Offensive rebound %: share of available offensive rebounds taken while on the floor."),
-                Cell("DREB%", Pct(StatFormulas.ReboundPercent(season.DefensiveRebounds, season.Minutes, season.TeamMinutes, season.TeamDefensiveRebounds + season.OpponentOffensiveRebounds)), "Defensive rebound %: share of available defensive rebounds taken while on the floor."),
-                Cell("REB%", Pct(StatFormulas.ReboundPercent(season.Rebounds, season.Minutes, season.TeamMinutes, season.TeamOffensiveRebounds + season.TeamDefensiveRebounds + season.OpponentOffensiveRebounds + season.OpponentDefensiveRebounds)), "Rebound %: share of all available rebounds taken while on the floor."),
-                Cell("TEAM +/-", Signed(StatFormulas.PerGame(season.TeamPoints - season.OpponentPoints, g)), "Team point margin per game in the games he played (not on-court plus-minus, which the simulation does not track)."),
+                Cell("AST%", Pct(StatFormulas.AssistPercent(totals.Assists, totals.Minutes, season.Team.Minutes, season.Team.FieldGoalsMade, totals.FieldGoalsMade)), "Assist %: AST / ((MIN / (TmMIN / 5)) × TmFGM − FGM) — share of team-mates' baskets assisted while on the floor."),
+                Cell("OREB%", Pct(StatFormulas.ReboundPercent(totals.OffensiveRebounds, totals.Minutes, season.Team.Minutes, season.Team.OffensiveRebounds + season.Opponent.DefensiveRebounds)), "Offensive rebound %: share of available offensive rebounds taken while on the floor."),
+                Cell("DREB%", Pct(StatFormulas.ReboundPercent(totals.DefensiveRebounds, totals.Minutes, season.Team.Minutes, season.Team.DefensiveRebounds + season.Opponent.OffensiveRebounds)), "Defensive rebound %: share of available defensive rebounds taken while on the floor."),
+                Cell("REB%", Pct(StatFormulas.ReboundPercent(totals.Rebounds, totals.Minutes, season.Team.Minutes, season.Team.OffensiveRebounds + season.Team.DefensiveRebounds + season.Opponent.OffensiveRebounds + season.Opponent.DefensiveRebounds)), "Rebound %: share of all available rebounds taken while on the floor."),
+                Cell("TEAM +/-", Signed(StatFormulas.PerGame(season.Team.Points - season.Opponent.Points, g)), "Team point margin per game in the games he played (not on-court plus-minus, which the simulation does not track)."),
             ]),
         ];
     }
@@ -81,7 +82,7 @@ internal static class PlayerStatsSections
     {
         var m = season.Metrics ?? new Dictionary<string, double>();
         var g = season.GamesPlayed;
-        string Get(string code, Func<double, string> format) => m.TryGetValue(code, out var value) ? format(value) : "–";
+        string Get(string code, Func<double, string> format) => m.TryGetValue(code, out var value) ? format(value) : StatColumns.Missing;
         string PerGame(string code) => Get(code, value => Fixed(g == 0 ? null : value / g));
         string Rating(string code) => Get(code, value => value.ToString("0.0", Invariant));
         string Ratio(string code) => Get(code, value => value.ToString("0.00", Invariant));
@@ -160,9 +161,9 @@ internal static class PlayerStatsSections
 
     private static StatCell Cell(string label, string value, string definition) => new(label, value, definition);
 
-    private static string Fixed(double? value) => value is null ? "–" : value.Value.ToString("0.0", Invariant);
+    private static string Fixed(double? value) => StatColumns.Fixed(value);
 
-    private static string Pct(double? value) => value is null ? "–" : (value.Value * 100).ToString("0.0", Invariant) + "%";
+    private static string Pct(double? value) => value is null ? StatColumns.Missing : StatColumns.Percent(value) + "%";
 
-    private static string Signed(double? value) => value is null ? "–" : value.Value.ToString("+0.0;-0.0;0.0", Invariant);
+    private static string Signed(double? value) => value is null ? StatColumns.Missing : value.Value.ToString("+0.0;-0.0;0.0", Invariant);
 }

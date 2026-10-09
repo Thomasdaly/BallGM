@@ -12,27 +12,35 @@ the field/mechanism doesn't exist yet (see patch ID). `/sim-regress` should repo
 | 1-mp | Σ player.Minutes per team == 240 + 25×OT | 0 violations | exact | — (already computable) |
 | 2-fgm | Σ player.MadeTwoPt×2+MadeThreePt×3+MadeFT per team == team score | 0 mismatches | exact | done (P-4a/c; enforced at `PlayerStatLine` construction, not just checked after the fact) |
 | 3-ast | player.Assists <= player.MadeFieldGoals, all players | 0 violations | exact | done (P-4a: FGM now a real per-player figure) |
-| 4-reb | **strict**: per team, (FGA−FGM) + trip-ending FT misses == own OREB + own team OREB + opp DREB + opp team DREB | 0 mismatches | exact | S1 (P-7). Restated 2026-10-08: the old form compared boards to the engine's own floored miss counter and passed vacuously; the strict form fails 100% of team-games at baseline (`reports/sim-audit-4d6d61ff-…md` 1.4) |
+| 4-reb | **strict**: per team, (FGA−FGM) + trip-ending FT misses == own OREB + own team OREB + opp DREB + opp team DREB | 0 mismatches | exact | done (S1: enforced in `BoxScore.Create` via `TeamStatLine`; 2,000-seed property loop in `PossessionMatchEngineTests` recomputes it) |
 | 5-usg | Σ USG% per team per stint | 100 | exact | done (P-4e; "per game" not "per stint" — the engine has no lineup-stint granularity) |
 | 6-pace | pace_poss_per_48 | 99.0 | [96.0, 101.0] | — (already computable via controlled matchups; real-game pace still needs seed-mixing exposed) |
 | 7-ortg | ortg (pooled, with home-court) | 115.0 | [112.0, 117.0] | done (P-4b/c mechanics + P-5 retune; measured ≈116.8) |
 | 8-winspread | sd_team_win_pct | 0.150 | [0.135, 0.165] | done (P-1b, P-2, P-6; measured ≈0.147 after P-6's nudge) |
 | 9-nollscully | noll_scully (this league's actual 78-game season, not the formula's default 82) | 2.70 | [2.50, 3.00] | done (P-6; measured ≈2.60) |
-| 10-margin | sd_game_margin: SD of the **signed** home − away margin, league games (restated 2026-10-08: P-5 measured the SD of the absolute margin, ≈0.6× the signed figure — see `docs/stats-audit.md` §14) | 13.5 | [12.5, 14.5] | S1 retune (baseline signed SD 24.2 league / 21.7 controlled — was failing unnoticed) |
+| 10-margin | sd_game_margin: SD of the **signed** home − away margin, league games (restated 2026-10-08: P-5 measured the SD of the absolute margin, ≈0.6× the signed figure — see `docs/stats-audit.md` §14) | 13.5 | [12.5, 14.5] | done (S1 retune: league signed SD 13.70, n=1,000 seasons; controlled 72v72 12.31) |
 | 11-pc1 | first_pc_variance_share (rating covariance) | 0.45 | [0.20, 0.70] | done (P-3: multi-attribute `PlayerRating`); match-engine/box-score half of battery 4 still owed |
 | 12-dynasty | 50-season chained `LeagueSession` run | 0 `EmptyRotationCode` failures | exact | done (P-1a: roster-floor auto-resign; P-1b: draft-day wiring) |
 | 13-tov | tov_pct = TOV / (FGA + 0.44·FTA + TOV) | 0.128 | [0.120, 0.140] | S3 (P-9) |
 | 14-stl | stl_per_game (team) | 7.4 | [6.6, 8.2] | S3 (P-9) |
 | 15-blk | blk_per_game (team) | 4.9 | [4.2, 5.6] | S4 (P-10) |
 | 16-pf | pf_per_game (team) | 19.5 | [17.5, 21.5] | S5 (P-11) |
-| 17-ast | ast_per_fgm (league pooled) | 0.61 | [0.57, 0.65] | S1 (P-7) |
-| 18-orb | orb_pct = OREB / (OREB + opp DREB) | 0.265 | [0.25, 0.29] | S1 (P-7) |
+| 17-ast | ast_per_fgm (league pooled) | 0.61 | [0.57, 0.65] | done (S1: 0.609) |
+| 18-orb | orb_pct = OREB / (OREB + opp DREB) | 0.265 | [0.25, 0.29] | done (S1: 0.264) |
 | 19-ids | STL_A ≤ opp TOV; BLK_A ≤ opp (FGA−FGM); Σ +/- = 5·margin; PF ≤ stored foul limit | 0 violations | exact | S2–S5 (each clause from the slice that adds the stat) |
 | 20-fg3a | fg3a_per_fga | 0.40 | [0.33, 0.44] | — (computable now; zones in S7 must keep it) |
 | 21-replay | same seed ⇒ identical box score, every field, every player | 0 diffs | exact | — (computable now) |
 | 22-time | season sim time, `scratch/bench` (M1, 6-team fixture league, 5×200 seasons median) | ≤ 16.9 ms | ≤ 1.25 × baseline 13.5 ms | — (computable now) |
 
 ## Notes for `/sim-regress`
+
+- **S1 (2026-10-09) changed how rows 1-5 are checked.** Every Battery-1 identity is now enforced at
+  construction (`PlayerStatLine`, `BoxScore.Create` with `TeamStatLine`, `GameResult.Create`), so a
+  game that breaks one cannot be produced; `scratch/audit/harness`'s `ReplicaMatchEngine` copies the
+  pre-S1 engine and is stale — re-derive it from the current `PossessionMatchEngine` before the next
+  `/sim-audit`. Rows 6-10/17/18/20 were measured with `scratch/calib` (controlled 6,000 games +
+  1,000 fixture seasons): pace 98.1, ortg 115.7, sd_team_win_pct 0.1475, noll_scully 2.61,
+  league signed sd_game_margin 13.70, fg3a/fga 0.396. Row 22: 14.6 ms/season (bench).
 
 - Rows 1-2 pass today (verified 2026-09-11, 50 seasons / 12,372 games / 24,744 team-game lines, 0/0).
 - Row 12 now passes — P-1a (roster-floor auto-resign) and P-1b (`BallGM.Rules.Draft.DraftDay` wired to

@@ -187,10 +187,48 @@ public sealed class PossessionMatchEngineTests
     private static int MinutesOnFloorForStarters(MatchSetup setup) =>
         setup.Home.Rotation.Slots.Count(slot => slot.IsStarter);
 
+    [Fact]
+    public void EveryBoxScoreIdentityHoldsAcrossTwoThousandVariedGames()
+    {
+        // A property check over seeds, rating gaps, rest and short squads. BoxScore.Create refuses a
+        // game that breaks an identity, so a game that plays at all already satisfies them; the
+        // rebound identity is recomputed here independently anyway, from the published box score.
+        for (var seed = 0; seed < 2_000; seed++)
+        {
+            var setup = MatchTestFixtures.Setup(
+                seed,
+                homeRating: 50 + (seed % 41),
+                awayRating: 90 - (seed * 7 % 41),
+                homeRestDays: seed % 4,
+                awayRestDays: (seed / 4) % 4,
+                homeSquadSize: 5 + (seed % 6),
+                awaySquadSize: 5 + ((seed / 6) % 6));
+
+            var played = Engine.Play(setup);
+            Assert.True(played.IsSuccess, $"seed {seed}: {string.Join("; ", played.Errors.Select(error => error.Message))}");
+
+            var box = played.Value.Result.BoxScore!;
+            foreach (var (team, opponent) in new[] { (box.Home, box.Away), (box.Away, box.Home) })
+            {
+                var own = box.Lines.Where(line => line.TeamId == team.TeamId).ToList();
+                var theirs = box.Lines.Where(line => line.TeamId == opponent.TeamId).ToList();
+                var liveMisses = own.Sum(line => line.FieldGoalsAttempted - line.FieldGoalsMade) + team.LiveFreeThrowMisses;
+                var rebounds = own.Sum(line => line.OffensiveRebounds) + team.TeamOffensiveRebounds +
+                    theirs.Sum(line => line.DefensiveRebounds) + opponent.TeamDefensiveRebounds;
+
+                Assert.Equal(liveMisses, rebounds);
+                Assert.True(own.Sum(line => line.Assists) <= own.Sum(line => line.FieldGoalsMade), $"seed {seed}: more assists than baskets.");
+            }
+        }
+    }
+
+    /// <summary>Every field of every line and both team lines: records print all their properties.</summary>
     private static string Describe(BoxScore boxScore) =>
         string.Join(
             "|",
             boxScore.Lines
                 .OrderBy(line => line.PlayerId.Value, StringComparer.Ordinal)
-                .Select(line => $"{line.PlayerId.Value}:{line.Minutes}:{line.Points}:{line.Rebounds}:{line.Assists}"));
+                .Select(line => line.ToString())
+                .Append(boxScore.Home.ToString())
+                .Append(boxScore.Away.ToString()));
 }

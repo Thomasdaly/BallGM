@@ -52,10 +52,10 @@ public static class SeasonAwardCalculator
 
     private static int StatFor(PlayerSeasonStatLine line, AwardStatBasis basis) => basis switch
     {
-        AwardStatBasis.TotalPoints => line.TotalPoints,
-        AwardStatBasis.TotalRebounds => line.TotalRebounds,
-        AwardStatBasis.TotalAssists => line.TotalAssists,
-        AwardStatBasis.TotalMinutes => line.TotalMinutes,
+        AwardStatBasis.TotalPoints => line.Totals.Points,
+        AwardStatBasis.TotalRebounds => line.Totals.Rebounds,
+        AwardStatBasis.TotalAssists => line.Totals.Assists,
+        AwardStatBasis.TotalMinutes => line.Totals.Minutes,
         _ => throw new ArgumentOutOfRangeException(nameof(basis), basis, "Unknown award stat basis."),
     };
 }

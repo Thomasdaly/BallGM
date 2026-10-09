@@ -6,7 +6,8 @@
            body, dim, faint, num (Barlow Condensed, tabular), code, good/warn/bad/accent
   Boxes:   panel, card, callout, stat, pill, ovr (colour set by OverallTierConverter), crest
   Season:  ribbon-* (the season ribbon), Button.daycell (month grid), matchup, form, badge; Button.cardbtn, Button.scrim + Border.sheet (the game sheet), Button.meeting
-  Tables:  Grid.thead (header row), ItemsControl.table (zebra rows), ListBox.table
+  Tables:  Grid.thead (header row), ItemsControl.table (zebra rows), ListBox.table;
+           ItemsControl.statheads / ItemsControl.statrow (the shared stat columns, from StatColumns)
   Buttons: default (ghost), primary
   Nav:     ListBox.nav
 
@@ -15,7 +16,8 @@
 -->
 <Styles
   xmlns="https://github.com/avaloniaui"
-  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels">
 
   <!-- Base. -->
   <Style Selector="Window">
@@ -238,6 +240,51 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
+  <!--
+    Stat columns. Every stat table on every screen draws its figures with these two, fed from the
+    one StatColumns catalogue: a header strip (statheads) and a row of cells (statrow), each cell at
+    its column's width, right-aligned with tabular numerals so a column of figures lines up.
+  -->
+  <Style Selector="ItemsControl.statheads">
+    <Setter Property="ItemsPanel">
+      <ItemsPanelTemplate>
+        <StackPanel Orientation="Horizontal" />
+      </ItemsPanelTemplate>
+    </Setter>
+    <Setter Property="ItemTemplate">
+      <DataTemplate x:DataType="vm:StatHeader">
+        <TextBlock Classes="statcell" Text="{Binding Header}" Width="{Binding Width}" ToolTip.Tip="{Binding Tooltip}" />
+      </DataTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ItemsControl.statrow">
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="ItemsPanel">
+      <ItemsPanelTemplate>
+        <StackPanel Orientation="Horizontal" />
+      </ItemsPanelTemplate>
+    </Setter>
+    <Setter Property="ItemTemplate">
+      <DataTemplate x:DataType="vm:StatValue">
+        <TextBlock Classes="num statcell" Text="{Binding Value}" Width="{Binding Width}" ToolTip.Tip="{Binding Tooltip}" AutomationProperties.Name="{Binding AccessibleName}" />
+      </DataTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="TextBlock.statcell">
+    <Setter Property="TextAlignment" Value="Right" />
+    <Setter Property="Padding" Value="{StaticResource StatCellPadding}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="ItemsControl.statrow TextBlock.statcell">
+    <Setter Property="FontSize" Value="14" />
+  </Style>
+  <Style Selector="ItemsControl.statheads TextBlock.statcell">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource TextFaintBrush}" />
+  </Style>
+
   <!-- Tables. A header row is a Grid.thead; rows are an ItemsControl.table, zebra-striped. -->
   <Style Selector="Grid.thead">
     <Setter Property="Margin" Value="10,0,10,6" />
@@ -263,6 +310,11 @@
   <Style Selector="Button.th:pointerover /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <!-- A sortable stat column header: right-aligned over its right-aligned figures, same padding. -->
+  <Style Selector="Button.th.statsort">
+    <Setter Property="HorizontalContentAlignment" Value="Right" />
+    <Setter Property="Padding" Value="{StaticResource StatCellPadding}" />
   </Style>
   <!-- A whole table row that opens something: no button chrome, the row's own hover shows it. -->
   <Style Selector="Button.rowbtn">
@@ -383,7 +435,8 @@
     <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
   </Style>
-  <Style Selector="ToggleButton.chip">
+  <!-- :is() so a RadioButton chip (one-of-N, which a click cannot uncheck) wears the same style. -->
+  <Style Selector=":is(ToggleButton).chip">
     <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
     <Setter Property="BorderThickness" Value="0,0,0,2" />
     <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
@@ -394,7 +447,12 @@
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
-  <Style Selector="ToggleButton.chip:checked /template/ ContentPresenter#PART_ContentPresenter">
+  <!-- A small chip: a view option beside a table (per game / per 36 / totals), quieter than a filter. -->
+  <Style Selector=":is(ToggleButton).chip.small">
+    <Setter Property="Padding" Value="10,3" />
+    <Setter Property="FontSize" Value="14" />
+  </Style>
+  <Style Selector=":is(ToggleButton).chip:checked /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
     <Setter Property="Foreground" Value="{StaticResource TextBrush}" />

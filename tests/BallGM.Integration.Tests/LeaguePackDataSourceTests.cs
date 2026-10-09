@@ -460,16 +460,16 @@ public sealed class LeaguePackDataSourceTests : IDisposable
 
         var detail = session.PlayerProfile(star.PlayerId).Value.SeasonDetail!;
 
-        Assert.True(detail.Games > 0);
-        Assert.Equal(detail.Games, detail.Starts);
+        Assert.True(detail.Totals.Games > 0);
+        Assert.Equal(detail.Totals.Games, detail.Totals.Starts);
         // At least five players × 48 minutes a game; overtime adds to it.
-        Assert.True(detail.TeamMinutes >= 240 * detail.Games);
-        Assert.True(detail.FieldGoalsAttempted >= detail.FieldGoalsMade);
-        Assert.Equal(detail.Points, (2 * (detail.FieldGoalsMade - detail.ThreesMade)) + (3 * detail.ThreesMade) + detail.FreeThrowsMade);
+        Assert.True(detail.Team.Minutes >= 240 * detail.Totals.Games);
+        Assert.True(detail.Totals.FieldGoalsAttempted >= detail.Totals.FieldGoalsMade);
+        Assert.Equal(detail.Totals.Points, (2 * (detail.Totals.FieldGoalsMade - detail.Totals.ThreePointsMade)) + (3 * detail.Totals.ThreePointsMade) + detail.Totals.FreeThrowsMade);
 
         Assert.True(session.ConcludeSeason().IsSuccess);
         var concluded = Assert.Single(session.PlayerProfile(star.PlayerId).Value.Career, line => !line.IsPostseason);
-        Assert.Equal(detail.FieldGoalsAttempted, concluded.Metrics!["FGA"]);
+        Assert.Equal(detail.Totals.FieldGoalsAttempted, concluded.Metrics!["FGA"]);
         Assert.True(concluded.Metrics.ContainsKey("TS_PCT"));
     }
 
@@ -552,8 +552,8 @@ public sealed class LeaguePackDataSourceTests : IDisposable
 
         var playoffRow = Assert.Single(career, line => line.IsPostseason);
         var regularRow = Assert.Single(career, line => !line.IsPostseason);
-        Assert.Equal((playoffLine.GamesPlayed, playoffLine.Points), (playoffRow.GamesPlayed, playoffRow.Points));
-        Assert.Equal((regular[playerId].GamesPlayed, regular[playerId].Points), (regularRow.GamesPlayed, regularRow.Points));
+        Assert.Equal((playoffLine.Stats.Games, playoffLine.Stats.Points), (playoffRow.GamesPlayed, playoffRow.Points));
+        Assert.Equal((regular[playerId].Stats.Games, regular[playerId].Stats.Points), (regularRow.GamesPlayed, regularRow.Points));
     }
 
     [Fact]

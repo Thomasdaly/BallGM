@@ -1,5 +1,7 @@
 using System.Globalization;
+using BallGM.Application.Players;
 using BallGM.Application.Seasons;
+using BallGM.Domain.Seasons;
 
 namespace BallGM.Client.Avalonia.ViewModels;
 
@@ -58,6 +60,25 @@ public sealed class GameSheet
 
     public string LineupHeading => IsFinal ? "Box score" : "Projected rotations";
 
+    // The sheet's three columns that are not counting stats of the row's own line: each defined once,
+    // so its header and every cell under it share one label, tooltip and width.
+    private static readonly StatHeader ProjectedMinutesHeader = new("MIN", "Projected minutes from today's depth chart.", 38);
+    private static readonly StatHeader RecentScoringHeader = new("L5 PTS", $"Points per game over this player's last {RecentGames} team games.", 48);
+    private static readonly StatHeader SeasonPpgHeader = new("PPG", "Season points per game, regular season.", 44);
+
+    private static readonly IReadOnlyList<StatColumn> PreviewSeasonColumns =
+        [StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists, StatColumns.FieldGoalPercent];
+
+    private static readonly IReadOnlyList<StatHeader> FinalHeaders =
+        [.. StatColumns.Headers(StatColumns.BoxScore), SeasonPpgHeader];
+
+    private static readonly IReadOnlyList<StatHeader> PreviewHeaders =
+    [
+        ProjectedMinutesHeader,
+        .. StatColumns.Headers(PreviewSeasonColumns, StatBasis.PerGame),
+        RecentScoringHeader,
+    ];
+
     public string LineupNote => IsFinal
         ? "Game line first; the season's per-game scoring alongside."
         : $"Today's depth charts, projected minutes, season per-game averages, and scoring over each player's last {RecentGames} team games.";
@@ -90,8 +111,8 @@ public sealed class GameSheet
             isFinal,
             status,
             $"Day {game.Day} · {input.DateLine(game.Day)}",
-            Side(input, game.AwayTeamId, game.AwayTeamName, isFinal ? game.AwayPoints : null, isFinal && awayWon, input.AwayChart, input.Played?.AwayLines),
-            Side(input, game.HomeTeamId, game.HomeTeamName, isFinal ? game.HomePoints : null, isFinal && !awayWon, input.HomeChart, input.Played?.HomeLines),
+            Side(input, game.AwayTeamId, game.AwayTeamName, isFinal ? game.AwayPoints : null, isFinal && awayWon, input.AwayChart, input.Played?.AwayLines, input.Played?.AwayTeam),
+            Side(input, game.HomeTeamId, game.HomeTeamName, isFinal ? game.HomePoints : null, isFinal && !awayWon, input.HomeChart, input.Played?.HomeLines, input.Played?.HomeTeam),
             meetings);
     }
 
@@ -102,7 +123,8 @@ public sealed class GameSheet
         int? points,
         bool isWinner,
         DepthChartSummary? chart,
-        IReadOnlyList<BoxScoreLine>? boxScore)
+        IReadOnlyList<BoxScoreLine>? boxScore,
+        BoxScoreTeamLine? teamLine)
     {
         var standing = input.Standings.GetValueOrDefault(teamId);
         var art = input.Art.GetValueOrDefault(teamId) ?? TeamArt.For(teamName);
@@ -129,6 +151,8 @@ public sealed class GameSheet
 
         IReadOnlyList<LineupRow> starters;
         IReadOnlyList<LineupRow> bench;
+        IReadOnlyList<StatValue> totals = [];
+        var teamRebounds = string.Empty;
         string note;
 
         if (boxScore is { Count: > 0 })
@@ -136,6 +160,11 @@ public sealed class GameSheet
             var rows = boxScore.Select(line => FromBoxScore(line, depth, input.Totals)).ToList();
             starters = rows.Where(row => row.IsStarter).ToList();
             bench = rows.Where(row => !row.IsStarter).ToList();
+            var sum = CountingStats.Sum(boxScore.Select(line => line.Stats));
+            totals = [.. StatColumns.Cells(sum, StatColumns.BoxScore), SeasonPpgHeader.Cell(string.Empty)];
+            teamRebounds = teamLine is null
+                ? string.Empty
+                : string.Create(CultureInfo.InvariantCulture, $"Team rebounds: {teamLine.TeamRebounds} ({teamLine.TeamOffensiveRebounds} offensive, {teamLine.TeamDefensiveRebounds} defensive) — boards no player secured, counted so every miss is accounted for.");
             note = string.Empty;
         }
         else if (input.Game.Played)
@@ -175,13 +204,16 @@ public sealed class GameSheet
             points?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
             isWinner,
             form,
-            standing is { GamesPlayed: > 0 } ? PerGame(standing.PointsFor, standing.GamesPlayed) : "—",
-            standing is { GamesPlayed: > 0 } ? PerGame(standing.PointsAgainst, standing.GamesPlayed) : "—",
-            standing is { GamesPlayed: > 0 }
-                ? ((double)standing.PointDifferential / standing.GamesPlayed).ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture)
-                : "—",
+            StatColumns.Fixed(standing is null ? null : StatFormulas.PerGame(standing.PointsFor, standing.GamesPlayed)),
+            StatColumns.Fixed(standing is null ? null : StatFormulas.PerGame(standing.PointsAgainst, standing.GamesPlayed)),
+            standing is null || StatFormulas.PerGame(standing.PointDifferential, standing.GamesPlayed) is not { } margin
+                ? "—"
+                : margin.ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture),
             starters,
             bench,
+            totals,
+            teamRebounds,
+            boxScore is { Count: > 0 } ? FinalHeaders : PreviewHeaders,
             note);
     }
 
@@ -189,9 +221,9 @@ public sealed class GameSheet
         string position,
         DepthChartLine player,
         IReadOnlyDictionary<string, PlayerSeasonTotals> totals,
-        IReadOnlyDictionary<string, (int Games, int Points)> recent)
+        IReadOnlyDictionary<string, CountingStats> recent)
     {
-        var season = totals.GetValueOrDefault(player.PlayerId);
+        var season = totals.GetValueOrDefault(player.PlayerId)?.Stats;
         var last = recent.GetValueOrDefault(player.PlayerId);
 
         return new LineupRow(
@@ -201,12 +233,12 @@ public sealed class GameSheet
             player.IsStarter,
             player.Overall,
             true,
-            player.Minutes.ToString(CultureInfo.InvariantCulture),
-            Average(season?.Points, season?.GamesPlayed),
-            Average(season?.Rebounds, season?.GamesPlayed),
-            Average(season?.Assists, season?.GamesPlayed),
-            last.Games == 0 ? "—" : PerGame(last.Points, last.Games),
-            season is { GamesPlayed: > 0 } ? $"{season.GamesPlayed} games played this season" : "No games played this season");
+            [
+                ProjectedMinutesHeader.Cell(player.Minutes.ToString(CultureInfo.InvariantCulture)),
+                .. StatColumns.Cells(season, PreviewSeasonColumns, StatBasis.PerGame),
+                RecentScoringHeader.Cell(StatColumns.Fixed(last is null ? null : StatFormulas.PerGame(last.Points, last.Games))),
+            ],
+            season is { Games: > 0 } ? $"{season.Games} games played this season" : "No games played this season");
     }
 
     private static LineupRow FromBoxScore(
@@ -214,7 +246,7 @@ public sealed class GameSheet
         IReadOnlyDictionary<string, (string Position, int Overall)> depth,
         IReadOnlyDictionary<string, PlayerSeasonTotals> totals)
     {
-        var season = totals.GetValueOrDefault(line.PlayerId);
+        var season = totals.GetValueOrDefault(line.PlayerId)?.Stats;
         var known = depth.TryGetValue(line.PlayerId, out var rating);
 
         return new LineupRow(
@@ -224,30 +256,28 @@ public sealed class GameSheet
             line.Started,
             known ? rating.Overall : 0,
             known,
-            line.Minutes.ToString(CultureInfo.InvariantCulture),
-            line.Points.ToString(CultureInfo.InvariantCulture),
-            line.Rebounds.ToString(CultureInfo.InvariantCulture),
-            line.Assists.ToString(CultureInfo.InvariantCulture),
-            Average(season?.Points, season?.GamesPlayed),
+            [
+                .. StatColumns.Cells(line.Stats, StatColumns.BoxScore),
+                SeasonPpgHeader.Cell(StatColumns.Fixed(season is null ? null : StatFormulas.PerGame(season.Points, season.Games))),
+            ],
             known ? string.Empty : "Not on either team's depth chart today, so no current rating or position.");
     }
 
     /// <summary>Points per appearance over the team's recent box scores, by player.</summary>
-    private static IReadOnlyDictionary<string, (int Games, int Points)> RecentScoring(IReadOnlyList<BoxScoreSummary> boxScores, string teamId)
+    private static IReadOnlyDictionary<string, CountingStats> RecentScoring(IReadOnlyList<BoxScoreSummary> boxScores, string teamId)
     {
-        var scoring = new Dictionary<string, (int Games, int Points)>(StringComparer.Ordinal);
+        var recent = new Dictionary<string, CountingStats>(StringComparer.Ordinal);
 
         foreach (var boxScore in boxScores)
         {
             var lines = boxScore.HomeTeamId == teamId ? boxScore.HomeLines : boxScore.AwayLines;
-            foreach (var line in lines.Where(line => line.Minutes > 0))
+            foreach (var line in lines.Where(line => line.Stats.Minutes > 0))
             {
-                var current = scoring.GetValueOrDefault(line.PlayerId);
-                scoring[line.PlayerId] = (current.Games + 1, current.Points + line.Points);
+                recent[line.PlayerId] = recent.GetValueOrDefault(line.PlayerId, CountingStats.None) + line.Stats;
             }
         }
 
-        return scoring;
+        return recent;
     }
 
     private static Dictionary<string, (string Position, int Overall)> DepthLookup(params DepthChartSummary?[] charts)
@@ -271,11 +301,6 @@ public sealed class GameSheet
         (a.HomeTeamId == b.HomeTeamId && a.AwayTeamId == b.AwayTeamId) ||
         (a.HomeTeamId == b.AwayTeamId && a.AwayTeamId == b.HomeTeamId);
 
-    private static string Average(int? total, int? games) =>
-        total is { } sum && games is > 0 ? PerGame(sum, games.Value) : "—";
-
-    private static string PerGame(int total, int games) =>
-        ((double)total / games).ToString("0.0", CultureInfo.InvariantCulture);
 }
 
 /// <summary>Everything <see cref="GameSheet.Build"/> reads, gathered by the screen that opens the sheet.</summary>
@@ -306,17 +331,24 @@ public sealed record GameSheetSide(
     string Differential,
     IReadOnlyList<LineupRow> Starters,
     IReadOnlyList<LineupRow> Bench,
+    IReadOnlyList<StatValue> Totals,
+    string TeamRebounds,
+    IReadOnlyList<StatHeader> Headers,
     string LineupNote)
 {
     public bool HasLineup => Starters.Count + Bench.Count > 0;
+
+    public bool HasTotals => Totals.Count > 0;
+
+    public bool HasTeamRebounds => TeamRebounds.Length > 0;
 
     public bool HasForm => Form.Count > 0;
 }
 
 /// <summary>
-/// One player in a game sheet's line-up. Before tip-off the four figures are projected minutes and
-/// season points, rebounds and assists per game, and <see cref="Extra"/> is recent scoring; after it
-/// they are the game's own line and <see cref="Extra"/> is season scoring.
+/// One player in a game sheet's line-up. <see cref="Stats"/> line up with <see cref="GameSheetSide.Headers"/>:
+/// before tip-off projected minutes, season per-game figures and recent scoring; after it the game's
+/// own line and season scoring.
 /// </summary>
 public sealed record LineupRow(
     string PlayerId,
@@ -325,11 +357,7 @@ public sealed record LineupRow(
     bool IsStarter,
     int Overall,
     bool HasOverall,
-    string Minutes,
-    string Points,
-    string Rebounds,
-    string Assists,
-    string Extra,
+    IReadOnlyList<StatValue> Stats,
     string Tip);
 
 /// <summary>Another meeting between the same two teams this season.</summary>

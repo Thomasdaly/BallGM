@@ -63,7 +63,7 @@ public sealed class PlayedSeasonTests
         var regular = session.PlayerSeasonTotals(BallGM.Domain.Seasons.SeasonPhase.RegularSeason);
         var playoffs = session.PlayerSeasonTotals(BallGM.Domain.Seasons.SeasonPhase.Postseason);
 
-        Assert.All(regular.Values, line => Assert.True(line.GamesPlayed <= mostTeamGames, $"{line.PlayerId} has {line.GamesPlayed} regular-season games; no team played more than {mostTeamGames}."));
+        Assert.All(regular.Values, line => Assert.True(line.Stats.Games <= mostTeamGames, $"{line.PlayerId} has {line.Stats.Games} regular-season games; no team played more than {mostTeamGames}."));
         Assert.NotEmpty(playoffs);
     }
 
@@ -145,8 +145,8 @@ public sealed class PlayedSeasonTests
             foreach (var game in session.BoxScoresOn(day).Value)
             {
                 Assert.True(game.HasBoxScore, $"Game '{game.GameId}' was played without a box score.");
-                Assert.Equal(game.HomePoints, game.HomeLines.Sum(line => line.Points));
-                Assert.Equal(game.AwayPoints, game.AwayLines.Sum(line => line.Points));
+                Assert.Equal(game.HomePoints, game.HomeLines.Sum(line => line.Stats.Points));
+                Assert.Equal(game.AwayPoints, game.AwayLines.Sum(line => line.Stats.Points));
                 Assert.NotEqual(game.HomePoints, game.AwayPoints);
 
                 checkedGames++;
