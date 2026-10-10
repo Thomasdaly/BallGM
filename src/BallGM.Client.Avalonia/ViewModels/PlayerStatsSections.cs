@@ -81,6 +81,8 @@ internal static class PlayerStatsSections
             [
                 Counted(StatColumns.Steals),
                 Cell("STL%", Pct(StatFormulas.StealPercent(totals, team, opponent)), "Steal %: the share of opponent possessions this player ended with a steal while on the floor."),
+                Counted(StatColumns.Blocks),
+                Cell("BLK%", Pct(StatFormulas.BlockPercent(totals, team, opponent)), "Block %: the share of opponent two-point attempts this player blocked while on the floor."),
                 Cell("TEAM DRTG", Fixed(StatFormulas.Rating(opponent)), "Opponent points per 100 possessions in the games this player played."),
             ]),
             new("Impact", "What happens while on the floor",

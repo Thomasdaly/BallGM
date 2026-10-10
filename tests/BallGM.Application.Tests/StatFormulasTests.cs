@@ -107,5 +107,10 @@ public sealed class StatFormulasTests
         Assert.Equal(10 / 40.0, factors.OffensiveReboundPercent!.Value, 10);
         Assert.Equal(18 / 88.0, factors.FreeThrowsPerFieldGoal!.Value, 10);
         Assert.Null(StatFormulas.UsagePercent(BallGM.Domain.Seasons.CountingStats.None, team));
+
+        // BLK%: 3 blocks × (240 / 5) / (36 minutes × the opponent's 76 two-point attempts: 88 FGA − 12 3PA).
+        var blocker = player with { Blocks = 3 };
+        var opponentThrees = opponent with { ThreePointsAttempted = 12 };
+        Assert.Equal(3 * 48 / (36 * 76.0), StatFormulas.BlockPercent(blocker, team, opponentThrees)!.Value, 10);
     }
 }

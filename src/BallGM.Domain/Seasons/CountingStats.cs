@@ -22,9 +22,10 @@ public sealed record CountingStats(
     int Assists,
     int PlusMinus,
     int Steals,
-    int Turnovers)
+    int Turnovers,
+    int Blocks)
 {
-    public static CountingStats None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    public static CountingStats None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     public int Rebounds => OffensiveRebounds + DefensiveRebounds;
 
@@ -53,75 +54,47 @@ public sealed record CountingStats(
             line.Assists,
             line.PlusMinus,
             line.Steals,
-            line.Turnovers);
+            line.Turnovers,
+            line.Blocks);
     }
 
-    /// <summary>The totals over every supplied game line — accumulated in place, one record at the end.</summary>
+    /// <summary>The totals over every supplied game line.</summary>
     public static CountingStats Sum(IEnumerable<PlayerStatLine> lines)
     {
         ArgumentNullException.ThrowIfNull(lines);
-
-        var total = default(Accumulator);
-        foreach (var line in lines)
-        {
-            total.Add(1, line.Started ? 1 : 0, line.Minutes, line.Points, line.FieldGoalsMade, line.FieldGoalsAttempted,
-                line.ThreePointsMade, line.ThreePointsAttempted, line.FreeThrowsMade, line.FreeThrowsAttempted,
-                line.OffensiveRebounds, line.DefensiveRebounds, line.Assists, line.PlusMinus, line.Steals, line.Turnovers);
-        }
-
-        return total.ToStats();
+        return Sum(lines.Select(Of));
     }
 
     /// <summary>The totals over several runs of games.</summary>
     public static CountingStats Sum(IEnumerable<CountingStats> runs)
     {
         ArgumentNullException.ThrowIfNull(runs);
-
-        var total = default(Accumulator);
-        foreach (var run in runs)
-        {
-            total.Add(run.Games, run.Starts, run.Minutes, run.Points, run.FieldGoalsMade, run.FieldGoalsAttempted,
-                run.ThreePointsMade, run.ThreePointsAttempted, run.FreeThrowsMade, run.FreeThrowsAttempted,
-                run.OffensiveRebounds, run.DefensiveRebounds, run.Assists, run.PlusMinus, run.Steals, run.Turnovers);
-        }
-
-        return total.ToStats();
+        return runs.Aggregate(None, (total, run) => total + run);
     }
 
+    /// <summary>The one place every field is added: a new counting stat is added here and in <see cref="Of"/>, nowhere else.</summary>
     public static CountingStats operator +(CountingStats left, CountingStats right)
     {
         ArgumentNullException.ThrowIfNull(left);
         ArgumentNullException.ThrowIfNull(right);
 
-        return Sum([left, right]);
-    }
-
-    /// <summary>Running totals for <see cref="Sum(IEnumerable{PlayerStatLine})"/>: no record per line, one at the end.</summary>
-    private struct Accumulator
-    {
-        private int _games, _starts, _minutes, _points, _fgm, _fga, _tpm, _tpa, _ftm, _fta, _oreb, _dreb, _ast, _plusMinus, _stl, _tov;
-
-        public void Add(int games, int starts, int minutes, int points, int fgm, int fga, int tpm, int tpa, int ftm, int fta, int oreb, int dreb, int ast, int plusMinus, int stl, int tov)
-        {
-            _plusMinus += plusMinus;
-            _stl += stl;
-            _tov += tov;
-            _games += games;
-            _starts += starts;
-            _minutes += minutes;
-            _points += points;
-            _fgm += fgm;
-            _fga += fga;
-            _tpm += tpm;
-            _tpa += tpa;
-            _ftm += ftm;
-            _fta += fta;
-            _oreb += oreb;
-            _dreb += dreb;
-            _ast += ast;
-        }
-
-        public readonly CountingStats ToStats() =>
-            new(_games, _starts, _minutes, _points, _fgm, _fga, _tpm, _tpa, _ftm, _fta, _oreb, _dreb, _ast, _plusMinus, _stl, _tov);
+        return new CountingStats(
+            left.Games + right.Games,
+            left.Starts + right.Starts,
+            left.Minutes + right.Minutes,
+            left.Points + right.Points,
+            left.FieldGoalsMade + right.FieldGoalsMade,
+            left.FieldGoalsAttempted + right.FieldGoalsAttempted,
+            left.ThreePointsMade + right.ThreePointsMade,
+            left.ThreePointsAttempted + right.ThreePointsAttempted,
+            left.FreeThrowsMade + right.FreeThrowsMade,
+            left.FreeThrowsAttempted + right.FreeThrowsAttempted,
+            left.OffensiveRebounds + right.OffensiveRebounds,
+            left.DefensiveRebounds + right.DefensiveRebounds,
+            left.Assists + right.Assists,
+            left.PlusMinus + right.PlusMinus,
+            left.Steals + right.Steals,
+            left.Turnovers + right.Turnovers,
+            left.Blocks + right.Blocks);
     }
 }

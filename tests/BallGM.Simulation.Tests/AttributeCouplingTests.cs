@@ -15,7 +15,7 @@ public sealed class AttributeCouplingTests
 {
     private static readonly PossessionMatchEngine Engine = new();
 
-    private static readonly Lazy<(int HomeTurnovers, int AwaySteals)> Neutral = new(() => Totals(Rating(), Rating()));
+    private static readonly Lazy<(int HomeTurnovers, int AwaySteals, int AwayBlocks)> Neutral = new(() => Totals(Rating(), Rating()));
 
     [Fact]
     public void BetterPassersForTheirLevelTurnTheBallOverLess()
@@ -35,19 +35,30 @@ public sealed class AttributeCouplingTests
         Assert.True(quickDefence.AwaySteals > Neutral.Value.AwaySteals, $"{quickDefence.AwaySteals} vs {Neutral.Value.AwaySteals}");
     }
 
-    private static (int HomeTurnovers, int AwaySteals) Totals(PlayerRating home, PlayerRating away)
+    [Fact]
+    public void ATallerDefenceBlocksMoreShots()
+    {
+        // Height up, strength down: nothing in the engine reads strength's shape, so only height moves.
+        var tallDefence = Totals(home: Rating(), away: Rating(height: +15, strength: -15));
+
+        Assert.True(tallDefence.AwayBlocks > Neutral.Value.AwayBlocks * 1.05, $"{tallDefence.AwayBlocks} vs {Neutral.Value.AwayBlocks}");
+    }
+
+    private static (int HomeTurnovers, int AwaySteals, int AwayBlocks) Totals(PlayerRating home, PlayerRating away)
     {
         var turnovers = 0;
         var steals = 0;
+        var blocks = 0;
         for (var seed = 0; seed < 600; seed++)
         {
             var setup = MatchTestFixtures.Setup(seed, home, away);
             var box = Engine.Play(setup).Value.Result.BoxScore!;
             turnovers += box.LinesFor(setup.Home.TeamId).Sum(line => line.Turnovers);
             steals += box.LinesFor(setup.Away.TeamId).Sum(line => line.Steals);
+            blocks += box.LinesFor(setup.Away.TeamId).Sum(line => line.Blocks);
         }
 
-        return (turnovers, steals);
+        return (turnovers, steals, blocks);
     }
 
     /// <summary>A rating of Overall 70 with the given shape: the deltas must sum to zero to keep the level.</summary>

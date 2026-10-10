@@ -28,7 +28,8 @@ public sealed record PlayerStatLineEnvelope(
     bool Started,
     int? PlusMinus = null,
     int? Steals = null,
-    int? Turnovers = null);
+    int? Turnovers = null,
+    int? Blocks = null);
 
 /// <summary>One side's team-level figures: team rebounds and free-throw trips that ended on a live miss.</summary>
 public sealed record TeamStatLineEnvelope(int TeamOffensiveRebounds, int TeamDefensiveRebounds, int LiveFreeThrowMisses);
@@ -106,8 +107,13 @@ public sealed record SeasonEnvelope
     /// was derivable, and usage is now read through <c>StatFormulas.UsagePercent</c>. Refused, not
     /// migrated.
     /// </para>
+    /// <para>
+    /// Version 7 adds each line's <c>Blocks</c>: an unfouled miss can be blocked, and
+    /// <c>BoxScore.Create</c> refuses a side with more blocks than the other side has missed field
+    /// goals. Refused, not migrated.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 6;
+    public const int CurrentSchemaVersion = 7;
 
     public SeasonEnvelope(
         int schemaVersion,

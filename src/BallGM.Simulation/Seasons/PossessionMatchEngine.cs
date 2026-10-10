@@ -245,18 +245,17 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// </summary>
     private static int TurnoverRate(Side offence, Side defence, int handler)
     {
-        var passing = Math.Clamp(
-            -offence.PassingShape[handler] * MatchModelBounds.TurnoverPerPassingPoint,
-            -MatchModelBounds.MaximumTurnoverPassingSwing,
-            MatchModelBounds.MaximumTurnoverPassingSwing);
-
-        var quickness = Math.Clamp(
-            (defence.OnFloorQuickness - offence.OnFloorQuickness) * MatchModelBounds.TurnoverPerQuicknessPoint,
-            -MatchModelBounds.MaximumTurnoverQuicknessSwing,
-            MatchModelBounds.MaximumTurnoverQuicknessSwing);
+        var passing = Swing(-offence.PassingShape[handler], MatchModelBounds.TurnoverPerPassingPoint, MatchModelBounds.MaximumTurnoverPassingSwing);
+        var quickness = Swing(defence.OnFloorQuickness - offence.OnFloorQuickness, MatchModelBounds.TurnoverPerQuicknessPoint, MatchModelBounds.MaximumTurnoverQuicknessSwing);
 
         return MatchModelBounds.BaseTurnoverRate + passing + quickness;
     }
+
+    /// <summary>A shape difference turned into basis points, capped either way: the form every attribute coupling takes.</summary>
+    private static int Swing(int difference, int perPoint, int cap) => Math.Clamp(difference * perPoint, -cap, cap);
+
+    /// <summary>A per-player pick weight from a shape: 100 is neutral, moved per point and clamped.</summary>
+    private static int ShapeWeight(int shape, int perPoint, int minimum, int maximum) => Math.Clamp(100 + (shape * perPoint), minimum, maximum);
 
     /// <summary>
     /// One shot and everything it leads to. Returns whether the offence still has the ball — only an
@@ -297,7 +296,37 @@ public sealed class PossessionMatchEngine : IMatchEngine
         }
 
         ChargeAttempt(offence, shooter, isThree);
+
+        // An unfouled miss may have been blocked: credited to a defender on the floor, and sometimes
+        // knocked out of bounds, which hands the ball back to the offence as a team rebound.
+        if (random.NextBasisPoint() < BlockRate(offence, defence, isThree))
+        {
+            defence.BlocksBy[defence.PickOnFloor(defence.BlockFactors, random)]++;
+
+            if (random.NextBasisPoint() < MatchModelBounds.BlockedOutOfBoundsShare)
+            {
+                offence.TeamOffensiveRebounds++;
+                return true;
+            }
+        }
+
         return Rebound(offence, defence, random);
+    }
+
+    /// <summary>
+    /// The chance an unfouled miss was blocked. A three is rarely blocked and its rate is fixed; a two
+    /// moves with the two fives' height shapes against each other, capped (see
+    /// <see cref="MatchModelBounds.MaximumBlockHeightSwing"/>).
+    /// </summary>
+    private static int BlockRate(Side offence, Side defence, bool isThree)
+    {
+        if (isThree)
+        {
+            return MatchModelBounds.BlockChanceOnThreePointMiss;
+        }
+
+        return MatchModelBounds.BlockChanceOnTwoPointMiss +
+            Swing(defence.OnFloorHeight - offence.OnFloorHeight, MatchModelBounds.BlockPerHeightPoint, MatchModelBounds.MaximumBlockHeightSwing);
     }
 
     /// <summary>The period's percentage for this shot, pushed by the score at this moment (see <see cref="MatchModelBounds.LeadPressurePerPoint"/>).</summary>
@@ -519,13 +548,16 @@ public sealed class PossessionMatchEngine : IMatchEngine
             PlusMinusBy = new int[count];
             StealsBy = new int[count];
             TurnoversBy = new int[count];
+            BlocksBy = new int[count];
             _regulationOn = new int[count];
             _overtimeOn = new int[count];
             OnFloor = [];
             Overalls = new int[count];
             PassingShape = new int[count];
             QuicknessShape = new int[count];
+            HeightShape = new int[count];
             StealFactors = new int[count];
+            BlockFactors = new int[count];
 
             // Shape, not level: each attribute measured against the player's own Overall, so these
             // terms redistribute what happens without adding to how good a side is. A player missing
@@ -537,10 +569,14 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 Overalls[index] = overall;
                 PassingShape[index] = rating.Passing - overall;
                 QuicknessShape[index] = ((rating.Speed + rating.LateralQuickness) / 2) - overall;
-                StealFactors[index] = Math.Clamp(
-                    100 + (QuicknessShape[index] * MatchModelBounds.StealWeightPerQuicknessPoint),
-                    MatchModelBounds.MinimumStealWeight,
-                    MatchModelBounds.MaximumStealWeight);
+                HeightShape[index] = rating.Height - overall;
+                StealFactors[index] = ShapeWeight(
+                    QuicknessShape[index], MatchModelBounds.StealWeightPerQuicknessPoint, MatchModelBounds.MinimumStealWeight, MatchModelBounds.MaximumStealWeight);
+
+                // Who blocks is mostly where they play — a centre is at the rim, a point guard is not —
+                // and then how tall they are for their level.
+                BlockFactors[index] = MatchModelBounds.BlockWeightFor(Players[index].Position) * ShapeWeight(
+                    HeightShape[index], MatchModelBounds.BlockWeightPerHeightPoint, MatchModelBounds.MinimumBlockWeight, MatchModelBounds.MaximumBlockWeight) / 100;
             }
 
             PointsBy = new int[count];
@@ -580,8 +616,8 @@ public sealed class PossessionMatchEngine : IMatchEngine
                     MatchModelBounds.MaximumUsageFactor))
                 .ToArray();
 
-            ReboundFactors = Players.Select(slot => ReboundWeightFor(slot.Position)).ToArray();
-            AssistFactors = Players.Select(slot => AssistWeightFor(slot.Position)).ToArray();
+            ReboundFactors = Players.Select(slot => MatchModelBounds.ReboundWeightFor(slot.Position)).ToArray();
+            AssistFactors = Players.Select(slot => MatchModelBounds.AssistWeightFor(slot.Position)).ToArray();
 
             _rotation = Players
                 .Select(slot => new RotationPlayer(slot.PlayerId.Value, slot.Minutes, slot.IsStarter, slot.DepthRank))
@@ -617,18 +653,24 @@ public sealed class PossessionMatchEngine : IMatchEngine
             OnFloor = _closers ?? _plan[possession];
             var counts = _closers is null ? _regulationOn : _overtimeOn;
             var quickness = 0;
+            var height = 0;
 
             foreach (var index in OnFloor)
             {
                 counts[index]++;
                 quickness += QuicknessShape[index];
+                height += HeightShape[index];
             }
 
             OnFloorQuickness = quickness / Math.Max(1, OnFloor.Length);
+            OnFloorHeight = height / Math.Max(1, OnFloor.Length);
         }
 
         /// <summary>The mean quickness shape of the five on the floor for this possession.</summary>
         public int OnFloorQuickness { get; private set; }
+
+        /// <summary>The mean height shape (Height − Overall) of the five on the floor for this possession.</summary>
+        public int OnFloorHeight { get; private set; }
 
         /// <summary>Turns the possessions each player was on the floor for into the minutes the box score credits.</summary>
         public void CreditMinutes(int regulationPossessions, int overtimePeriods)
@@ -654,6 +696,12 @@ public sealed class PossessionMatchEngine : IMatchEngine
         public int[] StealsBy { get; }
 
         public int[] TurnoversBy { get; }
+
+        public int[] BlocksBy { get; }
+
+        public int[] HeightShape { get; }
+
+        public int[] BlockFactors { get; }
 
         public int[] PassingShape { get; }
 
@@ -765,30 +813,8 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 Players[index].IsStarter,
                 PlusMinusBy[index],
                 StealsBy[index],
-                TurnoversBy[index]));
+                TurnoversBy[index],
+                BlocksBy[index]));
         }
-
-        /// <summary>
-        /// Who gets the ball off the rim. Positional rather than rating-driven: a great point guard
-        /// does not out-rebound a mediocre centre, and a box score that said otherwise would read as
-        /// obviously wrong to anybody who follows the sport.
-        /// </summary>
-        private static int ReboundWeightFor(Position position) => position switch
-        {
-            Position.Center => 130,
-            Position.PowerForward => 120,
-            Position.SmallForward => 95,
-            Position.ShootingGuard => 80,
-            _ => 75,
-        };
-
-        private static int AssistWeightFor(Position position) => position switch
-        {
-            Position.PointGuard => 150,
-            Position.ShootingGuard => 110,
-            Position.SmallForward => 95,
-            Position.PowerForward => 80,
-            _ => 65,
-        };
     }
 }

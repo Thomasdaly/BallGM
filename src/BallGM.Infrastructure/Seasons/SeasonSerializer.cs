@@ -211,12 +211,12 @@ public sealed class SeasonSerializer
 
             if (saved.BoxScore is not null)
             {
-                // Fields a version-5 box score always states: a missing one is a malformed file, not a zero.
-                if (saved.OvertimePeriods is null || saved.BoxScore.Any(line => line.PlusMinus is null || line.Steals is null || line.Turnovers is null))
+                // Fields a current box score always states: a missing one is a malformed file, not a zero.
+                if (saved.OvertimePeriods is null || saved.BoxScore.Any(line => line.PlusMinus is null || line.Steals is null || line.Turnovers is null || line.Blocks is null))
                 {
                     return DomainOperationResult<IReadOnlyList<GameResult>>.Failure(new DomainError(
                         InvalidFieldCode,
-                        $"The save records a box score for game '{saved.GameId}' without its overtime count or every line's plus-minus, steals and turnovers."));
+                        $"The save records a box score for game '{saved.GameId}' without its overtime count or every line's plus-minus, steals, turnovers and blocks."));
                 }
 
                 if (saved.HomeTeam is null || saved.AwayTeam is null)
@@ -247,7 +247,8 @@ public sealed class SeasonSerializer
                         line.Started,
                         line.PlusMinus!.Value,
                         line.Steals!.Value,
-                        line.Turnovers!.Value)),
+                        line.Turnovers!.Value,
+                        line.Blocks!.Value)),
                     ToTeamLine(fixture.HomeTeamId, saved.HomeTeam),
                     ToTeamLine(fixture.AwayTeamId, saved.AwayTeam),
                     saved.OvertimePeriods.Value);
@@ -297,7 +298,8 @@ public sealed class SeasonSerializer
                         line.Started,
                         line.PlusMinus,
                         line.Steals,
-                        line.Turnovers))
+                        line.Turnovers,
+                        line.Blocks))
                     .ToList(),
             result.BoxScore is null ? null : ToEnvelope(result.BoxScore.Home),
             result.BoxScore is null ? null : ToEnvelope(result.BoxScore.Away),

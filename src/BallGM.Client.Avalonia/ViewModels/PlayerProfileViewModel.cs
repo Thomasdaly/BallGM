@@ -75,6 +75,8 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
 
     public IReadOnlyList<CareerRow> Career { get; } = profile.Career.Select(CareerRow.From).ToList();
 
+    public IReadOnlyList<StatHeader> CareerHeaders => CareerRow.Headers;
+
     public bool HasSimulatedStats => profile.SeasonDetail is not null;
 
     /// <summary>Per game, per 36 minutes, or totals for the simulated season's panels.</summary>
@@ -174,33 +176,63 @@ public sealed record ContractYearRow(string Season, string Salary, string Guaran
         year.ShareOfCap is { } share ? (share * 100).ToString("0.0", CultureInfo.InvariantCulture) + "%" : "–");
 }
 
-public sealed record CareerRow(
-    string Season, string Team, string Games, string Minutes, string Points, string Rebounds, string Assists, bool IsCurrent,
-    string FieldGoalPct, string ThreePct, string TrueShooting, string Usage, string NetRating, string Pie)
+/// <summary>
+/// One season of a career, as the career table draws it: the same per-game columns the roster shows,
+/// then the stated rates a data pack may carry. Counting figures a pack does not state show a dash.
+/// </summary>
+public sealed record CareerRow(string Season, string Team, bool IsCurrent, IReadOnlyList<StatValue> Cells)
 {
+    private static readonly StatColumn[] PerGameColumns =
+    [
+        StatColumns.Games, StatColumns.Minutes, StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists,
+        StatColumns.Steals, StatColumns.Blocks, StatColumns.Turnovers, StatColumns.PlusMinus,
+    ];
+
+    /// <summary>The career table's headers: per-game counting columns, then shooting and the stated rates.</summary>
+    public static IReadOnlyList<StatHeader> Headers { get; } =
+    [
+        .. StatColumns.Headers(PerGameColumns, StatBasis.PerGame),
+        StatColumns.FieldGoalPercent.HeaderFor(StatBasis.PerGame),
+        StatColumns.ThreePointPercent.HeaderFor(StatBasis.PerGame),
+        StatColumns.TrueShooting.HeaderFor(StatBasis.PerGame),
+        StatColumns.RateHeader("USG%", "Usage: the share of team plays a player used while on the floor."),
+        StatColumns.RateHeader("NETRTG", "Net rating: points scored minus points allowed per 100 possessions while on the floor."),
+        StatColumns.RateHeader("PIE", "Player Impact Estimate: a player's share of all game events while on the floor."),
+    ];
+
     public static CareerRow From(CareerSeasonLine line)
     {
         var m = line.Metrics ?? new Dictionary<string, double>();
-        string Pct(double? value) => StatColumns.Percent(value);
-        double? Ratio(string made, string attempted) =>
-            m.TryGetValue(made, out var numerator) && m.TryGetValue(attempted, out var denominator) && denominator > 0 ? numerator / denominator : null;
-        string Metric(string code, Func<double, string> format) => m.TryGetValue(code, out var value) ? format(value) : StatColumns.Missing;
+        double? Metric(string code) => m.TryGetValue(code, out var value) ? value : null;
+        double? Ratio(string made, string attempted) => Metric(attempted) is > 0 and var denominator ? Metric(made) / denominator : null;
+
+        // Every metric code carries a season total; a simulated season always states these, a pack may.
+        double? PerGame(double? total) => total is { } value ? StatFormulas.PerGame(value, line.GamesPlayed) : null;
+
+        string[] values =
+        [
+            line.GamesPlayed.ToString(CultureInfo.InvariantCulture),
+            StatColumns.Fixed(PerGame(line.Minutes)),
+            StatColumns.Fixed(PerGame(line.Points)),
+            StatColumns.Fixed(PerGame(line.Rebounds)),
+            StatColumns.Fixed(PerGame(line.Assists)),
+            StatColumns.Fixed(PerGame(Metric("STL"))),
+            StatColumns.Fixed(PerGame(Metric("BLK"))),
+            StatColumns.Fixed(PerGame(Metric("TOV"))),
+            StatColumns.Signed(PerGame(Metric("PLUS_MINUS"))),
+            StatColumns.Percent(Ratio("FGM", "FGA")),
+            StatColumns.Percent(Ratio("FG3M", "FG3A")),
+            StatColumns.Percent(Metric("TS_PCT")),
+            StatColumns.Percent(Metric("USG_PCT")),
+            StatColumns.Signed(Metric("NET_RATING")),
+            StatColumns.Percent(Metric("PIE")),
+        ];
 
         return new CareerRow(
             line.IsPostseason ? $"{line.Season} playoffs" : line.Season,
             line.TeamName ?? "–",
-            line.GamesPlayed.ToString(CultureInfo.InvariantCulture),
-            PlayerProfileViewModel.PerGame(line.Minutes, line.GamesPlayed),
-            PlayerProfileViewModel.PerGame(line.Points, line.GamesPlayed),
-            PlayerProfileViewModel.PerGame(line.Rebounds, line.GamesPlayed),
-            PlayerProfileViewModel.PerGame(line.Assists, line.GamesPlayed),
             line.IsCurrent,
-            Pct(Ratio("FGM", "FGA")),
-            Pct(Ratio("FG3M", "FG3A")),
-            Metric("TS_PCT", value => Pct(value)),
-            Metric("USG_PCT", value => Pct(value)),
-            Metric("NET_RATING", value => StatColumns.Signed(value)),
-            Metric("PIE", value => Pct(value)));
+            Headers.Zip(values, (header, value) => header.Cell(value)).ToList());
     }
 
     /// <summary>Career totals over regular seasons only; playoff rows are listed but never summed in.</summary>

@@ -79,7 +79,8 @@ public static class StatFormulas
     /// <summary>A counting stat per 36 minutes — the standard rate for comparing players across roles.</summary>
     public static double? Per36(int total, int minutes) => minutes == 0 ? null : total * 36.0 / minutes;
 
-    public static double? PerGame(int total, int games) => games == 0 ? null : (double)total / games;
+    /// <summary>A total per game; a stated metric's total may be fractional.</summary>
+    public static double? PerGame(double total, int games) => games == 0 ? null : total / games;
 
     /// <summary>One counting stat of <paramref name="stats"/> on the requested basis; null when there is nothing to divide by.</summary>
     public static double? Scaled(int total, CountingStats stats, StatBasis basis)
@@ -161,7 +162,20 @@ public static class StatFormulas
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(opponent);
         return OnFloorShare(player.Steals, player.Minutes, team.Minutes, Possessions(opponent));
+    }
+
+    /// <summary>
+    /// BLK%: blocks per opponent two-point attempt while on the floor — the league convention, which
+    /// counts the rare blocked three in the numerator against two-point attempts only.
+    /// </summary>
+    public static double? BlockPercent(CountingStats player, CountingStats team, CountingStats opponent)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(opponent);
+        return OnFloorShare(player.Blocks, player.Minutes, team.Minutes, opponent.TwoPointsAttempted);
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using BallGM.Domain.Players;
 using BallGM.Domain.Randomness;
 using BallGM.Domain.Seasons;
 
@@ -148,6 +149,43 @@ public static class MatchModelBounds
     public const int MaximumStealWeight = 300;
 
     /// <summary>
+    /// Chance an unfouled two-point miss was blocked, in <see cref="ProbabilityScale"/> units, between
+    /// two fives of the same height shape. A block is a miss the defence caused, so it relabels a miss
+    /// rather than adding one: field-goal percentage is untouched.
+    /// </summary>
+    public const int BlockChanceOnTwoPointMiss = 1_650;
+
+    /// <summary>Chance an unfouled three-point miss was blocked: rare, and not moved by height.</summary>
+    public const int BlockChanceOnThreePointMiss = 250;
+
+    /// <summary>
+    /// How much the two fives' height moves the block chance on a two, per point the defence's mean
+    /// height shape (Height − Overall) exceeds the offence's — a difference between the sides.
+    /// </summary>
+    public const int BlockPerHeightPoint = 25;
+
+    /// <summary>The most the height difference may move the block chance on a two, either way.</summary>
+    public const int MaximumBlockHeightSwing = 500;
+
+    /// <summary>
+    /// How strongly a defender's height shape decides who gets the block, on top of position: a
+    /// weight of 100 plus this per point of shape, clamped to <see cref="MinimumBlockWeight"/>–<see cref="MaximumBlockWeight"/>.
+    /// </summary>
+    public const int BlockWeightPerHeightPoint = 6;
+
+    /// <summary>The floor and ceiling on a defender's height weight for blocks (100 is neutral).</summary>
+    public const int MinimumBlockWeight = 25;
+
+    /// <inheritdoc cref="MinimumBlockWeight"/>
+    public const int MaximumBlockWeight = 300;
+
+    /// <summary>
+    /// Share of blocks knocked out of bounds: the offence keeps the ball, booked as a team offensive
+    /// rebound so every miss still ends in exactly one rebound. The rest stay live and are rebounded.
+    /// </summary>
+    public const int BlockedOutOfBoundsShare = 3_500;
+
+    /// <summary>
     /// What share of field-goal <em>attempts</em> are three-pointers, in <see cref="ProbabilityScale"/>
     /// units — applied to every attempt, not just makes, unlike the single scoring-rate draw this
     /// replaced. This is the entire answer to <c>fg3a_per_fga</c>: the ratio is stated, not derived.
@@ -160,7 +198,7 @@ public static class MatchModelBounds
     /// by <see cref="FieldGoalPercentSwingAtMaximumStrength"/> the same way the old scoring rate used
     /// to move with efficiency — a better team, not a team that shoots more often.
     /// </summary>
-    public const int BaseTwoPointPercentage = 4_820;
+    public const int BaseTwoPointPercentage = 4_720;
 
     /// <summary>
     /// League-average three-point percentage at a neutral efficiency. Lower than
@@ -285,4 +323,40 @@ public static class MatchModelBounds
     /// worst outcome nobody chose.
     /// </summary>
     public const int MaximumInjuryDays = 28;
+
+    // Positional pick weights: who is on hand for a board, a pass or a block. Named here with every
+    // other term so a bounds test can read them.
+
+    /// <summary>
+    /// Who gets the ball off the rim. Positional rather than rating-driven: a great point guard
+    /// does not out-rebound a mediocre centre, and a box score that said otherwise would read as
+    /// obviously wrong to anybody who follows the sport.
+    /// </summary>
+    public static int ReboundWeightFor(Position position) => position switch
+    {
+        Position.Center => 130,
+        Position.PowerForward => 120,
+        Position.SmallForward => 95,
+        Position.ShootingGuard => 80,
+        _ => 75,
+    };
+
+    /// <summary>Who is at the rim to block a shot: far more positional than rebounding.</summary>
+    public static int BlockWeightFor(Position position) => position switch
+    {
+        Position.Center => 200,
+        Position.PowerForward => 140,
+        Position.SmallForward => 85,
+        Position.ShootingGuard => 50,
+        _ => 35,
+    };
+
+    public static int AssistWeightFor(Position position) => position switch
+    {
+        Position.PointGuard => 150,
+        Position.ShootingGuard => 110,
+        Position.SmallForward => 95,
+        Position.PowerForward => 80,
+        _ => 65,
+    };
 }

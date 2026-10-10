@@ -41,7 +41,8 @@ public sealed record PlayerStatLine
         bool started,
         int plusMinus,
         int steals,
-        int turnovers)
+        int turnovers,
+        int blocks)
     {
         ArgumentNullException.ThrowIfNull(playerId);
         ArgumentNullException.ThrowIfNull(teamId);
@@ -58,6 +59,7 @@ public sealed record PlayerStatLine
         ThrowIfNegative(freeThrowsAttempted, nameof(freeThrowsAttempted));
         ThrowIfNegative(freeThrowsMade, nameof(freeThrowsMade));
         ThrowIfNegative(steals, nameof(steals));
+        ThrowIfNegative(blocks, nameof(blocks));
         ThrowIfNegative(turnovers, nameof(turnovers));
 
         if (fieldGoalsMade > fieldGoalsAttempted)
@@ -109,6 +111,7 @@ public sealed record PlayerStatLine
         Started = started;
         PlusMinus = plusMinus;
         Steals = steals;
+        Blocks = blocks;
         Turnovers = turnovers;
     }
 
@@ -155,6 +158,9 @@ public sealed record PlayerStatLine
 
     /// <summary>Possessions this player lost without a shot.</summary>
     public int Turnovers { get; }
+
+    /// <summary>Opponent shots this player blocked. A side's blocks are never more than the other side's missed field goals.</summary>
+    public int Blocks { get; }
 
     private static void ThrowIfNegative(int value, string parameterName)
     {
@@ -224,6 +230,7 @@ public sealed class BoxScore
     private const string PlusMinusDoesNotMatchMarginCode = "box_score.plus_minus_does_not_match_margin";
     private const string NegativeOvertimeCode = "box_score.negative_overtime";
     private const string StealsExceedTurnoversCode = "box_score.steals_exceed_opponent_turnovers";
+    private const string BlocksExceedMissesCode = "box_score.blocks_exceed_opponent_misses";
 
     /// <summary>The players on the floor for a side at once; a side's minutes and plus-minus are counted in fives.</summary>
     public const int PlayersOnFloor = 5;
@@ -353,7 +360,17 @@ public sealed class BoxScore
                     $"Team '{team.TeamId.Value}' in game '{gameId.Value}' has {own.Steals} steals, more than the {totals[1 - side].Turnovers} turnovers its opponent committed."));
             }
 
-            var liveMisses = own.FieldGoalsAttempted - own.FieldGoalsMade + team.LiveFreeThrowMisses;
+            // A block is an opponent's missed field goal, so a side cannot block more shots than the
+            // other side missed.
+            var opponentMisses = totals[1 - side].FieldGoalsMissed;
+            if (own.Blocks > opponentMisses)
+            {
+                errors.Add(new DomainError(
+                    BlocksExceedMissesCode,
+                    $"Team '{team.TeamId.Value}' in game '{gameId.Value}' has {own.Blocks} blocks, more than the {opponentMisses} field goals its opponent missed."));
+            }
+
+            var liveMisses = own.FieldGoalsMissed + team.LiveFreeThrowMisses;
             var rebounds = own.OffensiveRebounds + team.TeamOffensiveRebounds + totals[1 - side].DefensiveRebounds + opponent.TeamDefensiveRebounds;
             if (liveMisses != rebounds)
             {
@@ -447,6 +464,9 @@ public sealed class BoxScore
         public int Minutes;
         public int PlusMinus;
         public int Steals;
+        public int Blocks;
+
+        public readonly int FieldGoalsMissed => FieldGoalsAttempted - FieldGoalsMade;
         public int Turnovers;
         public int FieldGoalsAttempted;
         public int FieldGoalsMade;
@@ -460,6 +480,7 @@ public sealed class BoxScore
             Minutes += line.Minutes;
             PlusMinus += line.PlusMinus;
             Steals += line.Steals;
+            Blocks += line.Blocks;
             Turnovers += line.Turnovers;
             FieldGoalsAttempted += line.FieldGoalsAttempted;
             FieldGoalsMade += line.FieldGoalsMade;

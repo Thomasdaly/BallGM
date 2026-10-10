@@ -7,7 +7,8 @@
   Boxes:   panel, card, callout, stat, pill, ovr (colour set by OverallTierConverter), crest
   Season:  ribbon-* (the season ribbon), Button.daycell (month grid), matchup, form, badge; Button.cardbtn, Button.scrim + Border.sheet (the game sheet), Button.meeting
   Tables:  Grid.thead (header row), ItemsControl.table (zebra rows), ListBox.table;
-           ItemsControl.statheads / ItemsControl.statrow (the shared stat columns, from StatColumns)
+           ItemsControl.statheads / ItemsControl.statrow (the shared stat columns, from StatColumns);
+           ScrollViewer.tablewrap (a wide table scrolls sideways rather than losing its names)
   Buttons: default (ghost), primary
   Nav:     ListBox.nav
 
@@ -238,6 +239,16 @@
     <Setter Property="Height" Value="14" />
     <Setter Property="CornerRadius" Value="1" />
     <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!--
+    A stat table too wide for its room scrolls sideways instead of squeezing its name column out. Rows
+    inside are measured at their natural width and all arranged at the widest one, so a single
+    stretching name column (with TableNameMinWidth on its header cell) stays aligned in every row.
+  -->
+  <Style Selector="ScrollViewer.tablewrap">
+    <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+    <Setter Property="VerticalScrollBarVisibility" Value="Disabled" />
   </Style>
 
   <!--

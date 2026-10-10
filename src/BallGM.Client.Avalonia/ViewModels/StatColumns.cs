@@ -76,6 +76,7 @@ public static class StatColumns
 
     public static readonly StatColumn Steals = Counting("STL", "Steals: live-ball turnovers forced", stats => stats.Steals);
     public static readonly StatColumn Turnovers = Counting("TOV", "Turnovers: possessions lost without a shot", stats => stats.Turnovers);
+    public static readonly StatColumn Blocks = Counting("BLK", "Blocks: opponent shots blocked", stats => stats.Blocks);
 
     /// <summary>Signed: the score difference while this player was on the floor.</summary>
     public static readonly StatColumn PlusMinus = Counting(
@@ -92,11 +93,14 @@ public static class StatColumns
 
     /// <summary>One game's line, as a box score shows it.</summary>
     public static IReadOnlyList<StatColumn> BoxScore { get; } =
-        [Minutes, Points, FieldGoals, Threes, FreeThrows, OffensiveRebounds, DefensiveRebounds, Rebounds, Assists, Steals, Turnovers, PlusMinus];
+        [Minutes, Points, FieldGoals, Threes, FreeThrows, OffensiveRebounds, DefensiveRebounds, Rebounds, Assists, Steals, Blocks, Turnovers, PlusMinus];
 
     /// <summary>A run of games, as a roster or a preview shows it: averages and shooting rates.</summary>
     public static IReadOnlyList<StatColumn> Season { get; } =
-        [Games, Minutes, Points, Rebounds, Assists, Steals, Turnovers, PlusMinus, FieldGoalPercent, ThreePointPercent, FreeThrowPercent, TrueShooting];
+        [Games, Minutes, Points, Rebounds, Assists, Steals, Blocks, Turnovers, PlusMinus, FieldGoalPercent, ThreePointPercent, FreeThrowPercent, TrueShooting];
+
+    /// <summary>A header for a stated rate the catalogue does not compute (a data pack's NETRTG, PIE), at a rate column's width.</summary>
+    public static StatHeader RateHeader(string header, string tooltip) => new(header, tooltip, Wide);
 
     public static IReadOnlyList<StatHeader> Headers(IEnumerable<StatColumn> columns, StatBasis basis = StatBasis.Totals) =>
         columns.Select(column => column.HeaderFor(basis)).ToList();

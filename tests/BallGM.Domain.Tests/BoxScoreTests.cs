@@ -27,7 +27,7 @@ public sealed class BoxScoreTests
         Assert.Throws<ArgumentException>(() => new PlayerStatLine(
             new PlayerId("P1"), Home, minutes: 20, points: 10, offensiveRebounds: 0, defensiveRebounds: 0,
             assists: 0, fieldGoalsAttempted: 4, fieldGoalsMade: 4, threePointsAttempted: 0,
-            threePointsMade: 0, freeThrowsAttempted: 0, freeThrowsMade: 0, started: true, plusMinus: 0, steals: 0, turnovers: 0));
+            threePointsMade: 0, freeThrowsAttempted: 0, freeThrowsMade: 0, started: true, plusMinus: 0, steals: 0, turnovers: 0, blocks: 0));
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public sealed class BoxScoreTests
         var line = new PlayerStatLine(
             new PlayerId("P1"), Home, minutes: 20, points: 6, offensiveRebounds: 0, defensiveRebounds: 0,
             assists: 0, fieldGoalsAttempted: 2, fieldGoalsMade: 2, threePointsAttempted: 1,
-            threePointsMade: 1, freeThrowsAttempted: 1, freeThrowsMade: 1, started: true, plusMinus: 0, steals: 0, turnovers: 0);
+            threePointsMade: 1, freeThrowsAttempted: 1, freeThrowsMade: 1, started: true, plusMinus: 0, steals: 0, turnovers: 0, blocks: 0);
 
         Assert.Equal(6, line.Points);
     }
@@ -65,7 +65,7 @@ public sealed class BoxScoreTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerStatLine(
             new PlayerId("P1"), Home, minutes: 20, points: 5, offensiveRebounds: 0, defensiveRebounds: 0,
             assists: 0, fieldGoalsAttempted: 5, fieldGoalsMade: 1, threePointsAttempted: 5,
-            threePointsMade: 3, freeThrowsAttempted: 0, freeThrowsMade: 0, started: true, plusMinus: 0, steals: 0, turnovers: 0));
+            threePointsMade: 3, freeThrowsAttempted: 0, freeThrowsMade: 0, started: true, plusMinus: 0, steals: 0, turnovers: 0, blocks: 0));
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public sealed class BoxScoreTests
         // Five free-throw shooters a side; home wins 10-5. Minutes 48 each fills 240; plus-minus is
         // then varied away from 5 × margin = +25.
         PlayerStatLine Line(string id, TeamId team, int minutes, int points, int plusMinus) => new(
-            new PlayerId(id), team, minutes, points, 0, 0, 0, 0, 0, 0, 0, points, points, started: true, plusMinus, steals: 0, turnovers: 0);
+            new PlayerId(id), team, minutes, points, 0, 0, 0, 0, 0, 0, 0, points, points, started: true, plusMinus, steals: 0, turnovers: 0, blocks: 0);
 
         var home = Enumerable.Range(0, 5).Select(index => Line($"H{index}", Home, 48, 2, plusMinus: 5)).ToList();
         var away = Enumerable.Range(0, 5).Select(index => Line($"A{index}", Away, 48, 1, plusMinus: -5)).ToList();
@@ -145,7 +145,7 @@ public sealed class BoxScoreTests
     {
         // A steal is the other side's turnover: home cannot take the ball away more often than away lost it.
         PlayerStatLine Line(string id, TeamId team, int steals, int turnovers) => new(
-            new PlayerId(id), team, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, started: true, plusMinus: 0, steals, turnovers);
+            new PlayerId(id), team, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, started: true, plusMinus: 0, steals, turnovers, blocks: 0);
 
         DomainOperationResult<BoxScore> Build(int homeSteals, int awayTurnovers) => BoxScore.Create(
             GameId.For(Season, SeasonDay.Opening, 0), 0, 0,
@@ -156,12 +156,28 @@ public sealed class BoxScoreTests
         Assert.Contains(Build(homeSteals: 4, awayTurnovers: 3).Errors, error => error.Code == "box_score.steals_exceed_opponent_turnovers");
     }
 
+    [Fact]
+    public void CreateRefusesMoreBlocksThanTheOtherSideMissed()
+    {
+        // A block is the other side's missed field goal: away misses two of three twos.
+        PlayerStatLine Line(string id, TeamId team, int fga, int fgm, int blocks) => new(
+            new PlayerId(id), team, 48, 2 * fgm, 0, 0, 0, fga, fgm, 0, 0, 0, 0, started: true, plusMinus: 0, steals: 0, turnovers: 0, blocks);
+
+        DomainOperationResult<BoxScore> Build(int homeBlocks) => BoxScore.Create(
+            GameId.For(Season, SeasonDay.Opening, 0), 0, 2,
+            [Line("H", Home, 0, 0, homeBlocks), Line("A", Away, 3, 1, 0)],
+            new TeamStatLine(Home, 0, 2, 0), new TeamStatLine(Away, 0, 0, 0), overtimePeriods: 0);
+
+        Assert.DoesNotContain(Build(homeBlocks: 2).Errors, error => error.Code == "box_score.blocks_exceed_opponent_misses");
+        Assert.Contains(Build(homeBlocks: 3).Errors, error => error.Code == "box_score.blocks_exceed_opponent_misses");
+    }
+
     private static PlayerStatLine Shooter(
         PlayerId playerId, TeamId teamId, int fga, int fgm, int oreb, int dreb, int ast, int ftm = 0, int fta = 0) =>
         new(
             playerId, teamId, minutes: 20, points: (2 * fgm) + ftm, oreb, dreb, ast,
             fieldGoalsAttempted: fga, fieldGoalsMade: fgm, threePointsAttempted: 0, threePointsMade: 0,
-            freeThrowsAttempted: fta, freeThrowsMade: ftm, started: true, plusMinus: 0, steals: 0, turnovers: 0);
+            freeThrowsAttempted: fta, freeThrowsMade: ftm, started: true, plusMinus: 0, steals: 0, turnovers: 0, blocks: 0);
 
     private static DomainOperationResult<BoxScore> Build(
         int homePoints, int awayPoints, IReadOnlyCollection<PlayerStatLine> lines)
@@ -182,5 +198,5 @@ public sealed class BoxScoreTests
         new(
             playerId, teamId, minutes, points, offensiveRebounds, defensiveRebounds, assists,
             fieldGoalsAttempted: 0, fieldGoalsMade: 0, threePointsAttempted: 0, threePointsMade: 0,
-            freeThrowsAttempted: points, freeThrowsMade: points, started: true, plusMinus: 0, steals: 0, turnovers: 0);
+            freeThrowsAttempted: points, freeThrowsMade: points, started: true, plusMinus: 0, steals: 0, turnovers: 0, blocks: 0);
 }

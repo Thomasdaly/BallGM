@@ -114,6 +114,8 @@
   <x:Double x:Key="Space6">32</x:Double>
   <Thickness x:Key="StatCellPadding">0,0,6,0</Thickness>
   <Thickness x:Key="StatBlockGutter">0,0,16,0</Thickness>
+  <!-- A table's name column never narrows below this: a table wider than its room scrolls sideways (ScrollViewer.tablewrap). -->
+  <x:Double x:Key="TableNameMinWidth">140</x:Double>
 
   <!--
     Chart colours: data, never status and never team paint. Validated with the dataviz palette

@@ -77,7 +77,7 @@ public sealed class GameSheet
     private static readonly StatHeader SeasonPpgHeader = new("PPG", "Season points per game, regular season.", 44);
 
     private static readonly IReadOnlyList<StatColumn> PreviewSeasonColumns =
-        [StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists, StatColumns.Steals, StatColumns.Turnovers, StatColumns.PlusMinus, StatColumns.FieldGoalPercent, StatColumns.TrueShooting];
+        [StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists, StatColumns.Steals, StatColumns.Blocks, StatColumns.Turnovers, StatColumns.PlusMinus, StatColumns.FieldGoalPercent, StatColumns.TrueShooting];
 
     private static readonly IReadOnlyList<StatHeader> FinalHeaders =
         [.. StatColumns.Headers(StatColumns.BoxScore), SeasonPpgHeader];

@@ -23,14 +23,14 @@ the field/mechanism doesn't exist yet (see patch ID). `/sim-regress` should repo
 | 12-dynasty | 50-season chained `LeagueSession` run | 0 `EmptyRotationCode` failures | exact | done (P-1a: roster-floor auto-resign; P-1b: draft-day wiring) |
 | 13-tov | tov_pct = TOV / (FGA + 0.44·FTA + TOV) | 0.128 | [0.120, 0.140] | done (S3: 0.128) |
 | 14-stl | stl_per_game (team) | 7.4 | [6.6, 8.2] | done (S3: 7.43) |
-| 15-blk | blk_per_game (team) | 4.9 | [4.2, 5.6] | S4 (P-10) |
+| 15-blk | blk_per_game (team) | 4.9 | [4.2, 5.6] | done (S4: 4.99) |
 | 16-pf | pf_per_game (team) | 19.5 | [17.5, 21.5] | S5 (P-11) |
 | 17-ast | ast_per_fgm (league pooled) | 0.61 | [0.57, 0.65] | done (S1: 0.609) |
 | 18-orb | orb_pct = OREB / (OREB + opp DREB) | 0.265 | [0.25, 0.29] | done (S1: 0.264) |
-| 19-ids | STL_A ≤ opp TOV; BLK_A ≤ opp (FGA−FGM); Σ +/- = 5·margin; PF ≤ stored foul limit | 0 violations | exact | partly done (S2-S3: Σ+/-, Σ MIN and STL ≤ opponent TOV enforced in `BoxScore.Create`; BLK/PF clauses arrive with S4-S5) |
+| 19-ids | STL_A ≤ opp TOV; BLK_A ≤ opp (FGA−FGM); Σ +/- = 5·margin; PF ≤ stored foul limit | 0 violations | exact | partly done (S2-S4: Σ+/-, Σ MIN, STL ≤ opponent TOV and BLK ≤ opponent missed FGA enforced in `BoxScore.Create`; PF clause arrives with S5) |
 | 20-fg3a | fg3a_per_fga | 0.40 | [0.33, 0.44] | — (computable now; zones in S7 must keep it) |
 | 21-replay | same seed ⇒ identical box score, every field, every player | 0 diffs | exact | done (`PossessionMatchEngineTests.TheSameSeedPlaysTheSameGameTwice` compares every field of every line and both team lines) |
-| 22-time | season sim time, `scratch/bench` (M1, 6-team fixture league, 5×200 seasons median) | ≤ 16.9 ms | ≤ 1.25 × baseline 13.5 ms | done (S3: 14.5 ms/season) |
+| 22-time | season sim time, `scratch/bench` (M1, 6-team fixture league, 5×200 seasons median) | ≤ 16.9 ms | ≤ 1.25 × baseline 13.5 ms | done (S4: 14.8 ms/season) |
 
 ## Notes for `/sim-regress`
 

@@ -180,4 +180,44 @@ public sealed class MatchModelBoundsTests
         Assert.True(100 + (SpecialistShape * 2 * MatchModelBounds.StealWeightPerQuicknessPoint) >= MatchModelBounds.MaximumStealWeight);
         Assert.True(100 - (SpecialistShape * MatchModelBounds.StealWeightPerQuicknessPoint) <= MatchModelBounds.MinimumStealWeight);
     }
+
+    [Fact]
+    public void BlocksRelabelAMinorityOfMissesAndTheirCapsAreReachable()
+    {
+        // A block chance is a share of misses, so even the tallest mismatch blocks a minority of twos,
+        // and a three is always rarer to block than a two.
+        Assert.True(MatchModelBounds.BlockChanceOnTwoPointMiss - MatchModelBounds.MaximumBlockHeightSwing > 0);
+        Assert.True(MatchModelBounds.BlockChanceOnTwoPointMiss + MatchModelBounds.MaximumBlockHeightSwing < MatchModelBounds.ProbabilityScale / 4);
+        Assert.True(MatchModelBounds.BlockChanceOnThreePointMiss < MatchModelBounds.BlockChanceOnTwoPointMiss - MatchModelBounds.MaximumBlockHeightSwing);
+        Assert.InRange(MatchModelBounds.BlockedOutOfBoundsShare, 1, MatchModelBounds.ProbabilityScale - 1);
+
+        // Two fives whose height shapes differ by a specialist's margin reach the swing cap, and one
+        // specialist reaches each weight cap.
+        const int SpecialistShape = 20;
+        Assert.True(SpecialistShape * MatchModelBounds.BlockPerHeightPoint >= MatchModelBounds.MaximumBlockHeightSwing);
+        Assert.True(100 + (SpecialistShape * 2 * MatchModelBounds.BlockWeightPerHeightPoint) >= MatchModelBounds.MaximumBlockWeight);
+        Assert.True(100 - (SpecialistShape * MatchModelBounds.BlockWeightPerHeightPoint) <= MatchModelBounds.MinimumBlockWeight);
+    }
+
+    [Fact]
+    public void PositionalWeightsPutTheRightPlayerOnHandForEachEvent()
+    {
+        var positions = Enum.GetValues<BallGM.Domain.Players.Position>();
+        Assert.All(positions, position =>
+        {
+            Assert.True(MatchModelBounds.ReboundWeightFor(position) > 0);
+            Assert.True(MatchModelBounds.AssistWeightFor(position) > 0);
+            Assert.True(MatchModelBounds.BlockWeightFor(position) > 0);
+        });
+
+        // The big man is at the rim, the point guard has the ball.
+        Assert.Equal(BallGM.Domain.Players.Position.Center, positions.MaxBy(MatchModelBounds.BlockWeightFor));
+        Assert.Equal(BallGM.Domain.Players.Position.Center, positions.MaxBy(MatchModelBounds.ReboundWeightFor));
+        Assert.Equal(BallGM.Domain.Players.Position.PointGuard, positions.MaxBy(MatchModelBounds.AssistWeightFor));
+
+        // Blocks are more positional than rebounds: the spread between the extremes is wider.
+        Assert.True(
+            positions.Max(MatchModelBounds.BlockWeightFor) * positions.Min(MatchModelBounds.ReboundWeightFor) >
+            positions.Max(MatchModelBounds.ReboundWeightFor) * positions.Min(MatchModelBounds.BlockWeightFor));
+    }
 }

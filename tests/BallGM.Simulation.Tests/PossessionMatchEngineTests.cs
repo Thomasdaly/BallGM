@@ -226,6 +226,10 @@ public sealed class PossessionMatchEngineTests
 
                 Assert.Equal(liveMisses, rebounds);
                 Assert.True(own.Sum(line => line.Assists) <= own.Sum(line => line.FieldGoalsMade), $"seed {seed}: more assists than baskets.");
+                Assert.True(own.Sum(line => line.Steals) <= theirs.Sum(line => line.Turnovers), $"seed {seed}: more steals than opponent turnovers.");
+                Assert.True(
+                    own.Sum(line => line.Blocks) <= theirs.Sum(line => line.FieldGoalsAttempted - line.FieldGoalsMade),
+                    $"seed {seed}: more blocks than opponent misses.");
             }
         }
     }

@@ -121,6 +121,7 @@ public sealed partial class LeagueSession
             ["TD3"] = detail.TripleDoubles,
             ["STL"] = detail.Totals.Steals,
             ["TOV"] = detail.Totals.Turnovers,
+            ["BLK"] = detail.Totals.Blocks,
         };
 
         void Add(string code, double? value)
