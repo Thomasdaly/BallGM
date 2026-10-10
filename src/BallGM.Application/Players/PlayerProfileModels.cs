@@ -19,7 +19,7 @@ public sealed record PlayerProfileSummary(
     DateOnly BirthDate,
     int SeasonsOfService,
     int Overall,
-    PlayerAttributes Attributes,
+    AttributeSheet Attributes,
     string? TeamName,
     string? PortraitPath,
     bool IsInjured,
@@ -66,8 +66,28 @@ public sealed record ContractDetailLine(
 /// <summary>One season of a contract. <see cref="Option"/> is "Player", "Team", or null.</summary>
 public sealed record ContractYearLine(int Season, long Salary, long Guaranteed, string? Option, double? ShareOfCap);
 
-/// <summary>The five rating attributes. Overall is their integer mean, and never stored.</summary>
-public sealed record PlayerAttributes(int Height, int Speed, int Strength, int Passing, int LateralQuickness);
+/// <summary>
+/// A player's scouting sheet as a screen shows it: the visible attributes group by group in sheet
+/// order, by their stable keys (the pack and save keys; a screen words them); potential;
+/// measurements; how at home he is at each position; his traits by key; and the one-line personality
+/// the hidden layer reads as. Hidden attribute values never reach the screen.
+/// </summary>
+public sealed record AttributeSheet(
+    IReadOnlyList<AttributeGroupLine> Groups,
+    int PotentialAbility,
+    BodyLine? Body,
+    IReadOnlyList<PositionFamiliarityLine> Positions,
+    IReadOnlyList<string> Traits,
+    string Personality);
+
+public sealed record AttributeGroupLine(string Group, IReadOnlyList<AttributeLine> Attributes);
+
+/// <summary>One attribute: its stable key (the enum name) and its value.</summary>
+public sealed record AttributeLine(string Key, int Value);
+
+public sealed record BodyLine(int HeightCm, int WingspanCm, int WeightKg);
+
+public sealed record PositionFamiliarityLine(string Position, string Familiarity);
 
 /// <summary>One season of a contract, in smallest money units; an option season is not yet owed.</summary>
 public sealed record ContractSeasonLine(int Season, long Salary, bool IsOption);

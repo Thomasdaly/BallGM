@@ -92,18 +92,16 @@ public sealed record LeaguePackPlayerEnvelope(
     DateOnly? BirthDate,
     int? SeasonsOfService,
     string? Team,
-    LeaguePackRatingEnvelope? Ratings,
+    IReadOnlyDictionary<string, int?>? Ratings,
     string? Injury,
     LeaguePackContractEnvelope? Contract,
     string? Portrait = null,
-    IReadOnlyList<Careers.CareerSeasonEnvelope>? Career = null);
-
-public sealed record LeaguePackRatingEnvelope(
-    int? Height,
-    int? Speed,
-    int? Strength,
-    int? Passing,
-    int? LateralQuickness);
+    IReadOnlyList<Careers.CareerSeasonEnvelope>? Career = null,
+    IReadOnlyDictionary<string, int?>? Hidden = null,
+    int? Potential = null,
+    Players.PlayerBodyEnvelope? Body = null,
+    IReadOnlyDictionary<string, string>? Positions = null,
+    IReadOnlyList<string>? Traits = null);
 
 /// <summary>
 /// A contract as consecutive season salaries starting with the pack's season, in the currency's

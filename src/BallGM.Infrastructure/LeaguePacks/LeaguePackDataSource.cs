@@ -12,6 +12,7 @@ using BallGM.Domain.Teams;
 using BallGM.Domain.Transactions;
 using BallGM.Infrastructure.Careers;
 using BallGM.Infrastructure.Fixtures;
+using BallGM.Infrastructure.Players;
 using BallGM.Infrastructure.Rulesets;
 using BallGM.Infrastructure.Time;
 using BallGM.Rules.Configuration;
@@ -41,7 +42,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
     /// Version 2 added optional team colours. Version 1 is a strict subset, so this build still reads
     /// it; a version-1 file that states colours is refused rather than half-read.
     /// </summary>
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     public const int OldestSupportedSchemaVersion = 1;
 
@@ -202,7 +203,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
         var parsedPlayers = new List<ParsedPlayer>(playerPlans.Count);
         foreach (var (plan, index) in playerPlans.Select((plan, index) => (plan, index)))
         {
-            var parsed = ParsePlayer(plan, index, teamKeys, season, packDirectory, errors);
+            var parsed = ParsePlayer(plan, index, envelope.SchemaVersion, teamKeys, season, packDirectory, errors);
             if (parsed is not null)
             {
                 parsedPlayers.Add(parsed);
@@ -455,6 +456,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
     private static ParsedPlayer? ParsePlayer(
         LeaguePackPlayerEnvelope plan,
         int index,
+        int schemaVersion,
         IReadOnlySet<string> teamKeys,
         Season season,
         string packDirectory,
@@ -486,7 +488,9 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             service = 0;
         }
 
-        var rating = ParseRating(plan.Ratings, label, errors);
+        var rating = Enum.IsDefined(position) && birthDate != default
+            ? ParseRating(plan, schemaVersion, position, season.Year - birthDate.Year, label, errors)
+            : null;
 
         if (plan.Team is not null && !teamKeys.Contains(plan.Team))
         {
@@ -547,24 +551,29 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
         return lines;
     }
 
-    private static PlayerRating? ParseRating(LeaguePackRatingEnvelope? ratings, string label, List<DomainError> errors)
+    /// <summary>
+    /// A player's sheet. Schema 3 states the full sheet; schemas 1 and 2 state five attributes, which
+    /// are expanded into a full sheet deterministically from the player's name.
+    /// </summary>
+    private static PlayerRating? ParseRating(LeaguePackPlayerEnvelope plan, int schemaVersion, Position position, int age, string label, List<DomainError> errors)
     {
-        if (ratings is null)
+        string? error;
+        var rating = schemaVersion < 3
+            ? PlayerSheetCodec.ReadLegacy(
+                plan.Ratings,
+                plan.Hidden is not null || plan.Potential is not null || plan.Body is not null || plan.Positions is not null || plan.Traits is not null,
+                position,
+                age,
+                $"{plan.Name ?? label}|{plan.BirthDate:yyyy-MM-dd}|{position}",
+                out error)
+            : PlayerSheetCodec.Read(plan.Ratings, plan.Hidden, plan.Potential, plan.Body, plan.Positions, plan.Traits, position, out error);
+
+        if (error is not null)
         {
-            errors.Add(Invalid(label, "Ratings are required."));
-            return null;
+            errors.Add(Invalid(label, error));
         }
 
-        int?[] values = [ratings.Height, ratings.Speed, ratings.Strength, ratings.Passing, ratings.LateralQuickness];
-        if (values.Any(value => value is not int rating || rating < PlayerRating.MinimumOverall || rating > PlayerRating.MaximumOverall))
-        {
-            errors.Add(Invalid(
-                label,
-                $"All five ratings (height, speed, strength, passing, lateralQuickness) must be stated, each between {PlayerRating.MinimumOverall} and {PlayerRating.MaximumOverall}."));
-            return null;
-        }
-
-        return new PlayerRating(values[0]!.Value, values[1]!.Value, values[2]!.Value, values[3]!.Value, values[4]!.Value);
+        return rating;
     }
 
     private static void ValidateContract(LeaguePackContractEnvelope contract, string label, List<DomainError> errors)

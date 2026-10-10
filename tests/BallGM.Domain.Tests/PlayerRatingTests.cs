@@ -29,56 +29,83 @@ public sealed class PlayerRatingTests
     }
 
     [Fact]
-    public void TheFlatConstructorSetsEveryAttributeToTheSameValue()
+    public void TheFlatConstructorSetsEveryVisibleAttributeToTheValueAndHiddenOnesToTheMiddle()
     {
-        var rating = new PlayerRating(overall: 72);
+        var rating = new PlayerRating(72);
 
-        Assert.Equal(72, rating.Height);
-        Assert.Equal(72, rating.Speed);
-        Assert.Equal(72, rating.Strength);
-        Assert.Equal(72, rating.Passing);
-        Assert.Equal(72, rating.LateralQuickness);
+        Assert.All(PlayerAttributes.All, attribute => Assert.Equal(72, rating[attribute]));
+        Assert.All(PlayerAttributes.AllHidden, attribute => Assert.Equal(PlayerRating.NeutralHidden, rating.Hidden(attribute)));
         Assert.Equal(72, rating.Overall);
+        Assert.Equal(72, rating.PotentialAbility);
+        Assert.Null(rating.Body);
+        Assert.Empty(rating.Traits);
     }
 
     [Fact]
-    public void OverallIsTheMeanOfTheFiveAttributes()
+    public void CurrentAbilityWeightsTheAttributes_AndTheWeightsTotalAHundred()
     {
-        var rating = new PlayerRating(height: 90, speed: 60, strength: 70, passing: 80, lateralQuickness: 50);
+        Assert.Equal(100, PlayerAttributes.All.Sum(PlayerAttributes.AbilityWeight));
 
-        Assert.Equal((90 + 60 + 70 + 80 + 50) / 5, rating.Overall);
+        // Three-point shooting counts five times as much as dunking.
+        var shooter = new PlayerRating(60).With(PlayerAttribute.ThreePoint, 80);
+        var dunker = new PlayerRating(60).With(PlayerAttribute.Dunking, 80);
+
+        Assert.Equal(61, shooter.Overall);
+        Assert.Equal(60, dunker.Overall);
     }
 
     [Fact]
-    public void ThePrimaryConstructorThrowsWhenAnAttributeFallsOutsideTheScale()
+    public void EveryAttributeBelongsToItsGroup_InSheetOrder()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new PlayerRating(height: 101, speed: 50, strength: 50, passing: 50, lateralQuickness: 50));
+        var groups = PlayerAttributes.All.Select(PlayerAttributes.GroupOf).ToList();
 
-        Assert.Throws<ArgumentOutOfRangeException>(() =>
-            new PlayerRating(height: 50, speed: -1, strength: 50, passing: 50, lateralQuickness: 50));
+        Assert.Equal(groups.OrderBy(group => group), groups);
+        Assert.Equal(Enum.GetValues<AttributeGroup>(), groups.Distinct());
+        Assert.Equal(AttributeGroup.Mental, PlayerAttributes.GroupOf(PlayerAttribute.BasketballIq));
+        Assert.Equal(AttributeGroup.Rebounding, PlayerAttributes.GroupOf(PlayerAttribute.BoxingOut));
     }
 
     [Fact]
-    public void AdjustShiftsEveryAttributeByTheSameDelta()
+    public void ASheetOutOfScaleOrShortOfAttributesIsRefused()
     {
-        var rating = new PlayerRating(height: 60, speed: 50, strength: 40, passing: 55, lateralQuickness: 45);
+        var full = Enumerable.Repeat(50, PlayerAttributes.Count).ToArray();
+        var hidden = Enumerable.Repeat(50, PlayerAttributes.HiddenCount).ToArray();
+
+        Assert.Throws<ArgumentException>(() => new PlayerRating(full[1..], hidden, 50));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerRating(full.Select((value, index) => index == 3 ? 101 : value).ToArray(), hidden, 50));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerRating(full, hidden, -1));
+    }
+
+    [Fact]
+    public void AdjustMovesEveryVisibleAttributeButNotTheHiddenLayerOrTheBody()
+    {
+        var body = new PlayerBody(201, 208, 104);
+        var rating = new PlayerRating(60).With(HiddenAttribute.Professionalism, 90).WithBody(body).With(PlayerAttribute.Passing, 99);
         var adjusted = rating.Adjust(5);
 
-        Assert.Equal(65, adjusted.Height);
-        Assert.Equal(55, adjusted.Speed);
-        Assert.Equal(45, adjusted.Strength);
-        Assert.Equal(60, adjusted.Passing);
-        Assert.Equal(50, adjusted.LateralQuickness);
+        Assert.Equal(100, adjusted[PlayerAttribute.Passing]);
+        Assert.Equal(65, adjusted[PlayerAttribute.Speed]);
+        Assert.Equal(90, adjusted.Hidden(HiddenAttribute.Professionalism));
+        Assert.Equal(body, adjusted.Body);
     }
 
     [Fact]
-    public void AdjustClampsEachAttributeIndependently()
+    public void TwoSheetsWithTheSameContentAreEqual()
     {
-        var rating = new PlayerRating(height: 98, speed: 5, strength: 50, passing: 50, lateralQuickness: 50);
-        var adjusted = rating.Adjust(10);
+        var positions = new Dictionary<Position, PositionFamiliarity> { [Position.Center] = PositionFamiliarity.Natural };
+        var first = new PlayerRating(Enumerable.Repeat(55, PlayerAttributes.Count).ToArray(), Enumerable.Repeat(40, PlayerAttributes.HiddenCount).ToArray(), 60, new PlayerBody(210, 220, 115), positions, [PlayerTrait.PostsUp]);
+        var second = new PlayerRating(Enumerable.Repeat(55, PlayerAttributes.Count).ToArray(), Enumerable.Repeat(40, PlayerAttributes.HiddenCount).ToArray(), 60, new PlayerBody(210, 220, 115), positions, [PlayerTrait.PostsUp]);
 
-        Assert.Equal(PlayerRating.MaximumOverall, adjusted.Height);
-        Assert.Equal(15, adjusted.Speed);
+        Assert.Equal(first, second);
+        Assert.NotEqual(first, second.With(PlayerAttribute.Blocking, 56));
+    }
+
+    [Fact]
+    public void ABodyOutsideHumanRangeIsRefused()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerBody(260, 260, 100));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerBody(200, 240, 100));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerBody(200, 205, 30));
+        Assert.True(PlayerBody.IsValid(200, 205, 100));
     }
 }

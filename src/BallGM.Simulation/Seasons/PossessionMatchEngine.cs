@@ -597,6 +597,9 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// </summary>
     private sealed class Side
     {
+        /// <summary>The sheet of a player the team cannot rate: nobody, at zero. One instance, not one per game.</summary>
+        private static readonly PlayerRating NoOne = new(0);
+
         public Side(MatchTeam team, int personalFoulLimit)
         {
             TeamId = team.TeamId;
@@ -628,12 +631,12 @@ public sealed class PossessionMatchEngine : IMatchEngine
             // from the available list rates zero everywhere.
             for (var index = 0; index < count; index++)
             {
-                var rating = team.RatingOf(Players[index].PlayerId) ?? new PlayerRating(0);
+                var rating = team.RatingOf(Players[index].PlayerId) ?? NoOne;
                 var overall = rating.Overall;
                 Overalls[index] = overall;
-                PassingShape[index] = rating.Passing - overall;
-                QuicknessShape[index] = ((rating.Speed + rating.LateralQuickness) / 2) - overall;
-                HeightShape[index] = rating.Height - overall;
+                PassingShape[index] = rating.Playmaking - overall;
+                QuicknessShape[index] = rating.Quickness - overall;
+                HeightShape[index] = MatchModelBounds.HeightShapeFor(rating.Body);
                 StealFactors[index] = ShapeWeight(
                     QuicknessShape[index], MatchModelBounds.StealWeightPerQuicknessPoint, MatchModelBounds.MinimumStealWeight, MatchModelBounds.MaximumStealWeight);
 
@@ -890,7 +893,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
         /// <summary>The mean quickness shape of the five on the floor for this possession.</summary>
         public int OnFloorQuickness { get; private set; }
 
-        /// <summary>The mean height shape (Height − Overall) of the five on the floor for this possession.</summary>
+        /// <summary>The mean height shape (<see cref="MatchModelBounds.HeightShapeFor"/>) of the five on the floor for this possession.</summary>
         public int OnFloorHeight { get; private set; }
 
         /// <summary>Turns the possessions each player was on the floor for into the minutes the box score credits.</summary>

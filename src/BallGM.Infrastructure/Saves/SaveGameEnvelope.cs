@@ -62,6 +62,11 @@ public sealed record SaveGameEnvelope(
     /// concluded seasons would sit in one career column beside new ones computed another way, so it is
     /// refused rather than shown inconsistently.
     /// </para>
+    /// <para>
+    /// Moved 4 → 5 when a player's five attributes became a full sheet (visible and hidden attributes,
+    /// potential, body, positions, traits) — and a player's retirement and biography, which every
+    /// earlier version silently dropped, began to travel with him.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 4;
+    public const int CurrentSchemaVersion = 5;
 }

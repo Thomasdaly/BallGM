@@ -57,7 +57,7 @@ public static class ProspectGenerator
         {
             var position = positions[index % positions.Length];
             var talent = GenerateTalent(rules, random);
-            var rating = RatingProfileGenerator.Generate(talent, rules.MinimumRating, rules.MaximumRating, random);
+            var rating = RatingProfileGenerator.Generate(talent, position, rules.ProspectAgeYears, rules.MinimumRating, rules.MaximumRating, random);
             var name = ProspectNameBank.NextName(random);
 
             var prospectResult = Prospect.Create(

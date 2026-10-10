@@ -18,6 +18,7 @@ using BallGM.Infrastructure.Careers;
 using BallGM.Infrastructure.Contracts;
 using BallGM.Infrastructure.DraftAssets;
 using BallGM.Infrastructure.Negotiations;
+using BallGM.Infrastructure.Players;
 using BallGM.Infrastructure.Rulesets;
 using BallGM.Infrastructure.Seasons;
 using BallGM.Infrastructure.Time;
@@ -102,10 +103,25 @@ public sealed class SaveGameSerializer : ISaveGameStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
 
+        // One parse. The version is checked before the shape: a save from another schema has other
+        // fields, and reading it against this one's would report a malformed file instead.
         SaveGameEnvelope? envelope;
         try
         {
-            envelope = JsonSerializer.Deserialize<SaveGameEnvelope>(json, Options);
+            using var document = JsonDocument.Parse(json);
+            var stated = document.RootElement.ValueKind == JsonValueKind.Object &&
+                document.RootElement.TryGetProperty("schemaVersion", out var version) &&
+                version.TryGetInt32(out var number)
+                ? number
+                : (int?)null;
+            if (stated != SaveGameEnvelope.CurrentSchemaVersion)
+            {
+                return Fail<SaveGameContents>(
+                    UnsupportedSchemaVersionCode,
+                    $"Save schema version {stated?.ToString(CultureInfo.InvariantCulture) ?? "(none stated)"} cannot be read by this build, which reads version {SaveGameEnvelope.CurrentSchemaVersion}.");
+            }
+
+            envelope = document.RootElement.Deserialize<SaveGameEnvelope>(Options);
         }
         catch (JsonException exception)
         {
@@ -115,13 +131,6 @@ public sealed class SaveGameSerializer : ISaveGameStore
         if (envelope is null)
         {
             return Fail<SaveGameContents>(MalformedFileCode, "The save payload did not contain a save game.");
-        }
-
-        if (envelope.SchemaVersion != SaveGameEnvelope.CurrentSchemaVersion)
-        {
-            return Fail<SaveGameContents>(
-                UnsupportedSchemaVersionCode,
-                $"Save schema version {envelope.SchemaVersion} cannot be read by this build, which reads version {SaveGameEnvelope.CurrentSchemaVersion}.");
         }
 
         try
@@ -268,14 +277,33 @@ public sealed class SaveGameSerializer : ISaveGameStore
                     $"Player '{envelope.PlayerId}' declares '{envelope.BirthDate}' as a birth date. Expected the form {DateFormat}.");
             }
 
+            var rating = PlayerSheetCodec.Read(
+                envelope.Ratings,
+                envelope.Hidden,
+                envelope.Potential,
+                envelope.Body,
+                envelope.Positions,
+                envelope.Traits,
+                position,
+                out var sheetError);
+            if (rating is null)
+            {
+                return Fail<List<Player>>(InvalidFieldCode, $"Player '{envelope.PlayerId}': {sheetError}");
+            }
+
+            var biography = envelope.Biography is { } bio
+                ? new PlayerBiography(bio.Birthplace, bio.PriorProgramme, bio.DraftSeasonYear, bio.DraftRound, bio.DraftSelection)
+                : null;
             var result = Player.Create(
                 new PlayerId(envelope.PlayerId),
                 envelope.FullName,
                 position,
-                new PlayerRating(envelope.Height, envelope.Speed, envelope.Strength, envelope.Passing, envelope.LateralQuickness),
+                rating,
                 birthDate,
                 envelope.SeasonsOfService,
-                envelope.InjuryDescription is null ? null : new Injury(envelope.InjuryDescription));
+                envelope.InjuryDescription is null ? null : new Injury(envelope.InjuryDescription),
+                biography,
+                envelope.IsRetired);
 
             if (result.IsFailure)
             {
@@ -592,14 +620,19 @@ public sealed class SaveGameSerializer : ISaveGameStore
             player.Id.Value,
             player.FullName,
             player.Position.ToString(),
-            player.Rating.Height,
-            player.Rating.Speed,
-            player.Rating.Strength,
-            player.Rating.Passing,
-            player.Rating.LateralQuickness,
+            PlayerSheetCodec.VisibleMap(player.Rating),
+            PlayerSheetCodec.HiddenMap(player.Rating),
+            player.Rating.PotentialAbility,
+            PlayerSheetCodec.BodyOf(player.Rating),
+            PlayerSheetCodec.PositionMap(player.Rating),
+            PlayerSheetCodec.TraitList(player.Rating),
             player.BirthDate.ToString(DateFormat, CultureInfo.InvariantCulture),
             player.SeasonsOfService,
-            player.CurrentInjury?.Description);
+            player.CurrentInjury?.Description,
+            player.IsRetired,
+            player.Biography == PlayerBiography.Unknown
+                ? null
+                : new PlayerBiographyEnvelope(player.Biography.Birthplace, player.Biography.PriorProgramme, player.Biography.DraftSeasonYear, player.Biography.DraftRound, player.Biography.DraftSelection));
 
     private static TransactionLedgerEnvelope ToEnvelope(TransactionLedger ledger) =>
         new(ledger.Entries.Select(ToEnvelope).ToList());

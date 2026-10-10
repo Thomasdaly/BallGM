@@ -814,19 +814,19 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
         // the rest of this method already has. `RatingProfileGenerator` reads no other state, so a
         // seed derived purely from this player's own index reproduces the identical profile on every
         // load, exactly like every other figure `CreatePlayer` computes.
-        var profileRandom = new SeededRandomSource(SeedMixer.Mix(leagueWidePlayerIndex, "rating-profile"));
-        var rating = RatingProfileGenerator.Generate(
-            target, PlayerRating.MinimumOverall + 30, PlayerRating.MaximumOverall, profileRandom);
-
-        var injury = ScriptedInjuries.TryGetValue((teamIndex, slot), out var description)
-            ? new Injury(description)
-            : null;
-
         // A spread of ages and service across every roster, deterministic like the rest of the
         // fixture. Rookies and veterans have to both exist for a tiered compensation rule to have
         // anything to key off, and a league of identically aged players would hide that entirely.
         var age = 19 + (((teamIndex * 3) + (slot * 5)) % 17);
         var seasonsOfService = Math.Max(0, age - 19 - ((teamIndex + slot) % 2));
+
+        var profileRandom = new SeededRandomSource(SeedMixer.Mix(leagueWidePlayerIndex, "rating-profile"));
+        var rating = RatingProfileGenerator.Generate(
+            target, RosterPositionPlan[(slot + (teamIndex * 2)) % RosterPositionPlan.Length], age, PlayerRating.MinimumOverall + 30, PlayerRating.MaximumOverall, profileRandom);
+
+        var injury = ScriptedInjuries.TryGetValue((teamIndex, slot), out var description)
+            ? new Injury(description)
+            : null;
 
         return Player.Create(
             new PlayerId(SortableId.NewId()),

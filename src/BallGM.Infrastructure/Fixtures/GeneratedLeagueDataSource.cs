@@ -3,6 +3,7 @@ using BallGM.Domain.Common;
 using BallGM.Domain.Players;
 using BallGM.Domain.Randomness;
 using BallGM.Infrastructure.LeaguePacks;
+using BallGM.Infrastructure.Players;
 using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.Draft;
 using BallGM.Rules.Players;
@@ -101,17 +102,22 @@ public sealed class GeneratedLeagueDataSource : ILeagueDataSource
             for (var slot = 0; slot < RosterSize; slot++)
             {
                 var talent = Math.Clamp(SlotTalent[slot] + quality + random.NextInt32(-3, 4), 35, 99);
-                var rating = RatingProfileGenerator.Generate(talent, 30, PlayerRating.MaximumOverall, random);
                 var age = 20 + random.NextInt32(0, 15);
+                var rating = RatingProfileGenerator.Generate(talent, SlotPosition[slot], age, 30, PlayerRating.MaximumOverall, random);
                 players.Add(new LeaguePackPlayerEnvelope(
                     ProspectNameBank.NextName(random),
                     SlotPosition[slot].ToString(),
                     new DateOnly(Season - age, 1 + random.NextInt32(0, 12), 1 + random.NextInt32(0, 28)),
                     Math.Max(0, age - 20),
                     key,
-                    new LeaguePackRatingEnvelope(rating.Height, rating.Speed, rating.Strength, rating.Passing, rating.LateralQuickness),
+                    PlayerSheetCodec.VisibleMap(rating),
                     null,
-                    new LeaguePackContractEnvelope(Salaries(rating.Overall, 1 + random.NextInt32(0, 4)), null)));
+                    new LeaguePackContractEnvelope(Salaries(rating.Overall, 1 + random.NextInt32(0, 4)), null),
+                    Hidden: PlayerSheetCodec.HiddenMap(rating),
+                    Potential: rating.PotentialAbility,
+                    Body: PlayerSheetCodec.BodyOf(rating),
+                    Positions: PlayerSheetCodec.PositionMap(rating),
+                    Traits: PlayerSheetCodec.TraitList(rating)));
             }
         }
 

@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using BallGM.Application.Leagues;
+using BallGM.Domain.Players;
 using BallGM.Infrastructure.AI;
 using BallGM.Infrastructure.Cap;
 using BallGM.Infrastructure.DraftAssets;
@@ -44,16 +45,71 @@ public sealed class LeaguePackDataSourceTests : IDisposable
     }
 
     [Fact]
-    public void Pack_StoresTheFiveAttributesItStates()
+    public void Pack_AnOlderSchemasFiveAttributesExpandIntoAFullSheetTheSameWayEveryLoad()
     {
         var snapshot = Load(SamplePack()).Value;
+        var again = Load(SamplePack()).Value;
 
         var star = snapshot.Players.Single(player => player.FullName == "Player T0-S0");
-        Assert.Equal(90, star.Rating.Height);
-        Assert.Equal(70, star.Rating.Speed);
-        Assert.Equal(85, star.Rating.Strength);
-        Assert.Equal(60, star.Rating.Passing);
-        Assert.Equal(65, star.Rating.LateralQuickness);
+        Assert.Equal(70, star.Rating[PlayerAttribute.Speed]);
+        Assert.Equal(85, star.Rating[PlayerAttribute.Strength]);
+        Assert.Equal(60, star.Rating[PlayerAttribute.Passing]);
+        Assert.Equal(65, star.Rating[PlayerAttribute.LateralQuickness]);
+        Assert.Equal(200 + ((90 - 74) * 10 / 25), star.Rating.Body!.HeightCm);
+        Assert.Equal(star.Rating, again.Players.Single(player => player.FullName == "Player T0-S0").Rating);
+    }
+
+    [Fact]
+    public void Pack_SchemaThreeStatesTheFullSheet()
+    {
+        var sheet = new PlayerRating(72).With(PlayerAttribute.ThreePoint, 91).With(HiddenAttribute.Professionalism, 88);
+        var pack = SamplePack();
+        pack["schemaVersion"] = 3;
+        foreach (var player in pack["players"]!.AsArray())
+        {
+            player!["ratings"] = SheetJson(new PlayerRating(60));
+        }
+
+        var star = pack["players"]![0]!;
+        star["ratings"] = SheetJson(sheet);
+        star["hidden"] = new JsonObject { ["professionalism"] = 88 };
+        star["potential"] = 80;
+        star["body"] = new JsonObject { ["heightCm"] = 198, ["wingspanCm"] = 206, ["weightKg"] = 97 };
+        star["positions"] = new JsonObject { ["ShootingGuard"] = "Accomplished" };
+        star["traits"] = new JsonArray("StretchesTheFloor");
+
+        var loaded = Load(pack);
+
+        Assert.True(loaded.IsSuccess, string.Join("; ", loaded.Errors.Select(error => error.Message)));
+        var rating = loaded.Value.Players.Single(player => player.FullName == "Player T0-S0").Rating;
+        Assert.Equal(91, rating[PlayerAttribute.ThreePoint]);
+        Assert.Equal(88, rating.Hidden(HiddenAttribute.Professionalism));
+        Assert.Equal(PlayerRating.NeutralHidden, rating.Hidden(HiddenAttribute.Temperament));
+        Assert.Equal(80, rating.PotentialAbility);
+        Assert.Equal(new PlayerBody(198, 206, 97), rating.Body);
+        Assert.Equal(PositionFamiliarity.Accomplished, rating.Positions[Position.ShootingGuard]);
+        Assert.Equal([PlayerTrait.StretchesTheFloor], rating.Traits);
+
+        // A schema-3 sheet missing an attribute, naming one this build does not know, or stating the
+        // old five is refused with what is wrong.
+        star["ratings"]!.AsObject().Remove("vision");
+        Assert.Contains(Load(pack).Errors, error => error.Message.Contains("'vision'", StringComparison.Ordinal));
+        star["ratings"] = SheetJson(sheet);
+        star["ratings"]!["jumpShot"] = 80;
+        Assert.Contains(Load(pack).Errors, error => error.Message.Contains("jumpShot", StringComparison.Ordinal));
+        star["ratings"] = new JsonObject { ["height"] = 90, ["speed"] = 70, ["strength"] = 85, ["passing"] = 60, ["lateralQuickness"] = 65 };
+        Assert.False(Load(pack).IsSuccess);
+    }
+
+    private static JsonObject SheetJson(PlayerRating rating)
+    {
+        var json = new JsonObject();
+        foreach (var attribute in PlayerAttributes.All)
+        {
+            json[BallGM.Infrastructure.Players.PlayerSheetCodec.Key(attribute)] = rating[attribute];
+        }
+
+        return json;
     }
 
     [Fact]
@@ -396,8 +452,14 @@ public sealed class LeaguePackDataSourceTests : IDisposable
         var profile = session.PlayerProfile(star.PlayerId);
 
         Assert.True(profile.IsSuccess, string.Join("; ", profile.Errors.Select(error => error.Message)));
-        Assert.Equal(new BallGM.Application.Players.PlayerAttributes(90, 70, 85, 60, 65), profile.Value.Attributes);
-        Assert.Equal(74, profile.Value.Overall);
+        var sheet = profile.Value.Attributes;
+        Assert.Equal(Enum.GetNames<AttributeGroup>(), sheet.Groups.Select(group => group.Group));
+        Assert.Equal(PlayerAttributes.Count, sheet.Groups.Sum(group => group.Attributes.Count));
+        Assert.Equal(70, sheet.Groups.SelectMany(group => group.Attributes).Single(line => line.Key == "Speed").Value);
+        Assert.Equal(60, sheet.Groups.SelectMany(group => group.Attributes).Single(line => line.Key == "Passing").Value);
+        Assert.Equal(200 + ((90 - 74) * 10 / 25), sheet.Body!.HeightCm);
+        Assert.Contains(sheet.Positions, line => line.Position == "PG" && line.Familiarity == "Natural");
+        Assert.False(string.IsNullOrEmpty(sheet.Personality));
         Assert.Equal("RED Team", profile.Value.TeamName);
         Assert.Equal([10_000_000L, 10_500_000L], profile.Value.Contract.Select(line => line.Salary));
         var past = Assert.Single(profile.Value.Career);

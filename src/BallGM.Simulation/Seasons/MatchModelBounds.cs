@@ -160,7 +160,7 @@ public static class MatchModelBounds
 
     /// <summary>
     /// How much the two fives' height moves the block chance on a two, per point the defence's mean
-    /// height shape (Height − Overall) exceeds the offence's — a difference between the sides.
+    /// height shape (<see cref="HeightShapeFor"/>: centimetres from average) exceeds the offence's — a difference between the sides.
     /// </summary>
     public const int BlockPerHeightPoint = 25;
 
@@ -270,8 +270,20 @@ public static class MatchModelBounds
     /// <inheritdoc cref="RimPercentageOffset"/>
     public const int AboveBreak3PercentageOffset = -100;
 
+    /// <summary>The cap on a height shape either way, so a giant is tall, not a different sport.</summary>
+    public const int MaximumHeightShape = 60;
+
     /// <summary>
-    /// How a shooter's height shape (Height − Overall) moves his shot diet: this many basis points a
+    /// The height shape every size coupling reads (zone diet, block chance and credit): how much taller
+    /// than average a player is (<see cref="PlayerBody.HeightShape"/>), capped. A sheet with no body (a
+    /// flat test fixture) is average size, so its couplings stay silent.
+    /// </summary>
+    public static int HeightShapeFor(PlayerBody? body) => body is null
+        ? 0
+        : Math.Clamp(body.HeightShape, -MaximumHeightShape, MaximumHeightShape);
+
+    /// <summary>
+    /// How a shooter's height shape (<see cref="HeightShapeFor"/>) moves his shot diet: this many basis points a
     /// point from above-the-break threes to the rim (or back, for a short player), capped either way.
     /// </summary>
     public const int ZoneMixPerHeightPoint = 60;

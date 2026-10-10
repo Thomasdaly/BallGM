@@ -90,18 +90,56 @@ public sealed class SaveGameSerializerTests
     }
 
     [Fact]
+    public void ASavedPlayerKeepsHisWholeSheet_HisRetirementAndHisBiography()
+    {
+        // Every version before 5 dropped retirement and biography on every save (regression).
+        var snapshot = LoadFixture();
+        var original = snapshot.Players.First();
+        var retired = Player.Create(
+            original.Id,
+            original.FullName,
+            original.Position,
+            original.Rating.With(HiddenAttribute.Loyalty, 93),
+            original.BirthDate,
+            original.SeasonsOfService,
+            biography: new PlayerBiography("Harrowgate", "Northcliff State", 2027, 1, 4),
+            isRetired: true).Value;
+        snapshot = snapshot with { Players = [retired, .. snapshot.Players.Skip(1)] };
+
+        var saved = _serializer.Save(snapshot, null, new Dictionary<string, Negotiation>());
+        var loaded = _serializer.Load(saved.Value);
+
+        Assert.True(loaded.IsSuccess, string.Join("; ", loaded.Errors.Select(error => error.Message)));
+        var back = loaded.Value.Snapshot.Players.Single(player => player.Id == original.Id);
+        Assert.Equal(retired.Rating, back.Rating);
+        Assert.True(back.IsRetired);
+        Assert.Equal(retired.Biography, back.Biography);
+        Assert.All(snapshot.Players, player => Assert.Equal(player.Rating, loaded.Value.Snapshot.Players.Single(other => other.Id == player.Id).Rating));
+    }
+
+    [Fact]
+    public void VersionFourSave_IsRefusedBecauseItsPlayersCarryOnlyFiveAttributes()
+    {
+        var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
+
+        var result = _serializer.Load(saved.Value.Replace("\"schemaVersion\": 5", "\"schemaVersion\": 4", StringComparison.Ordinal));
+
+        Assert.Equal("save_game.unsupported_schema_version", Assert.Single(result.Errors).Code);
+    }
+
+    [Fact]
     public void SaveDeclaresItsSchemaVersion()
     {
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
 
-        Assert.Contains("\"schemaVersion\": 4", saved.Value, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": 5", saved.Value, StringComparison.Ordinal);
     }
 
     [Fact]
     public void SaveFromAFutureSchema_ExplainsItselfInsteadOfLoadingHalfOfIt()
     {
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
-        var mutated = saved.Value.Replace("\"schemaVersion\": 4", "\"schemaVersion\": 99", StringComparison.Ordinal);
+        var mutated = saved.Value.Replace("\"schemaVersion\": 5", "\"schemaVersion\": 99", StringComparison.Ordinal);
 
         var result = _serializer.Load(mutated);
 
@@ -115,7 +153,7 @@ public sealed class SaveGameSerializerTests
         // Version 3's concluded seasons hold USG_PCT as the engine's share of team plays; version 4's
         // hold the minutes-normalised estimate. Loading one would mix the two in one career column.
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
-        var versionThree = saved.Value.Replace("\"schemaVersion\": 4", "\"schemaVersion\": 3", StringComparison.Ordinal);
+        var versionThree = saved.Value.Replace("\"schemaVersion\": 5", "\"schemaVersion\": 3", StringComparison.Ordinal);
 
         var result = _serializer.Load(versionThree);
 

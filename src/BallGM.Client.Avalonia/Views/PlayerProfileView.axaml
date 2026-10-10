@@ -124,7 +124,7 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Text="Overall is the average of these five. Hover an attribute for what it covers." Classes="faint tiny" TextWrapping="Wrap" />
+              <TextBlock Text="Overall is Current Ability, weighted across these attributes." Classes="faint tiny" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
 

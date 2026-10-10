@@ -35,14 +35,10 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
 
     public string? InjuryDescription => profile.InjuryDescription;
 
-    public IReadOnlyList<AttributeRow> Attributes { get; } =
-    [
-        new("Height", profile.Attributes.Height, "Size: rebounding, rim protection, finishing over defenders."),
-        new("Speed", profile.Attributes.Speed, "Getting up the floor and past a defender."),
-        new("Strength", profile.Attributes.Strength, "Holding position, finishing through contact."),
-        new("Passing", profile.Attributes.Passing, "Creating shots for team-mates."),
-        new("Lateral quickness", profile.Attributes.LateralQuickness, "Staying in front on defence."),
-    ];
+    /// <summary>Every visible attribute, group by group in sheet order.</summary>
+    public IReadOnlyList<AttributeRow> Attributes { get; } = profile.Attributes.Groups
+        .SelectMany(group => group.Attributes.Select(attribute => new AttributeRow(AttributeDescriptions.NameOf(attribute.Key), attribute.Value, AttributeDescriptions.For(attribute.Key))))
+        .ToList();
 
     public IReadOnlyList<ContractRow> Contract { get; } = profile.Contract
         .Select(line => new ContractRow(

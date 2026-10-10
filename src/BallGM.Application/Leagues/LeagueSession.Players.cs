@@ -1,6 +1,7 @@
 using System.Globalization;
 using BallGM.Application.Players;
 using BallGM.Domain.Common;
+using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 
@@ -88,7 +89,7 @@ public sealed partial class LeagueSession
             player.BirthDate,
             player.SeasonsOfService,
             rating.Overall,
-            new PlayerAttributes(rating.Height, rating.Speed, rating.Strength, rating.Passing, rating.LateralQuickness),
+            AttributeSheetFor(rating),
             team?.Name,
             _snapshot.Artwork.PortraitFor(player.Id),
             player.IsInjured,
@@ -215,16 +216,32 @@ public sealed partial class LeagueSession
     public static string SeasonLabel(int startYear) =>
         string.Create(CultureInfo.InvariantCulture, $"{startYear}-{(startYear + 1) % 100:00}");
 
-    /// <summary>
-    /// Folds a season about to be concluded into every player's career history, so the profile keeps
-    /// it after the season run itself is cleared: one regular-season row for everyone who played, and
-    /// a separate playoff row for everyone who reached the postseason. Called by <see cref="ConcludeSeason"/>.
-    /// </summary>
+    /// <summary>The scouting sheet a screen shows, from the full rating.</summary>
+    private static AttributeSheet AttributeSheetFor(PlayerRating rating) => new(
+        PlayerAttributes.All
+            .GroupBy(PlayerAttributes.GroupOf)
+            .Select(group => new AttributeGroupLine(
+                group.Key.ToString(),
+                group.Select(attribute => new AttributeLine(attribute.ToString(), rating[attribute])).ToList()))
+            .ToList(),
+        rating.PotentialAbility,
+        rating.Body is { } body ? new BodyLine(body.HeightCm, body.WingspanCm, body.WeightKg) : null,
+        rating.Positions.OrderBy(entry => entry.Key)
+            .Select(entry => new PositionFamiliarityLine(GetLeagueOverviewQuery.DescribePosition(entry.Key), entry.Value.ToString()))
+            .ToList(),
+        rating.Traits.Select(trait => trait.ToString()).ToList(),
+        Personality.Describe(rating));
+
     /// <summary>Each rostered player's team name, by player identifier.</summary>
     private static Dictionary<string, string> TeamNameByPlayer(LeagueSnapshot snapshot) => snapshot.Teams
         .SelectMany(team => team.PlayerIds.Select(id => (id.Value, team.Name)))
         .ToDictionary(entry => entry.Value, entry => entry.Name, StringComparer.Ordinal);
 
+    /// <summary>
+    /// Folds a season about to be concluded into every player's career history, so the profile keeps
+    /// it after the season run itself is cleared: one regular-season row for everyone who played, and
+    /// a separate playoff row for everyone who reached the postseason. Called by <see cref="ConcludeSeason"/>.
+    /// </summary>
     private static LeagueSnapshot WithConcludedSeason(LeagueSnapshot snapshot, SeasonRun run)
     {
         var teamOf = TeamNameByPlayer(snapshot);

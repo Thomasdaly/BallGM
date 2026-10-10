@@ -20,8 +20,8 @@ public sealed class AttributeCouplingTests
     [Fact]
     public void BetterPassersForTheirLevelTurnTheBallOverLess()
     {
-        // Both sides are Overall 70. One has its passing raised 15 and its strength lowered 15.
-        var passers = Totals(home: Rating(passing: +15, strength: -15), away: Rating()).HomeTurnovers;
+        // Both sides are Overall 70. One has its handle, passing and vision raised 15.
+        var passers = Totals(home: Rating(playmaking: +15), away: Rating()).HomeTurnovers;
 
         Assert.True(passers < Neutral.Value.HomeTurnovers * 0.95, $"passers {passers} vs neutral {Neutral.Value.HomeTurnovers}");
     }
@@ -29,7 +29,7 @@ public sealed class AttributeCouplingTests
     [Fact]
     public void AQuickerDefenceForcesMoreTurnoversAndStealsMore()
     {
-        var quickDefence = Totals(home: Rating(), away: Rating(speed: +10, lateral: +10, height: -10, strength: -10));
+        var quickDefence = Totals(home: Rating(), away: Rating(quickness: +10, heightCm: 196));
 
         Assert.True(quickDefence.HomeTurnovers > Neutral.Value.HomeTurnovers * 1.03, $"{quickDefence.HomeTurnovers} vs {Neutral.Value.HomeTurnovers}");
         Assert.True(quickDefence.AwaySteals > Neutral.Value.AwaySteals, $"{quickDefence.AwaySteals} vs {Neutral.Value.AwaySteals}");
@@ -38,8 +38,8 @@ public sealed class AttributeCouplingTests
     [Fact]
     public void ATallerDefenceBlocksMoreShots()
     {
-        // Height up, strength down: nothing in the engine reads strength's shape, so only height moves.
-        var tallDefence = Totals(home: Rating(), away: Rating(height: +15, strength: -15));
+        // Six centimetres taller than average, nothing else changed.
+        var tallDefence = Totals(home: Rating(), away: Rating(heightCm: 206));
 
         Assert.True(tallDefence.AwayBlocks > Neutral.Value.AwayBlocks * 1.05, $"{tallDefence.AwayBlocks} vs {Neutral.Value.AwayBlocks}");
     }
@@ -47,8 +47,8 @@ public sealed class AttributeCouplingTests
     [Fact]
     public void SlowerFeetForTheirLevelFoulMore()
     {
-        // Speed and lateral quickness down, strength up: only the quickness shape moves.
-        var slow = Fouls(Rating(speed: -10, lateral: -10, strength: +20));
+        // Speed, first step and lateral quickness down; Overall held by the mental attributes.
+        var slow = Fouls(Rating(quickness: -10));
         var neutral = Fouls(Rating());
 
         Assert.True(slow > neutral, $"{slow} vs {neutral}");
@@ -67,7 +67,7 @@ public sealed class AttributeCouplingTests
             return ((double)zones.RimAttempts / zones.TotalAttempts, (double)zones.ThreeAttempts / zones.TotalAttempts);
         }
 
-        var tall = Diet(Rating(height: +15, strength: -15));
+        var tall = Diet(Rating(heightCm: 206));
         var neutral = Diet(Rating());
 
         Assert.True(tall.Rim > neutral.Rim + 0.05, $"rim {tall.Rim:F3} vs {neutral.Rim:F3}");
@@ -96,7 +96,32 @@ public sealed class AttributeCouplingTests
         return (turnovers, steals, blocks);
     }
 
-    /// <summary>A rating of Overall 70 with the given shape: the deltas must sum to zero to keep the level.</summary>
-    private static PlayerRating Rating(int height = 0, int speed = 0, int strength = 0, int passing = 0, int lateral = 0) =>
-        new(70 + height, 70 + speed, 70 + strength, 70 + passing, 70 + lateral);
+    /// <summary>
+    /// A sheet of Overall 70 with the given shape: ball skills and feet moved as the engine reads them,
+    /// a body of the given height (none is average size), and the mental attributes — which the engine
+    /// does not read yet — shifted to hold Current Ability at exactly 70.
+    /// </summary>
+    private static PlayerRating Rating(int playmaking = 0, int quickness = 0, int? heightCm = null)
+    {
+        var rating = new PlayerRating(70);
+        foreach (var attribute in new[] { PlayerAttribute.BallHandling, PlayerAttribute.Passing, PlayerAttribute.Vision })
+        {
+            rating = rating.With(attribute, 70 + playmaking);
+        }
+
+        foreach (var attribute in new[] { PlayerAttribute.Speed, PlayerAttribute.FirstStep, PlayerAttribute.LateralQuickness })
+        {
+            rating = rating.With(attribute, 70 + quickness);
+        }
+
+        var mental = PlayerAttributes.All.Where(attribute => PlayerAttributes.GroupOf(attribute) == AttributeGroup.Mental).ToList();
+        for (var step = 0; step < 100 && rating.Overall != 70; step++)
+        {
+            var direction = Math.Sign(70 - rating.Overall);
+            rating = rating.With(mental[step % mental.Count], rating[mental[step % mental.Count]] + direction);
+        }
+
+        Assert.Equal(70, rating.Overall);
+        return heightCm is int height ? rating.WithBody(new PlayerBody(height, height + 5, 100)) : rating;
+    }
 }

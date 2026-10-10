@@ -13,7 +13,16 @@ public sealed class PlayerProfileViewModelTests
         new DateOnly(1999, 3, 4),
         6,
         80,
-        new PlayerAttributes(70, 88, 75, 90, 77),
+        new AttributeSheet(
+            [
+                new AttributeGroupLine("Scoring", [new AttributeLine("ThreePoint", 70), new AttributeLine("FreeThrow", 88)]),
+                new AttributeGroupLine("Mental", [new AttributeLine("BasketballIq", 75)]),
+            ],
+            85,
+            new BodyLine(193, 201, 90),
+            [new PositionFamiliarityLine("PG", "Natural")],
+            ["StretchesTheFloor"],
+            "Professional"),
         "Test Team",
         null,
         false,
@@ -24,12 +33,13 @@ public sealed class PlayerProfileViewModelTests
         [new CareerSeasonLine("2024-25", "Old Team", 70, 2100, 1400, 350, 420), .. current is null ? Array.Empty<CareerSeasonLine>() : [current]]);
 
     [Fact]
-    public void Profile_ShowsAllFiveAttributesAndTheContract()
+    public void Profile_ShowsEveryAttributeInSheetOrderAndTheContract()
     {
         var profile = new PlayerProfileViewModel(Sample(), () => { });
 
-        Assert.Equal(["Height", "Speed", "Strength", "Passing", "Lateral quickness"], profile.Attributes.Select(row => row.Name));
-        Assert.Equal([70, 88, 75, 90, 77], profile.Attributes.Select(row => row.Value));
+        Assert.Equal(["Three point", "Free throw", "Basketball IQ"], profile.Attributes.Select(row => row.Name));
+        Assert.Contains("threes", profile.Attributes[0].Meaning, StringComparison.Ordinal);
+        Assert.Equal([70, 88, 75], profile.Attributes.Select(row => row.Value));
         Assert.Equal(["2026-27", "2027-28"], profile.Contract.Select(row => row.Season));
         Assert.Equal("Option", profile.Contract[1].Note);
         Assert.Equal("2 seasons remaining · $41.0M total", profile.ContractSummary);

@@ -85,3 +85,22 @@ mean before the engine reads them, so a pack on its own scale still plays basket
 named and capped in `MatchModelBounds`, integer basis points, seeded; the 23 frozen `sim-regress`
 rows stay green or move only with a written retune; the real-league pack's attributes are derived locally
 and never committed.
+
+## A1: the sheet, as built
+
+37 visible attributes, nine hidden, potential, body, familiarity and traits on `PlayerRating`
+(the type kept its name; `Overall` is Current Ability). Latent-factor generator with position
+archetypes; first principal component pinned in band. Pack schema 3 with legacy expansion, save
+schema 5. The engine reads the same three shapes, now from the sheet — but they are structural now
+(a centre is always tall and slow, a point guard always the handler), so the fixture league moved
+within its bands: win spread 0.163, talent share 0.879, league margin SD 14.42 (ceilings 0.165, 0.88,
+14.5) at 1,000 seasons. Re-centred in A3. Every flat-sheet rate row held.
+
+Battery 8 after A1 is no better — the calibration league's scoring leader averages about 22, the
+rebounding and assists leaders about 7 and 4.4 — because nothing in the engine reads the new
+attributes yet. The new generator spreads skill more evenly across a sheet than five attributes
+did, which flattens the tails a little further while the engine still reads only Overall. A3 onward
+is where the tails come from.
+
+The local real-league pack loads (schema 2, expanded). Deriving its full sheet from real per-player data is
+scheduled with the engine slices, where each attribute group first matters.
