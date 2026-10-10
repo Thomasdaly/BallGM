@@ -12,99 +12,935 @@
     "P2": "Outside band but within 2x.",
     "P3": "Inside band, drifting toward an edge."
   },
-
   "rate_stats": {
-    "pace_poss_per_48":      { "target": 99.0,  "min": 96.0,  "max": 101.0 },
-    "ortg":                  { "target": 115.0, "min": 112.0, "max": 117.0 },
-    "efg_pct":               { "target": 0.545, "min": 0.530, "max": 0.560 },
-    "ts_pct":                { "target": 0.575, "min": 0.560, "max": 0.590 },
-    "tov_pct":               { "target": 0.128, "min": 0.120, "max": 0.140 },
-    "orb_pct":               { "target": 0.265, "min": 0.250, "max": 0.290 },
-    "ft_per_fga":            { "target": 0.220, "min": 0.190, "max": 0.250 },
-    "fg3a_per_fga":          { "target": 0.400, "min": 0.330, "max": 0.440 },
-    "ast_per_fgm":           { "target": 0.610, "min": 0.570, "max": 0.650 },
-    "pf_per_game":           { "target": 19.5,  "min": 17.5,  "max": 21.5 },
-    "blk_per_game":          { "target": 4.9,   "min": 4.2,   "max": 5.6 },
-    "stl_per_game":          { "target": 7.4,   "min": 6.6,   "max": 8.2 },
-    "hca_points":            { "target": 2.5,   "min": 1.5,   "max": 3.5 }
+    "pace_poss_per_48": {
+      "target": 99.0,
+      "min": 96.0,
+      "max": 101.0
+    },
+    "ortg": {
+      "target": 115.0,
+      "min": 112.0,
+      "max": 117.0
+    },
+    "efg_pct": {
+      "target": 0.545,
+      "min": 0.53,
+      "max": 0.56
+    },
+    "ts_pct": {
+      "target": 0.575,
+      "min": 0.56,
+      "max": 0.59
+    },
+    "tov_pct": {
+      "target": 0.128,
+      "min": 0.12,
+      "max": 0.14
+    },
+    "orb_pct": {
+      "target": 0.265,
+      "min": 0.25,
+      "max": 0.29
+    },
+    "ft_per_fga": {
+      "target": 0.22,
+      "min": 0.19,
+      "max": 0.25
+    },
+    "fg3a_per_fga": {
+      "target": 0.4,
+      "min": 0.33,
+      "max": 0.44
+    },
+    "ast_per_fgm": {
+      "target": 0.61,
+      "min": 0.57,
+      "max": 0.65
+    },
+    "pf_per_game": {
+      "target": 19.5,
+      "min": 17.5,
+      "max": 21.5
+    },
+    "blk_per_game": {
+      "target": 4.9,
+      "min": 4.2,
+      "max": 5.6
+    },
+    "stl_per_game": {
+      "target": 7.4,
+      "min": 6.6,
+      "max": 8.2
+    },
+    "hca_points": {
+      "target": 2.5,
+      "min": 1.5,
+      "max": 3.5
+    }
   },
-
   "distribution_shape": {
-    "sd_team_win_pct":       { "target": 0.150, "min": 0.135, "max": 0.165 },
-    "noll_scully":           { "target": 2.70,  "min": 2.50,  "max": 3.00,
-                               "formula": "sd_observed / (0.5 / sqrt(82))" },
-    "talent_share_of_var":   { "target": 0.84,  "min": 0.80,  "max": 0.88,
-                               "formula": "(var_observed - 0.25/82) / var_observed" },
-    "sd_game_margin":        { "target": 13.5,  "min": 12.5,  "max": 14.5 },
-    "sd_team_game_score":    { "target": 12.0,  "min": 11.0,  "max": 13.0 },
-    "teams_60plus_wins_per_30": { "target": 1.2, "min": 0.6,  "max": 2.2 },
-    "teams_20orfewer_per_30":   { "target": 1.4, "min": 0.7,  "max": 2.5 },
-    "player_value_skew":     { "target": 1.20,  "min": 0.70,  "max": 2.00,
-                               "note": "Right-skewed. A value near 0 means Gaussian talent generation." },
-    "player_value_excess_kurtosis": { "target": 2.50, "min": 1.00, "max": 6.00 },
-    "hill_tail_exponent_top5pct":   { "target": 2.60, "min": 2.00, "max": 3.50,
-                               "note": "Finite mean and variance, heavy tail. Blows up if talent is normal." },
-    "rotation_size_at_90pct_mp":    { "target": 9.0,  "min": 8.2,  "max": 10.0 }
+    "sd_team_win_pct": {
+      "target": 0.15,
+      "min": 0.135,
+      "max": 0.165
+    },
+    "noll_scully": {
+      "target": 2.7,
+      "min": 2.5,
+      "max": 3.0,
+      "formula": "sd_observed / (0.5 / sqrt(82))"
+    },
+    "talent_share_of_var": {
+      "target": 0.84,
+      "min": 0.8,
+      "max": 0.88,
+      "formula": "(var_observed - 0.25/82) / var_observed"
+    },
+    "sd_game_margin": {
+      "target": 13.5,
+      "min": 12.5,
+      "max": 14.5
+    },
+    "sd_team_game_score": {
+      "target": 12.0,
+      "min": 11.0,
+      "max": 13.0
+    },
+    "teams_60plus_wins_per_30": {
+      "target": 1.2,
+      "min": 0.6,
+      "max": 2.2
+    },
+    "teams_20orfewer_per_30": {
+      "target": 1.4,
+      "min": 0.7,
+      "max": 2.5
+    },
+    "player_value_skew": {
+      "target": 1.2,
+      "min": 0.7,
+      "max": 2.0,
+      "note": "Right-skewed. A value near 0 means Gaussian talent generation."
+    },
+    "player_value_excess_kurtosis": {
+      "target": 2.5,
+      "min": 1.0,
+      "max": 6.0
+    },
+    "hill_tail_exponent_top5pct": {
+      "target": 2.6,
+      "min": 2.0,
+      "max": 3.5,
+      "note": "Finite mean and variance, heavy tail. Blows up if talent is normal."
+    },
+    "rotation_size_at_90pct_mp": {
+      "target": 9.0,
+      "min": 8.2,
+      "max": 10.0
+    }
   },
-
   "correlation_structure": {
-    "first_pc_variance_share": { "target": 0.45, "min": 0.20, "max": 0.70,
-                               "note": ">0.70 means every player is a scalar overall in a trench coat." },
-    "usg_ts_within_player_slope": { "target": -0.60, "min": -0.90, "max": -0.30,
-                               "unit": "TS percentage points per +1 USG point" },
-    "stacking_slope_orb":    { "target": 0.55, "min": 0.40, "max": 0.70 },
-    "stacking_slope_ast":    { "target": 0.60, "min": 0.45, "max": 0.75 },
-    "stacking_slope_blk":    { "target": 0.60, "min": 0.45, "max": 0.75 },
-    "stacking_slope_drtg":   { "target": 0.65, "min": 0.50, "max": 0.80 },
+    "first_pc_variance_share": {
+      "target": 0.45,
+      "min": 0.2,
+      "max": 0.7,
+      "note": ">0.70 means every player is a scalar overall in a trench coat."
+    },
+    "usg_ts_within_player_slope": {
+      "target": -0.6,
+      "min": -0.9,
+      "max": -0.3,
+      "unit": "TS percentage points per +1 USG point"
+    },
+    "stacking_slope_orb": {
+      "target": 0.55,
+      "min": 0.4,
+      "max": 0.7
+    },
+    "stacking_slope_ast": {
+      "target": 0.6,
+      "min": 0.45,
+      "max": 0.75
+    },
+    "stacking_slope_blk": {
+      "target": 0.6,
+      "min": 0.45,
+      "max": 0.75
+    },
+    "stacking_slope_drtg": {
+      "target": 0.65,
+      "min": 0.5,
+      "max": 0.8
+    },
     "$comment_stacking": "Regress team rate on the sum of the five on-court players' individual rates. Slope 1.0 = linear talent aggregation = roster construction is a solved trivial problem. This is failure mode #1.",
     "expected_rating_couplings": [
-      ["height", "block_rate", "positive"],
-      ["height", "three_point", "negative"],
-      ["height", "lateral_quickness", "negative"],
-      ["speed", "steal_rate", "positive"],
-      ["strength", "orb_rate", "positive"],
-      ["passing", "turnover_rate", "positive"]
+      [
+        "height",
+        "block_rate",
+        "positive"
+      ],
+      [
+        "height",
+        "three_point",
+        "negative"
+      ],
+      [
+        "height",
+        "lateral_quickness",
+        "negative"
+      ],
+      [
+        "speed",
+        "steal_rate",
+        "positive"
+      ],
+      [
+        "strength",
+        "orb_rate",
+        "positive"
+      ],
+      [
+        "passing",
+        "turnover_rate",
+        "positive"
+      ]
     ]
   },
-
   "temporal": {
-    "yoy_team_win_r":        { "target": 0.65, "min": 0.55, "max": 0.72 },
-    "games_to_split_half_r_0.5": { "target": 13, "min": 10, "max": 18 },
+    "yoy_team_win_r": {
+      "target": 0.65,
+      "min": 0.55,
+      "max": 0.72
+    },
+    "games_to_split_half_r_0.5": {
+      "target": 13,
+      "min": 10,
+      "max": 18
+    },
     "yoy_player": {
-      "ft_pct":  { "target": 0.70, "min": 0.60, "max": 0.80 },
-      "fg3_pct": { "target": 0.40, "min": 0.30, "max": 0.50 },
-      "usg_pct": { "target": 0.85, "min": 0.78, "max": 0.92 },
-      "reb_pct": { "target": 0.85, "min": 0.78, "max": 0.92 },
-      "ts_pct":  { "target": 0.55, "min": 0.45, "max": 0.65 }
+      "ft_pct": {
+        "target": 0.7,
+        "min": 0.6,
+        "max": 0.8
+      },
+      "fg3_pct": {
+        "target": 0.4,
+        "min": 0.3,
+        "max": 0.5
+      },
+      "usg_pct": {
+        "target": 0.85,
+        "min": 0.78,
+        "max": 0.92
+      },
+      "reb_pct": {
+        "target": 0.85,
+        "min": 0.78,
+        "max": 0.92
+      },
+      "ts_pct": {
+        "target": 0.55,
+        "min": 0.45,
+        "max": 0.65
+      }
     },
     "peak_age": {
-      "net_impact":   { "target": 26.5, "min": 25.0, "max": 28.0 },
-      "scoring_vol":  { "target": 27.0, "min": 25.5, "max": 28.5 },
-      "fg3_pct":      { "target": 28.5, "min": 26.5, "max": 31.0 },
-      "reb_pct":      { "target": 25.0, "min": 23.0, "max": 27.0 },
-      "blk_pct":      { "target": 24.5, "min": 23.0, "max": 26.5 },
+      "net_impact": {
+        "target": 26.5,
+        "min": 25.0,
+        "max": 28.0
+      },
+      "scoring_vol": {
+        "target": 27.0,
+        "min": 25.5,
+        "max": 28.5
+      },
+      "fg3_pct": {
+        "target": 28.5,
+        "min": 26.5,
+        "max": 31.0
+      },
+      "reb_pct": {
+        "target": 25.0,
+        "min": 23.0,
+        "max": 27.0
+      },
+      "blk_pct": {
+        "target": 24.5,
+        "min": 23.0,
+        "max": 26.5
+      },
       "$comment": "These MUST differ from each other. Identical peaks mean one aging curve is driving every skill."
     },
-    "rating_drift_per_50_seasons": { "target": 0.0, "min": -1.0, "max": 1.0,
-                               "unit": "league mean overall points; any monotonic trend is a broken progs loop" },
-    "title_gini_50_seasons": { "target": 0.55, "min": 0.42, "max": 0.68 }
+    "rating_drift_per_50_seasons": {
+      "target": 0.0,
+      "min": -1.0,
+      "max": 1.0,
+      "unit": "league mean overall points; any monotonic trend is a broken progs loop"
+    },
+    "title_gini_50_seasons": {
+      "target": 0.55,
+      "min": 0.42,
+      "max": 0.68
+    }
   },
-
   "calibration": {
-    "brier_score":           { "target": 0.205, "min": 0.190, "max": 0.225 },
-    "calibration_slope":     { "target": 1.00,  "min": 0.93,  "max": 1.07 },
-    "p_win_series_at_plus5_netrtg": { "target": 0.80, "min": 0.74, "max": 0.86 },
-    "p_best_rs_team_wins_title":    { "target": 0.25, "min": 0.18, "max": 0.32,
-                               "note": "60% means playoff variance is too low and the game feels deterministic." }
+    "brier_score": {
+      "target": 0.205,
+      "min": 0.19,
+      "max": 0.225
+    },
+    "calibration_slope": {
+      "target": 1.0,
+      "min": 0.93,
+      "max": 1.07
+    },
+    "p_win_series_at_plus5_netrtg": {
+      "target": 0.8,
+      "min": 0.74,
+      "max": 0.86
+    },
+    "p_best_rs_team_wins_title": {
+      "target": 0.25,
+      "min": 0.18,
+      "max": 0.32,
+      "note": "60% means playoff variance is too low and the game feels deterministic."
+    }
   },
-
   "economy_and_ai": {
-    "star_premium_convexity": { "target": "convex", "test": "quadratic term on surplus-vs-quality must be positive and significant" },
-    "rookie_pick_surplus_decay": { "target": "power_law", "test": "log(surplus) vs log(pick) linear; reject linear decay" },
-    "ai_cap_space_utilization": { "target": 0.93, "min": 0.85, "max": 0.99 },
-    "roster_archetype_entropy": { "target": 2.20, "min": 1.70, "max": 2.80,
-                               "unit": "nats; low = every AI team builds the same roster" },
-    "trade_value_intransitivity_rate": { "target": 0.0, "max": 0.0,
-                               "note": "Any A>B, B>C, C>A loop on 10k random triples is a P0 exploit." }
+    "star_premium_convexity": {
+      "target": "convex",
+      "test": "quadratic term on surplus-vs-quality must be positive and significant"
+    },
+    "rookie_pick_surplus_decay": {
+      "target": "power_law",
+      "test": "log(surplus) vs log(pick) linear; reject linear decay"
+    },
+    "ai_cap_space_utilization": {
+      "target": 0.93,
+      "min": 0.85,
+      "max": 0.99
+    },
+    "roster_archetype_entropy": {
+      "target": 2.2,
+      "min": 1.7,
+      "max": 2.8,
+      "unit": "nats; low = every AI team builds the same roster"
+    },
+    "trade_value_intransitivity_rate": {
+      "target": 0.0,
+      "max": 0.0,
+      "note": "Any A>B, B>C, C>A loop on 10k random triples is a P0 exploit."
+    }
+  },
+  "league_shape": {
+    "$comment": "Battery 8. Per-player distribution of the real league, aggregates only (counts above thresholds, leader values, percentiles) \u2014 no player rows or names. Computed by a local, uncommitted script from 2021-22..2025-26 per-player totals (hustle and usage: 2025-26 only). Population: players with 40+ games unless stated. Box bands: five-season min..max, widened 5% (values) or 2 (counts); one-season rows +/-15% or +/-2. Measure on a 30-team, 82-game league; a smaller league scales counts by teams/30.",
+    "ppg.leader": {
+      "target": 32.74,
+      "min": 28.88,
+      "max": 35.55,
+      "population": "GP>=40"
+    },
+    "ppg.p99": {
+      "target": 28.49,
+      "min": 25.54,
+      "max": 32.65,
+      "population": "GP>=40"
+    },
+    "ppg.p90": {
+      "target": 20.7,
+      "min": 18.21,
+      "max": 22.66,
+      "population": "GP>=40"
+    },
+    "ppg.p50": {
+      "target": 9.44,
+      "min": 8.71,
+      "max": 10.08,
+      "population": "GP>=40"
+    },
+    "ppg.count_ge_25": {
+      "target": 15.2,
+      "min": 11,
+      "max": 21,
+      "population": "GP>=40"
+    },
+    "ppg.count_ge_20": {
+      "target": 43.8,
+      "min": 34,
+      "max": 54,
+      "population": "GP>=40"
+    },
+    "rpg.leader": {
+      "target": 13.52,
+      "min": 11.8,
+      "max": 15.4,
+      "population": "GP>=40"
+    },
+    "rpg.p99": {
+      "target": 11.72,
+      "min": 10.86,
+      "max": 12.8,
+      "population": "GP>=40"
+    },
+    "rpg.p90": {
+      "target": 7.56,
+      "min": 6.65,
+      "max": 8.19,
+      "population": "GP>=40"
+    },
+    "rpg.p50": {
+      "target": 3.73,
+      "min": 3.39,
+      "max": 4.11,
+      "population": "GP>=40"
+    },
+    "rpg.count_ge_10": {
+      "target": 12.6,
+      "min": 8,
+      "max": 17,
+      "population": "GP>=40"
+    },
+    "rpg.count_ge_8": {
+      "target": 30.8,
+      "min": 21,
+      "max": 37,
+      "population": "GP>=40"
+    },
+    "orpg.leader": {
+      "target": 4.67,
+      "min": 4.25,
+      "max": 5.35,
+      "population": "GP>=40"
+    },
+    "orpg.p99": {
+      "target": 3.55,
+      "min": 3.06,
+      "max": 3.96,
+      "population": "GP>=40"
+    },
+    "orpg.p90": {
+      "target": 2.16,
+      "min": 1.98,
+      "max": 2.36,
+      "population": "GP>=40"
+    },
+    "orpg.p50": {
+      "target": 0.81,
+      "min": 0.7,
+      "max": 0.9,
+      "population": "GP>=40"
+    },
+    "orpg.count_ge_3": {
+      "target": 11.6,
+      "min": 7,
+      "max": 15,
+      "population": "GP>=40"
+    },
+    "apg.leader": {
+      "target": 10.93,
+      "min": 10.08,
+      "max": 12.16,
+      "population": "GP>=40"
+    },
+    "apg.p99": {
+      "target": 8.56,
+      "min": 7.51,
+      "max": 9.33,
+      "population": "GP>=40"
+    },
+    "apg.p90": {
+      "target": 5.34,
+      "min": 4.86,
+      "max": 5.79,
+      "population": "GP>=40"
+    },
+    "apg.p50": {
+      "target": 1.87,
+      "min": 1.62,
+      "max": 2.07,
+      "population": "GP>=40"
+    },
+    "apg.count_ge_8": {
+      "target": 6.4,
+      "min": 2,
+      "max": 10,
+      "population": "GP>=40"
+    },
+    "apg.count_ge_6": {
+      "target": 24.8,
+      "min": 20,
+      "max": 30,
+      "population": "GP>=40"
+    },
+    "spg.leader": {
+      "target": 2.2,
+      "min": 1.76,
+      "max": 3.16,
+      "population": "GP>=40"
+    },
+    "spg.p99": {
+      "target": 1.74,
+      "min": 1.55,
+      "max": 1.95,
+      "population": "GP>=40"
+    },
+    "spg.p90": {
+      "target": 1.22,
+      "min": 1.11,
+      "max": 1.33,
+      "population": "GP>=40"
+    },
+    "spg.p50": {
+      "target": 0.71,
+      "min": 0.61,
+      "max": 0.8,
+      "population": "GP>=40"
+    },
+    "spg.count_ge_1.5": {
+      "target": 12.4,
+      "min": 5,
+      "max": 18,
+      "population": "GP>=40"
+    },
+    "bpg.leader": {
+      "target": 3.26,
+      "min": 2.62,
+      "max": 4.02,
+      "population": "GP>=40"
+    },
+    "bpg.p99": {
+      "target": 2.05,
+      "min": 1.62,
+      "max": 2.43,
+      "population": "GP>=40"
+    },
+    "bpg.p90": {
+      "target": 0.94,
+      "min": 0.86,
+      "max": 1.02,
+      "population": "GP>=40"
+    },
+    "bpg.p50": {
+      "target": 0.36,
+      "min": 0.31,
+      "max": 0.41,
+      "population": "GP>=40"
+    },
+    "bpg.count_ge_2": {
+      "target": 4.8,
+      "min": 0,
+      "max": 10,
+      "population": "GP>=40"
+    },
+    "bpg.count_ge_1.5": {
+      "target": 11.2,
+      "min": 8,
+      "max": 14,
+      "population": "GP>=40"
+    },
+    "mpg.leader": {
+      "target": 37.76,
+      "min": 35.45,
+      "max": 39.92,
+      "population": "GP>=40"
+    },
+    "mpg.p99": {
+      "target": 36.67,
+      "min": 33.6,
+      "max": 39.08,
+      "population": "GP>=40"
+    },
+    "mpg.p90": {
+      "target": 33.73,
+      "min": 30.75,
+      "max": 36.22,
+      "population": "GP>=40"
+    },
+    "mpg.p50": {
+      "target": 23.6,
+      "min": 21.26,
+      "max": 25.55,
+      "population": "GP>=40"
+    },
+    "mpg.count_ge_34": {
+      "target": 32.4,
+      "min": 16,
+      "max": 44,
+      "population": "GP>=40"
+    },
+    "mpg.count_ge_30": {
+      "target": 88.2,
+      "min": 68,
+      "max": 101,
+      "population": "GP>=40"
+    },
+    "fta_pg.leader": {
+      "target": 11.08,
+      "min": 9.47,
+      "max": 12.87,
+      "population": "GP>=40"
+    },
+    "fta_pg.p99": {
+      "target": 8.12,
+      "min": 6.9,
+      "max": 10.1,
+      "population": "GP>=40"
+    },
+    "fta_pg.p90": {
+      "target": 4.77,
+      "min": 4.16,
+      "max": 5.45,
+      "population": "GP>=40"
+    },
+    "fta_pg.p50": {
+      "target": 1.65,
+      "min": 1.4,
+      "max": 1.85,
+      "population": "GP>=40"
+    },
+    "fta_pg.count_ge_7": {
+      "target": 10.4,
+      "min": 6,
+      "max": 15,
+      "population": "GP>=40"
+    },
+    "fg3m_pg.leader": {
+      "target": 4.6,
+      "min": 4.17,
+      "max": 5.12,
+      "population": "GP>=40"
+    },
+    "fg3m_pg.p99": {
+      "target": 3.43,
+      "min": 2.96,
+      "max": 3.78,
+      "population": "GP>=40"
+    },
+    "fg3m_pg.p90": {
+      "target": 2.51,
+      "min": 2.33,
+      "max": 2.7,
+      "population": "GP>=40"
+    },
+    "fg3m_pg.p50": {
+      "target": 1.13,
+      "min": 0.99,
+      "max": 1.26,
+      "population": "GP>=40"
+    },
+    "fg3m_pg.count_ge_3": {
+      "target": 14.8,
+      "min": 10,
+      "max": 20,
+      "population": "GP>=40"
+    },
+    "tov_pg.leader": {
+      "target": 4.32,
+      "min": 3.75,
+      "max": 4.9,
+      "population": "GP>=40"
+    },
+    "tov_pg.p99": {
+      "target": 3.61,
+      "min": 3.26,
+      "max": 3.97,
+      "population": "GP>=40"
+    },
+    "tov_pg.p90": {
+      "target": 2.52,
+      "min": 2.29,
+      "max": 2.75,
+      "population": "GP>=40"
+    },
+    "tov_pg.p50": {
+      "target": 1.08,
+      "min": 0.96,
+      "max": 1.17,
+      "population": "GP>=40"
+    },
+    "tov_pg.count_ge_3": {
+      "target": 16.6,
+      "min": 12,
+      "max": 23,
+      "population": "GP>=40"
+    },
+    "pf_pg.leader": {
+      "target": 3.61,
+      "min": 3.29,
+      "max": 3.92,
+      "population": "GP>=40"
+    },
+    "pf_pg.p99": {
+      "target": 3.35,
+      "min": 3.05,
+      "max": 3.62,
+      "population": "GP>=40"
+    },
+    "pf_pg.p90": {
+      "target": 2.67,
+      "min": 2.4,
+      "max": 2.96,
+      "population": "GP>=40"
+    },
+    "pf_pg.p50": {
+      "target": 1.85,
+      "min": 1.67,
+      "max": 1.99,
+      "population": "GP>=40"
+    },
+    "pf_pg.count_ge_3": {
+      "target": 17.4,
+      "min": 8,
+      "max": 28,
+      "population": "GP>=40"
+    },
+    "players_ge_40_games": {
+      "target": 357.2,
+      "min": 330,
+      "max": 389,
+      "population": "all"
+    },
+    "usg.leader": {
+      "target": 0.37,
+      "min": 0.31,
+      "max": 0.42,
+      "population": "GP>=40, MPG>=20"
+    },
+    "usg.p99": {
+      "target": 0.33,
+      "min": 0.28,
+      "max": 0.37,
+      "population": "GP>=40, MPG>=20"
+    },
+    "usg.p90": {
+      "target": 0.27,
+      "min": 0.23,
+      "max": 0.32,
+      "population": "GP>=40, MPG>=20"
+    },
+    "usg.p50": {
+      "target": 0.19,
+      "min": 0.16,
+      "max": 0.22,
+      "population": "GP>=40, MPG>=20"
+    },
+    "usg.count_ge_0.3": {
+      "target": 10,
+      "min": 8,
+      "max": 12,
+      "population": "GP>=40, MPG>=20"
+    },
+    "usg.count_ge_0.25": {
+      "target": 43,
+      "min": 41,
+      "max": 45,
+      "population": "GP>=40, MPG>=20"
+    },
+    "deflections_pg.leader": {
+      "target": 4.4,
+      "min": 3.74,
+      "max": 5.06,
+      "population": "G>=40, 2025-26 only"
+    },
+    "deflections_pg.p99": {
+      "target": 4.16,
+      "min": 3.53,
+      "max": 4.78,
+      "population": "G>=40, 2025-26 only"
+    },
+    "deflections_pg.p90": {
+      "target": 2.73,
+      "min": 2.32,
+      "max": 3.14,
+      "population": "G>=40, 2025-26 only"
+    },
+    "deflections_pg.p50": {
+      "target": 1.68,
+      "min": 1.43,
+      "max": 1.93,
+      "population": "G>=40, 2025-26 only"
+    },
+    "deflections_pg.count_ge_3": {
+      "target": 21,
+      "min": 19,
+      "max": 23,
+      "population": "G>=40, 2025-26 only"
+    },
+    "deflections_pg.count_ge_2": {
+      "target": 102,
+      "min": 100,
+      "max": 104,
+      "population": "G>=40, 2025-26 only"
+    },
+    "contested_pg.leader": {
+      "target": 13.48,
+      "min": 11.46,
+      "max": 15.5,
+      "population": "G>=40, 2025-26 only"
+    },
+    "contested_pg.p99": {
+      "target": 9.96,
+      "min": 8.46,
+      "max": 11.45,
+      "population": "G>=40, 2025-26 only"
+    },
+    "contested_pg.p90": {
+      "target": 6.84,
+      "min": 5.81,
+      "max": 7.86,
+      "population": "G>=40, 2025-26 only"
+    },
+    "contested_pg.p50": {
+      "target": 3.66,
+      "min": 3.11,
+      "max": 4.21,
+      "population": "G>=40, 2025-26 only"
+    },
+    "contested_pg.count_ge_10": {
+      "target": 3,
+      "min": 1,
+      "max": 5,
+      "population": "G>=40, 2025-26 only"
+    },
+    "contested_pg.count_ge_7": {
+      "target": 32,
+      "min": 30,
+      "max": 34,
+      "population": "G>=40, 2025-26 only"
+    },
+    "screen_assists_pg.leader": {
+      "target": 4.32,
+      "min": 3.67,
+      "max": 4.96,
+      "population": "G>=40, 2025-26 only"
+    },
+    "screen_assists_pg.p99": {
+      "target": 3.63,
+      "min": 3.09,
+      "max": 4.18,
+      "population": "G>=40, 2025-26 only"
+    },
+    "screen_assists_pg.p90": {
+      "target": 1.91,
+      "min": 1.62,
+      "max": 2.19,
+      "population": "G>=40, 2025-26 only"
+    },
+    "screen_assists_pg.p50": {
+      "target": 0.38,
+      "min": 0.32,
+      "max": 0.44,
+      "population": "G>=40, 2025-26 only"
+    },
+    "screen_assists_pg.count_ge_3": {
+      "target": 10,
+      "min": 8,
+      "max": 12,
+      "population": "G>=40, 2025-26 only"
+    },
+    "screen_assists_pg.count_ge_2": {
+      "target": 32,
+      "min": 30,
+      "max": 34,
+      "population": "G>=40, 2025-26 only"
+    },
+    "loose_balls_pg.leader": {
+      "target": 1.03,
+      "min": 0.87,
+      "max": 1.18,
+      "population": "G>=40, 2025-26 only"
+    },
+    "loose_balls_pg.p99": {
+      "target": 0.88,
+      "min": 0.75,
+      "max": 1.02,
+      "population": "G>=40, 2025-26 only"
+    },
+    "loose_balls_pg.p90": {
+      "target": 0.66,
+      "min": 0.56,
+      "max": 0.76,
+      "population": "G>=40, 2025-26 only"
+    },
+    "loose_balls_pg.p50": {
+      "target": 0.42,
+      "min": 0.35,
+      "max": 0.48,
+      "population": "G>=40, 2025-26 only"
+    },
+    "loose_balls_pg.count_ge_1": {
+      "target": 2,
+      "min": 0,
+      "max": 4,
+      "population": "G>=40, 2025-26 only"
+    },
+    "box_outs_pg.leader": {
+      "target": 3.15,
+      "min": 2.67,
+      "max": 3.62,
+      "population": "G>=40, 2025-26 only"
+    },
+    "box_outs_pg.p99": {
+      "target": 2.53,
+      "min": 2.15,
+      "max": 2.91,
+      "population": "G>=40, 2025-26 only"
+    },
+    "box_outs_pg.p90": {
+      "target": 1.35,
+      "min": 1.15,
+      "max": 1.55,
+      "population": "G>=40, 2025-26 only"
+    },
+    "box_outs_pg.p50": {
+      "target": 0.38,
+      "min": 0.32,
+      "max": 0.43,
+      "population": "G>=40, 2025-26 only"
+    },
+    "box_outs_pg.count_ge_2": {
+      "target": 15,
+      "min": 13,
+      "max": 17,
+      "population": "G>=40, 2025-26 only"
+    },
+    "box_outs_pg.count_ge_1": {
+      "target": 54,
+      "min": 52,
+      "max": 56,
+      "population": "G>=40, 2025-26 only"
+    },
+    "charges_pg.leader": {
+      "target": 0.39,
+      "min": 0.33,
+      "max": 0.45,
+      "population": "G>=40, 2025-26 only"
+    },
+    "charges_pg.p99": {
+      "target": 0.28,
+      "min": 0.24,
+      "max": 0.33,
+      "population": "G>=40, 2025-26 only"
+    },
+    "charges_pg.p90": {
+      "target": 0.08,
+      "min": 0.07,
+      "max": 0.09,
+      "population": "G>=40, 2025-26 only"
+    },
+    "charges_pg.p50": {
+      "target": 0.02,
+      "min": 0.01,
+      "max": 0.02,
+      "population": "G>=40, 2025-26 only"
+    },
+    "charges_pg.count_ge_0.3": {
+      "target": 2,
+      "min": 0,
+      "max": 4,
+      "population": "G>=40, 2025-26 only"
+    }
   }
 }

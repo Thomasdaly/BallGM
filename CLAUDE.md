@@ -13,6 +13,7 @@ Full context lives in `docs/`:
 - `docs/domain-language.md` — canonical terminology and aggregate boundaries
 - `docs/roadmap.md` — milestone sequence (M0–M13); a thin Avalonia UI slice now lands at Milestone 2, not at the end
 - `docs/negotiation-mechanisms.md` — the signing-mechanism inventory, with each one marked built / deferred to a named milestone / declined. Read before adding anything to contract or free-agency rules; "we decided not to" is recorded there.
+- `docs/attributes-plan.md` — the Football-Manager-depth attribute work under way (slices A0–A11): the real league's per-player shape as sim-audit battery 8, the 30-team calibration league, and the baseline. Read before touching `PlayerRating`, the generator, or a usage/minutes/rebound/assist term.
 - `docs/competitive-feature-review.md` — the same treatment applied to a competitor's published franchise-mode feature set: relationships/morale/trust, in-save rule changes, expansion and relocation, cash in trades, draft-class playlists, and what we declined and why. It also states the content-neutrality position (engine neutral, our shipped content fictional, format must be expressive enough for community packs) and defines Milestone 13. Read before proposing a "what if the game also had…" feature; the answer is probably already recorded.
 
 Read the relevant doc before touching a system you haven't worked in yet. Don't re-derive decisions already recorded there.

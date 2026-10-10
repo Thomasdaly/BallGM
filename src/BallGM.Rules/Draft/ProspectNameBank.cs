@@ -8,7 +8,7 @@ namespace BallGM.Rules.Draft;
 /// names a build ships are exactly the kind of thing a data pack replaces once the mod platform
 /// (Milestone 10) exists. Entirely invented, none drawn from a real player, coach, or public figure.
 /// </summary>
-internal static class ProspectNameBank
+public static class ProspectNameBank
 {
     private static readonly string[] FirstNames =
     [

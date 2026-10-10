@@ -490,6 +490,14 @@ The deep-stats work (`docs/stats-audit.md`) began by finding that the box score 
 
 **The front office reads production but does not value it.** Trade and free-agent target cards print each player's regular-season line per game — points, rebounds, assists, steals, blocks, turnovers, fouls, plus-minus and match rating (`ProductionLine`, from the shared stat columns). AI valuation still reads `Overall`; feeding production into it is Milestone 9's call, not a display change's.
 
+### The calibration league and league shape (attributes A0)
+
+`GeneratedLeagueDataSource` builds a seeded, fictional league of any multiple of six teams as
+league-pack content and loads it through `LeaguePackDataSource.FromEnvelope`, so generated content is
+validated exactly as authored content is. Thirty teams under `data/rulesets/calibration-league.json`
+(82 games) is the yardstick for sim-audit battery 8, the real league's per-player distribution. The
+baseline and the plan are in `docs/attributes-plan.md`.
+
 ### The playoff eligibility cutoff is applied at the signing
 
 `PostseasonRules.PlayoffEligibilityCutoffDay` is the last season day a player may be added and still appear in the postseason. It is enforced in `SigningValidator`, with the day travelling in from `LeagueSession`'s season through `ISigningEngine` onto `SigningContext`.

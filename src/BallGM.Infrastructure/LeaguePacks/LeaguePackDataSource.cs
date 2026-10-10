@@ -128,6 +128,20 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
         return Build(envelope, rulesetResult.Value, packDirectory);
     }
 
+    /// <summary>
+    /// Pack content built in memory rather than read from a file — a generated league — validated
+    /// exactly as a pack on disk is, under a ruleset the caller has already read. Artwork paths, if
+    /// any, resolve against the working directory.
+    /// </summary>
+    public static DomainOperationResult<LeagueSnapshot> FromEnvelope(LeaguePackEnvelope envelope, LeagueRuleset ruleset)
+    {
+        ArgumentNullException.ThrowIfNull(envelope);
+        ArgumentNullException.ThrowIfNull(ruleset);
+        return envelope.SchemaVersion is < OldestSupportedSchemaVersion or > CurrentSchemaVersion
+            ? Fail(UnsupportedSchemaVersionCode, $"The league pack is schema version {envelope.SchemaVersion}; this build reads versions {OldestSupportedSchemaVersion} to {CurrentSchemaVersion}.")
+            : Build(envelope, ruleset, Directory.GetCurrentDirectory());
+    }
+
     private static DomainOperationResult<LeagueSnapshot> Build(LeaguePackEnvelope envelope, LeagueRuleset ruleset, string packDirectory)
     {
         var errors = new List<DomainError>();

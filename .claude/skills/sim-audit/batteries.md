@@ -84,6 +84,22 @@ Where most sims actually fail. Compute every key under `distribution_shape`.
 - 7.3 AI free agency: cap space utilization, overpay rate, roster-archetype entropy
 - 7.4 Trade valuation intransitivity on 10k random triples
 
+## Battery 8 — League shape (per-player distribution)
+
+The real league's spread of players, not its averages: does the sim produce as many 25-point
+scorers, 10-rebound bigs, 8-assist guards, deflection and screen-assist specialists as the real
+league does? Compute every key under `league_shape` on a 30-team, 82-game league (scale counts by
+teams/30 otherwise), over the same population the key states (40+ games unless noted).
+
+- 8.1 Scoring and usage: `ppg.*`, `usg.*`, `fta_pg.*`, `fg3m_pg.*`
+- 8.2 Rebounding: `rpg.*`, `orpg.*`, `box_outs_pg.*`
+- 8.3 Playmaking and ball security: `apg.*`, `tov_pg.*`, `screen_assists_pg.*`
+- 8.4 Defence and hustle: `spg.*`, `bpg.*`, `deflections_pg.*`, `contested_pg.*`, `charges_pg.*`, `loose_balls_pg.*`, `pf_pg.*`
+- 8.5 Minutes and availability: `mpg.*`, `players_ge_40_games`
+
+A leader or count below its band is the Gaussian-flatness signature (every player averaging under
+25); above it, an over-concentrated usage or minutes model. Report which.
+
 ---
 
 ## Report format
