@@ -3,6 +3,7 @@ using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
+using BallGM.Rules.Configuration;
 using BallGM.Rules.Seasons;
 using BallGM.Simulation.Seasons;
 
@@ -28,7 +29,8 @@ internal static class MatchTestFixtures
             FixtureFor(seed),
             Team(Home, homeRating, homeRestDays, homeSquadSize),
             Team(Away, awayRating, awayRestDays, awaySquadSize),
-            seed);
+            seed,
+            GameRules.Default);
     }
 
     /// <summary>
@@ -36,7 +38,7 @@ internal static class MatchTestFixtures
     /// — so a test can hold Overall level and vary only a side's attribute shape.
     /// </summary>
     public static MatchSetup Setup(int seed, PlayerRating homeEveryone, PlayerRating awayEveryone) =>
-        new(FixtureFor(seed), Squad(Home, _ => homeEveryone), Squad(Away, _ => awayEveryone), seed);
+        new(FixtureFor(seed), Squad(Home, _ => homeEveryone), Squad(Away, _ => awayEveryone), seed, GameRules.Default);
 
     private static readonly TeamId Home = new("TEAM-HOME");
 

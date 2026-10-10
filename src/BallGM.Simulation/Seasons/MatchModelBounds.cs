@@ -186,6 +186,50 @@ public static class MatchModelBounds
     public const int BlockedOutOfBoundsShare = 3_500;
 
     /// <summary>
+    /// Chance a possession that is not turned over draws a defensive foul away from the shot, in
+    /// <see cref="ProbabilityScale"/> units. It counts toward the team's fouls for the period; in the
+    /// bonus it is <see cref="BonusFreeThrows"/> free throws for the ball handler, otherwise the
+    /// offence simply keeps the ball. Shooting fouls are drawn separately, with the shot.
+    /// </summary>
+    public const int NonShootingFoulRate = 1_120;
+
+    /// <summary>
+    /// Share of the turnovers that are not steals which are offensive fouls, charged to the ball
+    /// handler as a personal foul. An offensive foul is not a team foul, so it never puts the other
+    /// side in the bonus.
+    /// </summary>
+    public const int OffensiveFoulShareOfLostBalls = 1_800;
+
+    /// <summary>Free throws for a foul committed in the bonus: a property of the sport, not a tuning term.</summary>
+    public const int BonusFreeThrows = 2;
+
+    /// <summary>The periods regulation is played in, each with its own team-foul count for the bonus.</summary>
+    public const int RegulationPeriods = 4;
+
+    /// <summary>
+    /// How strongly a defender's quickness shape decides who commits a foul: a weight of 100 plus this
+    /// per point the defender is <em>slower</em> than his level, clamped to
+    /// <see cref="MinimumFoulWeight"/>–<see cref="MaximumFoulWeight"/>, on top of position.
+    /// </summary>
+    public const int FoulWeightPerQuicknessPoint = 5;
+
+    /// <summary>
+    /// A defender within this many fouls of the limit is in foul trouble and defends more carefully:
+    /// his weight for further fouls drops to <see cref="FoulTroubleWeightPercent"/>. Without it, the
+    /// bigs who foul most foul out far more often than real ones, who play the trouble.
+    /// </summary>
+    public const int FoulTroubleMargin = 2;
+
+    /// <summary>A defender in foul trouble's weight for further fouls, as a percentage of his usual one.</summary>
+    public const int FoulTroubleWeightPercent = 40;
+
+    /// <summary>The floor and ceiling on a defender's quickness weight for fouls (100 is neutral).</summary>
+    public const int MinimumFoulWeight = 40;
+
+    /// <inheritdoc cref="MinimumFoulWeight"/>
+    public const int MaximumFoulWeight = 250;
+
+    /// <summary>
     /// What share of field-goal <em>attempts</em> are three-pointers, in <see cref="ProbabilityScale"/>
     /// units — applied to every attempt, not just makes, unlike the single scoring-rate draw this
     /// replaced. This is the entire answer to <c>fg3a_per_fga</c>: the ratio is stated, not derived.
@@ -228,7 +272,7 @@ public static class MatchModelBounds
     /// throw line for two (a two-point attempt) or three (a three-point attempt) shots rather than
     /// leaving the shot a clean miss.
     /// </summary>
-    public const int ShootingFoulChanceOnMiss = 1_300;
+    public const int ShootingFoulChanceOnMiss = 1_200;
 
     /// <summary>Chance a made field goal draws an additional single free throw — an "and-one."</summary>
     public const int AndOneChanceOnMake = 500;
@@ -358,5 +402,15 @@ public static class MatchModelBounds
         Position.SmallForward => 95,
         Position.PowerForward => 80,
         _ => 65,
+    };
+
+    /// <summary>Who commits a foul: the big men at the rim more than the guards on the perimeter.</summary>
+    public static int FoulWeightFor(Position position) => position switch
+    {
+        Position.Center => 140,
+        Position.PowerForward => 125,
+        Position.SmallForward => 100,
+        Position.ShootingGuard => 90,
+        _ => 85,
     };
 }

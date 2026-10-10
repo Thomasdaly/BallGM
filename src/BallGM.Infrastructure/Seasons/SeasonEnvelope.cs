@@ -29,7 +29,8 @@ public sealed record PlayerStatLineEnvelope(
     int? PlusMinus = null,
     int? Steals = null,
     int? Turnovers = null,
-    int? Blocks = null);
+    int? Blocks = null,
+    int? PersonalFouls = null);
 
 /// <summary>One side's team-level figures: team rebounds and free-throw trips that ended on a live miss.</summary>
 public sealed record TeamStatLineEnvelope(int TeamOffensiveRebounds, int TeamDefensiveRebounds, int LiveFreeThrowMisses);
@@ -45,7 +46,8 @@ public sealed record GameResultEnvelope(
     IReadOnlyList<PlayerStatLineEnvelope>? BoxScore,
     TeamStatLineEnvelope? HomeTeam = null,
     TeamStatLineEnvelope? AwayTeam = null,
-    int? OvertimePeriods = null);
+    int? OvertimePeriods = null,
+    int? PersonalFoulLimit = null);
 
 /// <summary>One saved injury spell.</summary>
 public sealed record InjurySpellEnvelope(string PlayerId, string Description, int FromDay, int UntilDayExclusive);
@@ -112,8 +114,14 @@ public sealed record SeasonEnvelope
     /// <c>BoxScore.Create</c> refuses a side with more blocks than the other side has missed field
     /// goals. Refused, not migrated.
     /// </para>
+    /// <para>
+    /// Version 8 adds each line's <c>PersonalFouls</c> and each box score's <c>PersonalFoulLimit</c>:
+    /// the limit the game was played under is saved with it, so a loaded game is held to its own rule
+    /// rather than the league's current one. Whether a player fouled out is derived from the two.
+    /// Refused, not migrated.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 7;
+    public const int CurrentSchemaVersion = 8;
 
     public SeasonEnvelope(
         int schemaVersion,

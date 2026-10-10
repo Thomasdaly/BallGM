@@ -220,4 +220,21 @@ public sealed class MatchModelBoundsTests
             positions.Max(MatchModelBounds.BlockWeightFor) * positions.Min(MatchModelBounds.ReboundWeightFor) >
             positions.Max(MatchModelBounds.ReboundWeightFor) * positions.Min(MatchModelBounds.BlockWeightFor));
     }
+
+    [Fact]
+    public void FoulTermsKeepFoulsCommonButFoulOutsRare()
+    {
+        // A foul away from the shot is a minority of possessions, an offensive foul a minority of lost
+        // balls, and foul trouble damps but never removes a defender's fouls.
+        Assert.InRange(MatchModelBounds.NonShootingFoulRate, 1, MatchModelBounds.ProbabilityScale / 5);
+        Assert.InRange(MatchModelBounds.OffensiveFoulShareOfLostBalls, 1, MatchModelBounds.ProbabilityScale / 2);
+        Assert.InRange(MatchModelBounds.FoulTroubleWeightPercent, 1, 99);
+        Assert.InRange(MatchModelBounds.FoulTroubleMargin, 1, BallGM.Rules.Configuration.GameRules.Default.PersonalFoulLimit - 1);
+
+        // Bigs foul more than guards; and a specialist's quickness shape reaches both weight caps.
+        Assert.True(MatchModelBounds.FoulWeightFor(BallGM.Domain.Players.Position.Center) > MatchModelBounds.FoulWeightFor(BallGM.Domain.Players.Position.PointGuard));
+        const int SpecialistShape = 20;
+        Assert.True(100 + (SpecialistShape * 2 * MatchModelBounds.FoulWeightPerQuicknessPoint) >= MatchModelBounds.MaximumFoulWeight);
+        Assert.True(100 - (SpecialistShape * MatchModelBounds.FoulWeightPerQuicknessPoint) <= MatchModelBounds.MinimumFoulWeight);
+    }
 }

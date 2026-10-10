@@ -44,6 +44,21 @@ public sealed class AttributeCouplingTests
         Assert.True(tallDefence.AwayBlocks > Neutral.Value.AwayBlocks * 1.05, $"{tallDefence.AwayBlocks} vs {Neutral.Value.AwayBlocks}");
     }
 
+    [Fact]
+    public void SlowerFeetForTheirLevelFoulMore()
+    {
+        // Speed and lateral quickness down, strength up: only the quickness shape moves.
+        var slow = Fouls(Rating(speed: -10, lateral: -10, strength: +20));
+        var neutral = Fouls(Rating());
+
+        Assert.True(slow > neutral, $"{slow} vs {neutral}");
+    }
+
+    /// <summary>The away side's personal fouls against a neutral home side: fouls fall on the defence's players.</summary>
+    private static int Fouls(PlayerRating away) => Enumerable.Range(0, 600)
+        .Select(seed => MatchTestFixtures.Setup(seed, Rating(), away))
+        .Sum(setup => Engine.Play(setup).Value.Result.BoxScore!.LinesFor(setup.Away.TeamId).Sum(line => line.PersonalFouls));
+
     private static (int HomeTurnovers, int AwaySteals, int AwayBlocks) Totals(PlayerRating home, PlayerRating away)
     {
         var turnovers = 0;

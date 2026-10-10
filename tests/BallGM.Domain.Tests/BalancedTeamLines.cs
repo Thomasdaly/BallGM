@@ -47,7 +47,7 @@ internal static class BalancedTeamLines
                 line.PlayerId, line.TeamId, onFloor ? BoxScore.RegulationMinutes : 0, line.Points, line.OffensiveRebounds,
                 line.DefensiveRebounds, line.Assists, line.FieldGoalsAttempted, line.FieldGoalsMade,
                 line.ThreePointsAttempted, line.ThreePointsMade, line.FreeThrowsAttempted, line.FreeThrowsMade, line.Started,
-                onFloor ? margin : 0, line.Steals, line.Turnovers, line.Blocks);
+                onFloor ? margin : 0, line.Steals, line.Turnovers, line.Blocks, line.PersonalFouls, line.FouledOut);
         }).ToList();
     }
 }

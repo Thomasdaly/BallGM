@@ -85,6 +85,11 @@ internal static class PlayerStatsSections
                 Cell("BLK%", Pct(StatFormulas.BlockPercent(totals, team, opponent)), "Block %: the share of opponent two-point attempts this player blocked while on the floor."),
                 Cell("TEAM DRTG", Fixed(StatFormulas.Rating(opponent)), "Opponent points per 100 possessions in the games this player played."),
             ]),
+            new("Discipline", "Fouls and foul trouble",
+            [
+                Counted(StatColumns.PersonalFouls),
+                Counted(StatColumns.FoulOuts),
+            ]),
             new("Impact", "What happens while on the floor",
             [
                 Counted(StatColumns.PlusMinus),

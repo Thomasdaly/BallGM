@@ -102,6 +102,27 @@ public sealed class GameSheetTests
     }
 
     [Fact]
+    public void Final_MarksAPlayerWhoFouledOutInWordsBesideHisFouls()
+    {
+        var game = Played("g-final", day: 3, away: Away, home: Home, awayPoints: 96, homePoints: 104);
+        var fouledOut = Line("h-1", "Home Starter", true, minutes: 30, points: 10, rebounds: 4, assists: 1);
+        fouledOut = fouledOut with { Stats = fouledOut.Stats with { PersonalFouls = 6, FoulOuts = 1 } };
+        var box = new BoxScoreSummary(
+            "g-final", 3, "2031-07-10", Home, "Home Side", 104, Away, "Away Side", 96, true,
+            [fouledOut, Line("h-2", "Home Bench", false, minutes: 18, points: 6, rebounds: 2, assists: 0)],
+            [Line("a-1", "Away Starter", true, minutes: 30, points: 12, rebounds: 3, assists: 2)],
+            new BoxScoreTeamLine(CountingStats.None with { Games = 1, Points = 104 }, 0, 0),
+            new BoxScoreTeamLine(CountingStats.None with { Games = 1, Points = 96 }, 0, 0));
+
+        var sheet = GameSheet.Build(Input(game, currentDay: 6, fixtures: [game], played: box));
+
+        var starter = Assert.Single(sheet.Home.Starters);
+        Assert.True(starter.FouledOut);
+        Assert.Equal("6", Cell(sheet.Home, starter, "PF"));
+        Assert.False(Assert.Single(sheet.Home.Bench).FouledOut);
+    }
+
+    [Fact]
     public void Final_ShowsTheFourFactorsWithTheLosingSideOfEachDimmed()
     {
         var game = Played("g-final", day: 3, away: Away, home: Home, awayPoints: 96, homePoints: 104);

@@ -77,7 +77,7 @@ public sealed class GameSheet
     private static readonly StatHeader SeasonPpgHeader = new("PPG", "Season points per game, regular season.", 44);
 
     private static readonly IReadOnlyList<StatColumn> PreviewSeasonColumns =
-        [StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists, StatColumns.Steals, StatColumns.Blocks, StatColumns.Turnovers, StatColumns.PlusMinus, StatColumns.FieldGoalPercent, StatColumns.TrueShooting];
+        [StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists, StatColumns.Steals, StatColumns.Blocks, StatColumns.Turnovers, StatColumns.PersonalFouls, StatColumns.PlusMinus, StatColumns.FieldGoalPercent, StatColumns.TrueShooting];
 
     private static readonly IReadOnlyList<StatHeader> FinalHeaders =
         [.. StatColumns.Headers(StatColumns.BoxScore), SeasonPpgHeader];
@@ -291,7 +291,8 @@ public sealed class GameSheet
                 .. StatColumns.Cells(line.Stats, StatColumns.BoxScore),
                 SeasonPpgHeader.Cell(StatColumns.Fixed(season is null ? null : StatFormulas.PerGame(season.Points, season.Games))),
             ],
-            known ? string.Empty : "Not on either team's depth chart today, so no current rating or position.");
+            known ? string.Empty : "Not on either team's depth chart today, so no current rating or position.",
+            line.Stats.FoulOuts > 0);
     }
 
     /// <summary>Points per appearance over the team's recent box scores, by player.</summary>
@@ -389,7 +390,8 @@ public sealed record LineupRow(
     int Overall,
     bool HasOverall,
     IReadOnlyList<StatValue> Stats,
-    string Tip);
+    string Tip,
+    bool FouledOut = false);
 
 /// <summary>One of the four factors, both sides' figures, and what it measures.</summary>
 /// <remarks><see cref="Edge"/> is which side won the factor: negative away, positive home, zero level or unknown.</remarks>

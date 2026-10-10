@@ -15,7 +15,15 @@
     <DataTemplate x:Key="LineupRowTemplate" x:DataType="vm:LineupRow">
       <Grid ColumnDefinitions="34,*,42,Auto" Height="30" ToolTip.Tip="{Binding Tip}">
         <TextBlock Text="{Binding Position}" Classes="faint small" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="1" Text="{Binding Name}" Classes="small" Classes.strong="{Binding IsStarter}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+        <!-- A player who reached the foul limit says so in words, not colour alone. -->
+        <DockPanel Grid.Column="1" Margin="0,0,8,0">
+          <Border DockPanel.Dock="Right" Classes="pill bad" Margin="6,0,0,0" IsVisible="{Binding FouledOut}"
+                  ToolTip.Tip="Reached the foul limit and took no further part in the game."
+                  AutomationProperties.Name="Fouled out">
+            <TextBlock Text="Fouled out" />
+          </Border>
+          <TextBlock Text="{Binding Name}" Classes="small" Classes.strong="{Binding IsStarter}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
         <Border Grid.Column="2" Classes="ovr small" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}" IsVisible="{Binding HasOverall}">
           <TextBlock Text="{Binding Overall}" />
         </Border>

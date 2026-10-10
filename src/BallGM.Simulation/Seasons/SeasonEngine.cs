@@ -380,7 +380,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
             // The seed is derived from the game's own identifier and nothing else, so this game plays
             // out the same way whether it is the first thing simulated after a load or the four
             // hundredth of an uninterrupted run. See SeedMixer.
-            var setup = new MatchSetup(fixture, homeTeam, awayTeam, run.Seed.ForGame(fixture.Id));
+            var setup = new MatchSetup(fixture, homeTeam, awayTeam, run.Seed.ForGame(fixture.Id), context.Ruleset.GameRules);
 
             var playResult = _matchEngine.Play(setup);
             if (playResult.IsFailure)

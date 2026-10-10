@@ -115,6 +115,32 @@ public sealed class LeagueRulesetSerializerTests
     }
 
     [Fact]
+    public void GameRulesSectionReadsRoundTripsAndDefaultsWhenAbsent()
+    {
+        var serializer = new LeagueRulesetSerializer();
+        var shipped = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "rulesets", "default-league.json"));
+        string With(string section) => shipped.TrimEnd().TrimEnd('}') + $$"""
+            ,
+            "gameRules": {{section}}
+            }
+            """;
+
+        var absent = serializer.Deserialize(shipped);
+        Assert.True(absent.IsSuccess);
+        Assert.Equal(GameRules.Default, absent.Value.GameRules);
+        Assert.Equal((6, 4, 3), (absent.Value.GameRules.PersonalFoulLimit, absent.Value.GameRules.BonusTeamFoulsPerPeriod, absent.Value.GameRules.BonusTeamFoulsPerOvertime));
+
+        var five = serializer.Deserialize(With("""{ "personalFoulLimit": 5, "bonusTeamFoulsPerOvertime": 2 }"""));
+        Assert.True(five.IsSuccess, string.Join("; ", five.Errors.Select(error => error.Message)));
+        var again = serializer.Deserialize(serializer.Serialize(five.Value));
+        Assert.Equal((5, 4, 2), (again.Value.GameRules.PersonalFoulLimit, again.Value.GameRules.BonusTeamFoulsPerPeriod, again.Value.GameRules.BonusTeamFoulsPerOvertime));
+
+        var none = serializer.Deserialize(With("""{ "personalFoulLimit": 0 }"""));
+        Assert.True(none.IsFailure);
+        Assert.Equal("ruleset.invalid_personal_foul_limit", Assert.Single(none.Errors).Code);
+    }
+
+    [Fact]
     public void AMissingCapMechanicsSectionMeansNoneOfIt()
     {
         var read = new LeagueRulesetSerializer().Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "rulesets", "default-league.json")));

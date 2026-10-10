@@ -212,11 +212,12 @@ public sealed class SeasonSerializer
             if (saved.BoxScore is not null)
             {
                 // Fields a current box score always states: a missing one is a malformed file, not a zero.
-                if (saved.OvertimePeriods is null || saved.BoxScore.Any(line => line.PlusMinus is null || line.Steals is null || line.Turnovers is null || line.Blocks is null))
+                if (saved.OvertimePeriods is null || saved.PersonalFoulLimit is null ||
+                    saved.BoxScore.Any(line => line.PlusMinus is null || line.Steals is null || line.Turnovers is null || line.Blocks is null || line.PersonalFouls is null))
                 {
                     return DomainOperationResult<IReadOnlyList<GameResult>>.Failure(new DomainError(
                         InvalidFieldCode,
-                        $"The save records a box score for game '{saved.GameId}' without its overtime count or every line's plus-minus, steals, turnovers and blocks."));
+                        $"The save records a box score for game '{saved.GameId}' without its overtime count and foul limit, or every line's plus-minus, steals, turnovers, blocks and fouls."));
                 }
 
                 if (saved.HomeTeam is null || saved.AwayTeam is null)
@@ -248,10 +249,13 @@ public sealed class SeasonSerializer
                         line.PlusMinus!.Value,
                         line.Steals!.Value,
                         line.Turnovers!.Value,
-                        line.Blocks!.Value)),
+                        line.Blocks!.Value,
+                        line.PersonalFouls!.Value,
+                        line.PersonalFouls.Value == saved.PersonalFoulLimit.Value)),
                     ToTeamLine(fixture.HomeTeamId, saved.HomeTeam),
                     ToTeamLine(fixture.AwayTeamId, saved.AwayTeam),
-                    saved.OvertimePeriods.Value);
+                    saved.OvertimePeriods.Value,
+                    saved.PersonalFoulLimit.Value);
 
                 if (boxScoreResult.IsFailure)
                 {
@@ -299,11 +303,13 @@ public sealed class SeasonSerializer
                         line.PlusMinus,
                         line.Steals,
                         line.Turnovers,
-                        line.Blocks))
+                        line.Blocks,
+                        line.PersonalFouls))
                     .ToList(),
             result.BoxScore is null ? null : ToEnvelope(result.BoxScore.Home),
             result.BoxScore is null ? null : ToEnvelope(result.BoxScore.Away),
-            result.BoxScore?.OvertimePeriods ?? 0);
+            result.BoxScore?.OvertimePeriods ?? 0,
+            result.BoxScore?.PersonalFoulLimit);
 
     private static TeamStatLineEnvelope ToEnvelope(TeamStatLine line) =>
         new(line.TeamOffensiveRebounds, line.TeamDefensiveRebounds, line.LiveFreeThrowMisses);

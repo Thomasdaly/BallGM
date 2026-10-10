@@ -42,7 +42,9 @@ public sealed record PlayerStatLine
         int plusMinus,
         int steals,
         int turnovers,
-        int blocks)
+        int blocks,
+        int personalFouls,
+        bool fouledOut)
     {
         ArgumentNullException.ThrowIfNull(playerId);
         ArgumentNullException.ThrowIfNull(teamId);
@@ -60,6 +62,7 @@ public sealed record PlayerStatLine
         ThrowIfNegative(freeThrowsMade, nameof(freeThrowsMade));
         ThrowIfNegative(steals, nameof(steals));
         ThrowIfNegative(blocks, nameof(blocks));
+        ThrowIfNegative(personalFouls, nameof(personalFouls));
         ThrowIfNegative(turnovers, nameof(turnovers));
 
         if (fieldGoalsMade > fieldGoalsAttempted)
@@ -112,6 +115,8 @@ public sealed record PlayerStatLine
         PlusMinus = plusMinus;
         Steals = steals;
         Blocks = blocks;
+        PersonalFouls = personalFouls;
+        FouledOut = fouledOut;
         Turnovers = turnovers;
     }
 
@@ -161,6 +166,12 @@ public sealed record PlayerStatLine
 
     /// <summary>Opponent shots this player blocked. A side's blocks are never more than the other side's missed field goals.</summary>
     public int Blocks { get; }
+
+    /// <summary>Personal fouls this player committed, never more than the box score's <see cref="BoxScore.PersonalFoulLimit"/>.</summary>
+    public int PersonalFouls { get; }
+
+    /// <summary>Whether this player reached the foul limit and took no further part — exactly when his fouls equal it.</summary>
+    public bool FouledOut { get; }
 
     private static void ThrowIfNegative(int value, string parameterName)
     {
@@ -231,6 +242,8 @@ public sealed class BoxScore
     private const string NegativeOvertimeCode = "box_score.negative_overtime";
     private const string StealsExceedTurnoversCode = "box_score.steals_exceed_opponent_turnovers";
     private const string BlocksExceedMissesCode = "box_score.blocks_exceed_opponent_misses";
+    private const string FoulsExceedLimitCode = "box_score.fouls_exceed_limit";
+    private const string FoulOutMismatchCode = "box_score.foul_out_does_not_match_fouls";
 
     /// <summary>The players on the floor for a side at once; a side's minutes and plus-minus are counted in fives.</summary>
     public const int PlayersOnFloor = 5;
@@ -251,9 +264,10 @@ public sealed class BoxScore
 
     private readonly List<PlayerStatLine> _lines;
 
-    private BoxScore(GameId gameId, TeamStatLine home, TeamStatLine away, List<PlayerStatLine> lines, int overtimePeriods)
+    private BoxScore(GameId gameId, TeamStatLine home, TeamStatLine away, List<PlayerStatLine> lines, int overtimePeriods, int personalFoulLimit)
     {
         GameId = gameId;
+        PersonalFoulLimit = personalFoulLimit;
         OvertimePeriods = overtimePeriods;
         HomeTeamId = home.TeamId;
         AwayTeamId = away.TeamId;
@@ -273,9 +287,11 @@ public sealed class BoxScore
         IEnumerable<PlayerStatLine> lines,
         TeamStatLine home,
         TeamStatLine away,
-        int overtimePeriods)
+        int overtimePeriods,
+        int personalFoulLimit)
     {
         ArgumentNullException.ThrowIfNull(gameId);
+        ArgumentOutOfRangeException.ThrowIfLessThan(personalFoulLimit, 1);
         ArgumentNullException.ThrowIfNull(lines);
         ArgumentNullException.ThrowIfNull(home);
         ArgumentNullException.ThrowIfNull(away);
@@ -312,6 +328,22 @@ public sealed class BoxScore
             }
 
             totals[side].Add(line);
+
+            // The limit is stored on the box score, so a loaded game is held to the rule it was played
+            // under rather than whatever the league's ruleset says today.
+            if (line.PersonalFouls > personalFoulLimit)
+            {
+                errors.Add(new DomainError(
+                    FoulsExceedLimitCode,
+                    $"Player '{line.PlayerId.Value}' has {line.PersonalFouls} fouls in game '{gameId.Value}', past its limit of {personalFoulLimit}."));
+            }
+
+            if (line.FouledOut != (line.PersonalFouls == personalFoulLimit))
+            {
+                errors.Add(new DomainError(
+                    FoulOutMismatchCode,
+                    $"Player '{line.PlayerId.Value}' in game '{gameId.Value}' is marked {(line.FouledOut ? "fouled out" : "still eligible")} with {line.PersonalFouls} of {personalFoulLimit} fouls."));
+            }
         }
 
         if (totals[0].Points != homePoints || totals[1].Points != awayPoints)
@@ -393,7 +425,7 @@ public sealed class BoxScore
 
         return errors.Count > 0
             ? DomainOperationResult<BoxScore>.Failure(errors.ToArray())
-            : DomainOperationResult<BoxScore>.Success(new BoxScore(gameId, home, away, supplied, overtimePeriods));
+            : DomainOperationResult<BoxScore>.Success(new BoxScore(gameId, home, away, supplied, overtimePeriods, personalFoulLimit));
     }
 
     public GameId GameId { get; }
@@ -403,6 +435,9 @@ public sealed class BoxScore
     public TeamId AwayTeamId { get; }
 
     public int OvertimePeriods { get; }
+
+    /// <summary>The personal foul limit this game was played under.</summary>
+    public int PersonalFoulLimit { get; }
 
     public TeamStatLine Home { get; }
 

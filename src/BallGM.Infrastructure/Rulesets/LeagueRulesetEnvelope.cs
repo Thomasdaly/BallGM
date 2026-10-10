@@ -77,7 +77,8 @@ public sealed record LeagueRulesetEnvelope
         int? retirementMandatoryAge = null,
         IReadOnlyList<AgeCurveBandEnvelope>? retirementVoluntaryOddsByAge = null,
         IReadOnlyList<AwardEnvelope>? awards = null,
-        CapMechanicsEnvelope? capMechanics = null)
+        CapMechanicsEnvelope? capMechanics = null,
+        GameRulesEnvelope? gameRules = null)
     {
         SchemaVersion = schemaVersion;
         Name = name;
@@ -143,6 +144,7 @@ public sealed record LeagueRulesetEnvelope
         RetirementVoluntaryOddsByAge = retirementVoluntaryOddsByAge;
         Awards = awards;
         CapMechanics = capMechanics;
+        GameRules = gameRules;
     }
 
     public int SchemaVersion { get; }
@@ -339,7 +341,13 @@ public sealed record LeagueRulesetEnvelope
     /// Absent means none of it: every behaviour falls back to what the thresholds alone describe.
     /// </summary>
     public CapMechanicsEnvelope? CapMechanics { get; }
+
+    /// <summary>The personal foul limit and the bonus (schema v11). Absent means the sport's usual six and four.</summary>
+    public GameRulesEnvelope? GameRules { get; }
 }
+
+/// <summary>The on-disk shape of <c>GameRules</c>; either figure may be left out for its default.</summary>
+public sealed record GameRulesEnvelope(int? PersonalFoulLimit = null, int? BonusTeamFoulsPerPeriod = null, int? BonusTeamFoulsPerOvertime = null);
 
 /// <summary>
 /// The on-disk shape of <c>CapMechanics</c>. Money in smallest units; rates in percent (150 = $1.50

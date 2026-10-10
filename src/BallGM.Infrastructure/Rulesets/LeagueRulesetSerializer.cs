@@ -108,7 +108,8 @@ public sealed class LeagueRulesetSerializer
             ruleset.AwardRules.IsConfigured
                 ? ruleset.AwardRules.Awards.Select(award => new AwardEnvelope(award.Code, award.Name, award.StatBasis.ToString())).ToList()
                 : null,
-            ToEnvelope(ruleset.CapMechanics));
+            ToEnvelope(ruleset.CapMechanics),
+            ToEnvelope(ruleset.GameRules));
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -293,6 +294,12 @@ public sealed class LeagueRulesetSerializer
                 return DomainOperationResult<LeagueRuleset>.Failure(capMechanicsResult.Errors.ToArray());
             }
 
+            var gameRulesResult = BuildGameRules(envelope.GameRules);
+            if (gameRulesResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(gameRulesResult.Errors.ToArray());
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
@@ -311,7 +318,8 @@ public sealed class LeagueRulesetSerializer
                 developmentRulesResult.Value,
                 retirementRulesResult.Value,
                 awardRulesResult.Value,
-                capMechanicsResult.Value);
+                capMechanicsResult.Value,
+                gameRulesResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
@@ -520,6 +528,14 @@ public sealed class LeagueRulesetSerializer
             ToMoney(envelope.ReducedOverCapAllowance),
             cutoff);
     }
+
+    /// <summary>The game rules a file states; an absent section, or an absent figure, is the sport's default.</summary>
+    internal static DomainOperationResult<GameRules> BuildGameRules(GameRulesEnvelope? envelope) =>
+        GameRules.Create(envelope?.PersonalFoulLimit, envelope?.BonusTeamFoulsPerPeriod, envelope?.BonusTeamFoulsPerOvertime);
+
+    /// <summary>The section to write: none when the league plays the sport's default.</summary>
+    internal static GameRulesEnvelope? ToEnvelope(GameRules rules) =>
+        rules == GameRules.Default ? null : new GameRulesEnvelope(rules.PersonalFoulLimit, rules.BonusTeamFoulsPerPeriod, rules.BonusTeamFoulsPerOvertime);
 
     internal static CapMechanicsEnvelope? ToEnvelope(CapMechanics mechanics) =>
         !mechanics.IsConfigured

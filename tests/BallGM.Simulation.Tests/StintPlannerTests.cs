@@ -76,4 +76,19 @@ public sealed class StintPlannerTests
         Assert.Equal(5 * 98, played.Sum());
         Assert.All(played, count => Assert.InRange(count, 0, 98));
     }
+
+    [Fact]
+    public void AShortHandedRotationOfFourPlaysEveryPossessionAndFinishes()
+    {
+        // Regression: a team down to four fit players, each planned past the whole game, once sent
+        // the possession targets into a loop that could never place the fifth place a possession.
+        var rotation = Enumerable.Range(0, 4)
+            .Select(index => new RotationPlayer($"P{index}", 60, IsStarter: true, DepthRank: index))
+            .ToList();
+
+        var plan = StintPlanner.Plan(rotation, 100);
+
+        Assert.Equal(100, plan.Length);
+        Assert.All(plan, lineup => Assert.Equal([0, 1, 2, 3], lineup));
+    }
 }

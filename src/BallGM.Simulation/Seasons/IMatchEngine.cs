@@ -2,6 +2,7 @@ using BallGM.Domain.Common;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
+using BallGM.Rules.Configuration;
 using BallGM.Rules.Seasons;
 
 namespace BallGM.Simulation.Seasons;
@@ -37,7 +38,8 @@ public sealed record MatchTeam(
 }
 
 /// <summary>One game's worth of everything the engine needs, and the seed this game — and only this game — is played with.</summary>
-public sealed record MatchSetup(Fixture Fixture, MatchTeam Home, MatchTeam Away, int Seed);
+/// <remarks><see cref="Rules"/> is the foul limit and bonus the game is played under: the league's, always stated.</remarks>
+public sealed record MatchSetup(Fixture Fixture, MatchTeam Home, MatchTeam Away, int Seed, GameRules Rules);
 
 /// <summary>
 /// Somebody hurt in a game. Counted in days rather than in season days, because the model has no

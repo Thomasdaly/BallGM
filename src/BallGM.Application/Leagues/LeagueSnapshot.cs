@@ -134,7 +134,8 @@ public sealed record LeagueConfiguration(
     DevelopmentConfiguration? Development = null,
     RetirementConfiguration? Retirement = null,
     IReadOnlyList<AwardDefinition>? Awards = null,
-    CapMechanicsConfiguration? CapMechanics = null)
+    CapMechanicsConfiguration? CapMechanics = null,
+    GameRulesConfiguration? GameRules = null)
 {
     /// <summary>Whether this league configures any threshold at all.</summary>
     public bool IsUncapped =>
@@ -323,6 +324,13 @@ public sealed record NegotiationConfiguration(
 
     public bool HasShortTermContracts => ShortTermContractDays is not null;
 }
+
+/// <summary>
+/// The foul limit and bonus a ruleset states (see <c>BallGM.Rules.Configuration.GameRules</c>); absent
+/// means the sport's usual six personal fouls and the bonus from the fifth team foul of a period (the
+/// fourth of an overtime).
+/// </summary>
+public sealed record GameRulesConfiguration(int PersonalFoulLimit, int BonusTeamFoulsPerPeriod, int BonusTeamFoulsPerOvertime);
 
 /// <summary>
 /// The cap mechanics a ruleset states (see <c>BallGM.Rules.Configuration.CapMechanics</c>), in the

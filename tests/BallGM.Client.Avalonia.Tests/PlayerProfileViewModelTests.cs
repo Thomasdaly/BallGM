@@ -94,6 +94,7 @@ public sealed class PlayerProfileViewModelTests
             Steals = 2,
             Turnovers = 4,
             Blocks = 1,
+            PersonalFouls = 5,
         });
         var profile = new PlayerProfileViewModel(Sample(recent: [game]), () => { });
 
@@ -101,8 +102,8 @@ public sealed class PlayerProfileViewModelTests
         Assert.Equal("@ Rivals", row.Opponent);
         Assert.Equal("W 110–104", row.Result);
         // The full box-score line, in the same columns a game sheet shows.
-        Assert.Equal(["MIN", "PTS", "FG", "3P", "FT", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TOV", "+/-"], profile.GameLogHeaders.Select(header => header.Header));
-        Assert.Equal(["34", "28", "11-20", "2-5", "4-5", "2", "4", "6", "9", "2", "1", "4", "-3"], row.Stats.Select(cell => cell.Value));
+        Assert.Equal(["MIN", "PTS", "FG", "3P", "FT", "OREB", "DREB", "REB", "AST", "STL", "BLK", "TOV", "PF", "+/-"], profile.GameLogHeaders.Select(header => header.Header));
+        Assert.Equal(["34", "28", "11-20", "2-5", "4-5", "2", "4", "6", "9", "2", "1", "4", "5", "-3"], row.Stats.Select(cell => cell.Value));
     }
 
     [Fact]

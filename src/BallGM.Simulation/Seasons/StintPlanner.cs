@@ -34,17 +34,79 @@ public static class StintPlanner
         ArgumentNullException.ThrowIfNull(rotation);
         ArgumentOutOfRangeException.ThrowIfNegative(possessions);
 
-        var count = rotation.Count;
-        var plan = new int[possessions][];
+        // Five or fewer play every possession, and there are no targets to apportion: five places a
+        // possession cannot be shared among fewer than five without someone owed more than the game.
+        return rotation.Count <= MinutesAllocationBounds.PlayersOnFloor
+            ? Everyone(rotation.Count, possessions)
+            : Schedule(rotation, possessions, Targets(rotation, possessions), openingTip: true);
+    }
 
-        if (count <= MinutesAllocationBounds.PlayersOnFloor)
+    private static int[][] Everyone(int count, int possessions)
+    {
+        var plan = new int[possessions][];
+        Array.Fill(plan, Enumerable.Range(0, count).ToArray());
+        return plan;
+    }
+
+    /// <summary>
+    /// Re-plans the rest of a game after players leave it for good (a foul-out): from possession
+    /// <paramref name="from"/> on, over the <paramref name="eligible"/> rotation indices only. Each
+    /// eligible player keeps what the plan still owed him, plus a share of what it owed those leaving,
+    /// in proportion to planned minutes and never past the possessions left; there is no opening tip,
+    /// the game being under way. Writes the new lineups into <paramref name="plan"/>.
+    /// </summary>
+    public static void Replan(IReadOnlyList<RotationPlayer> rotation, int[][] plan, int from, IReadOnlyList<int> eligible)
+    {
+        ArgumentNullException.ThrowIfNull(rotation);
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(eligible);
+
+        var remaining = plan.Length - from;
+        if (remaining <= 0 || eligible.Count < MinutesAllocationBounds.PlayersOnFloor)
         {
-            var everyone = Enumerable.Range(0, count).ToArray();
-            Array.Fill(plan, everyone);
-            return plan;
+            return;
         }
 
-        var debt = Targets(rotation, possessions);
+        var owed = new int[rotation.Count];
+        for (var possession = from; possession < plan.Length; possession++)
+        {
+            foreach (var player in plan[possession])
+            {
+                owed[player]++;
+            }
+        }
+
+        var freed = owed.Sum() - eligible.Sum(player => owed[player]);
+        var weights = eligible.Select(player => (long)Math.Max(1, rotation[player].PlannedMinutes)).ToArray();
+        var shares = Apportion.LargestRemainder(weights.Select(weight => weight * freed).ToArray(), weights.Sum(), freed);
+        var debt = eligible.Select((player, slot) => owed[player] + shares[slot]).ToArray();
+        CapAt(debt, remaining);
+
+        var replanned = Schedule(eligible.Select(player => rotation[player]).ToArray(), remaining, debt, openingTip: false);
+        int[]? previous = null;
+        int[] mapped = [];
+        for (var step = 0; step < remaining; step++)
+        {
+            // Possessions sharing a lineup share one array, here as in the original plan.
+            if (!ReferenceEquals(replanned[step], previous))
+            {
+                previous = replanned[step];
+                mapped = previous.Select(slot => eligible[slot]).ToArray();
+            }
+
+            plan[from + step] = mapped;
+        }
+    }
+
+    private static int[][] Schedule(IReadOnlyList<RotationPlayer> rotation, int possessions, int[] debt, bool openingTip)
+    {
+        var count = rotation.Count;
+        if (count <= MinutesAllocationBounds.PlayersOnFloor)
+        {
+            return Everyone(count, possessions);
+        }
+
+        var plan = new int[possessions][];
         var onFloor = new int[MinutesAllocationBounds.PlayersOnFloor];
         var isOn = new bool[count];
 
@@ -70,7 +132,7 @@ public static class StintPlanner
         for (var possession = 0; possession < possessions;)
         {
             var remaining = possessions - possession;
-            Choose(keys, debt, remaining, opening: possession == 0, onFloor, isOn);
+            Choose(keys, debt, remaining, opening: openingTip && possession == 0, onFloor, isOn);
 
             var length = Math.Min(CheckpointPossessions, remaining);
             var maxOff = 0;
@@ -143,26 +205,40 @@ public static class StintPlanner
 
         // Nobody can play more possessions than the game has. The depth chart caps a player at 42
         // minutes, so this never binds for a built rotation; a hand-built one planning more than a
-        // full game for someone has the excess handed, one possession at a time, to whoever has room.
-        for (var index = 0; index < targets.Length; index++)
+        // full game for someone has the excess handed on.
+        CapAt(targets, possessions);
+        return targets;
+    }
+
+    /// <summary>
+    /// Nobody owed more than <paramref name="limit"/> possessions: any excess is handed, one possession
+    /// at a time, to whoever is owed least. The total is unchanged.
+    /// </summary>
+    private static void CapAt(int[] owed, int limit)
+    {
+        // Only callable when the total fits, or the excess has nowhere to go and this never ends.
+        if (owed.Sum() > (long)limit * owed.Length)
         {
-            while (targets[index] > possessions)
+            throw new InvalidOperationException($"{owed.Sum()} possessions cannot be shared among {owed.Length} players at no more than {limit} each.");
+        }
+
+        for (var index = 0; index < owed.Length; index++)
+        {
+            while (owed[index] > limit)
             {
-                targets[index]--;
+                owed[index]--;
                 var roomiest = 0;
-                for (var other = 1; other < targets.Length; other++)
+                for (var other = 1; other < owed.Length; other++)
                 {
-                    if (targets[other] < targets[roomiest])
+                    if (owed[other] < owed[roomiest])
                     {
                         roomiest = other;
                     }
                 }
 
-                targets[roomiest]++;
+                owed[roomiest]++;
             }
         }
-
-        return targets;
     }
 
     private static void Choose(TieBreaks keys, int[] debt, int remaining, bool opening, int[] onFloor, bool[] isOn)

@@ -281,6 +281,12 @@ internal static class LeagueConfigurationMapper
 
         var capMechanics = capMechanicsResult.Value;
 
+        var gameRulesResult = configuration.ToGameRules();
+        if (gameRulesResult.IsFailure)
+        {
+            return DomainOperationResult<LeagueRuleset>.Failure(gameRulesResult.Errors.ToArray());
+        }
+
         return DomainOperationResult<LeagueRuleset>.Success(new LeagueRuleset(
             LeagueRuleset.CurrentSchemaVersion,
             configuration.RulesetName,
@@ -299,7 +305,8 @@ internal static class LeagueConfigurationMapper
             developmentRules,
             retirementRules,
             awardRules,
-            capMechanics));
+            capMechanics,
+            gameRulesResult.Value));
     }
 
     /// <summary>
@@ -402,8 +409,20 @@ internal static class LeagueConfigurationMapper
                     ruleset.CapMechanics.SecondApronBlocksAggregation,
                     ruleset.CapMechanics.ReducedOverCapAllowance,
                     ruleset.CapMechanics.ReducedOverCapAllowanceUnavailableAbove)
-                : null);
+                : null,
+            ruleset.GameRules.ToConfiguration());
     }
+
+    /// <summary>The game rules a configuration states, or the sport's default for any it leaves out.</summary>
+    public static DomainOperationResult<GameRules> ToGameRules(this LeagueConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return GameRules.Create(configuration.GameRules?.PersonalFoulLimit, configuration.GameRules?.BonusTeamFoulsPerPeriod, configuration.GameRules?.BonusTeamFoulsPerOvertime);
+    }
+
+    /// <summary>The configuration to carry: none when the league plays the sport's default.</summary>
+    public static GameRulesConfiguration? ToConfiguration(this GameRules rules) =>
+        rules == GameRules.Default ? null : new GameRulesConfiguration(rules.PersonalFoulLimit, rules.BonusTeamFoulsPerPeriod, rules.BonusTeamFoulsPerOvertime);
 
     /// <summary>
     /// The validated cap mechanics a configuration states, or <see cref="CapMechanics.None"/>. Its

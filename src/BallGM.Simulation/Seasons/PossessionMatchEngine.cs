@@ -3,6 +3,7 @@ using BallGM.Domain.Players;
 using BallGM.Domain.Randomness;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
+using BallGM.Rules.Configuration;
 using BallGM.Rules.Seasons;
 
 namespace BallGM.Simulation.Seasons;
@@ -66,13 +67,14 @@ public sealed class PossessionMatchEngine : IMatchEngine
     {
         ArgumentNullException.ThrowIfNull(setup);
 
-        var homeResult = BuildSide(setup.Home);
+        var rules = setup.Rules;
+        var homeResult = BuildSide(setup.Home, rules.PersonalFoulLimit);
         if (homeResult.IsFailure)
         {
             return DomainOperationResult<MatchOutcome>.Failure(homeResult.Errors.ToArray());
         }
 
-        var awayResult = BuildSide(setup.Away);
+        var awayResult = BuildSide(setup.Away, rules.PersonalFoulLimit);
         if (awayResult.IsFailure)
         {
             return DomainOperationResult<MatchOutcome>.Failure(awayResult.Errors.ToArray());
@@ -90,7 +92,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         home.PlanRegulation(possessions);
         away.PlanRegulation(possessions);
-        PlayPeriod(home, away, homeEfficiency, awayEfficiency, possessions, random);
+        PlayPeriod(home, away, homeEfficiency, awayEfficiency, possessions, MatchModelBounds.RegulationPeriods, rules.BonusTeamFoulsPerPeriod, random);
 
         // A drawn game is refused by GameResult, every standings tie-break assumes a winner, and a
         // postseason series that could not be won would never end. So the tie is played out rather
@@ -102,7 +104,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
             overtimePeriods++;
             home.SendInClosers();
             away.SendInClosers();
-            PlayPeriod(home, away, homeEfficiency, awayEfficiency, MatchModelBounds.OvertimePossessions, random);
+            PlayPeriod(home, away, homeEfficiency, awayEfficiency, MatchModelBounds.OvertimePossessions, periods: 1, rules.BonusTeamFoulsPerOvertime, random);
         }
 
         if (home.Points == away.Points)
@@ -126,7 +128,8 @@ public sealed class PossessionMatchEngine : IMatchEngine
             lines,
             home.ToTeamLine(),
             away.ToTeamLine(),
-            overtimePeriods);
+            overtimePeriods,
+            rules.PersonalFoulLimit);
 
         if (boxScoreResult.IsFailure)
         {
@@ -173,7 +176,8 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// <see cref="MatchModelBounds.BaseTurnoverRate"/>), and one that reaches a shot is a real
     /// field-goal attempt at a real percentage, not a single blended score/miss draw.
     /// </summary>
-    private static void PlayPeriod(Side home, Side away, int homeEfficiency, int awayEfficiency, int possessions, IRandomSource random)
+    private static void PlayPeriod(
+        Side home, Side away, int homeEfficiency, int awayEfficiency, int possessions, int periods, int bonusAfter, IRandomSource random)
     {
         // Each side's hot or cold night is drawn once for the whole period, home first, before a
         // single possession: a night moves every shot together (see GameShootingVarianceRange).
@@ -182,13 +186,23 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         // Possessions alternate, as they do on a court, so that whoever is on the floor at any moment
         // is on the floor for both ends of it.
+        var period = -1;
         for (var possession = 0; possession < possessions; possession++)
         {
+            // Team fouls count afresh each period, for the bonus.
+            var current = possession * periods / possessions;
+            if (current != period)
+            {
+                period = current;
+                home.ResetTeamFouls();
+                away.ResetTeamFouls();
+            }
+
             // One possession at each end, with the same ten players on the floor for both.
             home.Enter(possession);
             away.Enter(possession);
-            PlayPossession(home, away, homeShooting, random);
-            PlayPossession(away, home, awayShooting, random);
+            PlayPossession(home, away, homeShooting, bonusAfter, random);
+            PlayPossession(away, home, awayShooting, bonusAfter, random);
         }
     }
 
@@ -213,7 +227,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// live; once a shot goes up, the possession lasts as long as the offence keeps the ball — every
     /// offensive rebound is a second chance on the same possession.
     /// </summary>
-    private static void PlayPossession(Side offence, Side defence, (int Fg2Percent, int Fg3Percent) shooting, IRandomSource random)
+    private static void PlayPossession(Side offence, Side defence, (int Fg2Percent, int Fg3Percent) shooting, int bonusAfter, IRandomSource random)
     {
         var handler = offence.PickOnFloor(offence.UsageFactors, random);
 
@@ -225,8 +239,23 @@ public sealed class PossessionMatchEngine : IMatchEngine
             {
                 defence.StealsBy[defence.PickOnFloor(defence.StealFactors, random)]++;
             }
+            else if (random.NextBasisPoint() < MatchModelBounds.OffensiveFoulShareOfLostBalls)
+            {
+                offence.ChargeFoul(handler);
+            }
 
             return;
+        }
+
+        // A foul away from the shot: a team foul either way, and in the bonus a trip to the line for
+        // the ball handler; otherwise the offence keeps the ball and plays on.
+        if (random.NextBasisPoint() < MatchModelBounds.NonShootingFoulRate && defence.DefensiveFoul(random) > bonusAfter)
+        {
+            var keptTheBall = ResolveFreeThrowTrip(offence, defence, handler, MatchModelBounds.BonusFreeThrows, random) && Rebound(offence, defence, random);
+            if (!keptTheBall)
+            {
+                return;
+            }
         }
 
         for (var shot = 0; shot < MatchModelBounds.MaximumShotsPerPossession; shot++)
@@ -285,13 +314,18 @@ public sealed class PossessionMatchEngine : IMatchEngine
             }
 
             // An and-one: a make that also draws a single free throw. Missed, it is a live ball.
-            return random.NextBasisPoint() < MatchModelBounds.AndOneChanceOnMake &&
-                ResolveFreeThrowTrip(offence, defence, shooter, shots: 1, random) &&
-                Rebound(offence, defence, random);
+            if (random.NextBasisPoint() >= MatchModelBounds.AndOneChanceOnMake)
+            {
+                return false;
+            }
+
+            defence.DefensiveFoul(random);
+            return ResolveFreeThrowTrip(offence, defence, shooter, shots: 1, random) && Rebound(offence, defence, random);
         }
 
         if (random.NextBasisPoint() < MatchModelBounds.ShootingFoulChanceOnMiss)
         {
+            defence.DefensiveFoul(random);
             return ResolveFreeThrowTrip(offence, defence, shooter, isThree ? 3 : 2, random) && Rebound(offence, defence, random);
         }
 
@@ -514,7 +548,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
         return injuries;
     }
 
-    private static DomainOperationResult<Side> BuildSide(MatchTeam team)
+    private static DomainOperationResult<Side> BuildSide(MatchTeam team, int personalFoulLimit)
     {
         ArgumentNullException.ThrowIfNull(team);
 
@@ -525,7 +559,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 $"Team '{team.TeamId.Value}' has nobody available, so it cannot be put on the floor for this game."));
         }
 
-        return DomainOperationResult<Side>.Success(new Side(team));
+        return DomainOperationResult<Side>.Success(new Side(team, personalFoulLimit));
     }
 
     /// <summary>
@@ -536,9 +570,10 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// </summary>
     private sealed class Side
     {
-        public Side(MatchTeam team)
+        public Side(MatchTeam team, int personalFoulLimit)
         {
             TeamId = team.TeamId;
+            _foulLimit = personalFoulLimit;
             RestDays = team.RestDays;
             Players = team.Rotation.Slots;
 
@@ -549,6 +584,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
             StealsBy = new int[count];
             TurnoversBy = new int[count];
             BlocksBy = new int[count];
+            PersonalFoulsBy = new int[count];
             _regulationOn = new int[count];
             _overtimeOn = new int[count];
             OnFloor = [];
@@ -558,6 +594,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
             HeightShape = new int[count];
             StealFactors = new int[count];
             BlockFactors = new int[count];
+            FoulFactors = new int[count];
 
             // Shape, not level: each attribute measured against the player's own Overall, so these
             // terms redistribute what happens without adding to how good a side is. A player missing
@@ -577,7 +614,14 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 // and then how tall they are for their level.
                 BlockFactors[index] = MatchModelBounds.BlockWeightFor(Players[index].Position) * ShapeWeight(
                     HeightShape[index], MatchModelBounds.BlockWeightPerHeightPoint, MatchModelBounds.MinimumBlockWeight, MatchModelBounds.MaximumBlockWeight) / 100;
+
+                // Who fouls is where they play, then slow feet for their level: a defender beaten off
+                // the dribble reaches.
+                FoulFactors[index] = MatchModelBounds.FoulWeightFor(Players[index].Position) * ShapeWeight(
+                    -QuicknessShape[index], MatchModelBounds.FoulWeightPerQuicknessPoint, MatchModelBounds.MinimumFoulWeight, MatchModelBounds.MaximumFoulWeight) / 100;
             }
+
+            _foulWeights = (int[])FoulFactors.Clone();
 
             PointsBy = new int[count];
             OffensiveReboundsBy = new int[count];
@@ -625,6 +669,9 @@ public sealed class PossessionMatchEngine : IMatchEngine
         }
 
         private readonly RotationPlayer[] _rotation;
+        private readonly int _foulLimit;
+        private readonly int[] _foulWeights;
+        private int _possession;
         private readonly int[] _regulationOn;
         private readonly int[] _overtimeOn;
         private int[][] _plan = [];
@@ -640,30 +687,150 @@ public sealed class PossessionMatchEngine : IMatchEngine
         /// Overtime belongs to the five the depth chart plays most, ties broken by player identifier:
         /// a closing five, not a continuation of the regulation rotation.
         /// </summary>
-        public void SendInClosers() => _closers ??= Enumerable.Range(0, Players.Count)
-            .OrderByDescending(index => PlannedMinutes[index])
-            .ThenBy(index => Players[index].PlayerId.Value, StringComparer.Ordinal)
-            .Take(MinutesAllocationBounds.PlayersOnFloor)
-            .Order()
-            .ToArray();
+        public void SendInClosers() => _closers ??= Closers();
+
+        /// <summary>The five the depth chart plays most among those still eligible (see <see cref="Eligible"/>).</summary>
+        private int[] Closers() => InDepthOrder(Eligible()).Take(MinutesAllocationBounds.PlayersOnFloor).Order().ToArray();
+
+        /// <summary>The depth chart's order: most planned minutes first, then by player identifier.</summary>
+        private IEnumerable<int> InDepthOrder(IEnumerable<int> players) => players
+            .OrderBy(player => FouledOut(player))
+            .ThenByDescending(player => PlannedMinutes[player])
+            .ThenBy(player => Players[player].PlayerId.Value, StringComparer.Ordinal);
+
+        /// <summary>
+        /// Who may still play: everyone not fouled out; short of five, the fouled-out players who have
+        /// actually played most stay on, as the sport's rule allows.
+        /// </summary>
+        private int[] Eligible()
+        {
+            var stillIn = Enumerable.Range(0, Players.Count).Count(player => !FouledOut(player));
+            return Enumerable.Range(0, Players.Count)
+                .OrderBy(player => FouledOut(player))
+                .ThenByDescending(player => _regulationOn[player] + _overtimeOn[player])
+                .ThenBy(player => Players[player].PlayerId.Value, StringComparer.Ordinal)
+                .Take(Math.Max(stillIn, MinutesAllocationBounds.PlayersOnFloor))
+                .Order()
+                .ToArray();
+        }
+
+        private bool FouledOut(int player) => PersonalFoulsBy[player] >= _foulLimit;
+
+        /// <summary>
+        /// A defensive foul by this side: a team foul, and a personal foul for a defender on the floor
+        /// still under the limit (weighted by <see cref="FoulFactors"/>). Returns the team's fouls this
+        /// period, for the bonus. If every defender on the floor is already at the limit — they stayed
+        /// on only because nobody was left to replace them — the team foul stands with nobody charged.
+        /// </summary>
+        public int DefensiveFoul(IRandomSource random)
+        {
+            TeamFouls++;
+
+            // A floor of defenders all at the limit charges nobody, and draws nothing.
+            var total = 0;
+            foreach (var index in OnFloor)
+            {
+                total += _foulWeights[index];
+            }
+
+            if (total > 0)
+            {
+                ChargeFoul(PickOnFloor(_foulWeights, random));
+            }
+
+            return TeamFouls;
+        }
+
+        /// <summary>Team fouls count afresh each period.</summary>
+        public void ResetTeamFouls() => TeamFouls = 0;
+
+        /// <summary>A defender's weight for the next foul: none at the limit, reduced in foul trouble.</summary>
+        private int FoulWeight(int index) =>
+            FouledOut(index) ? 0
+            : PersonalFoulsBy[index] > 0 && PersonalFoulsBy[index] >= _foulLimit - MatchModelBounds.FoulTroubleMargin
+                ? FoulFactors[index] * MatchModelBounds.FoulTroubleWeightPercent / 100
+            : FoulFactors[index];
+
+        /// <summary>A personal foul; the one that reaches the limit takes the player out of the game.</summary>
+        public void ChargeFoul(int index)
+        {
+            if (FouledOut(index))
+            {
+                return;
+            }
+
+            PersonalFoulsBy[index]++;
+            _foulWeights[index] = FoulWeight(index);
+            if (FouledOut(index))
+            {
+                FoulOut(index);
+            }
+        }
+
+        /// <summary>
+        /// Takes a fouled-out player out of the game at once. In overtime the closers are re-picked; in
+        /// regulation the rest is re-planned from what each player is still owed, with the fouled-out
+        /// player's remaining share handed to those still eligible in proportion to their planned
+        /// minutes. Either way he leaves the floor now, for the rest of this possession too.
+        /// </summary>
+        private void FoulOut(int index)
+        {
+            var eligible = Eligible();
+            if (eligible.Contains(index))
+            {
+                return;
+            }
+
+            if (_closers is not null)
+            {
+                _closers = Closers();
+                PutOnFloor(_closers);
+                return;
+            }
+
+            var from = _possession + 1;
+            var remaining = _plan.Length - from;
+            StintPlanner.Replan(_rotation, _plan, from, eligible);
+
+            // Somebody comes on for him now: the first of the next possession's five who is not on the
+            // floor; at the very end of regulation, the eligible player the depth chart plays most.
+            var substitute = remaining > 0
+                ? _plan[from].FirstOrDefault(player => !OnFloor.Contains(player), -1)
+                : InDepthOrder(eligible.Where(player => !OnFloor.Contains(player))).FirstOrDefault(-1);
+
+            if (substitute >= 0)
+            {
+                PutOnFloor(OnFloor.Select(player => player == index ? substitute : player).Order().ToArray());
+            }
+        }
 
         /// <summary>Puts the right five on the floor for this possession and counts it toward their minutes.</summary>
         public void Enter(int possession)
         {
-            OnFloor = _closers ?? _plan[possession];
-            var counts = _closers is null ? _regulationOn : _overtimeOn;
-            var quickness = 0;
-            var height = 0;
+            _possession = possession;
+            PutOnFloor(_closers ?? _plan[possession]);
 
+            var counts = _closers is null ? _regulationOn : _overtimeOn;
             foreach (var index in OnFloor)
             {
                 counts[index]++;
+            }
+        }
+
+        /// <summary>Sets the five on the floor and the shape means the couplings read from them.</summary>
+        private void PutOnFloor(int[] lineup)
+        {
+            OnFloor = lineup;
+            var quickness = 0;
+            var height = 0;
+            foreach (var index in lineup)
+            {
                 quickness += QuicknessShape[index];
                 height += HeightShape[index];
             }
 
-            OnFloorQuickness = quickness / Math.Max(1, OnFloor.Length);
-            OnFloorHeight = height / Math.Max(1, OnFloor.Length);
+            OnFloorQuickness = quickness / Math.Max(1, lineup.Length);
+            OnFloorHeight = height / Math.Max(1, lineup.Length);
         }
 
         /// <summary>The mean quickness shape of the five on the floor for this possession.</summary>
@@ -702,6 +869,13 @@ public sealed class PossessionMatchEngine : IMatchEngine
         public int[] HeightShape { get; }
 
         public int[] BlockFactors { get; }
+
+        public int[] PersonalFoulsBy { get; }
+
+        public int[] FoulFactors { get; }
+
+        /// <summary>Defensive fouls this period, toward the bonus.</summary>
+        public int TeamFouls { get; private set; }
 
         public int[] PassingShape { get; }
 
@@ -814,7 +988,9 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 PlusMinusBy[index],
                 StealsBy[index],
                 TurnoversBy[index],
-                BlocksBy[index]));
+                BlocksBy[index],
+                PersonalFoulsBy[index],
+                FouledOut(index)));
         }
     }
 }

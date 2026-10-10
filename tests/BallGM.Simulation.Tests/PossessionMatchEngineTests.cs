@@ -164,7 +164,11 @@ public sealed class PossessionMatchEngineTests
         {
             var setup = MatchTestFixtures.Setup(seed);
             var played = Engine.Play(setup).Value;
-            if (played.Result.BoxScore!.OvertimePeriods > 0)
+            var homeLines = played.Result.BoxScore!.LinesFor(setup.Home.TeamId);
+
+            // Overtime adds minutes, and a foul-out hands a player's remaining share to his teammates;
+            // both are the game departing from the plan, which FoulOuts_HandTheirMinutesToTeammates covers.
+            if (played.Result.BoxScore.OvertimePeriods > 0 || homeLines.Any(line => line.FouledOut))
             {
                 continue;
             }
@@ -175,6 +179,59 @@ public sealed class PossessionMatchEngineTests
                 Assert.InRange(credited, slot.Minutes - 1, slot.Minutes + 1);
             }
         }
+    }
+
+    [Fact]
+    public void FoulOuts_HandTheirMinutesToTeammates()
+    {
+        // A fouled-out player plays no possession after his last foul, and his team still fills every
+        // minute: the remaining share goes to whoever is left.
+        var fouledOut = 0;
+        for (var seed = 0; seed < 2_000; seed++)
+        {
+            var setup = MatchTestFixtures.Setup(seed);
+            var box = Engine.Play(setup).Value.Result.BoxScore!;
+            foreach (var teamId in new[] { setup.Home.TeamId, setup.Away.TeamId })
+            {
+                var lines = box.LinesFor(teamId);
+                var fouledOutLines = lines.Where(line => line.FouledOut).ToList();
+                if (fouledOutLines.Count == 0 || box.OvertimePeriods > 0)
+                {
+                    continue;
+                }
+
+                fouledOut += fouledOutLines.Count;
+                Assert.All(fouledOutLines, line => Assert.Equal(box.PersonalFoulLimit, line.PersonalFouls));
+                Assert.Equal(BoxScore.GameMinutes(lines.Count, 0), lines.Sum(line => line.Minutes));
+
+                // The rest of the game is re-planned from what everyone is still owed: nobody still in
+                // loses minutes, and nobody gains more than the minutes the fouled-out players forfeited.
+                var rotation = (teamId == setup.Home.TeamId ? setup.Home : setup.Away).Rotation.Slots;
+                int Planned(PlayerStatLine line) => rotation.Single(slot => slot.PlayerId == line.PlayerId).Minutes;
+                var forfeited = fouledOutLines.Sum(line => Planned(line) - line.Minutes);
+                Assert.All(
+                    lines.Where(line => !line.FouledOut),
+                    line => Assert.InRange(line.Minutes - Planned(line), -1, forfeited + 1));
+            }
+        }
+
+        // A real but rare event: some foul-outs over two thousand games, not one a game.
+        Assert.InRange(fouledOut, 20, 600);
+    }
+
+    [Fact]
+    public void ASmallerFoulLimitFoulsPlayersOutSooner()
+    {
+        var limitFour = BallGM.Rules.Configuration.GameRules.Create(personalFoulLimit: 4, bonusTeamFoulsPerPeriod: 4, bonusTeamFoulsPerOvertime: 3).Value;
+        int FoulOuts(BallGM.Rules.Configuration.GameRules rules) => Enumerable.Range(0, 400)
+            .Select(seed => Engine.Play(MatchTestFixtures.Setup(seed) with { Rules = rules }).Value.Result.BoxScore!)
+            .Sum(box => box.Lines.Count(line => line.FouledOut));
+
+        var atFour = FoulOuts(limitFour);
+        Assert.True(atFour > FoulOuts(BallGM.Rules.Configuration.GameRules.Default) * 3, $"{atFour} foul-outs at a limit of four");
+        Assert.All(
+            Enumerable.Range(0, 50).Select(seed => Engine.Play(MatchTestFixtures.Setup(seed) with { Rules = limitFour }).Value.Result.BoxScore!),
+            box => Assert.All(box.Lines, line => Assert.InRange(line.PersonalFouls, 0, 4)));
     }
 
     [Fact]
@@ -198,7 +255,8 @@ public sealed class PossessionMatchEngineTests
     [Fact]
     public void EveryBoxScoreIdentityHoldsAcrossTwoThousandVariedGames()
     {
-        // A property check over seeds, rating gaps, rest and short squads. BoxScore.Create refuses a
+        // A property check over seeds, rating gaps, rest and short squads — down to four fit players,
+        // which once hung the stint planner. BoxScore.Create refuses a
         // game that breaks an identity, so a game that plays at all already satisfies them; the
         // rebound identity is recomputed here independently anyway, from the published box score.
         for (var seed = 0; seed < 2_000; seed++)
@@ -209,8 +267,8 @@ public sealed class PossessionMatchEngineTests
                 awayRating: 90 - (seed * 7 % 41),
                 homeRestDays: seed % 4,
                 awayRestDays: (seed / 4) % 4,
-                homeSquadSize: 5 + (seed % 6),
-                awaySquadSize: 5 + ((seed / 6) % 6));
+                homeSquadSize: 4 + (seed % 7),
+                awaySquadSize: 4 + ((seed / 7) % 7));
 
             var played = Engine.Play(setup);
             Assert.True(played.IsSuccess, $"seed {seed}: {string.Join("; ", played.Errors.Select(error => error.Message))}");
@@ -230,6 +288,8 @@ public sealed class PossessionMatchEngineTests
                 Assert.True(
                     own.Sum(line => line.Blocks) <= theirs.Sum(line => line.FieldGoalsAttempted - line.FieldGoalsMade),
                     $"seed {seed}: more blocks than opponent misses.");
+                Assert.All(own, line => Assert.Equal(line.PersonalFouls == box.PersonalFoulLimit, line.FouledOut));
+                Assert.All(own, line => Assert.InRange(line.PersonalFouls, 0, box.PersonalFoulLimit));
             }
         }
     }

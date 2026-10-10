@@ -77,6 +77,11 @@ public static class StatColumns
     public static readonly StatColumn Steals = Counting("STL", "Steals: live-ball turnovers forced", stats => stats.Steals);
     public static readonly StatColumn Turnovers = Counting("TOV", "Turnovers: possessions lost without a shot", stats => stats.Turnovers);
     public static readonly StatColumn Blocks = Counting("BLK", "Blocks: opponent shots blocked", stats => stats.Blocks);
+    public static readonly StatColumn PersonalFouls = Counting("PF", "Personal fouls", stats => stats.PersonalFouls);
+
+    /// <summary>A count of games, so always a total: per game it would read as a fraction of a game.</summary>
+    public static readonly StatColumn FoulOuts = Counting(
+        "FOULED OUT", "Games fouled out: reached the foul limit and took no further part", stats => stats.FoulOuts, Wide, shown: _ => StatBasis.Totals);
 
     /// <summary>Signed: the score difference while this player was on the floor.</summary>
     public static readonly StatColumn PlusMinus = Counting(
@@ -93,11 +98,11 @@ public static class StatColumns
 
     /// <summary>One game's line, as a box score shows it.</summary>
     public static IReadOnlyList<StatColumn> BoxScore { get; } =
-        [Minutes, Points, FieldGoals, Threes, FreeThrows, OffensiveRebounds, DefensiveRebounds, Rebounds, Assists, Steals, Blocks, Turnovers, PlusMinus];
+        [Minutes, Points, FieldGoals, Threes, FreeThrows, OffensiveRebounds, DefensiveRebounds, Rebounds, Assists, Steals, Blocks, Turnovers, PersonalFouls, PlusMinus];
 
     /// <summary>A run of games, as a roster or a preview shows it: averages and shooting rates.</summary>
     public static IReadOnlyList<StatColumn> Season { get; } =
-        [Games, Minutes, Points, Rebounds, Assists, Steals, Blocks, Turnovers, PlusMinus, FieldGoalPercent, ThreePointPercent, FreeThrowPercent, TrueShooting];
+        [Games, Minutes, Points, Rebounds, Assists, Steals, Blocks, Turnovers, PersonalFouls, PlusMinus, FieldGoalPercent, ThreePointPercent, FreeThrowPercent, TrueShooting];
 
     /// <summary>A header for a stated rate the catalogue does not compute (a data pack's NETRTG, PIE), at a rate column's width.</summary>
     public static StatHeader RateHeader(string header, string tooltip) => new(header, tooltip, Wide);

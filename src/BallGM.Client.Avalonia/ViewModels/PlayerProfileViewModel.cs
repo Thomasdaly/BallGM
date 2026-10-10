@@ -185,7 +185,7 @@ public sealed record CareerRow(string Season, string Team, bool IsCurrent, IRead
     private static readonly StatColumn[] PerGameColumns =
     [
         StatColumns.Games, StatColumns.Minutes, StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists,
-        StatColumns.Steals, StatColumns.Blocks, StatColumns.Turnovers, StatColumns.PlusMinus,
+        StatColumns.Steals, StatColumns.Blocks, StatColumns.Turnovers, StatColumns.PersonalFouls, StatColumns.PlusMinus,
     ];
 
     /// <summary>The career table's headers: per-game counting columns, then shooting and the stated rates.</summary>
@@ -219,6 +219,7 @@ public sealed record CareerRow(string Season, string Team, bool IsCurrent, IRead
             StatColumns.Fixed(PerGame(Metric("STL"))),
             StatColumns.Fixed(PerGame(Metric("BLK"))),
             StatColumns.Fixed(PerGame(Metric("TOV"))),
+            StatColumns.Fixed(PerGame(Metric("PF"))),
             StatColumns.Signed(PerGame(Metric("PLUS_MINUS"))),
             StatColumns.Percent(Ratio("FGM", "FGA")),
             StatColumns.Percent(Ratio("FG3M", "FG3A")),
