@@ -663,3 +663,49 @@ the hot/cold-night term (`GameShootingVarianceRange` = ±850 bp) was tuned to it
   "signed home − away margin, league games".
 - **Locked bands:** the `MatchModelCalibrationTests` bands that P-5 widened (mean |margin| ceiling
   17 → 19) are revisited with written reasoning.
+
+## 15. Close-out (S9): where every stat is now
+
+All of §3's gaps are closed. Every stat below is modelled at the possession event, stored on the
+box score (season save schema 9), carried through `CountingStats` without a drop point, and drawn
+through the one `StatColumns` catalogue.
+
+| Stat | Modelled | Stored | Exposed | Box score | Game sheet | Profile | Roster | Season stats (Leaders table) | Leaders | Front office |
+|---|---|---|---|---|---|---|---|---|---|---|
+| MIN | ✓ stints (S2) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
+| PTS, FG, 3P, FT | ✓ (S1) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ PTS, FG%, 3P%, FT%, TS% | ✓ PTS |
+| FG by zone | ✓ (S7) | ✓ | ✓ | — | — | ✓ shot chart | — | — | — | — |
+| OREB / DREB / REB | ✓ (S1) | ✓ | ✓ | ✓ | ✓ REB | ✓ | ✓ REB | ✓ REB | ✓ REB | ✓ REB |
+| Team rebounds | ✓ (S1) | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — |
+| AST | ✓ scorer-linked (S1) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| STL | ✓ (S3) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| BLK | ✓ (S4) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| TOV | ✓ (S3) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | percentile | ✓ |
+| PF / foul-outs | ✓ (S5) | ✓ | ✓ | ✓ + marker | ✓ | ✓ | ✓ | ✓ | percentile | ✓ PF |
+| +/- | ✓ lineups (S2) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| USG% (observed) | ✓ (S3) | ✓ | ✓ | — | — | ✓ | — | — | — | — |
+| Match rating /10 | ✓ derived (S6) | never stored | ✓ | ✓ pill | ✓ pill | ✓ header, log, sparkline | ✓ | ✓ | ✓ | ✓ |
+| Percentiles | derived (S8) | — | ✓ | — | — | ✓ bars | — | — | — | — |
+
+**Calibration at close-out** (`scratch/calib`, 1,000 seasons of the fixture league; bench 5 × 500
+seasons): pace 98.1, ortg 115.3, sd_team_win_pct 0.151, Noll–Scully 2.67, signed margin SD 13.94,
+tov% 0.127, stl/g 7.41, blk/g 4.91, pf/g 19.3, ast/fgm 0.610, orb% 0.265, fg3a/fga 0.395, foul-outs
+13.1 per 100 games, 14.84 ms a season. Every measurable `suite.md` row is inside its band with no
+retune at S9 — each slice retuned inside itself because the calibration tests are locked.
+
+**Owed to the user** (both skills are `disable-model-invocation`): the `/sim-regress` gate, and the
+first full `/sim-audit 1–7` run, which becomes the new baseline that "no new failures" is measured
+against (Q1).
+
+**Follow-ups recorded, not done:**
+
+- Rebound and assist leaders are flatter than a real league's (8 and 4 a game at the top), the known
+  limitation that the engine reads `Overall` and attribute shape, not a usage or rebounding skill of
+  its own — battery 4's couplings.
+- The leaders screen and table do not mark the viewed team's players, and the table has no team
+  filter.
+- The plain (average) rating pill restates the Button pill's band styles for a `Border`. A shared
+  `:is(ContentControl).ratingpill` selector was tried and hung the headless UI tests, so the
+  duplication stays until that is understood.
+- Profile percentiles re-rank the population on each open (about 20k comparisons); a sorted array
+  per stat cached with `LeagueStats` would make it 15 binary searches.

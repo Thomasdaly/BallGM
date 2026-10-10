@@ -112,14 +112,16 @@ public sealed record DraftPreviewRow(string ProspectName, string Position, IRead
 
 /// <summary>
 /// A player's season in one line, per game, from the shared stat columns: points, rebounds, assists,
-/// steals, blocks and his average match rating. What a GM glances at beside a target's name.
+/// steals, blocks, turnovers, fouls, plus-minus and his average match rating. What a GM glances at
+/// beside a target's name.
 /// </summary>
 public static class ProductionLine
 {
     /// <summary>What every production line says about itself.</summary>
     public const string Tooltip = "This regular season, per game. Shown for reading; the front office still values players on overall.";
 
-    private static readonly StatColumn[] Columns = [StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists, StatColumns.Steals, StatColumns.Blocks];
+    private static readonly StatColumn[] Columns =
+        [StatColumns.Points, StatColumns.Rebounds, StatColumns.Assists, StatColumns.Steals, StatColumns.Blocks, StatColumns.Turnovers, StatColumns.PersonalFouls, StatColumns.PlusMinus];
 
     public static string For(PlayerSeasonTotals? season)
     {

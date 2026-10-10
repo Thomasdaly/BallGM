@@ -130,9 +130,9 @@ public sealed class LeadersViewModelTests
     [Fact]
     public void ProductionLineReadsPerGameFromTheSharedColumns()
     {
-        var season = new PlayerSeasonTotals("P", CountingStats.None with { Games = 4, Points = 80, OffensiveRebounds = 4, DefensiveRebounds = 20, Assists = 10, Steals = 2, Blocks = 1 }, new RatingAverage(712, 4));
+        var season = new PlayerSeasonTotals("P", CountingStats.None with { Games = 4, Points = 80, OffensiveRebounds = 4, DefensiveRebounds = 20, Assists = 10, Steals = 2, Blocks = 1, Turnovers = 9, PersonalFouls = 10, PlusMinus = -6 }, new RatingAverage(712, 4));
 
-        Assert.Equal("20.0 PTS · 6.0 REB · 2.5 AST · 0.5 STL · 0.3 BLK · 7.1 RTG in 4 games", ProductionLine.For(season));
+        Assert.Equal("20.0 PTS · 6.0 REB · 2.5 AST · 0.5 STL · 0.3 BLK · 2.3 TOV · 2.5 PF · -1.5 +/- · 7.1 RTG in 4 games", ProductionLine.For(season));
         Assert.Equal("no games this regular season", ProductionLine.For(null));
     }
 }

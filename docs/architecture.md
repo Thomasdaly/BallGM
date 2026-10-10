@@ -488,7 +488,7 @@ The deep-stats work (`docs/stats-audit.md`) began by finding that the box score 
 
 **The leaders screen** (League → Leaders) shows the top five in eleven categories on the shared Per game / Per 36 / Totals basis — per-game boards need the games share, per-36 boards the minutes as well, totals count everyone, percentages need the makes whatever the basis — and a sortable table of every player, 50 rows at a time (sorted on the stat lines, formatted only as drawn, a page appended rather than the table rebuilt), qualified-only by default. A player opens his profile in place, as on the roster. The roster gains a sortable RTG column. An average match rating is drawn as a non-interactive pill (it has no breakdown to open), so a clickable row never nests a second, empty control.
 
-**The front office reads production but does not value it.** Trade and free-agent target cards print each player's regular-season line per game (`ProductionLine`, from the shared stat columns). AI valuation still reads `Overall`; feeding production into it is Milestone 9's call, not a display change's.
+**The front office reads production but does not value it.** Trade and free-agent target cards print each player's regular-season line per game — points, rebounds, assists, steals, blocks, turnovers, fouls, plus-minus and match rating (`ProductionLine`, from the shared stat columns). AI valuation still reads `Overall`; feeding production into it is Milestone 9's call, not a display change's.
 
 ### The playoff eligibility cutoff is applied at the signing
 
