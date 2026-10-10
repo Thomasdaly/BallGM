@@ -44,7 +44,8 @@ public sealed record PlayerStatLine
         int turnovers,
         int blocks,
         int personalFouls,
-        bool fouledOut)
+        bool fouledOut,
+        ShotZones? zones = null)
     {
         ArgumentNullException.ThrowIfNull(playerId);
         ArgumentNullException.ThrowIfNull(teamId);
@@ -90,6 +91,22 @@ public sealed record PlayerStatLine
             throw new ArgumentOutOfRangeException(nameof(freeThrowsMade), freeThrowsMade, "A player cannot make more free throws than they attempted.");
         }
 
+        if (zones is not null)
+        {
+            if (!zones.IsConsistent)
+            {
+                throw new ArgumentOutOfRangeException(nameof(zones), zones, "Every zone's counts must be non-negative, with no more makes than attempts.");
+            }
+
+            if (zones.TotalAttempts != fieldGoalsAttempted || zones.TotalMade != fieldGoalsMade ||
+                zones.ThreeAttempts != threePointsAttempted || zones.ThreesMade != threePointsMade)
+            {
+                throw new ArgumentException(
+                    $"Shot zones ({zones.TotalMade}/{zones.TotalAttempts}, threes {zones.ThreesMade}/{zones.ThreeAttempts}) must add up to the field goals ({fieldGoalsMade}/{fieldGoalsAttempted}) and threes ({threePointsMade}/{threePointsAttempted}).",
+                    nameof(zones));
+            }
+        }
+
         var pointsFromShooting = (2 * (fieldGoalsMade - threePointsMade)) + (3 * threePointsMade) + freeThrowsMade;
         if (points != pointsFromShooting)
         {
@@ -117,6 +134,7 @@ public sealed record PlayerStatLine
         Blocks = blocks;
         PersonalFouls = personalFouls;
         FouledOut = fouledOut;
+        Zones = zones;
         Turnovers = turnovers;
     }
 
@@ -172,6 +190,12 @@ public sealed record PlayerStatLine
 
     /// <summary>Whether this player reached the foul limit and took no further part — exactly when his fouls equal it.</summary>
     public bool FouledOut { get; }
+
+    /// <summary>
+    /// Where his field goals came from, adding up to them; null on a line built without locations (a
+    /// hand-built fixture, or an engine that does not record them) — the match engine always records them.
+    /// </summary>
+    public ShotZones? Zones { get; }
 
     private static void ThrowIfNegative(int value, string parameterName)
     {

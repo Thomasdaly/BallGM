@@ -227,7 +227,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
 
         var restorePoint = run.Capture();
         var played = new List<GameResult>();
-        var rotations = new RotationMemo();
+        var memo = new AdvanceMemo();
 
         for (var dayIndex = assessment.FromDay; dayIndex < assessment.ToDay; dayIndex++)
         {
@@ -244,7 +244,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
             // round two's participants are not known until round one is decided. Drawing happens
             // whether or not this build can play a game: a bracket is a statement about the table,
             // and a build with no match model still has one.
-            var drawResult = DrawPostseasonFor(run, context, day);
+            var drawResult = DrawPostseasonFor(run, context, day, memo);
             if (drawResult.IsFailure)
             {
                 run.RestoreTo(restorePoint);
@@ -256,7 +256,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
                 continue;
             }
 
-            var dayResult = PlayDay(run, context, day, played, rotations);
+            var dayResult = PlayDay(run, context, day, played, memo);
             if (dayResult.IsFailure)
             {
                 run.RestoreTo(restorePoint);
@@ -299,7 +299,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         ArgumentNullException.ThrowIfNull(teamId);
         ArgumentNullException.ThrowIfNull(day);
 
-        var built = Rotation(run, context, teamId, day, new RotationMemo());
+        var built = Rotation(run, context, teamId, day, new AdvanceMemo());
         return built.IsFailure
             ? DomainOperationResult<DepthChartBuild>.Failure(built.Errors.ToArray())
             : DomainOperationResult<DepthChartBuild>.Success(built.Value.Chart);
@@ -314,7 +314,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
     /// count — and that rarely changes from one game to the next. A new Build input belongs in the key.
     /// </summary>
     private DomainOperationResult<(DepthChartBuild Chart, IReadOnlyList<AvailablePlayer> Available)> Rotation(
-        SeasonRun run, SeasonContext context, TeamId teamId, SeasonDay day, RotationMemo memo)
+        SeasonRun run, SeasonContext context, TeamId teamId, SeasonDay day, AdvanceMemo memo)
     {
         var team = context.Team(teamId);
         if (team is null)
@@ -326,7 +326,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
 
         var available = AvailableFor(team, run, day);
 
-        if (memo.TryGetValue(teamId, out var cached) &&
+        if (memo.Rotations.TryGetValue(teamId, out var cached) &&
             cached.RosterCount == team.RosterCount &&
             cached.Available.SequenceEqual(available))
         {
@@ -336,7 +336,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         var chart = _depthChartBuilder.Build(teamId, available, context.Ruleset.RosterLimits, team.RosterCount);
         if (chart.IsSuccess)
         {
-            memo[teamId] = (available, team.RosterCount, chart.Value);
+            memo.Rotations[teamId] = (available, team.RosterCount, chart.Value);
         }
 
         return chart.IsFailure
@@ -345,9 +345,9 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
     }
 
     /// <summary>One side for one game: the rotation and the fit players behind it, and its rest.</summary>
-    private DomainOperationResult<MatchTeam> SideFor(SeasonRun run, SeasonContext context, TeamId teamId, SeasonDay day, RotationMemo rotations)
+    private DomainOperationResult<MatchTeam> SideFor(SeasonRun run, SeasonContext context, TeamId teamId, SeasonDay day, AdvanceMemo memo)
     {
-        var built = Rotation(run, context, teamId, day, rotations);
+        var built = Rotation(run, context, teamId, day, memo);
         return built.IsFailure
             ? DomainOperationResult<MatchTeam>.Failure(built.Errors.ToArray())
             : DomainOperationResult<MatchTeam>.Success(new MatchTeam(teamId, built.Value.Chart.Chart, built.Value.Available, RestDaysFor(run, teamId, day)));
@@ -358,17 +358,17 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
         SeasonContext context,
         SeasonDay day,
         List<GameResult> played,
-        RotationMemo rotations)
+        AdvanceMemo memo)
     {
         foreach (var fixture in run.Schedule.On(day).Where(fixture => !run.HasResult(fixture.Id)))
         {
-            var home = SideFor(run, context, fixture.HomeTeamId, day, rotations);
+            var home = SideFor(run, context, fixture.HomeTeamId, day, memo);
             if (home.IsFailure)
             {
                 return DomainOperationResult.Failure(home.Errors.ToArray());
             }
 
-            var away = SideFor(run, context, fixture.AwayTeamId, day, rotations);
+            var away = SideFor(run, context, fixture.AwayTeamId, day, memo);
             if (away.IsFailure)
             {
                 return DomainOperationResult.Failure(away.Errors.ToArray());
@@ -457,7 +457,7 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
     /// every day outside the postseason, and on a postseason day whose games are already drawn, so
     /// the advance loop can call it unconditionally.
     /// </summary>
-    private DomainOperationResult DrawPostseasonFor(SeasonRun run, SeasonContext context, SeasonDay day)
+    private DomainOperationResult DrawPostseasonFor(SeasonRun run, SeasonContext context, SeasonDay day, AdvanceMemo memo)
     {
         var rules = context.Ruleset.PostseasonRules;
         var phase = run.Calendar.Phase(SeasonPhase.Postseason);
@@ -467,7 +467,9 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
             return DomainOperationResult.Success;
         }
 
-        var seeding = _bracketBuilder.Seed(context.League, Standings(run, context), rules);
+        // The seeding reads the regular-season table, which is final once the postseason starts, so
+        // within one advance it is worked out once rather than on every postseason day.
+        var seeding = memo.Seeding ??= _bracketBuilder.Seed(context.League, Standings(run, context), rules);
         if (seeding.IsFailure)
         {
             return DomainOperationResult.Failure(seeding.Errors.ToArray());
@@ -617,5 +619,13 @@ public sealed class SeasonEngine(IMatchEngine matchEngine)
     }
 }
 
-/// <summary>Each team's last rotation within one <see cref="SeasonEngine.Advance"/>; the context, and so the roster limits, is fixed for the call.</summary>
-internal sealed class RotationMemo : Dictionary<TeamId, (IReadOnlyList<AvailablePlayer> Available, int RosterCount, DepthChartBuild Chart)>;
+/// <summary>
+/// What one <see cref="SeasonEngine.Advance"/> works out once and reuses: each team's last rotation
+/// (the context, and so the roster limits, is fixed for the call), and the postseason seeding.
+/// </summary>
+internal sealed class AdvanceMemo
+{
+    public Dictionary<TeamId, (IReadOnlyList<AvailablePlayer> Available, int RosterCount, DepthChartBuild Chart)> Rotations { get; } = [];
+
+    public DomainOperationResult<PostseasonSeeding>? Seeding { get; set; }
+}

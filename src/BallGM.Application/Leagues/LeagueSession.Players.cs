@@ -99,7 +99,8 @@ public sealed partial class LeagueSession
             currentSeason is null ? career : [.. career, currentSeason],
             seasonDetail,
             ContractDetail(liveContracts, player.SeasonsOfService),
-            gameLog));
+            gameLog,
+            seasonDetail is null ? null : LeagueZones()));
     }
 
     /// <summary>
@@ -167,6 +168,10 @@ public sealed partial class LeagueSession
             games.Count(game => TenOrMore(game.Line, 3)),
             StatFormulas.AverageRating(games.Select(game => CountingStats.Of(game.Line))));
     }
+
+    /// <summary>Every regular-season field goal this season, by zone: what a shooter's zones are read against.</summary>
+    private ShotZones LeagueZones() => PlayerSeasonTotals(SeasonPhase.RegularSeason).Values
+        .Aggregate(ShotZones.None, (total, player) => total + player.Stats.Zones);
 
     /// <summary>The contract seen against the league's scales: share of the cap, place between min and max, free agency.</summary>
     private ContractDetailLine? ContractDetail(IReadOnlyList<Domain.Contracts.Contract> contracts, int seasonsOfService)

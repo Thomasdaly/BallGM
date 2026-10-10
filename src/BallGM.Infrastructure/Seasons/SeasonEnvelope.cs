@@ -30,7 +30,8 @@ public sealed record PlayerStatLineEnvelope(
     int? Steals = null,
     int? Turnovers = null,
     int? Blocks = null,
-    int? PersonalFouls = null);
+    int? PersonalFouls = null,
+    IReadOnlyList<int>? Zones = null);
 
 /// <summary>One side's team-level figures: team rebounds and free-throw trips that ended on a live miss.</summary>
 public sealed record TeamStatLineEnvelope(int TeamOffensiveRebounds, int TeamDefensiveRebounds, int LiveFreeThrowMisses);
@@ -120,8 +121,13 @@ public sealed record SeasonEnvelope
     /// rather than the league's current one. Whether a player fouled out is derived from the two.
     /// Refused, not migrated.
     /// </para>
+    /// <para>
+    /// Version 9 adds each line's <c>Zones</c>: field goals attempted and made from each of the five
+    /// shot zones (rim, paint, mid-range, corner three, above-the-break three), ten counts adding up to
+    /// the line's field goals and threes. Refused, not migrated.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 8;
+    public const int CurrentSchemaVersion = 9;
 
     public SeasonEnvelope(
         int schemaVersion,

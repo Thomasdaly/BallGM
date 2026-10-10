@@ -113,7 +113,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
             // terminal rule is stated rather than left to a seventh draw: the more efficient side
             // converts one last possession, and the home team holds an exact tie.
             var awayWins = awayEfficiency > homeEfficiency;
-            AwardBasket(awayWins ? away : home, awayWins ? home : away, isThree: false, random);
+            AwardBasket(awayWins ? away : home, awayWins ? home : away, random);
         }
 
         home.CreditMinutes(possessions, overtimePeriods);
@@ -249,6 +249,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         // A foul away from the shot: a team foul either way, and in the bonus a trip to the line for
         // the ball handler; otherwise the offence keeps the ball and plays on.
+        var firstShooter = handler;
         if (random.NextBasisPoint() < MatchModelBounds.NonShootingFoulRate && defence.DefensiveFoul(random) > bonusAfter)
         {
             var keptTheBall = ResolveFreeThrowTrip(offence, defence, handler, MatchModelBounds.BonusFreeThrows, random) && Rebound(offence, defence, random);
@@ -256,11 +257,17 @@ public sealed class PossessionMatchEngine : IMatchEngine
             {
                 return;
             }
+
+            // A second chance off his own missed free throw: whoever the usage factors pick shoots it.
+            firstShooter = -1;
         }
 
+        // The ball handler takes the first shot; a second chance after an offensive rebound goes to
+        // whoever the usage factors pick then.
         for (var shot = 0; shot < MatchModelBounds.MaximumShotsPerPossession; shot++)
         {
-            if (!TakeShot(offence, defence, shooting, random))
+            var shooter = shot == 0 && firstShooter >= 0 ? firstShooter : offence.PickOnFloor(offence.UsageFactors, random);
+            if (!TakeShot(offence, defence, shooter, shooting, random))
             {
                 return;
             }
@@ -296,17 +303,18 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// ever account for.
     /// </para>
     /// </summary>
-    private static bool TakeShot(Side offence, Side defence, (int Fg2Percent, int Fg3Percent) shooting, IRandomSource random)
+    private static bool TakeShot(Side offence, Side defence, int shooter, (int Fg2Percent, int Fg3Percent) shooting, IRandomSource random)
     {
-        var isThree = random.NextBasisPoint() < MatchModelBounds.ThreePointAttemptShare;
-        var shooter = offence.PickOnFloor(offence.UsageFactors, random);
+        // Where he shoots from: his own diet, which his height shape moves.
+        var zone = offence.ZoneFor(shooter, random.NextBasisPoint());
+        var isThree = ShotZones.IsThree(zone);
         var made = random.NextBasisPoint() <
-            MakePercentage(isThree ? shooting.Fg3Percent : shooting.Fg2Percent, offence, defence);
+            MakePercentage(ZonePercentage(zone, shooting, offence.HeightShape[shooter]), offence, defence);
 
         if (made)
         {
-            ChargeAttempt(offence, shooter, isThree);
-            AwardMake(offence, defence, shooter, isThree);
+            ChargeAttempt(offence, shooter, zone);
+            AwardMake(offence, defence, shooter, zone);
 
             if (random.NextBasisPoint() < MatchModelBounds.AssistChance)
             {
@@ -329,7 +337,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
             return ResolveFreeThrowTrip(offence, defence, shooter, isThree ? 3 : 2, random) && Rebound(offence, defence, random);
         }
 
-        ChargeAttempt(offence, shooter, isThree);
+        ChargeAttempt(offence, shooter, zone);
 
         // An unfouled miss may have been blocked: credited to a defender on the floor, and sometimes
         // knocked out of bounds, which hands the ball back to the offence as a team rebound.
@@ -374,10 +382,28 @@ public sealed class PossessionMatchEngine : IMatchEngine
         return Math.Clamp(periodPercentage + pressure, MatchModelBounds.MinimumFieldGoalPercentage, MatchModelBounds.MaximumFieldGoalPercentage);
     }
 
-    private static void ChargeAttempt(Side side, int shooter, bool isThree)
+    /// <summary>
+    /// A zone's make percentage: the period's two- or three-point percentage, the zone's zero-mean
+    /// offset, and the shooter's height shape — up at the rim, down from three, capped.
+    /// </summary>
+    private static int ZonePercentage(ShotZone zone, (int Fg2Percent, int Fg3Percent) shooting, int heightShape)
+    {
+        var height = Swing(heightShape, MatchModelBounds.ZonePercentagePerHeightPoint, MatchModelBounds.MaximumZonePercentageSwing);
+        return zone switch
+        {
+            ShotZone.Rim => shooting.Fg2Percent + MatchModelBounds.RimPercentageOffset + height,
+            ShotZone.Paint => shooting.Fg2Percent + MatchModelBounds.PaintPercentageOffset,
+            ShotZone.MidRange => shooting.Fg2Percent + MatchModelBounds.MidRangePercentageOffset,
+            ShotZone.Corner3 => shooting.Fg3Percent + MatchModelBounds.Corner3PercentageOffset - height,
+            _ => shooting.Fg3Percent + MatchModelBounds.AboveBreak3PercentageOffset - height,
+        };
+    }
+
+    private static void ChargeAttempt(Side side, int shooter, ShotZone zone)
     {
         side.FieldGoalsAttempted[shooter]++;
-        if (isThree)
+        side.ZoneAttempts[(int)zone][shooter]++;
+        if (ShotZones.IsThree(zone))
         {
             side.ThreePointsAttempted[shooter]++;
         }
@@ -442,21 +468,22 @@ public sealed class PossessionMatchEngine : IMatchEngine
     }
 
     /// <summary>
-    /// Awards a synthetic made basket to whichever player on the floor the usage factors pick — the overtime-tie terminal
-    /// rule's only caller. One usage draw and nothing else: no assist, no and-one, so the rule decides
-    /// the game without inventing a play.
+    /// The terminal basket after the last overtime: a layup at the rim by whichever player the usage
+    /// factors pick, with no assist.
     /// </summary>
-    private static void AwardBasket(Side side, Side opponent, bool isThree, IRandomSource random)
+    private static void AwardBasket(Side side, Side opponent, IRandomSource random)
     {
         var shooter = side.PickOnFloor(side.UsageFactors, random);
-        ChargeAttempt(side, shooter, isThree);
-        AwardMake(side, opponent, shooter, isThree);
+        ChargeAttempt(side, shooter, ShotZone.Rim);
+        AwardMake(side, opponent, shooter, ShotZone.Rim);
     }
 
-    private static void AwardMake(Side side, Side opponent, int shooter, bool isThree)
+    private static void AwardMake(Side side, Side opponent, int shooter, ShotZone zone)
     {
+        var isThree = ShotZones.IsThree(zone);
         Score(side, opponent, shooter, isThree ? 3 : 2);
         side.FieldGoalsMade[shooter]++;
+        side.ZoneMade[(int)zone][shooter]++;
 
         if (isThree)
         {
@@ -623,6 +650,32 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
             _foulWeights = (int[])FoulFactors.Clone();
 
+            ZoneAttempts = ShotZones.All.Select(_ => new int[count]).ToArray();
+            ZoneMade = ShotZones.All.Select(_ => new int[count]).ToArray();
+
+            // Each player's shot diet as cumulative basis points over the five zones: the neutral
+            // shares, with his height shape moving attempts between above-the-break threes and the rim.
+            _zoneDiet = new int[count][];
+            for (var index = 0; index < count; index++)
+            {
+                var shift = Swing(HeightShape[index], MatchModelBounds.ZoneMixPerHeightPoint, MatchModelBounds.MaximumZoneMixShift);
+                int[] shares =
+                [
+                    MatchModelBounds.RimShare + shift,
+                    MatchModelBounds.PaintShare,
+                    MatchModelBounds.MidRangeShare,
+                    MatchModelBounds.Corner3Share,
+                    MatchModelBounds.AboveBreak3Share - shift,
+                ];
+
+                for (var zone = 1; zone < shares.Length; zone++)
+                {
+                    shares[zone] += shares[zone - 1];
+                }
+
+                _zoneDiet[index] = shares;
+            }
+
             PointsBy = new int[count];
             OffensiveReboundsBy = new int[count];
             DefensiveReboundsBy = new int[count];
@@ -671,6 +724,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
         private readonly RotationPlayer[] _rotation;
         private readonly int _foulLimit;
         private readonly int[] _foulWeights;
+        private readonly int[][] _zoneDiet;
         private int _possession;
         private readonly int[] _regulationOn;
         private readonly int[] _overtimeOn;
@@ -872,6 +926,25 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         public int[] PersonalFoulsBy { get; }
 
+        /// <summary>Attempts and makes from each zone, indexed by <see cref="ShotZone"/> then player.</summary>
+        public int[][] ZoneAttempts { get; }
+
+        /// <inheritdoc cref="ZoneAttempts"/>
+        public int[][] ZoneMade { get; }
+
+        /// <summary>Where this shooter shoots from, given a draw in basis points: his own diet.</summary>
+        public ShotZone ZoneFor(int shooter, int roll)
+        {
+            var diet = _zoneDiet[shooter];
+            var zone = 0;
+            while (zone < diet.Length - 1 && roll >= diet[zone])
+            {
+                zone++;
+            }
+
+            return (ShotZone)zone;
+        }
+
         public int[] FoulFactors { get; }
 
         /// <summary>Defensive fouls this period, toward the bonus.</summary>
@@ -990,7 +1063,13 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 TurnoversBy[index],
                 BlocksBy[index],
                 PersonalFoulsBy[index],
-                FouledOut(index)));
+                FouledOut(index),
+                new ShotZones(
+                    ZoneAttempts[0][index], ZoneMade[0][index],
+                    ZoneAttempts[1][index], ZoneMade[1][index],
+                    ZoneAttempts[2][index], ZoneMade[2][index],
+                    ZoneAttempts[3][index], ZoneMade[3][index],
+                    ZoneAttempts[4][index], ZoneMade[4][index])));
         }
     }
 }

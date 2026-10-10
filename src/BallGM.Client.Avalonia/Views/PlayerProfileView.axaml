@@ -177,6 +177,51 @@
               <TextBlock Text="{Binding SimulatedSample}" Classes="faint small" VerticalAlignment="Center" />
             </StackPanel>
             <ItemsControl ItemsSource="{Binding SimulatedGroups}" ItemTemplate="{StaticResource StatGroupTemplate}" />
+            <!-- Shooting by zone: the chart, its legend in words, and the same figures as a table. -->
+            <Border Classes="panel" Margin="0,0,0,14" IsVisible="{Binding HasShotChart}">
+              <StackPanel Spacing="{StaticResource Space3}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <TextBlock Text="Shooting by zone" Classes="section" VerticalAlignment="Center" />
+                  <TextBlock Text="Field-goal percentage by zone, compared with the league from the same spot" Classes="faint tiny" VerticalAlignment="Center" />
+                </StackPanel>
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space5}">
+                  <ctl:ShotChart Zones="{Binding ShotChart.Zones}" Width="460" VerticalAlignment="Top"
+                                 AutomationProperties.Name="Shot chart: field-goal percentage by zone against the league. The same figures are in the table beside it." />
+                  <StackPanel Grid.Column="1" Spacing="{StaticResource Space2}">
+                    <ItemsControl ItemsSource="{Binding ShotChart.Zones}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShotZoneCell">
+                          <Grid ColumnDefinitions="*,Auto" Margin="0,4" AutomationProperties.Name="{Binding AccessibleName}">
+                            <StackPanel>
+                              <TextBlock Text="{Binding Name}" Classes="small strong" />
+                              <TextBlock Text="{Binding League, StringFormat='League {0}'}" Classes="faint tiny" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                              <TextBlock Text="{Binding Shooting}" Classes="num small" HorizontalAlignment="Right" />
+                              <TextBlock Text="{Binding Difference}" Classes="faint tiny" HorizontalAlignment="Right" />
+                            </StackPanel>
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space3}" Margin="0,6,0,0">
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource ChartCold2Brush}" />
+                        <TextBlock Text="Colder than league" Classes="faint tiny" VerticalAlignment="Center" />
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource ChartNeutralBrush}" />
+                        <TextBlock Text="{x:Static vm:ShotChartView.LevelLegend}" Classes="faint tiny" VerticalAlignment="Center" />
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="4">
+                        <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource ChartHot2Brush}" />
+                        <TextBlock Text="Hotter than league" Classes="faint tiny" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </StackPanel>
+                  </StackPanel>
+                </Grid>
+              </StackPanel>
+            </Border>
             <TextBlock Text="{Binding StatedSeasonTitle}" Classes="eyebrow" IsVisible="{Binding HasStatedStats}" Margin="0,10,0,0" />
             <ItemsControl ItemsSource="{Binding StatedGroups}" ItemTemplate="{StaticResource StatGroupTemplate}" />
             <TextBlock Text="Hover any stat for its definition. Simulated rate stats use the player's share of team minutes, the standard box-score estimate." Classes="faint tiny" TextWrapping="Wrap" />

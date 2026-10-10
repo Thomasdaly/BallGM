@@ -211,13 +211,17 @@ public sealed class SeasonSerializer
 
             if (saved.BoxScore is not null)
             {
+                // Shot zones parsed once: absent on a line built without locations, malformed otherwise.
+                var zones = saved.BoxScore.Select(line => line.Zones is null ? null : ShotZones.FromArray(line.Zones)).ToList();
+
                 // Fields a current box score always states: a missing one is a malformed file, not a zero.
                 if (saved.OvertimePeriods is null || saved.PersonalFoulLimit is null ||
-                    saved.BoxScore.Any(line => line.PlusMinus is null || line.Steals is null || line.Turnovers is null || line.Blocks is null || line.PersonalFouls is null))
+                    saved.BoxScore.Any(line => line.PlusMinus is null || line.Steals is null || line.Turnovers is null || line.Blocks is null || line.PersonalFouls is null) ||
+                    saved.BoxScore.Where((line, index) => line.Zones is not null && zones[index] is null).Any())
                 {
                     return DomainOperationResult<IReadOnlyList<GameResult>>.Failure(new DomainError(
                         InvalidFieldCode,
-                        $"The save records a box score for game '{saved.GameId}' without its overtime count and foul limit, or every line's plus-minus, steals, turnovers, blocks and fouls."));
+                        $"The save records a box score for game '{saved.GameId}' without its overtime count and foul limit, or every line's plus-minus, steals, turnovers, blocks and fouls, or with shot zones that do not add up."));
                 }
 
                 if (saved.HomeTeam is null || saved.AwayTeam is null)
@@ -231,7 +235,7 @@ public sealed class SeasonSerializer
                     fixture.Id,
                     saved.HomePoints,
                     saved.AwayPoints,
-                    saved.BoxScore.Select(line => new PlayerStatLine(
+                    saved.BoxScore.Select((line, index) => new PlayerStatLine(
                         new PlayerId(line.PlayerId),
                         new TeamId(line.TeamId),
                         line.Minutes,
@@ -251,7 +255,8 @@ public sealed class SeasonSerializer
                         line.Turnovers!.Value,
                         line.Blocks!.Value,
                         line.PersonalFouls!.Value,
-                        line.PersonalFouls.Value == saved.PersonalFoulLimit.Value)),
+                        line.PersonalFouls.Value == saved.PersonalFoulLimit.Value,
+                        zones[index])),
                     ToTeamLine(fixture.HomeTeamId, saved.HomeTeam),
                     ToTeamLine(fixture.AwayTeamId, saved.AwayTeam),
                     saved.OvertimePeriods.Value,
@@ -304,7 +309,8 @@ public sealed class SeasonSerializer
                         line.Steals,
                         line.Turnovers,
                         line.Blocks,
-                        line.PersonalFouls))
+                        line.PersonalFouls,
+                        line.Zones?.ToArray()))
                     .ToList(),
             result.BoxScore is null ? null : ToEnvelope(result.BoxScore.Home),
             result.BoxScore is null ? null : ToEnvelope(result.BoxScore.Away),

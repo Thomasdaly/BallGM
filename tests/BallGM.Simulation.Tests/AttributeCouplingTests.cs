@@ -54,6 +54,26 @@ public sealed class AttributeCouplingTests
         Assert.True(slow > neutral, $"{slow} vs {neutral}");
     }
 
+    [Fact]
+    public void TallerShootersForTheirLevelTakeMoreShotsAtTheRimAndFewerThrees()
+    {
+        (double Rim, double Three) Diet(PlayerRating rating)
+        {
+            var zones = Enumerable.Range(0, 400)
+                .Select(seed => MatchTestFixtures.Setup(seed, rating, Rating()))
+                .Select(setup => (setup, box: Engine.Play(setup).Value.Result.BoxScore!))
+                .SelectMany(game => game.box.LinesFor(game.setup.Home.TeamId))
+                .Aggregate(ShotZones.None, (total, line) => total + line.Zones!);
+            return ((double)zones.RimAttempts / zones.TotalAttempts, (double)zones.ThreeAttempts / zones.TotalAttempts);
+        }
+
+        var tall = Diet(Rating(height: +15, strength: -15));
+        var neutral = Diet(Rating());
+
+        Assert.True(tall.Rim > neutral.Rim + 0.05, $"rim {tall.Rim:F3} vs {neutral.Rim:F3}");
+        Assert.True(tall.Three < neutral.Three - 0.05, $"three {tall.Three:F3} vs {neutral.Three:F3}");
+    }
+
     /// <summary>The away side's personal fouls against a neutral home side: fouls fall on the defence's players.</summary>
     private static int Fouls(PlayerRating away) => Enumerable.Range(0, 600)
         .Select(seed => MatchTestFixtures.Setup(seed, Rating(), away))

@@ -230,11 +230,71 @@ public static class MatchModelBounds
     public const int MaximumFoulWeight = 250;
 
     /// <summary>
-    /// What share of field-goal <em>attempts</em> are three-pointers, in <see cref="ProbabilityScale"/>
-    /// units — applied to every attempt, not just makes, unlike the single scoring-rate draw this
-    /// replaced. This is the entire answer to <c>fg3a_per_fga</c>: the ratio is stated, not derived.
+    /// Where a neutral shooter's attempts come from, in <see cref="ProbabilityScale"/> units, summing
+    /// to the whole: the two three-point zones together are exactly <see cref="ThreePointAttemptShare"/>,
+    /// so the zones redistribute the two-and-three split rather than change it.
     /// </summary>
-    public const int ThreePointAttemptShare = 4_000;
+    public const int RimShare = 2_800;
+
+    /// <inheritdoc cref="RimShare"/>
+    public const int PaintShare = 1_700;
+
+    /// <inheritdoc cref="RimShare"/>
+    public const int MidRangeShare = 1_500;
+
+    /// <inheritdoc cref="RimShare"/>
+    public const int Corner3Share = 1_000;
+
+    /// <inheritdoc cref="RimShare"/>
+    public const int AboveBreak3Share = 3_000;
+
+    /// <summary>
+    /// How far a zone's make percentage sits from the period's two- or three-point percentage, in
+    /// <see cref="ProbabilityScale"/> units. Zero-mean (to within a tenth of a basis point an attempt)
+    /// over each kind's neutral shares, so the zones redistribute makes without moving the overall
+    /// percentages the scoring terms are tuned to. In the most lopsided matchups a zone can reach
+    /// <see cref="MinimumFieldGoalPercentage"/> or <see cref="MaximumFieldGoalPercentage"/>, and those
+    /// named clamps then bind; a neutral one sits well inside them (asserted in the bounds tests).
+    /// </summary>
+    public const int RimPercentageOffset = 1_300;
+
+    /// <inheritdoc cref="RimPercentageOffset"/>
+    public const int PaintPercentageOffset = -994;
+
+    /// <inheritdoc cref="RimPercentageOffset"/>
+    public const int MidRangePercentageOffset = -1_300;
+
+    /// <inheritdoc cref="RimPercentageOffset"/>
+    public const int Corner3PercentageOffset = 300;
+
+    /// <inheritdoc cref="RimPercentageOffset"/>
+    public const int AboveBreak3PercentageOffset = -100;
+
+    /// <summary>
+    /// How a shooter's height shape (Height − Overall) moves his shot diet: this many basis points a
+    /// point from above-the-break threes to the rim (or back, for a short player), capped either way.
+    /// </summary>
+    public const int ZoneMixPerHeightPoint = 60;
+
+    /// <inheritdoc cref="ZoneMixPerHeightPoint"/>
+    public const int MaximumZoneMixShift = 1_200;
+
+    /// <summary>
+    /// How a shooter's height shape moves his make percentage: up at the rim, down from three, this
+    /// many basis points a point, capped either way. Shape, so it redistributes rather than adds.
+    /// </summary>
+    public const int ZonePercentagePerHeightPoint = 15;
+
+    /// <inheritdoc cref="ZonePercentagePerHeightPoint"/>
+    public const int MaximumZonePercentageSwing = 300;
+
+    /// <summary>
+    /// What share of a neutral shooter's attempts are three-pointers, in <see cref="ProbabilityScale"/>
+    /// units: the two three-point zones of his diet. A league's actual <c>fg3a_per_fga</c> also moves
+    /// with its high-usage players' height shapes (<see cref="ZoneMixPerHeightPoint"/>), so it is
+    /// this figure only for a league of neutral shooters — tune the zone shares, not this sum.
+    /// </summary>
+    public const int ThreePointAttemptShare = Corner3Share + AboveBreak3Share;
 
     /// <summary>
     /// League-average two-point field-goal percentage at a neutral efficiency (no strength edge, no

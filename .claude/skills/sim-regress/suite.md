@@ -28,9 +28,9 @@ the field/mechanism doesn't exist yet (see patch ID). `/sim-regress` should repo
 | 17-ast | ast_per_fgm (league pooled) | 0.61 | [0.57, 0.65] | done (S1: 0.609) |
 | 18-orb | orb_pct = OREB / (OREB + opp DREB) | 0.265 | [0.25, 0.29] | done (S1: 0.264) |
 | 19-ids | STL_A ≤ opp TOV; BLK_A ≤ opp (FGA−FGM); Σ +/- = 5·margin; PF ≤ stored foul limit | 0 violations | exact | done (S2-S5: all four clauses enforced in `BoxScore.Create`; the foul limit is stored on the box score) |
-| 20-fg3a | fg3a_per_fga | 0.40 | [0.33, 0.44] | — (computable now; zones in S7 must keep it) |
+| 20-fg3a | fg3a_per_fga | 0.40 | [0.33, 0.44] | done (S7: zones keep it at 0.395) |
 | 21-replay | same seed ⇒ identical box score, every field, every player | 0 diffs | exact | done (`PossessionMatchEngineTests.TheSameSeedPlaysTheSameGameTwice` compares every field of every line and both team lines) |
-| 22-time | season sim time, `scratch/bench` (M1, 6-team fixture league, 5×200 seasons median) | ≤ 16.9 ms | ≤ 1.25 × baseline 13.5 ms | done (S5: 15.9 ms/season) |
+| 22-time | season sim time, `scratch/bench` (M1, 6-team fixture league, 5×200 seasons median) | ≤ 16.9 ms | ≤ 1.25 × baseline 13.5 ms | done (S7: 14.7 ms/season) |
 | 23-foulouts | foul-outs per 100 games (both teams) | 10 | [5, 15] | done (S5: 13.1; not frozen — no audit target, set from a real league's rate) |
 
 ## Notes for `/sim-regress`

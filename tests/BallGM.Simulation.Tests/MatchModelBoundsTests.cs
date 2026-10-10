@@ -237,4 +237,38 @@ public sealed class MatchModelBoundsTests
         Assert.True(100 + (SpecialistShape * 2 * MatchModelBounds.FoulWeightPerQuicknessPoint) >= MatchModelBounds.MaximumFoulWeight);
         Assert.True(100 - (SpecialistShape * MatchModelBounds.FoulWeightPerQuicknessPoint) <= MatchModelBounds.MinimumFoulWeight);
     }
+
+    [Fact]
+    public void ShotZonesRedistributeTheTwoAndThreeSplitWithoutMovingIt()
+    {
+        Assert.Equal(MatchModelBounds.ProbabilityScale,
+            MatchModelBounds.RimShare + MatchModelBounds.PaintShare + MatchModelBounds.MidRangeShare + MatchModelBounds.Corner3Share + MatchModelBounds.AboveBreak3Share);
+        Assert.Equal(MatchModelBounds.ThreePointAttemptShare, MatchModelBounds.Corner3Share + MatchModelBounds.AboveBreak3Share);
+
+        // The offsets are zero-mean over each kind's neutral shares (to within a basis point an attempt).
+        var twos = (MatchModelBounds.RimShare * MatchModelBounds.RimPercentageOffset) + (MatchModelBounds.PaintShare * MatchModelBounds.PaintPercentageOffset) +
+            (MatchModelBounds.MidRangeShare * MatchModelBounds.MidRangePercentageOffset);
+        var threes = (MatchModelBounds.Corner3Share * MatchModelBounds.Corner3PercentageOffset) + (MatchModelBounds.AboveBreak3Share * MatchModelBounds.AboveBreak3PercentageOffset);
+        // Strictly: under a tenth of a basis point per attempt.
+        var twoShares = MatchModelBounds.RimShare + MatchModelBounds.PaintShare + MatchModelBounds.MidRangeShare;
+        Assert.InRange(twos, -twoShares / 10, twoShares / 10);
+
+        // A neutral zone sits well inside the named clamps, which bind only in lopsided matchups.
+        foreach (var offset in new[] { MatchModelBounds.RimPercentageOffset, MatchModelBounds.PaintPercentageOffset, MatchModelBounds.MidRangePercentageOffset })
+        {
+            Assert.InRange(MatchModelBounds.BaseTwoPointPercentage + offset, MatchModelBounds.MinimumFieldGoalPercentage + 1_000, MatchModelBounds.MaximumFieldGoalPercentage - 1_000);
+        }
+
+        foreach (var offset in new[] { MatchModelBounds.Corner3PercentageOffset, MatchModelBounds.AboveBreak3PercentageOffset })
+        {
+            Assert.InRange(MatchModelBounds.BaseThreePointPercentage + offset, MatchModelBounds.MinimumFieldGoalPercentage + 1_000, MatchModelBounds.MaximumFieldGoalPercentage - 1_000);
+        }
+        Assert.Equal(0, threes);
+
+        // The height shift never empties a zone, and a specialist reaches both caps.
+        Assert.True(MatchModelBounds.MaximumZoneMixShift < Math.Min(MatchModelBounds.RimShare, MatchModelBounds.AboveBreak3Share));
+        const int SpecialistShape = 20;
+        Assert.True(SpecialistShape * MatchModelBounds.ZoneMixPerHeightPoint >= MatchModelBounds.MaximumZoneMixShift);
+        Assert.True(SpecialistShape * MatchModelBounds.ZonePercentagePerHeightPoint >= MatchModelBounds.MaximumZonePercentageSwing);
+    }
 }

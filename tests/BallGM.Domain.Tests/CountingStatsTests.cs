@@ -15,7 +15,7 @@ public sealed class CountingStatsTests
 
         var total = CountingStats.Sum([first, second]);
 
-        Assert.Equal(new CountingStats(2, 1, 50, 37, 14, 25, 4, 8, 5, 7, 3, 8, 6, 4, 0, 0, 0, 0, 0), total);
+        Assert.Equal(new CountingStats(2, 1, 50, 37, 14, 25, 4, 8, 5, 7, 3, 8, 6, 4, 0, 0, 0, 0, 0, ShotZones.None), total);
         Assert.Equal(11, total.Rebounds);
         Assert.Equal(10, total.TwoPointsMade);
         Assert.Equal(17, total.TwoPointsAttempted);

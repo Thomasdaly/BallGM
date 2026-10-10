@@ -25,9 +25,10 @@ public sealed record CountingStats(
     int Turnovers,
     int Blocks,
     int PersonalFouls,
-    int FoulOuts)
+    int FoulOuts,
+    ShotZones Zones)
 {
-    public static CountingStats None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    public static CountingStats None { get; } = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ShotZones.None);
 
     public int Rebounds => OffensiveRebounds + DefensiveRebounds;
 
@@ -59,7 +60,8 @@ public sealed record CountingStats(
             line.Turnovers,
             line.Blocks,
             line.PersonalFouls,
-            line.FouledOut ? 1 : 0);
+            line.FouledOut ? 1 : 0,
+            line.Zones ?? ShotZones.None);
     }
 
     /// <summary>The totals over every supplied game line.</summary>
@@ -101,6 +103,7 @@ public sealed record CountingStats(
             left.Turnovers + right.Turnovers,
             left.Blocks + right.Blocks,
             left.PersonalFouls + right.PersonalFouls,
-            left.FoulOuts + right.FoulOuts);
+            left.FoulOuts + right.FoulOuts,
+            left.Zones + right.Zones);
     }
 }

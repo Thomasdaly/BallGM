@@ -78,6 +78,11 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
 
     public bool HasGameLog => GameLog.Count > 0;
 
+    /// <summary>This season's shooting by zone against the league's, or null before a shot is taken.</summary>
+    public ShotChartView? ShotChart { get; } = ShotChartView.For(profile.SeasonDetail?.Totals.Zones, profile.LeagueZones);
+
+    public bool HasShotChart => ShotChart is not null;
+
     /// <summary>The regular season's average match rating, for the header pill.</summary>
     public RatingView? SeasonRating { get; } = RatingView.ForAverage(profile.SeasonDetail?.AverageRating);
 

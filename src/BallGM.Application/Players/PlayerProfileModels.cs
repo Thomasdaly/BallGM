@@ -29,7 +29,8 @@ public sealed record PlayerProfileSummary(
     IReadOnlyList<CareerSeasonLine> Career,
     SeasonDetailLine? SeasonDetail = null,
     ContractDetailLine? ContractDetail = null,
-    IReadOnlyList<RecentGameLine>? GameLog = null);
+    IReadOnlyList<RecentGameLine>? GameLog = null,
+    ShotZones? LeagueZones = null);
 
 /// <summary>
 /// Everything counted for a player this season, plus the team and opponent totals from the same

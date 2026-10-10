@@ -193,6 +193,27 @@ public sealed class BoxScoreTests
         Assert.Empty(Errors(fouls: 5, fouledOut: true, limit: 5));
     }
 
+    [Fact]
+    public void ALinesShotZonesMustAddUpToItsFieldGoalsAndThrees()
+    {
+        PlayerStatLine Line(ShotZones zones) => new(
+            new PlayerId("P"), Home, 30, 7, 0, 0, 0, fieldGoalsAttempted: 5, fieldGoalsMade: 3, threePointsAttempted: 2, threePointsMade: 1,
+            freeThrowsAttempted: 0, freeThrowsMade: 0, started: true, plusMinus: 0, steals: 0, turnovers: 0, blocks: 0, personalFouls: 0, fouledOut: false, zones);
+
+        // 2/3 at the rim, 0/0 elsewhere inside, 1/2 from the corner: adds up.
+        var zones = ShotZones.None with { RimAttempts = 3, RimMade = 2, Corner3Attempts = 2, Corner3Made = 1 };
+        Assert.Equal(5, Line(zones).Zones!.TotalAttempts);
+
+        Assert.Throws<ArgumentException>(() => Line(zones with { RimAttempts = 4 }));
+        Assert.Throws<ArgumentException>(() => Line(zones with { Corner3Attempts = 1, AboveBreak3Attempts = 0, MidRangeAttempts = 1 }));
+        Assert.Throws<ArgumentOutOfRangeException>(() => Line(zones with { PaintMade = 1, RimMade = 1 }));
+
+        // A negative count that the totals happen to absorb is still refused, here and on load.
+        var negative = zones with { RimAttempts = -1, RimMade = -1, PaintAttempts = 4, PaintMade = 3 };
+        Assert.Throws<ArgumentOutOfRangeException>(() => Line(negative));
+        Assert.Null(ShotZones.FromArray(negative.ToArray()));
+    }
+
     private static PlayerStatLine Shooter(
         PlayerId playerId, TeamId teamId, int fga, int fgm, int oreb, int dreb, int ast, int ftm = 0, int fta = 0) =>
         new(

@@ -119,6 +119,29 @@ public static class StatFormulas
         return stats.FieldGoalsAttempted + (FreeThrowTripWeight * stats.FreeThrowsAttempted) + stats.Turnovers;
     }
 
+    /// <summary>The fewest attempts from a zone for its percentage to be shown: fewer is noise, not a shooter.</summary>
+    public const int MinimumZoneAttempts = 5;
+
+    /// <summary>FG% from one zone; null with no attempts there.</summary>
+    public static double? ZonePercent(ShotZones zones, ShotZone zone)
+    {
+        ArgumentNullException.ThrowIfNull(zones);
+        return Percent(zones.Made(zone), zones.Attempts(zone));
+    }
+
+    /// <summary>
+    /// A shooter's FG% from a zone less the league's from the same zone, in percentage points; null
+    /// below <see cref="MinimumZoneAttempts"/> attempts, or when the league has none there.
+    /// </summary>
+    public static double? ZoneDifference(ShotZones player, ShotZones league, ShotZone zone)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(league);
+        return player.Attempts(zone) < MinimumZoneAttempts || ZonePercent(league, zone) is not { } leagueRate
+            ? null
+            : 100 * (ZonePercent(player, zone)!.Value - leagueRate);
+    }
+
     /// <summary>Possessions a side used, estimated from its box score: plays less offensive rebounds (FGA + 0.44 × FTA − OREB + TOV).</summary>
     public static double Possessions(CountingStats side) => Plays(side) - side.OffensiveRebounds;
 

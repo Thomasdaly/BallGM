@@ -466,6 +466,11 @@ public sealed class LeaguePackDataSourceTests : IDisposable
         Assert.True(detail.Team.Minutes >= 240 * detail.Totals.Games);
         Assert.True(detail.Totals.FieldGoalsAttempted >= detail.Totals.FieldGoalsMade);
 
+        // Shooting by zone adds up to the field goals, and the league's zones cover at least his.
+        Assert.Equal(detail.Totals.FieldGoalsAttempted, detail.Totals.Zones.TotalAttempts);
+        Assert.Equal(detail.Totals.ThreePointsAttempted, detail.Totals.Zones.ThreeAttempts);
+        Assert.True(session.PlayerProfile(star.PlayerId).Value.LeagueZones!.TotalAttempts > detail.Totals.Zones.TotalAttempts);
+
         // A season's average match rating, and every game in the log, newest first.
         Assert.InRange(detail.AverageRating!.Hundredths, 100, 1000);
         var profile = session.PlayerProfile(star.PlayerId).Value;
