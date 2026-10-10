@@ -1,3 +1,4 @@
+using BallGM.Application.Leagues;
 using BallGM.Domain.Cap;
 using BallGM.Domain.Common;
 using BallGM.Domain.Negotiations;
@@ -138,6 +139,41 @@ public sealed class LeagueRulesetSerializerTests
         var none = serializer.Deserialize(With("""{ "personalFoulLimit": 0 }"""));
         Assert.True(none.IsFailure);
         Assert.Equal("ruleset.invalid_personal_foul_limit", Assert.Single(none.Errors).Code);
+    }
+
+    [Fact]
+    public void StatLeadersSectionReadsRoundTripsAndDefaultsWhenAbsent()
+    {
+        var serializer = new LeagueRulesetSerializer();
+        var shipped = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "rulesets", "default-league.json"));
+        string With(string section) => shipped.TrimEnd().TrimEnd('}') + $$"""
+            ,
+            "statLeaders": {{section}}
+            }
+            """;
+
+        var absent = serializer.Deserialize(shipped);
+        Assert.True(absent.IsSuccess);
+        Assert.Equal(LeaderQualifiers.Default, absent.Value.LeaderQualifiers);
+
+        // The Application layer's stated default is the rules' default, figure for figure.
+        var rules = LeaderQualifiers.Default;
+        Assert.Equal(
+            LeaderQualifiersConfiguration.Default,
+            new LeaderQualifiersConfiguration(rules.MinimumGamesShareBasisPoints, rules.MinimumMinutesPerGame, rules.MinimumFieldGoalsMadePerTeamGame, rules.MinimumThreesMadePerTeamGame, rules.MinimumFreeThrowsMadePerTeamGame));
+
+        var half = serializer.Deserialize(With("""{ "minimumGamesShareBasisPoints": 5000, "minimumThreesMadePerTeamGame": 82 }"""));
+        Assert.True(half.IsSuccess, string.Join("; ", half.Errors.Select(error => error.Message)));
+        var again = serializer.Deserialize(serializer.Serialize(half.Value));
+        var qualifiers = again.Value.LeaderQualifiers;
+        Assert.Equal((5_000, 15, 366, 82, 152), (qualifiers.MinimumGamesShareBasisPoints, qualifiers.MinimumMinutesPerGame, qualifiers.MinimumFieldGoalsMadePerTeamGame, qualifiers.MinimumThreesMadePerTeamGame, qualifiers.MinimumFreeThrowsMadePerTeamGame));
+
+        var overShare = serializer.Deserialize(With("""{ "minimumGamesShareBasisPoints": 12000 }"""));
+        Assert.Equal("ruleset.invalid_leader_games_share", Assert.Single(overShare.Errors).Code);
+        var negativeMakes = serializer.Deserialize(With("""{ "minimumFreeThrowsMadePerTeamGame": -1 }"""));
+        Assert.Equal("ruleset.invalid_leader_makes", Assert.Single(negativeMakes.Errors).Code);
+        var overtime = serializer.Deserialize(With("""{ "minimumMinutesPerGame": 49 }"""));
+        Assert.Equal("ruleset.invalid_leader_minutes", Assert.Single(overtime.Errors).Code);
     }
 
     [Fact]

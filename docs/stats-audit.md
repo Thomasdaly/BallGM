@@ -453,7 +453,7 @@ Row 4-reb is restated as strict. Rows 13–22 are added:
 |---|---|
 | `SeasonEnvelope` | 3 → 4: the new fields, the team line, the zones and the OT count |
 | `SaveGameEnvelope` | 2 → 3: `CareerHistory` persisted, typed for the new counting stats (D6) |
-| Ruleset | 10 → 11: `personalFoulLimit` and `teamFoulBonusThreshold` (an optional `gameRules` section), and `statLeaders` qualifiers (`minimumGamesShareBasisPoints` 7,000, `minimumMinutesPerGame`, plus per-team-game make minimums for FG%/3P%/FT%: 3.66 / 1.00 / 1.52, stored as hundredths) |
+| Ruleset | 10 → 11 (S5): `personalFoulLimit` and the bonus thresholds (an optional `gameRules` section). 11 → 12 (S8): `statLeaders` qualifiers (`minimumGamesShareBasisPoints` 7,000, `minimumMinutesPerGame` 15 for the per-36 boards, plus make minimums per game of the season for FG%/3P%/FT%: 3.66 / 1.00 / 1.52, stored as hundredths). As built, the games are counted against the season's length so far, not the current team's, so a traded player is not penalised |
 
 All three follow the current policy: an older file is refused, not migrated.
 
@@ -564,7 +564,7 @@ are avoided wherever the sentence allows.
 |---|---|---|
 | Save schema | `SeasonEnvelope` 3 → 4 (and +1 per stat slice that adds fields: 4 → 8 across S1–S7) | older saves refused, not migrated (current policy) |
 | Save schema | `SaveGameEnvelope` 2 → 3 (career history) | older saves refused |
-| Ruleset schema | 10 → 11 (`gameRules`, `statLeaders`); both sections optional, with documented defaults | v10 files refused with the existing "bump the number" hint |
+| Ruleset schema | 10 → 11 (`gameRules`, S5), then 11 → 12 (`statLeaders`, S8); both sections optional, with documented defaults | older files refused with the existing "bump the number" hint — including the ruleset a save carries, so a save from before a bump does not load |
 | Application API | `ISeasonEngine.PlayerSeasonStats` returns the full split line; `BoxScoreLine`/`PlayerSeasonTotals`/`RecentGameLine` rebuilt on the shared `StatLine`; new `LeagueSession` queries (§9); `LeagueConfiguration` gains game rules and leader qualifiers; `StatFormulas` additions | consumed by the client and integration tests only |
 | Simulation contract | `MatchSetup` gains the foul limit and bonus threshold; `MatchModelBounds` gains the §8.2 terms | internal |
 | Packages | **none.** Property tests are hand-rolled seeded loops, as today; charts are hand-drawn. | — |

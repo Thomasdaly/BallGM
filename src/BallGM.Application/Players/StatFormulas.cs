@@ -119,6 +119,32 @@ public static class StatFormulas
         return stats.FieldGoalsAttempted + (FreeThrowTripWeight * stats.FreeThrowsAttempted) + stats.Turnovers;
     }
 
+    /// <summary>Whether a player has played the share of his team's games (in basis points) a leaderboard asks.</summary>
+    public static bool QualifiesOnGames(int games, int teamGames, int minimumShareBasisPoints) =>
+        teamGames > 0 && games * 10_000L >= (long)teamGames * minimumShareBasisPoints;
+
+    /// <summary>Whether a player has made enough (per team game, in hundredths) to rank on a shooting percentage.</summary>
+    public static bool QualifiesOnMakes(int made, int teamGames, int minimumPerTeamGameHundredths) =>
+        made * 100L >= (long)teamGames * minimumPerTeamGameHundredths;
+
+    /// <summary>
+    /// Where <paramref name="value"/> falls among <paramref name="population"/>, 0–100: the share below
+    /// it plus half the share level with it. With <paramref name="lowerIsBetter"/> (turnovers, fouls) the
+    /// scale is flipped, so a higher percentile always means better.
+    /// </summary>
+    public static int Percentile(double value, IReadOnlyCollection<double> population, bool lowerIsBetter = false)
+    {
+        ArgumentNullException.ThrowIfNull(population);
+        if (population.Count == 0)
+        {
+            return 50;
+        }
+
+        var below = population.Count(other => lowerIsBetter ? other > value : other < value);
+        var level = population.Count(other => other == value);
+        return (int)Math.Round(100.0 * (below + (level / 2.0)) / population.Count, MidpointRounding.AwayFromZero);
+    }
+
     /// <summary>The fewest attempts from a zone for its percentage to be shown: fewer is noise, not a shooter.</summary>
     public const int MinimumZoneAttempts = 5;
 

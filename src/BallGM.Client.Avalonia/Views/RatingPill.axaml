@@ -6,14 +6,25 @@
   x:DataType="vm:RatingView">
   <!--
     A match rating: the figure always printed, its band a background class (never the only signal).
-    A button, so it takes focus and opens its breakdown from the keyboard as well as the pointer.
+    A button where there is a breakdown, so it takes focus and opens it from the keyboard as well as
+    the pointer; a plain pill for an average, which has none — so a clickable row holding one does
+    not nest a second, empty control.
   -->
   <Panel>
   <TextBlock Text="—" Classes="faint small" HorizontalAlignment="Center" VerticalAlignment="Center"
              IsVisible="{Binding $parent[UserControl].DataContext, Converter={x:Static ObjectConverters.IsNull}}"
              ToolTip.Tip="No rating: did not play." />
+  <Border Classes="ratingpill"
+          IsVisible="{Binding !HasBreakdown, FallbackValue=False}"
+          Classes.outstanding="{Binding IsOutstanding}"
+          Classes.good="{Binding IsGood}"
+          Classes.poor="{Binding IsPoor}"
+          ToolTip.Tip="{Binding Tooltip}"
+          AutomationProperties.Name="{Binding Tooltip}">
+    <TextBlock Text="{Binding Text}" />
+  </Border>
   <Button Classes="ratingpill"
-          IsVisible="{Binding $parent[UserControl].DataContext, Converter={x:Static ObjectConverters.IsNotNull}}"
+          IsVisible="{Binding HasBreakdown, FallbackValue=False}"
           Classes.outstanding="{Binding IsOutstanding}"
           Classes.good="{Binding IsGood}"
           Classes.poor="{Binding IsPoor}"

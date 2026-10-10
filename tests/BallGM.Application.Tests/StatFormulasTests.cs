@@ -173,4 +173,29 @@ public sealed class StatFormulasTests
         Assert.Equal(new RatingAverage(expected, 1), StatFormulas.AverageRating([played, BallGM.Domain.Seasons.CountingStats.None]));
         Assert.Null(StatFormulas.AverageRating([]));
     }
+
+    [Fact]
+    public void Percentile_CountsHalfOfTiesAndFlipsWhenLowerIsBetter()
+    {
+        double[] league = [1, 2, 2, 3, 4];
+
+        Assert.Equal(90, StatFormulas.Percentile(4, league));
+        Assert.Equal(40, StatFormulas.Percentile(2, league));
+        Assert.Equal(10, StatFormulas.Percentile(1, league));
+        Assert.Equal(90, StatFormulas.Percentile(1, league, lowerIsBetter: true));
+        Assert.Equal(50, StatFormulas.Percentile(7, []));
+    }
+
+    [Fact]
+    public void Qualifiers_AreAShareOfTeamGamesAndMakesPerTeamGame()
+    {
+        // 70% of 50 team games is 35.
+        Assert.True(StatFormulas.QualifiesOnGames(35, 50, 7_000));
+        Assert.False(StatFormulas.QualifiesOnGames(34, 50, 7_000));
+        Assert.False(StatFormulas.QualifiesOnGames(0, 0, 7_000));
+
+        // 1.52 free throws made per team game over 50 games is 76.
+        Assert.True(StatFormulas.QualifiesOnMakes(76, 50, 152));
+        Assert.False(StatFormulas.QualifiesOnMakes(75, 50, 152));
+    }
 }

@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using BallGM.Application.AI;
 using BallGM.Application.Leagues;
+using BallGM.Domain.Seasons;
 
 namespace BallGM.Client.Avalonia.ViewModels;
 
@@ -198,8 +199,9 @@ public sealed class FrontOfficeViewModel : ViewModelBase
         PositionalNeeds = advisory.Needs.PositionalNeeds.Select(PositionalNeedRow.From).ToList();
         NeedsNotes = advisory.Needs.Notes.Select(AIFindingRow.From).ToList();
 
-        TradeTargets = advisory.TradeTargets.Select(target => TradeTargetRow.From(target, advisory.TeamId)).ToList();
-        FreeAgentTargets = advisory.FreeAgentTargets.Select(FreeAgentTargetRow.From).ToList();
+        var season = _session.PlayerSeasonTotals(SeasonPhase.RegularSeason);
+        TradeTargets = advisory.TradeTargets.Select(target => TradeTargetRow.From(target, advisory.TeamId, season)).ToList();
+        FreeAgentTargets = advisory.FreeAgentTargets.Select(target => FreeAgentTargetRow.From(target, season)).ToList();
 
         DraftPreview = advisory.DraftPreview is { } preview ? DraftPreviewRow.From(preview) : null;
         DraftPreviewNote = advisory.DraftPreviewNote;

@@ -1,3 +1,4 @@
+using BallGM.Application.Leagues;
 using BallGM.Domain.Seasons;
 
 namespace BallGM.Application.Players;
@@ -30,7 +31,9 @@ public sealed record PlayerProfileSummary(
     SeasonDetailLine? SeasonDetail = null,
     ContractDetailLine? ContractDetail = null,
     IReadOnlyList<RecentGameLine>? GameLog = null,
-    ShotZones? LeagueZones = null);
+    ShotZones? LeagueZones = null,
+    IReadOnlyList<Seasons.StatPercentile>? Percentiles = null,
+    LeaderQualifiersConfiguration? LeaderQualifiers = null);
 
 /// <summary>
 /// Everything counted for a player this season, plus the team and opponent totals from the same

@@ -78,7 +78,8 @@ public sealed record LeagueRulesetEnvelope
         IReadOnlyList<AgeCurveBandEnvelope>? retirementVoluntaryOddsByAge = null,
         IReadOnlyList<AwardEnvelope>? awards = null,
         CapMechanicsEnvelope? capMechanics = null,
-        GameRulesEnvelope? gameRules = null)
+        GameRulesEnvelope? gameRules = null,
+        StatLeadersEnvelope? statLeaders = null)
     {
         SchemaVersion = schemaVersion;
         Name = name;
@@ -145,6 +146,7 @@ public sealed record LeagueRulesetEnvelope
         Awards = awards;
         CapMechanics = capMechanics;
         GameRules = gameRules;
+        StatLeaders = statLeaders;
     }
 
     public int SchemaVersion { get; }
@@ -344,7 +346,18 @@ public sealed record LeagueRulesetEnvelope
 
     /// <summary>The personal foul limit and the bonus (schema v11). Absent means the sport's usual six and four.</summary>
     public GameRulesEnvelope? GameRules { get; }
+
+    /// <summary>Who qualifies for the leaderboards (schema v12). Absent means 70% of games and the usual makes.</summary>
+    public StatLeadersEnvelope? StatLeaders { get; }
 }
+
+/// <summary>The on-disk shape of <c>LeaderQualifiers</c>: a basis-point games share and makes per team game in hundredths.</summary>
+public sealed record StatLeadersEnvelope(
+    int? MinimumGamesShareBasisPoints = null,
+    int? MinimumMinutesPerGame = null,
+    int? MinimumFieldGoalsMadePerTeamGame = null,
+    int? MinimumThreesMadePerTeamGame = null,
+    int? MinimumFreeThrowsMadePerTeamGame = null);
 
 /// <summary>The on-disk shape of <c>GameRules</c>; either figure may be left out for its default.</summary>
 public sealed record GameRulesEnvelope(int? PersonalFoulLimit = null, int? BonusTeamFoulsPerPeriod = null, int? BonusTeamFoulsPerOvertime = null);

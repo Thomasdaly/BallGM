@@ -58,7 +58,7 @@
   </UserControl.Resources>
   <ScrollViewer>
     <StackPanel Spacing="18">
-      <Button Content="‹ Back to roster" Command="{Binding BackCommand}" HorizontalAlignment="Left" />
+      <Button Content="{Binding BackLabel}" Command="{Binding BackCommand}" HorizontalAlignment="Left" />
 
       <!-- Identity: portrait, name, rating, bio. -->
       <Border Classes="panel">
@@ -177,6 +177,34 @@
               <TextBlock Text="{Binding SimulatedSample}" Classes="faint small" VerticalAlignment="Center" />
             </StackPanel>
             <ItemsControl ItemsSource="{Binding SimulatedGroups}" ItemTemplate="{StaticResource StatGroupTemplate}" />
+            <!-- Against the league: a percentile per stat, the figure printed beside every bar. -->
+            <Border Classes="panel" Margin="0,0,0,14" IsVisible="{Binding HasSimulatedStats}">
+              <StackPanel Spacing="{StaticResource Space3}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <TextBlock Text="Against the league" Classes="section" VerticalAlignment="Center" />
+                  <TextBlock Text="Percentile among qualified players this regular season, per game. Higher is better on every row." Classes="faint tiny" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="{Binding NotRankedNote}" Classes="faint small" IsVisible="{Binding !HasPercentiles}" />
+                <ItemsControl ItemsSource="{Binding Percentiles}" IsVisible="{Binding HasPercentiles}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel Orientation="Horizontal" ItemSpacing="{StaticResource Space5}" LineSpacing="{StaticResource Space2}" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PercentileRow">
+                      <Grid ColumnDefinitions="44,140,44" ColumnSpacing="{StaticResource Space2}" ToolTip.Tip="{Binding Tooltip}"
+                            AutomationProperties.Name="{Binding AccessibleName}">
+                        <TextBlock Text="{Binding Stat}" Classes="small strong" VerticalAlignment="Center" />
+                        <ProgressBar Grid.Column="1" Classes="percentile" Minimum="0" Maximum="100" Value="{Binding Percentile}"
+                                     AutomationProperties.Name="{Binding AccessibleName}" />
+                        <TextBlock Grid.Column="2" Text="{Binding Text}" Classes="num small" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Border>
             <!-- Shooting by zone: the chart, its legend in words, and the same figures as a table. -->
             <Border Classes="panel" Margin="0,0,0,14" IsVisible="{Binding HasShotChart}">
               <StackPanel Spacing="{StaticResource Space3}">

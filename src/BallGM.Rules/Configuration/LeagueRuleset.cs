@@ -78,7 +78,7 @@ public sealed record LeagueRuleset
     /// a version 8 reader handed a version 9 file would ignore a stated award list and run a league
     /// with none, in a league that had described one.
     /// </remarks>
-    public const int CurrentSchemaVersion = 11;
+    public const int CurrentSchemaVersion = 12;
 
     public LeagueRuleset(
         int schemaVersion,
@@ -99,7 +99,8 @@ public sealed record LeagueRuleset
         RetirementRules? retirementRules = null,
         AwardRules? awardRules = null,
         CapMechanics? capMechanics = null,
-        GameRules? gameRules = null)
+        GameRules? gameRules = null,
+        LeaderQualifiers? leaderQualifiers = null)
     {
         if (schemaVersion <= 0)
         {
@@ -141,6 +142,7 @@ public sealed record LeagueRuleset
         AwardRules = awardRules ?? AwardRules.None;
         CapMechanics = capMechanics ?? CapMechanics.None;
         GameRules = gameRules ?? GameRules.Default;
+        LeaderQualifiers = leaderQualifiers ?? LeaderQualifiers.Default;
     }
 
     public int SchemaVersion { get; }
@@ -203,4 +205,7 @@ public sealed record LeagueRuleset
 
     /// <summary>The foul limit and bonus a game is played under (schema v11), or <see cref="Configuration.GameRules.Default"/>.</summary>
     public GameRules GameRules { get; }
+
+    /// <summary>Who qualifies for the statistical leaderboards (schema v12), or <see cref="Configuration.LeaderQualifiers.Default"/>.</summary>
+    public LeaderQualifiers LeaderQualifiers { get; }
 }

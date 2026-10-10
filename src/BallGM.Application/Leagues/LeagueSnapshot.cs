@@ -135,7 +135,8 @@ public sealed record LeagueConfiguration(
     RetirementConfiguration? Retirement = null,
     IReadOnlyList<AwardDefinition>? Awards = null,
     CapMechanicsConfiguration? CapMechanics = null,
-    GameRulesConfiguration? GameRules = null)
+    GameRulesConfiguration? GameRules = null,
+    LeaderQualifiersConfiguration? LeaderQualifiers = null)
 {
     /// <summary>Whether this league configures any threshold at all.</summary>
     public bool IsUncapped =>
@@ -331,6 +332,22 @@ public sealed record NegotiationConfiguration(
 /// fourth of an overtime).
 /// </summary>
 public sealed record GameRulesConfiguration(int PersonalFoulLimit, int BonusTeamFoulsPerPeriod, int BonusTeamFoulsPerOvertime);
+
+/// <summary>
+/// Who qualifies for the statistical leaderboards (see <c>BallGM.Rules.Configuration.LeaderQualifiers</c>):
+/// a games share in basis points, minutes a game for per-36 boards, and makes per team game in
+/// hundredths. Absent means the default.
+/// </summary>
+public sealed record LeaderQualifiersConfiguration(
+    int MinimumGamesShareBasisPoints,
+    int MinimumMinutesPerGame,
+    int MinimumFieldGoalsMadePerTeamGame,
+    int MinimumThreesMadePerTeamGame,
+    int MinimumFreeThrowsMadePerTeamGame)
+{
+    /// <summary>The rules' default, for a configuration that states none (kept equal to it by a test).</summary>
+    public static LeaderQualifiersConfiguration Default { get; } = new(7_000, 15, 366, 100, 152);
+}
 
 /// <summary>
 /// The cap mechanics a ruleset states (see <c>BallGM.Rules.Configuration.CapMechanics</c>), in the

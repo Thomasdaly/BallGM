@@ -1,0 +1,130 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.LeadersView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  xmlns:views="clr-namespace:BallGM.Client.Avalonia.Views"
+  x:DataType="vm:LeadersViewModel">
+  <Panel>
+    <ContentControl Content="{Binding Profile}" IsVisible="{Binding !IsShowingList}">
+      <ContentControl.DataTemplates>
+        <DataTemplate DataType="vm:PlayerProfileViewModel">
+          <views:PlayerProfileView />
+        </DataTemplate>
+      </ContentControl.DataTemplates>
+    </ContentControl>
+
+    <DockPanel IsVisible="{Binding IsShowingList}">
+      <StackPanel DockPanel.Dock="Top" Spacing="{StaticResource Space2}" Margin="0,0,0,8">
+        <TextBlock Text="Regular season" Classes="section" />
+        <TextBlock Text="No games played yet. Leaders appear once the season is under way: start or advance it on the Calendar."
+                   Classes="faint small" TextWrapping="Wrap" IsVisible="{Binding !HasStats}" />
+        <views:BasisToggle DataContext="{Binding Basis}" IsVisible="{Binding $parent[UserControl].((vm:LeadersViewModel)DataContext).HasStats}" />
+        <TextBlock Text="{Binding QualifierNote}" Classes="faint tiny" TextWrapping="Wrap" IsVisible="{Binding HasStats}" />
+      </StackPanel>
+
+      <TabControl Classes="profile" IsVisible="{Binding HasStats}">
+        <TabItem Header="Leaderboards">
+          <ScrollViewer Margin="0,14,0,0">
+            <ItemsControl ItemsSource="{Binding Boards}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel Orientation="Horizontal" ItemSpacing="{StaticResource Space4}" LineSpacing="{StaticResource Space4}" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:LeaderBoard">
+                  <Border Classes="panel" Width="300">
+                    <StackPanel Spacing="{StaticResource Space1}">
+                      <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+                        <TextBlock Text="{Binding Title}" Classes="strong" />
+                        <TextBlock Grid.Column="1" Text="{Binding Header}" Classes="faint small" ToolTip.Tip="{Binding Tooltip}" />
+                      </Grid>
+                      <TextBlock Text="No qualified players yet." Classes="faint small" IsVisible="{Binding IsEmpty}" />
+                      <ItemsControl ItemsSource="{Binding Leaders}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:LeaderRow">
+                            <Button Classes="rowbtn"
+                                    Command="{Binding $parent[UserControl].((vm:LeadersViewModel)DataContext).OpenProfileCommand}"
+                                    CommandParameter="{Binding PlayerId}"
+                                    AutomationProperties.Name="{Binding AccessibleName}"
+                                    ToolTip.Tip="Open player profile">
+                              <Grid ColumnDefinitions="22,*,Auto" ColumnSpacing="{StaticResource Space2}" Height="34">
+                                <TextBlock Text="{Binding Rank}" Classes="num faint small" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                  <TextBlock Text="{Binding Name}" Classes="small strong" TextTrimming="CharacterEllipsis" />
+                                  <TextBlock Text="{Binding Team}" Classes="faint tiny" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="2" Text="{Binding Value}" Classes="num" VerticalAlignment="Center" />
+                              </Grid>
+                            </Button>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Player stats">
+          <DockPanel Margin="0,14,0,0">
+            <CheckBox DockPanel.Dock="Top" Content="Qualified players only" IsChecked="{Binding QualifiedOnly}" Margin="10,0,0,8"
+                      ToolTip.Tip="Only players who have played the leaderboard share of their team's games." />
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="{StaticResource Space3}" Margin="10,8,0,0">
+              <TextBlock Text="{Binding TableCaption}" Classes="faint tiny" VerticalAlignment="Center" />
+              <Button Content="{Binding ShowMoreLabel}" Command="{Binding ShowMoreCommand}" IsVisible="{Binding CanShowMore}" />
+            </StackPanel>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto">
+              <DockPanel>
+                <Grid DockPanel.Dock="Top" Classes="thead" ColumnDefinitions="*,140,56,50,Auto">
+                  <TextBlock Text="Player" MinWidth="{StaticResource TableNameMinWidth}" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="1" Text="Team" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Text="POS" VerticalAlignment="Center" />
+                  <Button Grid.Column="3" Classes="th" Content="{Binding RatingHeader}" Command="{Binding SortByRatingCommand}" HorizontalAlignment="Center"
+                          ToolTip.Tip="{x:Static vm:StatColumns.RatingTooltip}" />
+                  <ItemsControl Grid.Column="4" ItemsSource="{Binding StatHeaders}" Margin="{StaticResource StatBlockGutter}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:RosterStatHeader">
+                        <Button Classes="th statsort" Width="{Binding Header.Width}" Content="{Binding Label}" ToolTip.Tip="{Binding Header.Tooltip}"
+                                Command="{Binding $parent[UserControl].((vm:LeadersViewModel)DataContext).SortByStatCommand}"
+                                CommandParameter="{Binding Index}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Grid>
+                <ItemsControl Classes="table" ItemsSource="{Binding Rows}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LeagueTableRow">
+                      <Button Classes="rowbtn"
+                              Command="{Binding $parent[UserControl].((vm:LeadersViewModel)DataContext).OpenProfileCommand}"
+                              CommandParameter="{Binding PlayerId}"
+                              ToolTip.Tip="Open player profile">
+                        <Grid ColumnDefinitions="*,140,56,50,Auto" Height="{StaticResource RowHeight}">
+                          <TextBlock Text="{Binding Name}" Classes="strong" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Grid.Column="1" Text="{Binding Team}" Classes="dim small" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                          <Border Grid.Column="2" Classes="pill">
+                            <TextBlock Text="{Binding Position}" />
+                          </Border>
+                          <views:RatingPill Grid.Column="3" DataContext="{Binding Rating}" />
+                          <ItemsControl Grid.Column="4" Classes="statrow" ItemsSource="{Binding Cells}" Margin="{StaticResource StatBlockGutter}" />
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </DockPanel>
+            </ScrollViewer>
+          </DockPanel>
+        </TabItem>
+      </TabControl>
+    </DockPanel>
+  </Panel>
+</UserControl>

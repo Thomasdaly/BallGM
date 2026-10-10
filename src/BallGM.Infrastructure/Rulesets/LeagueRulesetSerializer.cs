@@ -109,7 +109,8 @@ public sealed class LeagueRulesetSerializer
                 ? ruleset.AwardRules.Awards.Select(award => new AwardEnvelope(award.Code, award.Name, award.StatBasis.ToString())).ToList()
                 : null,
             ToEnvelope(ruleset.CapMechanics),
-            ToEnvelope(ruleset.GameRules));
+            ToEnvelope(ruleset.GameRules),
+            ToEnvelope(ruleset.LeaderQualifiers));
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -300,6 +301,12 @@ public sealed class LeagueRulesetSerializer
                 return DomainOperationResult<LeagueRuleset>.Failure(gameRulesResult.Errors.ToArray());
             }
 
+            var leadersResult = BuildLeaderQualifiers(envelope.StatLeaders);
+            if (leadersResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(leadersResult.Errors.ToArray());
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
@@ -319,7 +326,8 @@ public sealed class LeagueRulesetSerializer
                 retirementRulesResult.Value,
                 awardRulesResult.Value,
                 capMechanicsResult.Value,
-                gameRulesResult.Value);
+                gameRulesResult.Value,
+                leadersResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
@@ -536,6 +544,16 @@ public sealed class LeagueRulesetSerializer
     /// <summary>The section to write: none when the league plays the sport's default.</summary>
     internal static GameRulesEnvelope? ToEnvelope(GameRules rules) =>
         rules == GameRules.Default ? null : new GameRulesEnvelope(rules.PersonalFoulLimit, rules.BonusTeamFoulsPerPeriod, rules.BonusTeamFoulsPerOvertime);
+
+    /// <summary>The leaderboard qualifiers a file states; an absent section, or an absent figure, is the default.</summary>
+    internal static DomainOperationResult<LeaderQualifiers> BuildLeaderQualifiers(StatLeadersEnvelope? envelope) =>
+        LeaderQualifiers.Create(envelope?.MinimumGamesShareBasisPoints, envelope?.MinimumMinutesPerGame, envelope?.MinimumFieldGoalsMadePerTeamGame, envelope?.MinimumThreesMadePerTeamGame, envelope?.MinimumFreeThrowsMadePerTeamGame);
+
+    /// <summary>The section to write: none when the league uses the default qualifiers.</summary>
+    internal static StatLeadersEnvelope? ToEnvelope(LeaderQualifiers qualifiers) =>
+        qualifiers == LeaderQualifiers.Default
+            ? null
+            : new StatLeadersEnvelope(qualifiers.MinimumGamesShareBasisPoints, qualifiers.MinimumMinutesPerGame, qualifiers.MinimumFieldGoalsMadePerTeamGame, qualifiers.MinimumThreesMadePerTeamGame, qualifiers.MinimumFreeThrowsMadePerTeamGame);
 
     internal static CapMechanicsEnvelope? ToEnvelope(CapMechanics mechanics) =>
         !mechanics.IsConfigured

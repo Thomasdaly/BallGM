@@ -100,7 +100,9 @@ public sealed partial class LeagueSession
             seasonDetail,
             ContractDetail(liveContracts, player.SeasonsOfService),
             gameLog,
-            seasonDetail is null ? null : LeagueZones()));
+            seasonDetail is null ? null : LeagueZones(),
+            seasonDetail is null ? null : Percentiles(player.Id.Value),
+            _snapshot.Configuration.LeaderQualifiers ?? LeaderQualifiersConfiguration.Default));
     }
 
     /// <summary>
@@ -218,11 +220,14 @@ public sealed partial class LeagueSession
     /// it after the season run itself is cleared: one regular-season row for everyone who played, and
     /// a separate playoff row for everyone who reached the postseason. Called by <see cref="ConcludeSeason"/>.
     /// </summary>
+    /// <summary>Each rostered player's team name, by player identifier.</summary>
+    private static Dictionary<string, string> TeamNameByPlayer(LeagueSnapshot snapshot) => snapshot.Teams
+        .SelectMany(team => team.PlayerIds.Select(id => (id.Value, team.Name)))
+        .ToDictionary(entry => entry.Value, entry => entry.Name, StringComparer.Ordinal);
+
     private static LeagueSnapshot WithConcludedSeason(LeagueSnapshot snapshot, SeasonRun run)
     {
-        var teamOf = snapshot.Teams
-            .SelectMany(team => team.PlayerIds.Select(id => (id.Value, team.Name)))
-            .ToDictionary(entry => entry.Value, entry => entry.Name, StringComparer.Ordinal);
+        var teamOf = TeamNameByPlayer(snapshot);
 
         var history = snapshot.CareerHistory.ToDictionary(entry => entry.Key, entry => entry.Value.ToList(), StringComparer.Ordinal);
 

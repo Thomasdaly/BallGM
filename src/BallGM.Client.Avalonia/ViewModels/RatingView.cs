@@ -13,7 +13,10 @@ public sealed record RatingTermRow(string Family, string Value);
 /// </summary>
 public sealed record RatingView(int Tenths, RatingBand Band, string Tooltip, IReadOnlyList<RatingTermRow> Breakdown)
 {
-    public string Text => StatColumns.Fixed(Tenths / 10.0);
+    public string Text => TextOf(Tenths);
+
+    /// <summary>The one way a rating is printed: one decimal out of ten.</summary>
+    public static string TextOf(int tenths) => StatColumns.Fixed(tenths / 10.0);
 
     public double Value => Tenths / 10.0;
 

@@ -41,6 +41,7 @@ public sealed class RosterViewModel : ViewModelBase
         SortByPositionCommand = SortCommand(RosterSortColumn.Position);
         SortBySalaryCommand = SortCommand(RosterSortColumn.Salary);
         SortByYearsCommand = SortCommand(RosterSortColumn.Years);
+        SortByRatingCommand = SortCommand(RosterSortColumn.Rating);
         SortByStatCommand = new ParameterCommand<int>(index => SortBy(RosterSortColumn.Stat, index));
         Basis.Changed += () =>
         {
@@ -122,7 +123,7 @@ public sealed class RosterViewModel : ViewModelBase
     private IReadOnlyDictionary<string, PlayerSeasonTotals> SeasonTotals => _cachedTotals ??= _seasonTotals();
 
     public string SortLabel =>
-        $"Sorted by {(_sortColumn == RosterSortColumn.Stat ? StatColumns.Season[_sortStat].Header : _sortColumn.ToString().ToLowerInvariant())}, {(_sortDescending ? "highest" : "lowest")} first · click a column to sort";
+        $"Sorted by {_sortColumn switch { RosterSortColumn.Stat => StatColumns.Season[_sortStat].Header, RosterSortColumn.Rating => "match rating", _ => _sortColumn.ToString().ToLowerInvariant() }}, {(_sortDescending ? "highest" : "lowest")} first · click a column to sort";
 
     /// <summary>The season stat columns, one header per column, labelled for the chosen basis.</summary>
     public IReadOnlyList<RosterStatHeader> StatHeaders =>
@@ -130,7 +131,7 @@ public sealed class RosterViewModel : ViewModelBase
             .Select((header, index) => new RosterStatHeader(
                 header,
                 index,
-                _sortColumn == RosterSortColumn.Stat && _sortStat == index ? (_sortDescending ? " ▾" : " ▴") : string.Empty))
+                _sortColumn == RosterSortColumn.Stat && _sortStat == index ? TableOrder.Glyph(_sortDescending) : string.Empty))
             .ToList();
 
     /// <summary>Per game, per 36 minutes, or totals — the shared choice every stat table offers.</summary>
@@ -142,7 +143,10 @@ public sealed class RosterViewModel : ViewModelBase
         get
         {
             var totals = SeasonTotals;
-            var rows = Roster.Select(spot => RosterRow.From(spot, totals.GetValueOrDefault(spot.PlayerId)?.Stats, Basis.Basis)).ToList();
+            var rows = Roster.Select(spot => totals.GetValueOrDefault(spot.PlayerId) is { } season
+                    ? RosterRow.From(spot, season.Stats, Basis.Basis, season.AverageRating)
+                    : RosterRow.From(spot, basis: Basis.Basis))
+                .ToList();
             IOrderedEnumerable<RosterRow> ordered = _sortColumn switch
             {
                 RosterSortColumn.Name => Order(rows, row => row.FullName),
@@ -150,6 +154,7 @@ public sealed class RosterViewModel : ViewModelBase
                 RosterSortColumn.Salary => Order(rows, row => row.SalarySortKey),
                 RosterSortColumn.Years => Order(rows, row => row.YearsSortKey),
                 RosterSortColumn.Stat => RosterRow.OrderByStat(rows, _sortStat, _sortDescending),
+                RosterSortColumn.Rating => TableOrder.NullsLast(rows, row => row.RatingSortKey, _sortDescending),
                 _ => Order(rows, row => row.Overall),
             };
             return ordered.ThenBy(row => row.FullName, StringComparer.Ordinal).ToList();
@@ -165,6 +170,9 @@ public sealed class RosterViewModel : ViewModelBase
     public RelayCommand SortBySalaryCommand { get; }
 
     public RelayCommand SortByYearsCommand { get; }
+
+    /// <summary>Sorts by average match rating; players with no games come last either way.</summary>
+    public RelayCommand SortByRatingCommand { get; }
 
     /// <summary>Sorts by the season stat column at the index passed as the command parameter.</summary>
     public ParameterCommand<int> SortByStatCommand { get; }
@@ -221,6 +229,9 @@ public enum RosterSortColumn
     Salary,
     Years,
 
+    /// <summary>Average match rating this season.</summary>
+    Rating,
+
     /// <summary>One of <see cref="StatColumns.Season"/>, by index.</summary>
     Stat,
 }
@@ -251,19 +262,20 @@ public sealed record RosterRow(
 
     public int YearsSortKey { get; init; }
 
+    /// <summary>His average match rating this season, or null before he has played.</summary>
+    public RatingView? Rating { get; init; }
+
+    /// <summary>The unrounded average, in hundredths: 7.04 ranks above 6.96 though both print 7.0.</summary>
+    public int? RatingSortKey { get; init; }
+
     /// <summary>
     /// Rows ordered by one stat column. A player with nothing to rank (no games, no attempts) comes
     /// after every real figure whichever way the column runs — "no figure" is neither high nor low.
     /// </summary>
-    public static IOrderedEnumerable<RosterRow> OrderByStat(IEnumerable<RosterRow> rows, int column, bool descending)
-    {
-        var ranked = rows.OrderBy(row => row.StatSortKeys[column] is null);
-        return descending
-            ? ranked.ThenByDescending(row => row.StatSortKeys[column])
-            : ranked.ThenBy(row => row.StatSortKeys[column]);
-    }
+    public static IOrderedEnumerable<RosterRow> OrderByStat(IEnumerable<RosterRow> rows, int column, bool descending) =>
+        TableOrder.NullsLast(rows, row => row.StatSortKeys[column], descending);
 
-    public static RosterRow From(RosterSpot spot, CountingStats? season = null, StatBasis basis = StatBasis.PerGame)
+    public static RosterRow From(RosterSpot spot, CountingStats? season = null, StatBasis basis = StatBasis.PerGame, RatingAverage? rating = null)
     {
         var played = season is { Games: > 0 } ? season : null;
 
@@ -287,6 +299,8 @@ public sealed record RosterRow(
         {
             SalarySortKey = spot.CapCharge,
             YearsSortKey = spot.ContractSeasonsRemaining,
+            Rating = RatingView.ForAverage(rating),
+            RatingSortKey = rating?.Hundredths,
         };
     }
 }

@@ -35,4 +35,11 @@ internal static class DisplayText
     /// <summary>"1 day", "3 days".</summary>
     public static string Count(int count, string singular, string? plural = null) =>
         string.Create(CultureInfo.InvariantCulture, $"{count} {(count == 1 ? singular : plural ?? singular + "s")}");
+
+    /// <summary>A share stated in basis points, as an exact percentage: 7,000 → "70", 6,667 → "66.67".</summary>
+    public static string Share(int basisPoints) => (basisPoints / 100m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>A count stated in hundredths, printed exactly with its noun: "3.66 made field goals", "1 made three".</summary>
+    public static string Made(int hundredths, string noun) =>
+        $"{(hundredths / 100m).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} made {noun}{(hundredths == 100 ? string.Empty : "s")}";
 }

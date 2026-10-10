@@ -495,6 +495,53 @@ public sealed class LeaguePackDataSourceTests : IDisposable
     }
 
     [Fact]
+    public void LeagueStats_QualifyByThePacksRulesAndRankPercentilesAmongTheQualified()
+    {
+        var ruleset = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "rulesets", "default-league.json")))!.AsObject();
+        ruleset["statLeaders"] = System.Text.Json.Nodes.JsonNode.Parse("""{ "minimumGamesShareBasisPoints": 9000 }""");
+        File.WriteAllText(Path.Combine(_directory, "ruleset.json"), ruleset.ToJsonString());
+        var pack = SamplePack();
+        pack["rulesetFile"] = "ruleset.json";
+        var session = Session(Write(pack));
+        Assert.True(session.Load().IsSuccess);
+        Assert.Empty(session.LeagueStats(BallGM.Domain.Seasons.SeasonPhase.RegularSeason).Players);
+
+        Assert.True(session.StartSeason(seed: 5).IsSuccess);
+        Assert.True(session.AdvanceToEndOfSeason().IsSuccess);
+        var league = session.LeagueStats(BallGM.Domain.Seasons.SeasonPhase.RegularSeason);
+
+        // The pack's share reaches the session; everyone listed played, measured against the season's
+        // length so far (the most games any team has played), the same figure for every player.
+        Assert.Equal(9_000, league.Qualifiers.MinimumGamesShareBasisPoints);
+        Assert.Equal(366, league.Qualifiers.MinimumFieldGoalsMadePerTeamGame);
+        Assert.Equal(session.Season().Value.Standings.Rows.Max(row => row.GamesPlayed), league.SeasonGames);
+        Assert.All(league.Players, line => Assert.InRange(line.Stats.Games, 1, league.SeasonGames));
+        var qualified = league.Players.Where(league.QualifiesOnGames).ToList();
+        Assert.NotEmpty(qualified);
+        Assert.All(qualified, line => Assert.True(line.Stats.Games * 10 >= league.SeasonGames * 9));
+        Assert.All(league.Players.Where(line => league.Qualifies("PTS", line, BallGM.Application.Players.StatBasis.Per36)), line => Assert.True(line.Stats.Minutes >= line.Stats.Games * 15));
+
+        // Read twice without a game in between, it is the same summary: a profile does not rescan the season.
+        Assert.Same(league, session.LeagueStats(BallGM.Domain.Seasons.SeasonPhase.RegularSeason));
+        Assert.All(league.Players.Where(line => league.Qualifies("3P%", line, BallGM.Application.Players.StatBasis.PerGame)), line => Assert.Contains(line, qualified));
+
+        // The top scorer per game among the qualified sits at the top of the scoring percentiles,
+        // and a qualified player's percentiles are all on the 0-100 scale.
+        var top = qualified.MaxBy(line => (double)line.Stats.Points / line.Stats.Games)!;
+        var percentiles = session.PlayerProfile(top.PlayerId).Value.Percentiles!;
+        Assert.Equal("PTS", percentiles[0].Stat);
+        Assert.InRange(percentiles[0].Percentile, 95, 100);
+        Assert.All(percentiles, line => Assert.InRange(line.Percentile, 0, 100));
+        Assert.True(percentiles.Single(line => line.Stat == "TOV").LowerIsBetter);
+
+        // An unqualified player is not ranked at all.
+        if (league.Players.FirstOrDefault(line => !league.QualifiesOnGames(line)) is { } bench)
+        {
+            Assert.Empty(session.PlayerProfile(bench.PlayerId).Value.Percentiles!);
+        }
+    }
+
+    [Fact]
     public void Pack_WithCapMechanics_BillsARepeaterAndListsItsRestrictions()
     {
         var ruleset = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "rulesets", "default-league.json")))!.AsObject();

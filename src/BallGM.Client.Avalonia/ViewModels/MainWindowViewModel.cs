@@ -47,14 +47,15 @@ public sealed class MainWindowViewModel : ViewModelBase
         FreeAgencyBoard = new FreeAgencyBoardViewModel(overview, session, ApplyLeagueChange);
         Season = new SeasonViewModel(session, ApplyLeagueChange);
         FrontOffice = new FrontOfficeViewModel(session, ApplyLeagueChange);
+        Leaders = new LeadersViewModel(() => session.LeagueStats(SeasonPhase.RegularSeason), session.PlayerProfile);
         Contracts = new ContractsViewModel(session, () => ApplyLeagueChange(session.Overview() is { IsSuccess: true } refreshed ? refreshed.Value : overview));
 
-        Sections = [_roster.Title, _capSheet.Title, Contracts.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, Season.Title, FrontOffice.Title];
+        Sections = [_roster.Title, _capSheet.Title, Contracts.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, Season.Title, Leaders.Title, FrontOffice.Title];
         NavGroups =
         [
             new NavGroup("Squad", [_roster.Title, _capSheet.Title, Contracts.Title], () => SelectedSection, section => SelectedSection = section),
             new NavGroup("Market", [Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, _pickBoard.Title], () => SelectedSection, section => SelectedSection = section),
-            new NavGroup("League", [Season.Title, FrontOffice.Title], () => SelectedSection, section => SelectedSection = section),
+            new NavGroup("League", [Season.Title, Leaders.Title, FrontOffice.Title], () => SelectedSection, section => SelectedSection = section),
         ];
         Season.PropertyChanged += (_, args) =>
         {
@@ -147,6 +148,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     /// "run AI turn" button can now change the league.
     /// </summary>
     public FrontOfficeViewModel? FrontOffice { get; }
+
+    /// <summary>The league's leaderboards and player table. Re-read whenever it is opened.</summary>
+    public LeadersViewModel? Leaders { get; }
 
     /// <summary>Payroll outlook, upcoming free agents, and re-signing. Held for the run: refusals are session state.</summary>
     public ContractsViewModel? Contracts { get; }
@@ -259,6 +263,7 @@ public sealed class MainWindowViewModel : ViewModelBase
                 _ when FreeAgencyBoard is not null && value == FreeAgencyBoard.Title => FreeAgencyBoard,
                 _ when Season is not null && value == Season.Title => Season,
                 _ when FrontOffice is not null && value == FrontOffice.Title => FrontOffice,
+                _ when Leaders is not null && value == Leaders.Title => Leaders,
                 _ when Contracts is not null && value == Contracts.Title => Contracts,
                 _ => _roster,
             };
@@ -277,6 +282,11 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (CurrentScreen is ContractsViewModel contracts)
             {
                 contracts.Refresh();
+            }
+
+            if (CurrentScreen is LeadersViewModel leaders)
+            {
+                leaders.Refresh();
             }
 
             RaisePropertyChanged(nameof(AlertLine));

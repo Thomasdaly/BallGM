@@ -98,6 +98,10 @@
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="FontFeatures" Value="+tnum" />
   </Style>
+  <!-- Figures inside a sentence (a production line): tabular, at the sentence's own size and weight. -->
+  <Style Selector="TextBlock.figures">
+    <Setter Property="FontFeatures" Value="+tnum" />
+  </Style>
   <Style Selector="TextBlock.accent">
     <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
   </Style>
@@ -209,12 +213,59 @@
     <Setter Property="Background" Value="{StaticResource BadPillBrush}" />
     <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
   </Style>
+  <!-- The same pill, not interactive: an average, which has no breakdown to open. -->
+  <Style Selector="Border.ratingpill">
+    <Setter Property="Background" Value="{StaticResource Bg3Brush}" />
+    <Setter Property="MinWidth" Value="38" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.ratingpill > TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Border.ratingpill.outstanding">
+    <Setter Property="Background" Value="{StaticResource GoodBrush}" />
+  </Style>
+  <Style Selector="Border.ratingpill.outstanding > TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource Bg0Brush}" />
+  </Style>
+  <Style Selector="Border.ratingpill.good">
+    <Setter Property="Background" Value="{StaticResource GoodPillBrush}" />
+  </Style>
+  <Style Selector="Border.ratingpill.good > TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
+  </Style>
+  <Style Selector="Border.ratingpill.poor">
+    <Setter Property="Background" Value="{StaticResource BadPillBrush}" />
+  </Style>
+  <Style Selector="Border.ratingpill.poor > TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
+  </Style>
   <!-- The rating breakdown's flyout: a panel surface, so text tokens keep their contrast. -->
   <Style Selector="FlyoutPresenter.ratingbreakdown">
     <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
     <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
     <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
   </Style>
+  <!-- Percentile bar: one sequential data hue on a raised track; the figure is printed beside it. -->
+  <Style Selector="ProgressBar.percentile">
+    <Setter Property="Height" Value="8" />
+    <Setter Property="MinHeight" Value="8" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{StaticResource ChartSequentialBrush}" />
+    <Setter Property="Background" Value="{StaticResource Bg4Brush}" />
+  </Style>
+
   <!-- Sparkline: one sequential data hue on a faint anchor line. -->
   <Style Selector="ctl|Sparkline">
     <Setter Property="Stroke" Value="{StaticResource ChartSequentialBrush}" />

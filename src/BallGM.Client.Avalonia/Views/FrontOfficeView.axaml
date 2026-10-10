@@ -67,6 +67,8 @@
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding SummaryLine}" FontWeight="SemiBold" TextWrapping="Wrap" />
                   <TextBlock Text="{Binding PayrollLine}" Opacity="0.7" FontSize="12" />
+                  <TextBlock Text="{Binding IncomingProduction}" Classes="small dim figures" TextWrapping="Wrap" ToolTip.Tip="{x:Static vm:ProductionLine.Tooltip}" />
+                  <TextBlock Text="{Binding OutgoingProduction}" Classes="small dim figures" TextWrapping="Wrap" ToolTip.Tip="{x:Static vm:ProductionLine.Tooltip}" />
                   <ItemsControl ItemsSource="{Binding Rationale}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:AIFindingRow">
@@ -91,6 +93,7 @@
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding PlayerName}" FontWeight="SemiBold" />
                   <TextBlock Text="{Binding OfferLine}" Opacity="0.7" FontSize="12" />
+                  <TextBlock Text="{Binding Production}" Classes="small dim figures" TextWrapping="Wrap" ToolTip.Tip="{x:Static vm:ProductionLine.Tooltip}" />
                   <ItemsControl ItemsSource="{Binding Rationale}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:AIFindingRow">

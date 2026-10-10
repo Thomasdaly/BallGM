@@ -287,6 +287,12 @@ internal static class LeagueConfigurationMapper
             return DomainOperationResult<LeagueRuleset>.Failure(gameRulesResult.Errors.ToArray());
         }
 
+        var leadersResult = configuration.ToLeaderQualifiers();
+        if (leadersResult.IsFailure)
+        {
+            return DomainOperationResult<LeagueRuleset>.Failure(leadersResult.Errors.ToArray());
+        }
+
         return DomainOperationResult<LeagueRuleset>.Success(new LeagueRuleset(
             LeagueRuleset.CurrentSchemaVersion,
             configuration.RulesetName,
@@ -306,7 +312,8 @@ internal static class LeagueConfigurationMapper
             retirementRules,
             awardRules,
             capMechanics,
-            gameRulesResult.Value));
+            gameRulesResult.Value,
+            leadersResult.Value));
     }
 
     /// <summary>
@@ -410,7 +417,8 @@ internal static class LeagueConfigurationMapper
                     ruleset.CapMechanics.ReducedOverCapAllowance,
                     ruleset.CapMechanics.ReducedOverCapAllowanceUnavailableAbove)
                 : null,
-            ruleset.GameRules.ToConfiguration());
+            ruleset.GameRules.ToConfiguration(),
+            ruleset.LeaderQualifiers.ToConfiguration());
     }
 
     /// <summary>The game rules a configuration states, or the sport's default for any it leaves out.</summary>
@@ -419,6 +427,20 @@ internal static class LeagueConfigurationMapper
         ArgumentNullException.ThrowIfNull(configuration);
         return GameRules.Create(configuration.GameRules?.PersonalFoulLimit, configuration.GameRules?.BonusTeamFoulsPerPeriod, configuration.GameRules?.BonusTeamFoulsPerOvertime);
     }
+
+    /// <summary>The leaderboard qualifiers a configuration states, or the default for any it leaves out.</summary>
+    public static DomainOperationResult<LeaderQualifiers> ToLeaderQualifiers(this LeagueConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        var stated = configuration.LeaderQualifiers;
+        return LeaderQualifiers.Create(stated?.MinimumGamesShareBasisPoints, stated?.MinimumMinutesPerGame, stated?.MinimumFieldGoalsMadePerTeamGame, stated?.MinimumThreesMadePerTeamGame, stated?.MinimumFreeThrowsMadePerTeamGame);
+    }
+
+    /// <summary>The configuration to carry: none when the league uses the default qualifiers.</summary>
+    public static LeaderQualifiersConfiguration? ToConfiguration(this LeaderQualifiers qualifiers) =>
+        qualifiers == LeaderQualifiers.Default
+            ? null
+            : new LeaderQualifiersConfiguration(qualifiers.MinimumGamesShareBasisPoints, qualifiers.MinimumMinutesPerGame, qualifiers.MinimumFieldGoalsMadePerTeamGame, qualifiers.MinimumThreesMadePerTeamGame, qualifiers.MinimumFreeThrowsMadePerTeamGame);
 
     /// <summary>The configuration to carry: none when the league plays the sport's default.</summary>
     public static GameRulesConfiguration? ToConfiguration(this GameRules rules) =>

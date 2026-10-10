@@ -182,6 +182,9 @@
           <DataTemplate DataType="vm:FrontOfficeViewModel">
             <views:FrontOfficeView />
           </DataTemplate>
+          <DataTemplate DataType="vm:LeadersViewModel">
+            <views:LeadersView />
+          </DataTemplate>
           <DataTemplate DataType="vm:ContractsViewModel">
             <views:ContractsView />
           </DataTemplate>

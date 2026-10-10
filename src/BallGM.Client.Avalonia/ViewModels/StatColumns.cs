@@ -52,6 +52,9 @@ public sealed record StatValue(string Value, string Tooltip, double Width, strin
 /// </summary>
 public static class StatColumns
 {
+    /// <summary>The RTG column's tooltip, on every table that sorts by average match rating.</summary>
+    public const string RatingTooltip = "Average match rating out of ten this season";
+
     /// <summary>The placeholder every stat surface shows for a figure that does not exist yet.</summary>
     public const string Missing = "—";
 

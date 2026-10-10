@@ -8,8 +8,11 @@ namespace BallGM.Client.Avalonia.ViewModels;
 /// the screen a management sim opens when a name is clicked. Averages and percentages are display
 /// choices made here; everything counted comes from the session's profile query.
 /// </summary>
-public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action back) : ViewModelBase
+public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action back, string backTo = "roster") : ViewModelBase
 {
+    /// <summary>The back button, naming the screen it returns to.</summary>
+    public string BackLabel { get; } = $"‹ Back to {backTo}";
+
     private StatBasisChoice? _basis;
 
     public RelayCommand BackCommand { get; } = new(back);
@@ -82,6 +85,16 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
     public ShotChartView? ShotChart { get; } = ShotChartView.For(profile.SeasonDetail?.Totals.Zones, profile.LeagueZones);
 
     public bool HasShotChart => ShotChart is not null;
+
+    /// <summary>Where he stands in the league this regular season, stat by stat; empty until he qualifies.</summary>
+    public IReadOnlyList<PercentileRow> Percentiles { get; } = PercentileRow.From(profile.Percentiles);
+
+    public bool HasPercentiles => Percentiles.Count > 0;
+
+    /// <summary>Why there are no percentiles yet, in the league's own qualifier.</summary>
+    public string NotRankedNote { get; } = profile.LeaderQualifiers is { } qualifiers
+        ? $"Not ranked yet: a player needs {DisplayText.Share(qualifiers.MinimumGamesShareBasisPoints)}% of the season's games to be compared with the league."
+        : "Not ranked yet: not enough games to compare with the league.";
 
     /// <summary>The regular season's average match rating, for the header pill.</summary>
     public RatingView? SeasonRating { get; } = RatingView.ForAverage(profile.SeasonDetail?.AverageRating);
