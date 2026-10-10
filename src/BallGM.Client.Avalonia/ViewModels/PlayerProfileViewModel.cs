@@ -35,10 +35,8 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
 
     public string? InjuryDescription => profile.InjuryDescription;
 
-    /// <summary>Every visible attribute, group by group in sheet order.</summary>
-    public IReadOnlyList<AttributeRow> Attributes { get; } = profile.Attributes.Groups
-        .SelectMany(group => group.Attributes.Select(attribute => new AttributeRow(AttributeDescriptions.NameOf(attribute.Key), attribute.Value, AttributeDescriptions.For(attribute.Key))))
-        .ToList();
+    /// <summary>The scouting sheet: the attributes in three columns and the report above them.</summary>
+    public AttributeSheetView Sheet { get; } = new(profile.Attributes, profile.Overall);
 
     public IReadOnlyList<ContractRow> Contract { get; } = profile.Contract
         .Select(line => new ContractRow(
@@ -188,7 +186,6 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
         string.Create(CultureInfo.InvariantCulture, $"{startYear}-{(startYear + 1) % 100:00}");
 }
 
-public sealed record AttributeRow(string Name, int Value, string Meaning);
 
 public sealed record ContractRow(string Season, string Salary, string Note);
 

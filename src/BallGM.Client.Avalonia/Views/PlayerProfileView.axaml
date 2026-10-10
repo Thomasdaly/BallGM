@@ -101,30 +101,60 @@
 
       <TabControl Classes="profile">
         <TabItem Header="Overview">
-          <Grid ColumnDefinitions="2*,3*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="18" Margin="0,14,0,0">
+          <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="18" Margin="0,14,0,0">
             <StackPanel Spacing="18">
-          <Border Classes="panel">
+          <!-- The scouting report: ability as a coach's stars, personality, body, positions, traits. -->
+          <Border Classes="panel" DataContext="{Binding Sheet}">
             <StackPanel Spacing="12">
-              <TextBlock Text="Attributes" Classes="section" />
-              <ItemsControl ItemsSource="{Binding Attributes}">
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:AttributeRow">
-                    <Grid ColumnDefinitions="*,40" RowDefinitions="Auto,Auto" Margin="0,0,0,12" ToolTip.Tip="{Binding Meaning}">
-                      <TextBlock Text="{Binding Name}" Classes="strong" />
-                      <TextBlock Grid.Column="1" Text="{Binding Value}" Classes="num" HorizontalAlignment="Right" />
-                      <ProgressBar
-                        Grid.Row="1"
-                        Grid.ColumnSpan="2"
-                        Classes="attr"
-                        Minimum="0"
-                        Maximum="100"
-                        Value="{Binding Value}"
-                        Foreground="{Binding Value, Converter={x:Static conv:OverallTierConverter.Instance}}" />
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <TextBlock Text="Overall is Current Ability, weighted across these attributes." Classes="faint tiny" TextWrapping="Wrap" />
+              <TextBlock Text="Scouting report" Classes="section" />
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="6">
+                <TextBlock Text="Current" Classes="dim small" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding CurrentStars}" Classes="stars" AutomationProperties.Name="{Binding CurrentStarsName}" ToolTip.Tip="{Binding CurrentStarsName}" />
+                <TextBlock Grid.Row="1" Text="Potential" Classes="dim small" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PotentialStars}" Classes="stars" AutomationProperties.Name="{Binding PotentialStarsName}" ToolTip.Tip="{Binding PotentialStarsName}" />
+                <TextBlock Grid.Row="2" Text="Personality" Classes="dim small" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Personality}" Classes="strong" />
+              </Grid>
+              <TextBlock Text="Current ability is the Overall in the header, weighted across the Attributes tab." Classes="faint tiny" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Body}" Classes="small figures" TextWrapping="Wrap" IsVisible="{Binding HasBody}" />
+              <StackPanel Spacing="4">
+                <TextBlock Text="Positions" Classes="dim small" />
+                <ItemsControl ItemsSource="{Binding Positions}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <UniformGrid Columns="5" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PositionChip">
+                      <Border Classes="poschip" Classes.natural="{Binding IsNatural}" Classes.accomplished="{Binding IsAccomplished}" Classes.competent="{Binding IsCompetent}"
+                              ToolTip.Tip="{Binding AccessibleName}" AutomationProperties.Name="{Binding AccessibleName}">
+                        <StackPanel HorizontalAlignment="Center">
+                          <TextBlock Text="{Binding Position}" Classes="strong small" HorizontalAlignment="Center" />
+                          <TextBlock Text="{Binding Familiarity}" Classes="tiny" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+              <StackPanel Spacing="4" IsVisible="{Binding HasTraits}">
+                <TextBlock Text="Traits" Classes="dim small" />
+                <ItemsControl ItemsSource="{Binding Traits}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <Border Classes="pill">
+                        <TextBlock Text="{Binding}" />
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
             </StackPanel>
           </Border>
 
@@ -166,6 +196,44 @@
             </ScrollViewer>
           </StackPanel>
           </Grid>
+        </TabItem>
+
+        <TabItem Header="Attributes">
+          <!-- The full sheet, grouped as a scout reads it; every value printed, its badge tint only repeats the tier. -->
+          <ItemsControl ItemsSource="{Binding Sheet.Columns}" Margin="0,14,0,0">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="3" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <ItemsControl ItemsSource="{Binding}" Margin="0,0,18,0">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:AttributeGroupView">
+                      <Border Classes="panel" Margin="0,0,0,14">
+                        <StackPanel Spacing="4">
+                          <TextBlock Text="{Binding Title}" Classes="section" Margin="0,0,0,4" />
+                          <ItemsControl ItemsSource="{Binding Attributes}">
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:AttributeCell">
+                                <Grid ColumnDefinitions="*,42" Height="28" ToolTip.Tip="{Binding Description}" AutomationProperties.Name="{Binding AccessibleName}">
+                                  <TextBlock Text="{Binding Name}" Classes="small" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                  <Border Grid.Column="1" Classes="ovr small" Background="{Binding Value, Converter={x:Static conv:OverallTierConverter.Instance}}">
+                                    <TextBlock Text="{Binding Value}" />
+                                  </Border>
+                                </Grid>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </TabItem>
 
         <TabItem Header="Stats">

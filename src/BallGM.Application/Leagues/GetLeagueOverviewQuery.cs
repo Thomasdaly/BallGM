@@ -428,6 +428,7 @@ public sealed class GetLeagueOverviewQuery(
                 player.CurrentInjury?.Description,
                 contract?.ChargeFor(snapshot.CurrentSeason)?.Amount.SmallestUnits ?? 0,
                 SeasonsRemaining(contract, snapshot.CurrentSeason),
+                player.Rating.PotentialAbility,
                 snapshot.Artwork.PortraitFor(player.Id)));
         }
 

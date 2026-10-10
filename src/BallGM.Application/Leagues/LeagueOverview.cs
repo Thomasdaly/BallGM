@@ -37,6 +37,7 @@ public sealed record RosterSpot(
     string? InjuryDescription,
     long CapCharge,
     int ContractSeasonsRemaining,
+    int Potential,
     string? PortraitPath = null);
 
 /// <summary>

@@ -7,7 +7,7 @@ namespace BallGM.Client.Avalonia.Tests;
 
 public sealed class RosterStatColumnsTests
 {
-    private static readonly RosterSpot Spot = new("P1", "Test Player", "PG", 80, false, null, 10_000_000, 2);
+    private static readonly RosterSpot Spot = new("P1", "Test Player", "PG", 80, false, null, 10_000_000, 2, 88);
 
     private static readonly CountingStats Season = CountingStats.None with
     {
@@ -66,5 +66,14 @@ public sealed class RosterStatColumnsTests
 
         Assert.Equal(["high", "low", "none"], RosterRow.OrderByStat(rows, points, descending: true).Select(row => row.PlayerId));
         Assert.Equal(["low", "high", "none"], RosterRow.OrderByStat(rows, points, descending: false).Select(row => row.PlayerId));
+    }
+
+    [Fact]
+    public void PotentialShowsAsTheCoachesStarsAndSortsByTheFigureBehindThem()
+    {
+        var row = RosterRow.From(Spot);
+
+        Assert.Equal("★★★★½", row.Potential);
+        Assert.Equal(88, row.PotentialSortKey);
     }
 }

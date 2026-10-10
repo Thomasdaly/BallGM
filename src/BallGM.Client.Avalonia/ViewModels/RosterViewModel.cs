@@ -42,6 +42,7 @@ public sealed class RosterViewModel : ViewModelBase
         SortBySalaryCommand = SortCommand(RosterSortColumn.Salary);
         SortByYearsCommand = SortCommand(RosterSortColumn.Years);
         SortByRatingCommand = SortCommand(RosterSortColumn.Rating);
+        SortByPotentialCommand = SortCommand(RosterSortColumn.Potential);
         SortByStatCommand = new ParameterCommand<int>(index => SortBy(RosterSortColumn.Stat, index));
         Basis.Changed += () =>
         {
@@ -155,6 +156,7 @@ public sealed class RosterViewModel : ViewModelBase
                 RosterSortColumn.Years => Order(rows, row => row.YearsSortKey),
                 RosterSortColumn.Stat => RosterRow.OrderByStat(rows, _sortStat, _sortDescending),
                 RosterSortColumn.Rating => TableOrder.NullsLast(rows, row => row.RatingSortKey, _sortDescending),
+                RosterSortColumn.Potential => Order(rows, row => row.PotentialSortKey),
                 _ => Order(rows, row => row.Overall),
             };
             return ordered.ThenBy(row => row.FullName, StringComparer.Ordinal).ToList();
@@ -173,6 +175,8 @@ public sealed class RosterViewModel : ViewModelBase
 
     /// <summary>Sorts by average match rating; players with no games come last either way.</summary>
     public RelayCommand SortByRatingCommand { get; }
+
+    public RelayCommand SortByPotentialCommand { get; }
 
     /// <summary>Sorts by the season stat column at the index passed as the command parameter.</summary>
     public ParameterCommand<int> SortByStatCommand { get; }
@@ -232,6 +236,9 @@ public enum RosterSortColumn
     /// <summary>Average match rating this season.</summary>
     Rating,
 
+    /// <summary>Potential Ability.</summary>
+    Potential,
+
     /// <summary>One of <see cref="StatColumns.Season"/>, by index.</summary>
     Stat,
 }
@@ -264,6 +271,11 @@ public sealed record RosterRow(
 
     /// <summary>His average match rating this season, or null before he has played.</summary>
     public RatingView? Rating { get; init; }
+
+    /// <summary>Potential Ability as a coach's stars, as the profile shows it — never the exact figure.</summary>
+    public string Potential { get; init; } = string.Empty;
+
+    public int PotentialSortKey { get; init; }
 
     /// <summary>The unrounded average, in hundredths: 7.04 ranks above 6.96 though both print 7.0.</summary>
     public int? RatingSortKey { get; init; }
@@ -300,6 +312,8 @@ public sealed record RosterRow(
             SalarySortKey = spot.CapCharge,
             YearsSortKey = spot.ContractSeasonsRemaining,
             Rating = RatingView.ForAverage(rating),
+            Potential = AttributeSheetView.Stars(AbilityStars.HalfStars(spot.Potential)),
+            PotentialSortKey = spot.Potential,
             RatingSortKey = rating?.Hundredths,
         };
     }

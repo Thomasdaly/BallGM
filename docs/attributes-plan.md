@@ -104,3 +104,10 @@ is where the tails come from.
 
 The local real-league pack loads (schema 2, expanded). Deriving its full sheet from real per-player data is
 scheduled with the engine slices, where each attribute group first matters.
+
+## A2: the sheet on screen
+
+Attributes tab (three columns of grouped attributes in tier badges, with descriptions), scouting report
+on the Overview (stars, personality, body, positions, traits), POT on the roster. Change arrows wait
+for A9. The real-league pack still shows sheets expanded from five attributes — several 100s for its stars —
+until its sheets are derived from real per-player data alongside the engine slices.

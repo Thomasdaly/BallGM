@@ -87,7 +87,14 @@ public sealed record AttributeLine(string Key, int Value);
 
 public sealed record BodyLine(int HeightCm, int WingspanCm, int WeightKg);
 
-public sealed record PositionFamiliarityLine(string Position, string Familiarity);
+/// <summary>
+/// How at home he is at one position: its label, the familiarity in words, and its level (0 awkward to
+/// 4 natural; -1 not assessed), so a screen shades by the number and prints the word.
+/// </summary>
+public sealed record PositionFamiliarityLine(string Position, string Familiarity, int Level)
+{
+    public const int NotAssessed = -1;
+}
 
 /// <summary>One season of a contract, in smallest money units; an option season is not yet owed.</summary>
 public sealed record ContractSeasonLine(int Season, long Salary, bool IsOption);

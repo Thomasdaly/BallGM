@@ -226,8 +226,10 @@ public sealed partial class LeagueSession
             .ToList(),
         rating.PotentialAbility,
         rating.Body is { } body ? new BodyLine(body.HeightCm, body.WingspanCm, body.WeightKg) : null,
-        rating.Positions.OrderBy(entry => entry.Key)
-            .Select(entry => new PositionFamiliarityLine(GetLeagueOverviewQuery.DescribePosition(entry.Key), entry.Value.ToString()))
+        Enum.GetValues<Position>()
+            .Select(position => rating.Positions.TryGetValue(position, out var familiarity)
+                ? new PositionFamiliarityLine(GetLeagueOverviewQuery.DescribePosition(position), familiarity.ToString(), (int)familiarity)
+                : new PositionFamiliarityLine(GetLeagueOverviewQuery.DescribePosition(position), "Not assessed", PositionFamiliarityLine.NotAssessed))
             .ToList(),
         rating.Traits.Select(trait => trait.ToString()).ToList(),
         Personality.Describe(rating));

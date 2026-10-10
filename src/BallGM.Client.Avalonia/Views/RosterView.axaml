@@ -58,12 +58,13 @@
            could resolve differently row by row. -->
       <ScrollViewer HorizontalScrollBarVisibility="Auto">
         <DockPanel>
-          <Grid DockPanel.Dock="Top" Classes="thead" ColumnDefinitions="56,40,*,56,50,Auto,90,64,160">
+          <Grid DockPanel.Dock="Top" Classes="thead" ColumnDefinitions="56,86,40,*,56,50,Auto,90,64,160">
             <Button Classes="th" Content="OVR" Command="{Binding SortByOverallCommand}" />
-            <Button Grid.Column="2" Classes="th" Content="Player" Command="{Binding SortByNameCommand}" MinWidth="{StaticResource TableNameMinWidth}" />
-            <Button Grid.Column="3" Classes="th" Content="POS" Command="{Binding SortByPositionCommand}" />
-            <Button Grid.Column="4" Classes="th" Content="RTG" Command="{Binding SortByRatingCommand}" HorizontalAlignment="Center" ToolTip.Tip="{x:Static vm:StatColumns.RatingTooltip}" />
-            <ItemsControl Grid.Column="5" ItemsSource="{Binding StatHeaders}" Margin="{StaticResource StatBlockGutter}">
+            <Button Grid.Column="1" Classes="th" Content="POT" Command="{Binding SortByPotentialCommand}" ToolTip.Tip="Potential: how good he could become, as the coaches see it" />
+            <Button Grid.Column="3" Classes="th" Content="Player" Command="{Binding SortByNameCommand}" MinWidth="{StaticResource TableNameMinWidth}" />
+            <Button Grid.Column="4" Classes="th" Content="POS" Command="{Binding SortByPositionCommand}" />
+            <Button Grid.Column="5" Classes="th" Content="RTG" Command="{Binding SortByRatingCommand}" HorizontalAlignment="Center" ToolTip.Tip="{x:Static vm:StatColumns.RatingTooltip}" />
+            <ItemsControl Grid.Column="6" ItemsSource="{Binding StatHeaders}" Margin="{StaticResource StatBlockGutter}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                   <StackPanel Orientation="Horizontal" />
@@ -81,9 +82,9 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <Button Grid.Column="6" Classes="th" Content="Salary" Command="{Binding SortBySalaryCommand}" />
-            <Button Grid.Column="7" Classes="th" Content="Years" Command="{Binding SortByYearsCommand}" ToolTip.Tip="Contract seasons remaining" />
-            <TextBlock Grid.Column="8" Text="Status" VerticalAlignment="Center" />
+            <Button Grid.Column="7" Classes="th" Content="Salary" Command="{Binding SortBySalaryCommand}" />
+            <Button Grid.Column="8" Classes="th" Content="Years" Command="{Binding SortByYearsCommand}" ToolTip.Tip="Contract seasons remaining" />
+            <TextBlock Grid.Column="9" Text="Status" VerticalAlignment="Center" />
           </Grid>
 
             <ItemsControl Classes="table" ItemsSource="{Binding Rows}">
@@ -94,22 +95,23 @@
                     Command="{Binding $parent[ItemsControl].((vm:RosterViewModel)DataContext).OpenProfileCommand}"
                     CommandParameter="{Binding PlayerId}"
                     ToolTip.Tip="Open player profile">
-                  <Grid ColumnDefinitions="56,40,*,56,50,Auto,90,64,160" Height="{StaticResource RowHeight}">
+                  <Grid ColumnDefinitions="56,86,40,*,56,50,Auto,90,64,160" Height="{StaticResource RowHeight}">
                     <Border Classes="ovr" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}">
                       <TextBlock Text="{Binding Overall}" />
                     </Border>
-                    <Border Grid.Column="1" Classes="face">
+                    <TextBlock Grid.Column="1" Text="{Binding Potential}" Classes="stars small" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip.Tip="Potential, as the coaches see it" AutomationProperties.Name="{Binding Potential, StringFormat='Potential {0}'}" />
+                    <Border Grid.Column="2" Classes="face">
                       <Image Source="{Binding PortraitPath, Converter={x:Static conv:ImagePathConverter.Instance}}" Stretch="UniformToFill" />
                     </Border>
-                    <TextBlock Grid.Column="2" Text="{Binding FullName}" Classes="strong" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                    <Border Grid.Column="3" Classes="pill">
+                    <TextBlock Grid.Column="3" Text="{Binding FullName}" Classes="strong" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <Border Grid.Column="4" Classes="pill">
                       <TextBlock Text="{Binding Position}" />
                     </Border>
-                    <views:RatingPill Grid.Column="4" DataContext="{Binding Rating}" />
-                    <ItemsControl Grid.Column="5" Classes="statrow" ItemsSource="{Binding Stats}" Margin="{StaticResource StatBlockGutter}" />
-                    <TextBlock Grid.Column="6" Text="{Binding Salary}" Classes="num" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="7" Text="{Binding Years}" Classes="dim" VerticalAlignment="Center" />
-                    <Border Grid.Column="8" Classes="pill bad" IsVisible="{Binding IsInjured}">
+                    <views:RatingPill Grid.Column="5" DataContext="{Binding Rating}" />
+                    <ItemsControl Grid.Column="6" Classes="statrow" ItemsSource="{Binding Stats}" Margin="{StaticResource StatBlockGutter}" />
+                    <TextBlock Grid.Column="7" Text="{Binding Salary}" Classes="num" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="8" Text="{Binding Years}" Classes="dim" VerticalAlignment="Center" />
+                    <Border Grid.Column="9" Classes="pill bad" IsVisible="{Binding IsInjured}">
                       <TextBlock Text="{Binding InjuryDescription}" TextTrimming="CharacterEllipsis" />
                     </Border>
                   </Grid>

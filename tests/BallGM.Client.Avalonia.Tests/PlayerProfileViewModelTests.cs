@@ -18,9 +18,9 @@ public sealed class PlayerProfileViewModelTests
                 new AttributeGroupLine("Scoring", [new AttributeLine("ThreePoint", 70), new AttributeLine("FreeThrow", 88)]),
                 new AttributeGroupLine("Mental", [new AttributeLine("BasketballIq", 75)]),
             ],
-            85,
+            88,
             new BodyLine(193, 201, 90),
-            [new PositionFamiliarityLine("PG", "Natural")],
+            [new PositionFamiliarityLine("PG", "Natural", 4), new PositionFamiliarityLine("SG", "Accomplished", 3), new PositionFamiliarityLine("SF", "Competent", 2), new PositionFamiliarityLine("PF", "Awkward", 0), new PositionFamiliarityLine("C", "Not assessed", PositionFamiliarityLine.NotAssessed)],
             ["StretchesTheFloor"],
             "Professional"),
         "Test Team",
@@ -37,9 +37,27 @@ public sealed class PlayerProfileViewModelTests
     {
         var profile = new PlayerProfileViewModel(Sample(), () => { });
 
-        Assert.Equal(["Three point", "Free throw", "Basketball IQ"], profile.Attributes.Select(row => row.Name));
-        Assert.Contains("threes", profile.Attributes[0].Meaning, StringComparison.Ordinal);
-        Assert.Equal([70, 88, 75], profile.Attributes.Select(row => row.Value));
+        var sheet = profile.Sheet;
+        Assert.Equal(["Scoring", "Mental"], sheet.Columns[0].Select(group => group.Title));
+        // Two groups to a column, in the order the read model sends them.
+        Assert.Single(sheet.Columns);
+        Assert.Equal(["Three point", "Free throw"], sheet.Columns[0][0].Attributes.Select(cell => cell.Name));
+        Assert.Equal([70, 88], sheet.Columns[0][0].Attributes.Select(cell => cell.Value));
+        Assert.Equal("Basketball IQ", sheet.Columns[0][1].Attributes[0].Name);
+        Assert.Contains("threes", sheet.Columns[0][0].Attributes[0].Description, StringComparison.Ordinal);
+
+        // Ability as a coach's stars (Overall 80 is four stars, potential 88 four and a half), measurements both ways, positions in order.
+        Assert.Equal("★★★★☆", sheet.CurrentStars);
+        Assert.Equal("★★★★½", sheet.PotentialStars);
+        Assert.Equal("Current ability: 4 of 5 stars", sheet.CurrentStarsName);
+        Assert.Equal("193 cm (6 ft 4 in) · wingspan 201 cm · 90 kg (198 lb)", sheet.Body);
+        Assert.Equal(["PG", "SG", "SF", "PF", "C"], sheet.Positions.Select(chip => chip.Position));
+        Assert.True(sheet.Positions[0].IsNatural);
+        Assert.Equal("Not assessed", sheet.Positions[4].Familiarity);
+        Assert.True(sheet.Positions[1].IsAccomplished);
+        Assert.False(sheet.Positions[3].IsCompetent);
+        Assert.Equal(["Stretches the floor"], sheet.Traits);
+        Assert.Equal("Professional", sheet.Personality);
         Assert.Equal(["2026-27", "2027-28"], profile.Contract.Select(row => row.Season));
         Assert.Equal("Option", profile.Contract[1].Note);
         Assert.Equal("2 seasons remaining · $41.0M total", profile.ContractSummary);
