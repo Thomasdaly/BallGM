@@ -80,6 +80,7 @@
   <SolidColorBrush x:Key="WarnSoftBrush" Color="#1FF59E3D" />
   <SolidColorBrush x:Key="BadSoftBrush" Color="#1FF2606F" />
   <SolidColorBrush x:Key="BadPillBrush" Color="#33F2606F" />
+  <SolidColorBrush x:Key="GoodPillBrush" Color="#3345C98C" />
   <!-- What lies under a sheet: the floor, dimmed, so the sheet reads as on top of the screen. -->
   <SolidColorBrush x:Key="ScrimBrush" Color="#D90D1522" />
   <SolidColorBrush x:Key="TierEliteBrush" Color="{StaticResource TierEliteColor}" />

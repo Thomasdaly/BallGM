@@ -512,15 +512,59 @@ public sealed partial class LeagueSession
             return cached.Totals;
         }
 
+        var ratings = AverageRatings(phase);
+
         var totals = _seasonEngine.PlayerSeasonStats(_seasonRun, phase).ToDictionary(
             line => line.PlayerId.Value,
-            line => new PlayerSeasonTotals(line.PlayerId.Value, line.Totals),
+            line => new PlayerSeasonTotals(line.PlayerId.Value, line.Totals, ratings.GetValueOrDefault(line.PlayerId.Value)),
             StringComparer.Ordinal);
         _seasonTotalsCache = (version, totals);
         return totals;
     }
 
     private ((SeasonRun Run, int Results, SeasonPhase Phase) Version, IReadOnlyDictionary<string, PlayerSeasonTotals> Totals)? _seasonTotalsCache;
+
+    /// <summary>
+    /// Each player's mean match rating over one phase. A game's ratings never change once its result
+    /// is recorded, so each game is rated once and remembered for the season in progress, and a
+    /// season's averages cost one sum per player rather than a re-rating of every game every day.
+    /// </summary>
+    private Dictionary<string, Players.RatingAverage> AverageRatings(SeasonPhase phase)
+    {
+        if (!ReferenceEquals(_ratedRun, _seasonRun))
+        {
+            _ratedRun = _seasonRun;
+            _gameRatings.Clear();
+        }
+
+        var sums = new Dictionary<string, (long Sum, int Games)>(StringComparer.Ordinal);
+        foreach (var result in _seasonRun!.Results.Where(result => result.Phase == phase && result.BoxScore is not null))
+        {
+            if (!_gameRatings.TryGetValue(result.GameId, out var rated))
+            {
+                rated = result.BoxScore!.Lines
+                    .Select(line => (line.PlayerId.Value, Players.StatFormulas.MatchRatingHundredths(CountingStats.Of(line))))
+                    .Where(entry => entry.Item2 is not null)
+                    .Select(entry => (entry.Value, entry.Item2!.Value))
+                    .ToList();
+                _gameRatings[result.GameId] = rated;
+            }
+
+            foreach (var (playerId, hundredths) in rated)
+            {
+                var (sum, games) = sums.GetValueOrDefault(playerId);
+                sums[playerId] = (sum + hundredths, games + 1);
+            }
+        }
+
+        return sums.ToDictionary(
+            entry => entry.Key,
+            entry => Players.StatFormulas.MeanRating(entry.Value.Sum, entry.Value.Games),
+            StringComparer.Ordinal);
+    }
+
+    private readonly Dictionary<GameId, List<(string PlayerId, int Hundredths)>> _gameRatings = [];
+    private SeasonRun? _ratedRun;
 
     public DomainOperationResult<BoxScoreSummary> BoxScore(string gameId)
     {

@@ -28,7 +28,8 @@ public sealed record PlayerProfileSummary(
     IReadOnlyList<RecentGameLine> RecentGames,
     IReadOnlyList<CareerSeasonLine> Career,
     SeasonDetailLine? SeasonDetail = null,
-    ContractDetailLine? ContractDetail = null);
+    ContractDetailLine? ContractDetail = null,
+    IReadOnlyList<RecentGameLine>? GameLog = null);
 
 /// <summary>
 /// Everything counted for a player this season, plus the team and opponent totals from the same
@@ -40,7 +41,8 @@ public sealed record SeasonDetailLine(
     CountingStats Team,
     CountingStats Opponent,
     int DoubleDoubles,
-    int TripleDoubles);
+    int TripleDoubles,
+    RatingAverage? AverageRating = null);
 
 /// <summary>
 /// A contract in depth: every remaining season with its guarantee and option, the player's place

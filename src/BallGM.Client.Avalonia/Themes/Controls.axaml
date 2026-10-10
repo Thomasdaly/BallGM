@@ -18,6 +18,7 @@
 <Styles
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels">
 
   <!-- Base. -->
@@ -178,6 +179,48 @@
   <Style Selector="Border.pill.bad TextBlock">
     <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
   </Style>
+  <!--
+    Match rating pill: the figure always printed in tabular numerals, the band a status background —
+    outstanding solid good, good a good tint, average neutral, poor a bad tint. Never team paint.
+  -->
+  <Style Selector="Button.ratingpill">
+    <Setter Property="Background" Value="{StaticResource Bg3Brush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="MinWidth" Value="38" />
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="CornerRadius" Value="2" />
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontFeatures" Value="+tnum" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.ratingpill.outstanding">
+    <Setter Property="Background" Value="{StaticResource GoodBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource Bg0Brush}" />
+  </Style>
+  <Style Selector="Button.ratingpill.good">
+    <Setter Property="Background" Value="{StaticResource GoodPillBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
+  </Style>
+  <Style Selector="Button.ratingpill.poor">
+    <Setter Property="Background" Value="{StaticResource BadPillBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource BadBrush}" />
+  </Style>
+  <!-- The rating breakdown's flyout: a panel surface, so text tokens keep their contrast. -->
+  <Style Selector="FlyoutPresenter.ratingbreakdown">
+    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <!-- Sparkline: one sequential data hue on a faint anchor line. -->
+  <Style Selector="ctl|Sparkline">
+    <Setter Property="Stroke" Value="{StaticResource ChartSequentialBrush}" />
+    <Setter Property="Baseline" Value="{StaticResource Bg3Brush}" />
+  </Style>
+
   <!-- Overall rating: a square chip like a jersey number. Colour from OverallTierConverter. -->
   <Style Selector="Border.ovr">
     <Setter Property="Width" Value="34" />

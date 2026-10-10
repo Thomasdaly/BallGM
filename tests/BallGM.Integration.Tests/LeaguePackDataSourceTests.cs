@@ -465,6 +465,15 @@ public sealed class LeaguePackDataSourceTests : IDisposable
         // At least five players × 48 minutes a game; overtime adds to it.
         Assert.True(detail.Team.Minutes >= 240 * detail.Totals.Games);
         Assert.True(detail.Totals.FieldGoalsAttempted >= detail.Totals.FieldGoalsMade);
+
+        // A season's average match rating, and every game in the log, newest first.
+        Assert.InRange(detail.AverageRating!.Hundredths, 100, 1000);
+        var profile = session.PlayerProfile(star.PlayerId).Value;
+        // The log is every game he has a line in, playoffs included; the season line is the regular season only.
+        var postseason = session.PlayerSeasonTotals(BallGM.Domain.Seasons.SeasonPhase.Postseason).GetValueOrDefault(star.PlayerId)?.Stats.Games ?? 0;
+        Assert.Equal(detail.Totals.Games + postseason, profile.GameLog!.Count);
+        Assert.True(profile.GameLog.Zip(profile.GameLog.Skip(1)).All(pair => pair.First.Day >= pair.Second.Day), "newest first");
+        Assert.Equal(detail.AverageRating, session.PlayerSeasonTotals(BallGM.Domain.Seasons.SeasonPhase.RegularSeason)[star.PlayerId].AverageRating);
         Assert.Equal(detail.Totals.Points, (2 * (detail.Totals.FieldGoalsMade - detail.Totals.ThreePointsMade)) + (3 * detail.Totals.ThreePointsMade) + detail.Totals.FreeThrowsMade);
 
         Assert.True(session.ConcludeSeason().IsSuccess);

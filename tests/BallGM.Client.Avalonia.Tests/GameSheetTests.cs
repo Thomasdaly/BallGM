@@ -118,6 +118,8 @@ public sealed class GameSheetTests
 
         var starter = Assert.Single(sheet.Home.Starters);
         Assert.True(starter.FouledOut);
+        Assert.NotNull(starter.Rating);
+        Assert.NotEmpty(starter.Rating!.Breakdown);
         Assert.Equal("6", Cell(sheet.Home, starter, "PF"));
         Assert.False(Assert.Single(sheet.Home.Bench).FouledOut);
     }

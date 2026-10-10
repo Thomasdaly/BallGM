@@ -48,6 +48,7 @@ public sealed partial class LeagueSession
             .ToList();
 
         var recentGames = new List<RecentGameLine>();
+        var gameLog = new List<RecentGameLine>();
         CareerSeasonLine? currentSeason = null;
         SeasonDetailLine? seasonDetail = null;
         if (_seasonRun is not null)
@@ -57,11 +58,12 @@ public sealed partial class LeagueSession
                 .Where(entry => entry.Line is not null)
                 .ToList();
 
-            recentGames = played
-                .TakeLast(RecentGameCount)
+            gameLog = played
+                .AsEnumerable()
                 .Reverse()
                 .Select(entry => ToRecentGame(entry.Result, entry.Line!, teamNames, _seasonRun))
                 .ToList();
+            recentGames = gameLog.Take(RecentGameCount).ToList();
 
             // Recent form is every game, playoffs included; the season line is the regular season only.
             var regularSeason = played
@@ -96,7 +98,8 @@ public sealed partial class LeagueSession
             recentGames,
             currentSeason is null ? career : [.. career, currentSeason],
             seasonDetail,
-            ContractDetail(liveContracts, player.SeasonsOfService)));
+            ContractDetail(liveContracts, player.SeasonsOfService),
+            gameLog));
     }
 
     /// <summary>
@@ -161,7 +164,8 @@ public sealed partial class LeagueSession
             CountingStats.Sum(games.Select(game => game.Result.BoxScore!.TotalsFor(game.Line.TeamId))),
             CountingStats.Sum(games.Select(game => game.Result.BoxScore!.TotalsFor(OpponentOf(game.Result, game.Line.TeamId)))),
             games.Count(game => TenOrMore(game.Line, 2)),
-            games.Count(game => TenOrMore(game.Line, 3)));
+            games.Count(game => TenOrMore(game.Line, 3)),
+            StatFormulas.AverageRating(games.Select(game => CountingStats.Of(game.Line))));
     }
 
     /// <summary>The contract seen against the league's scales: share of the cap, place between min and max, free agency.</summary>

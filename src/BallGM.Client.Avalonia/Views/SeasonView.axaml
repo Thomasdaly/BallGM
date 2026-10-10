@@ -3,6 +3,7 @@
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  xmlns:views="clr-namespace:BallGM.Client.Avalonia.Views"
   xmlns:app="clr-namespace:BallGM.Application.Seasons;assembly=BallGM.Application"
   xmlns:theming="clr-namespace:BallGM.Client.Avalonia.Theming"
   xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
@@ -13,7 +14,7 @@
   <UserControl.Resources>
     <!-- One player in a game sheet's line-up; the stat cells follow the side's Headers (preview or box score). -->
     <DataTemplate x:Key="LineupRowTemplate" x:DataType="vm:LineupRow">
-      <Grid ColumnDefinitions="34,*,42,Auto" Height="30" ToolTip.Tip="{Binding Tip}">
+      <Grid ColumnDefinitions="34,*,42,50,Auto" Height="30" ToolTip.Tip="{Binding Tip}">
         <TextBlock Text="{Binding Position}" Classes="faint small" VerticalAlignment="Center" />
         <!-- A player who reached the foul limit says so in words, not colour alone. -->
         <DockPanel Grid.Column="1" Margin="0,0,8,0">
@@ -28,7 +29,8 @@
           <TextBlock Text="{Binding Overall}" />
         </Border>
         <TextBlock Grid.Column="2" Text="—" Classes="faint small" VerticalAlignment="Center" IsVisible="{Binding !HasOverall}" />
-        <ItemsControl Grid.Column="3" Classes="statrow" ItemsSource="{Binding Stats}" />
+        <views:RatingPill Grid.Column="3" DataContext="{Binding Rating}" />
+        <ItemsControl Grid.Column="4" Classes="statrow" ItemsSource="{Binding Stats}" />
       </Grid>
     </DataTemplate>
 
@@ -44,19 +46,20 @@
         </StackPanel>
         <ScrollViewer Classes="tablewrap">
           <StackPanel Spacing="{StaticResource Space1}">
-            <Grid Classes="thead" ColumnDefinitions="34,*,42,Auto" IsVisible="{Binding HasLineup}">
+            <Grid Classes="thead" ColumnDefinitions="34,*,42,50,Auto" IsVisible="{Binding HasLineup}">
               <TextBlock Text="Pos" />
               <TextBlock Grid.Column="1" Text="Player" MinWidth="{StaticResource TableNameMinWidth}" />
               <TextBlock Grid.Column="2" Text="OVR" />
-              <ItemsControl Grid.Column="3" Classes="statheads" ItemsSource="{Binding Headers}" />
+              <TextBlock Grid.Column="3" Text="RTG" HorizontalAlignment="Center" ToolTip.Tip="Match rating out of ten: this game's on a final, the season's average on a preview." />
+              <ItemsControl Grid.Column="4" Classes="statheads" ItemsSource="{Binding Headers}" />
             </Grid>
             <TextBlock Text="Starters" Classes="eyebrow" IsVisible="{Binding HasLineup}" />
             <ItemsControl Classes="table" ItemsSource="{Binding Starters}" ItemTemplate="{StaticResource LineupRowTemplate}" />
             <TextBlock Text="Bench" Classes="eyebrow" IsVisible="{Binding HasLineup}" />
             <ItemsControl Classes="table" ItemsSource="{Binding Bench}" ItemTemplate="{StaticResource LineupRowTemplate}" />
-            <Grid ColumnDefinitions="34,*,42,Auto" Height="30" Margin="10,0" IsVisible="{Binding HasTotals}">
+            <Grid ColumnDefinitions="34,*,42,50,Auto" Height="30" Margin="10,0" IsVisible="{Binding HasTotals}">
               <TextBlock Grid.Column="1" Text="Team totals" Classes="small strong" VerticalAlignment="Center" />
-              <ItemsControl Grid.Column="3" Classes="statrow" ItemsSource="{Binding Totals}" />
+              <ItemsControl Grid.Column="4" Classes="statrow" ItemsSource="{Binding Totals}" />
             </Grid>
           </StackPanel>
         </ScrollViewer>

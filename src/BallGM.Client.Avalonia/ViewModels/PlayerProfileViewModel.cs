@@ -67,9 +67,34 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
         ]
         : [];
 
-    public bool HasRecentGames => profile.RecentGames.Count > 0;
+    public bool HasRecentGames => GameLog.Count > 0;
 
-    public IReadOnlyList<RecentGameRow> RecentGames { get; } = profile.RecentGames.Select(RecentGameRow.From).ToList();
+    public IReadOnlyList<RecentGameRow> RecentGames => GameLog.Take(RecentFormGames).ToList();
+
+    private const int RecentFormGames = 5;
+
+    /// <summary>Every game this season, newest first, each with its match rating — rated once, here.</summary>
+    public IReadOnlyList<RecentGameRow> GameLog { get; } = (profile.GameLog ?? profile.RecentGames).Select(RecentGameRow.From).ToList();
+
+    public bool HasGameLog => GameLog.Count > 0;
+
+    /// <summary>The regular season's average match rating, for the header pill.</summary>
+    public RatingView? SeasonRating { get; } = RatingView.ForAverage(profile.SeasonDetail?.AverageRating);
+
+    /// <summary>The last ten games played (rated), oldest first: the sparkline and its words.</summary>
+    private IReadOnlyList<RatingView> Trend => GameLog.Select(game => game.Rating).OfType<RatingView>().Take(SparklineGames).Reverse().ToList();
+
+    public IReadOnlyList<double> RatingTrend => Trend.Select(rating => rating.Value).ToList();
+
+    public bool HasRatingTrend => Trend.Count > 1;
+
+    /// <summary>The trend in words, so the line is never the only way to read it.</summary>
+    public string RatingTrendText => string.Join(" · ", Trend.Select(rating => rating.Text));
+
+    /// <summary>"Last 10 games played · latest 7.0": the caption under the line, so its end is read in words too.</summary>
+    public string RatingTrendCaption => Trend is { Count: > 0 } trend ? $"Last {trend.Count} games played · latest {trend[^1].Text}" : string.Empty;
+
+    private const int SparklineGames = 10;
 
     public bool HasCareer => profile.Career.Count > 0;
 
@@ -156,14 +181,15 @@ public sealed record ContractRow(string Season, string Salary, string Note);
 public sealed record StatTile(string Label, string Value);
 
 /// <summary>One game in the log: when, against whom, the result, and the full box-score line.</summary>
-public sealed record RecentGameRow(string Date, string Opponent, string Result, bool Won, IReadOnlyList<StatValue> Stats)
+public sealed record RecentGameRow(string Date, string Opponent, string Result, bool Won, IReadOnlyList<StatValue> Stats, RatingView? Rating)
 {
     public static RecentGameRow From(RecentGameLine game) => new(
         game.Date,
         (game.IsHome ? "vs " : "@ ") + game.Opponent,
         string.Create(CultureInfo.InvariantCulture, $"{(game.Won ? "W" : "L")} {game.TeamPoints}–{game.OpponentPoints}"),
         game.Won,
-        StatColumns.Cells(game.Stats, StatColumns.BoxScore));
+        StatColumns.Cells(game.Stats, StatColumns.BoxScore),
+        RatingView.ForGame(game.Stats));
 }
 
 public sealed record ContractYearRow(string Season, string Salary, string Guaranteed, string Option, string ShareOfCap)

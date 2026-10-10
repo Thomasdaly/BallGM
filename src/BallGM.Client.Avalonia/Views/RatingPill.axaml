@@ -1,0 +1,45 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.RatingPill"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:RatingView">
+  <!--
+    A match rating: the figure always printed, its band a background class (never the only signal).
+    A button, so it takes focus and opens its breakdown from the keyboard as well as the pointer.
+  -->
+  <Panel>
+  <TextBlock Text="—" Classes="faint small" HorizontalAlignment="Center" VerticalAlignment="Center"
+             IsVisible="{Binding $parent[UserControl].DataContext, Converter={x:Static ObjectConverters.IsNull}}"
+             ToolTip.Tip="No rating: did not play." />
+  <Button Classes="ratingpill"
+          IsVisible="{Binding $parent[UserControl].DataContext, Converter={x:Static ObjectConverters.IsNotNull}}"
+          Classes.outstanding="{Binding IsOutstanding}"
+          Classes.good="{Binding IsGood}"
+          Classes.poor="{Binding IsPoor}"
+          Content="{Binding Text}"
+          ToolTip.Tip="{Binding Tooltip}"
+          AutomationProperties.Name="{Binding Tooltip}"
+          HorizontalAlignment="Center">
+    <Button.Flyout>
+      <Flyout Placement="Bottom" FlyoutPresenterClasses="ratingbreakdown">
+        <StackPanel Spacing="{StaticResource Space2}" MinWidth="220">
+          <TextBlock Text="How this rating was built" Classes="strong" />
+          <TextBlock Text="{Binding Tooltip}" Classes="faint small" TextWrapping="Wrap" MaxWidth="260" />
+          <ItemsControl ItemsSource="{Binding Breakdown}" IsVisible="{Binding HasBreakdown}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:RatingTermRow">
+                <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                  <TextBlock Text="{Binding Family}" Classes="small" />
+                  <TextBlock Grid.Column="1" Text="{Binding Value}" Classes="num small" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="Everyone starts at 6.5. Short stints count for less." Classes="faint tiny" TextWrapping="Wrap" MaxWidth="260" />
+        </StackPanel>
+      </Flyout>
+    </Button.Flyout>
+  </Button>
+  </Panel>
+</UserControl>

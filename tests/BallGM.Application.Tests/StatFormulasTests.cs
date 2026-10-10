@@ -113,4 +113,64 @@ public sealed class StatFormulasTests
         var opponentThrees = opponent with { ThreePointsAttempted = 12 };
         Assert.Equal(3 * 48 / (36 * 76.0), StatFormulas.BlockPercent(blocker, team, opponentThrees)!.Value, 10);
     }
+
+    private static BallGM.Domain.Seasons.CountingStats Game(int minutes, int points, int fgm, int fga, int plusMinus = 0) =>
+        BallGM.Domain.Seasons.CountingStats.None with
+        {
+            Games = 1,
+            Minutes = minutes,
+            Points = points,
+            FieldGoalsMade = fgm,
+            FieldGoalsAttempted = fga,
+            PlusMinus = plusMinus,
+        };
+
+    [Fact]
+    public void MatchRating_TermsAddUpExactlyToTheRatingAndAPlayerWhoDidNotPlayHasNone()
+    {
+        Assert.Null(StatFormulas.MatchRatingFor(BallGM.Domain.Seasons.CountingStats.None));
+
+        var line = Game(34, 24, 9, 17, plusMinus: 8) with { OffensiveRebounds = 2, DefensiveRebounds = 6, Assists = 5, Turnovers = 3, Steals = 1, Blocks = 1, PersonalFouls = 3, FreeThrowsMade = 6, FreeThrowsAttempted = 7 };
+        var rating = StatFormulas.MatchRatingFor(line)!;
+
+        Assert.Equal(rating.Hundredths - StatFormulas.RatingAnchor, rating.Terms.Sum(term => term.Hundredths));
+        Assert.Equal(["Scoring", "Rebounding", "Playmaking", "Defence", "Discipline", "Par for 34 min", "On-court impact"], rating.Terms.Select(term => term.Family));
+        Assert.InRange(rating.Hundredths, StatFormulas.MinimumRating, StatFormulas.MaximumRating);
+    }
+
+    [Fact]
+    public void MatchRating_ABigNightRatesHighAndAColdOneLow()
+    {
+        var forty = StatFormulas.MatchRatingFor(Game(38, 40, 15, 24) with { FreeThrowsMade = 7, FreeThrowsAttempted = 8, DefensiveRebounds = 6, Assists = 4 })!;
+        var cold = StatFormulas.MatchRatingFor(Game(30, 0, 0, 9) with { Turnovers = 3 })!;
+
+        Assert.InRange(forty.Hundredths, 850, 1000);
+        Assert.InRange(cold.Hundredths, 100, 500);
+        Assert.Equal(RatingBand.Outstanding, forty.Band);
+        Assert.Equal(RatingBand.Poor, cold.Band);
+        Assert.Equal(forty.Tenths - (StatFormulas.RatingAnchor / 10), forty.TermsInTenths.Sum(term => term.Hundredths));
+    }
+
+    [Fact]
+    public void MatchRating_AShortStintIsPulledTowardTheAnchorAndImpactIsCapped()
+    {
+        // The same production a minute over 6 and over 36 minutes: the short stint sits nearer 6.5.
+        var shortStint = StatFormulas.MatchRatingFor(Game(6, 6, 2, 3))!;
+        var longStint = StatFormulas.MatchRatingFor(Game(36, 36, 12, 18))!;
+        Assert.True(Math.Abs(shortStint.Hundredths - StatFormulas.RatingAnchor) < Math.Abs(longStint.Hundredths - StatFormulas.RatingAnchor));
+
+        // A blowout's plus-minus counts, but only so far.
+        var plusForty = StatFormulas.MatchRatingFor(Game(30, 10, 4, 9, plusMinus: 40))!;
+        Assert.InRange(plusForty.Terms.Single(term => term.Family == "On-court impact").Hundredths, 0, StatFormulas.MaximumImpact + 1);
+    }
+
+    [Fact]
+    public void AverageRating_IsTheMeanOfTheGamesPlayedOnly()
+    {
+        var played = Game(30, 20, 8, 15);
+        var expected = StatFormulas.MatchRatingFor(played)!.Hundredths;
+
+        Assert.Equal(new RatingAverage(expected, 1), StatFormulas.AverageRating([played, BallGM.Domain.Seasons.CountingStats.None]));
+        Assert.Null(StatFormulas.AverageRating([]));
+    }
 }

@@ -269,7 +269,8 @@ public sealed class GameSheet
                 .. StatColumns.Cells(season, PreviewSeasonColumns, StatBasis.PerGame),
                 RecentScoringHeader.Cell(StatColumns.Fixed(last is null ? null : StatFormulas.PerGame(last.Points, last.Games))),
             ],
-            season is { Games: > 0 } ? $"{season.Games} games played this season" : "No games played this season");
+            season is { Games: > 0 } ? $"{season.Games} games played this season" : "No games played this season",
+            Rating: RatingView.ForAverage(totals.GetValueOrDefault(player.PlayerId)?.AverageRating));
     }
 
     private static LineupRow FromBoxScore(
@@ -292,7 +293,8 @@ public sealed class GameSheet
                 SeasonPpgHeader.Cell(StatColumns.Fixed(season is null ? null : StatFormulas.PerGame(season.Points, season.Games))),
             ],
             known ? string.Empty : "Not on either team's depth chart today, so no current rating or position.",
-            line.Stats.FoulOuts > 0);
+            line.Stats.FoulOuts > 0,
+            RatingView.ForGame(line.Stats));
     }
 
     /// <summary>Points per appearance over the team's recent box scores, by player.</summary>
@@ -391,7 +393,8 @@ public sealed record LineupRow(
     bool HasOverall,
     IReadOnlyList<StatValue> Stats,
     string Tip,
-    bool FouledOut = false);
+    bool FouledOut = false,
+    RatingView? Rating = null);
 
 /// <summary>One of the four factors, both sides' figures, and what it measures.</summary>
 /// <remarks><see cref="Edge"/> is which side won the factor: negative away, positive home, zero level or unknown.</remarks>

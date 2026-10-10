@@ -246,5 +246,7 @@ public sealed record SeasonConclusionSummary(
 /// <summary>
 /// One player's totals for one phase of the season in progress — every counting stat. Totals only,
 /// like the Domain line it maps: per-game and per-36 figures are derived by <c>StatFormulas</c>.
+/// <see cref="AverageRating"/> is the mean of his game match ratings over the games he played — a mean of games,
+/// so it cannot be derived from the totals.
 /// </summary>
-public sealed record PlayerSeasonTotals(string PlayerId, CountingStats Stats);
+public sealed record PlayerSeasonTotals(string PlayerId, CountingStats Stats, Players.RatingAverage? AverageRating = null);
