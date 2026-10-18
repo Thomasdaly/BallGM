@@ -16,7 +16,7 @@
 
   <!-- Embedded typefaces (Barlow, SIL OFL 1.1 - licence in Assets/Fonts/OFL.txt). -->
   <ItemGroup>
-    <AvaloniaResource Include="Assets\Fonts\*.ttf" />
+    <AvaloniaResource Include="Assets\Fonts\**\*.ttf" />
     <AvaloniaResource Include="Assets\Licenses\*.txt" />
   </ItemGroup>
 

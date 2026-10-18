@@ -1,0 +1,80 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.Gallery.GalleryFoundations"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:ComponentGalleryViewModel">
+  <StackPanel Spacing="{StaticResource Space24}">
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
+      <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+        <StackPanel Spacing="{StaticResource Space8}">
+          <TextBlock Text="TEXT STYLES" Classes="label-caps" />
+          <TextBlock Text="MAXIMILIAN OKONKWO-VANDERBILT" Classes="hero small" />
+          <TextBlock Text="108-104 FINAL" Classes="hero italic" />
+          <TextBlock Text="ROSTER" Classes="h1" />
+          <TextBlock Text="SEASON SUMMARY" Classes="h2" />
+          <TextBlock Text="TEAM LEADERS" Classes="h3" />
+          <TextBlock Text="84" Classes="stat-xl" />
+          <TextBlock Text="CAP SPACE" Classes="label-caps" />
+          <TextBlock Text="Body text in sentence case, for explanations and reading content." Classes="body" />
+          <TextBlock Text="Body strong for emphasis." Classes="body-strong" />
+          <TextBlock Text="Caption for meta and timestamps." Classes="caption" />
+          <StackPanel Classes="tabular-check">
+            <TextBlock Text="TABULAR FIGURES" Classes="label-caps" />
+            <TextBlock Text="111.1" Classes="table" HorizontalAlignment="Right" Width="80" TextAlignment="Right" />
+            <TextBlock Text="888.8" Classes="table" HorizontalAlignment="Right" Width="80" TextAlignment="Right" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+      <StackPanel Grid.Column="1" Spacing="{StaticResource Space24}">
+        <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+          <StackPanel Spacing="{StaticResource Space12}">
+            <TextBlock Text="ICONS · 16 / 20 / 24" Classes="label-caps" />
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+              <PathIcon Data="{StaticResource Icon.Home}" Classes="small" />
+              <PathIcon Data="{StaticResource Icon.Home}" />
+              <PathIcon Data="{StaticResource Icon.Home}" Classes="large" />
+              <PathIcon Data="{StaticResource Icon.Roster}" Classes="large" />
+              <PathIcon Data="{StaticResource Icon.Calendar}" Classes="large" />
+              <PathIcon Data="{StaticResource Icon.Standings}" Classes="large" />
+              <PathIcon Data="{StaticResource Icon.Trade}" Classes="large" />
+              <PathIcon Data="{StaticResource Icon.Finances}" Classes="large" />
+              <PathIcon Data="{StaticResource Icon.Search}" Classes="large" />
+              <PathIcon Data="{StaticResource Icon.Settings}" Classes="large" />
+              <PathIcon Data="{StaticResource Icon.Mods}" Classes="large" />
+              <PathIcon Data="{StaticResource Icon.Injury}" Classes="large" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+        <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+          <StackPanel Spacing="{StaticResource Space12}">
+            <TextBlock Text="SKEW BORDER · CUT CORNER · DIVIDER" Classes="label-caps" />
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+              <ctl:SkewBorder Angle="12" Background="{DynamicResource AccentBrush}" Padding="{StaticResource Pad16x8}">
+                <TextBlock Text="12 DEGREES" Classes="h3" Foreground="{DynamicResource OnAccentBrush}" />
+              </ctl:SkewBorder>
+              <ctl:SkewBorder Angle="12" BorderBrush="{StaticResource TextMutedBrush}" StrokeThickness="1" Padding="{StaticResource Pad16x8}">
+                <TextBlock Text="STROKED" Classes="h3" />
+              </ctl:SkewBorder>
+              <ctl:SkewBorder Angle="0" Background="{StaticResource Surface3Brush}" CornerRadius="{StaticResource RadiusChip}" Padding="{StaticResource Pad16x8}">
+                <TextBlock Text="UPRIGHT" Classes="h3" />
+              </ctl:SkewBorder>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+              <ctl:CutCornerBorder Width="160" Height="72" Background="{DynamicResource TeamGradientBrush}" />
+              <ctl:CutCornerBorder Width="160" Height="72" Background="{StaticResource Surface3Brush}" Corners="TopRight, BottomLeft" />
+              <ctl:CutCornerBorder Width="160" Height="72" BorderBrush="{DynamicResource AccentBrush}" StrokeThickness="2" />
+            </StackPanel>
+            <ctl:Divider />
+            <StackPanel Orientation="Horizontal" Height="24" Spacing="{StaticResource Space12}">
+              <TextBlock Text="LEFT" Classes="label-caps" VerticalAlignment="Center" />
+              <ctl:Divider Orientation="Vertical" />
+              <TextBlock Text="RIGHT" Classes="label-caps" VerticalAlignment="Center" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+  </StackPanel>
+</UserControl>

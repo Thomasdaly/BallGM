@@ -1,0 +1,49 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.Gallery.GalleryNavigation"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:ComponentGalleryViewModel">
+  <Grid ColumnDefinitions="220,64,*" ColumnSpacing="{StaticResource Space24}">
+    <Border Background="{StaticResource CanvasBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" Height="240" VerticalAlignment="Top">
+      <ctl:NavRail ItemsSource="{Binding NavEntries}" SelectedIndex="1" />
+    </Border>
+    <Border Grid.Column="1" Background="{StaticResource CanvasBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" Height="240" VerticalAlignment="Top">
+      <ctl:NavRail ItemsSource="{Binding NavEntries}" SelectedIndex="1" IsCollapsed="True" />
+    </Border>
+    <StackPanel Grid.Column="2" Spacing="{StaticResource Space24}">
+      <Border Background="{StaticResource CanvasRaisedBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+        <StackPanel Spacing="{StaticResource Space12}">
+          <ctl:PageHeader Title="Roster" Subtitle="14 under contract · 12–15 allowed">
+            <ctl:PageHeader.Breadcrumb>
+              <ctl:Breadcrumb Items="{Binding Crumbs}" />
+            </ctl:PageHeader.Breadcrumb>
+            <ctl:PageHeader.Actions>
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                <Button Classes="secondary" Content="Compare" />
+                <Button Classes="secondary" Content="Columns" />
+              </StackPanel>
+            </ctl:PageHeader.Actions>
+          </ctl:PageHeader>
+          <ctl:SkewTabStrip ItemsSource="{Binding TabNames}" SelectedIndex="0" />
+          <ctl:SkewTabStrip ItemsSource="{Binding TabNames}" SelectedIndex="2" />
+        </StackPanel>
+      </Border>
+      <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+        <StackPanel Spacing="{StaticResource Space16}">
+          <TextBlock Text="SEGMENTED CONTROL · BREADCRUMB (WIDE / NARROW) · STEPPER · BADGE" Classes="label-caps" />
+          <ctl:SegmentedControl ItemsSource="{Binding Segments}" SelectedIndex="0" />
+          <ctl:Breadcrumb Items="{Binding Crumbs}" />
+          <ctl:Breadcrumb Items="{Binding Crumbs}" Width="260" HorizontalAlignment="Left" />
+          <ctl:Stepper Steps="{Binding Steps}" />
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+            <ctl:Badge Count="3" />
+            <ctl:Badge Count="128" />
+            <ctl:Badge IsDot="True" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Grid>
+</UserControl>

@@ -100,7 +100,7 @@ public static class FallbackArt
 
     private static GeometryDrawing TextDrawing(string text, double size, IBrush brush, double centreX, double baselineY)
     {
-        var typeface = new Typeface(new FontFamily("fonts:BallGM#Barlow Condensed"), FontStyle.Normal, FontWeight.ExtraBold);
+        var typeface = new Typeface(new FontFamily("fonts:BallGMDisplay#Barlow Condensed"), FontStyle.Normal, FontWeight.ExtraBold);
         var formatted = new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, size, brush);
         var origin = new Point(centreX - (formatted.Width / 2), baselineY - formatted.Baseline);
         return new GeometryDrawing { Brush = brush, Geometry = formatted.BuildGeometry(origin) ?? new RectangleGeometry() };

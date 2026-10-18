@@ -1,0 +1,196 @@
+<!--
+  Button and ToggleButton (docs/ui/spec/03_COMPONENTS.md section 4). Variants are classes:
+  primary (skewed 12 degrees, accent fill - at most one per view), secondary (outline), ghost,
+  danger, icon; sizes small / large. Every state is themed: pointerover, pressed, disabled,
+  focus-visible (a 2px ring outside the control, so it shows on any accent), checked, busy.
+-->
+<ResourceDictionary
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls">
+
+  <ControlTheme x:Key="{x:Type Button}" TargetType="Button">
+    <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusChip}" />
+    <Setter Property="Padding" Value="{StaticResource Pad16x8}" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="MinWidth" Value="32" />
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <ctl:SkewBorder
+            Name="PART_FocusRing"
+            Margin="-4"
+            StrokeThickness="2"
+            BorderBrush="{StaticResource FocusRingBrush}"
+            CornerRadius="{TemplateBinding CornerRadius}"
+            IsHitTestVisible="False"
+            IsVisible="False" />
+          <ctl:SkewBorder
+            Name="PART_Background"
+            Background="{TemplateBinding Background}"
+            BorderBrush="{TemplateBinding BorderBrush}"
+            StrokeThickness="1"
+            CornerRadius="{TemplateBinding CornerRadius}">
+            <Panel>
+              <ContentPresenter
+                Name="PART_ContentPresenter"
+                Padding="{TemplateBinding Padding}"
+                Content="{TemplateBinding Content}"
+                ContentTemplate="{TemplateBinding ContentTemplate}"
+                Foreground="{TemplateBinding Foreground}"
+                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                CornerRadius="{TemplateBinding CornerRadius}"
+                RecognizesAccessKey="True" />
+              <ctl:Spinner
+                Name="PART_Spinner"
+                Width="16"
+                Height="16"
+                Foreground="{TemplateBinding Foreground}"
+                IsVisible="False" />
+            </Panel>
+          </ctl:SkewBorder>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{StaticResource Surface3Brush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource TextMutedBrush}" />
+    </Style>
+    <Style Selector="^:pressed">
+      <Setter Property="Background" Value="{StaticResource Surface1Brush}" />
+    </Style>
+    <Style Selector="^:disabled">
+      <Setter Property="Background" Value="{StaticResource Surface1Brush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextDisabledBrush}" />
+      <Setter Property="Cursor" Value="Arrow" />
+    </Style>
+    <Style Selector="^:focus-visible /template/ ctl|SkewBorder#PART_FocusRing">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^.busy">
+      <Setter Property="IsHitTestVisible" Value="False" />
+    </Style>
+    <Style Selector="^.busy /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="^.busy /template/ ctl|Spinner#PART_Spinner">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+
+    <!-- Primary: the skewed, accent-filled call to action. -->
+    <Style Selector="^.primary">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+      <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="FontSize" Value="{StaticResource FontSizeH3}" />
+      <Setter Property="LetterSpacing" Value="{StaticResource TrackingH3}" />
+      <Setter Property="Padding" Value="{StaticResource Pad16x4}" />
+      <Setter Property="CornerRadius" Value="{StaticResource RadiusNone}" />
+    </Style>
+    <Style Selector="^.primary /template/ ctl|SkewBorder">
+      <Setter Property="Angle" Value="{StaticResource SkewAngle}" />
+    </Style>
+    <Style Selector="^.primary /template/ ctl|SkewBorder#PART_Background">
+      <Setter Property="StrokeThickness" Value="0" />
+    </Style>
+    <Style Selector="^.primary:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    </Style>
+    <Style Selector="^.primary:pressed">
+      <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}" />
+    </Style>
+    <Style Selector="^.primary:disabled">
+      <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextDisabledBrush}" />
+    </Style>
+
+    <!-- Secondary: outline only. -->
+    <Style Selector="^.secondary">
+      <Setter Property="Background" Value="{x:Null}" />
+      <Setter Property="BorderBrush" Value="{StaticResource TextMutedBrush}" />
+    </Style>
+    <Style Selector="^.secondary:pointerover">
+      <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource TextSecondaryBrush}" />
+    </Style>
+
+    <!-- Ghost: no chrome until hovered. -->
+    <Style Selector="^.ghost">
+      <Setter Property="Background" Value="{x:Null}" />
+      <Setter Property="BorderBrush" Value="{x:Null}" />
+      <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+    </Style>
+    <Style Selector="^.ghost:pointerover">
+      <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+
+    <!-- Danger: destructive actions. -->
+    <Style Selector="^.danger">
+      <Setter Property="Background" Value="{x:Null}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource NegativeBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource NegativeBrush}" />
+    </Style>
+    <Style Selector="^.danger:pointerover">
+      <Setter Property="Background" Value="{DynamicResource NegativeSoftBrush}" />
+    </Style>
+
+    <!-- Icon: square, for a PathIcon; needs a tooltip and an automation name at the call site. -->
+    <Style Selector="^.icon">
+      <Setter Property="Padding" Value="{StaticResource Pad4}" />
+      <Setter Property="Background" Value="{x:Null}" />
+      <Setter Property="BorderBrush" Value="{x:Null}" />
+      <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+    </Style>
+    <Style Selector="^.icon:pointerover">
+      <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+
+    <!-- Sizes. -->
+    <Style Selector="^.small">
+      <Setter Property="MinHeight" Value="24" />
+      <Setter Property="MinWidth" Value="24" />
+      <Setter Property="Padding" Value="{StaticResource Pad8x4}" />
+      <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    </Style>
+    <Style Selector="^.large">
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="Padding" Value="{StaticResource Pad24x12}" />
+    </Style>
+    <Style Selector="^.primary.large">
+      <Setter Property="FontSize" Value="{StaticResource FontSizeH2}" />
+      <Setter Property="Padding" Value="{StaticResource Pad24x4}" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ToggleButton}" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type Button}}">
+    <Style Selector="^:checked">
+      <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+    <Style Selector="^.chip">
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="Padding" Value="{StaticResource Pad12x4}" />
+      <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type RepeatButton}" TargetType="RepeatButton" BasedOn="{StaticResource {x:Type Button}}" />
+</ResourceDictionary>

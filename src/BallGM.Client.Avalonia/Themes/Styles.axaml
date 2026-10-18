@@ -9,7 +9,8 @@
 -->
 <Styles
   xmlns="https://github.com/avaloniaui"
-  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls">
 
   <Style Selector="Window">
     <Setter Property="Background" Value="{StaticResource CanvasBrush}" />
@@ -148,6 +149,54 @@
   <Style Selector="PathIcon.large">
     <Setter Property="Width" Value="{StaticResource IconLarge}" />
     <Setter Property="Height" Value="{StaticResource IconLarge}" />
+  </Style>
+
+  <!-- The nav rail collapsed to icons (descendant selectors cannot live in a control theme). -->
+  <Style Selector="ctl|NavRail:collapsed TextBlock#Label">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="ctl|NavRail:collapsed ctl|Badge#Count">
+    <Setter Property="IsDot" Value="True" />
+    <Setter Property="Margin" Value="-12,-16,0,0" />
+  </Style>
+  <Style Selector="ctl|NavRail:collapsed ListBoxItem Grid">
+    <Setter Property="Margin" Value="22,0,0,0" />
+  </Style>
+
+  <!-- Motion: the tab flag slides (removed under reduced motion below). -->
+  <Style Selector="ctl|SkewBorder.tab-indicator">
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource MotionTab}" Easing="CubicEaseOut" />
+        <DoubleTransition Property="Width" Duration="{StaticResource MotionTab}" Easing="CubicEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="ctl|Spinner">
+    <Style.Animations>
+      <Animation Duration="0:0:0.9" IterationCount="Infinite">
+        <KeyFrame Cue="0%">
+          <Setter Property="RotateTransform.Angle" Value="0" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="RotateTransform.Angle" Value="360" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+
+  <!-- Reduced motion (spec 01 section 10): a class on the top level removes transitions and spins. -->
+  <Style Selector=":is(TopLevel).reduced-motion ctl|SkewBorder.tab-indicator">
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+  <Style Selector=":is(TopLevel).reduced-motion ctl|Spinner">
+    <Style.Animations>
+      <Animation Duration="0:0:1" IterationCount="1">
+        <KeyFrame Cue="0%">
+          <Setter Property="RotateTransform.Angle" Value="0" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
   </Style>
 
   <!-- Size-only helpers for screens not yet rebuilt (they replaced literal FontSize values). -->

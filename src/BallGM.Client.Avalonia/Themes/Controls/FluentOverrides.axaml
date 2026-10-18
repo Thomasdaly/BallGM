@@ -1,0 +1,40 @@
+<!--
+  Stock Fluent controls kept with their templates (CheckBox, RadioButton, ToggleSwitch, TextBox,
+  ComboBox, Slider, ScrollBar, MenuItem, NumericUpDown) are retuned through Fluent's own resources:
+  token colours (the palette in App.axaml), the 2px / 4px radii, and the focus visual drawn in the
+  FocusRing token, so none of them shows the stock look (spec 01 section 14).
+-->
+<ResourceDictionary
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <CornerRadius x:Key="ControlCornerRadius">2</CornerRadius>
+  <CornerRadius x:Key="OverlayCornerRadius">4</CornerRadius>
+  <SolidColorBrush x:Key="SystemControlFocusVisualPrimaryBrush" Color="{StaticResource FocusRingColor}" />
+  <SolidColorBrush x:Key="SystemControlFocusVisualSecondaryBrush" Color="{StaticResource CanvasColor}" />
+  <Thickness x:Key="SystemControlFocusVisualPrimaryThickness">2</Thickness>
+  <Thickness x:Key="SystemControlFocusVisualSecondaryThickness">1</Thickness>
+  <SolidColorBrush x:Key="TextControlBackground" Color="{StaticResource Surface3Color}" />
+  <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="{StaticResource Surface3Color}" />
+  <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="{StaticResource Surface3Color}" />
+  <SolidColorBrush x:Key="TextControlBorderBrush" Color="{StaticResource StrokeColor}" />
+  <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="{StaticResource TextMutedColor}" />
+  <SolidColorBrush x:Key="TextControlForeground" Color="{StaticResource TextPrimaryColor}" />
+  <SolidColorBrush x:Key="TextControlForegroundFocused" Color="{StaticResource TextPrimaryColor}" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{StaticResource TextMutedColor}" />
+  <SolidColorBrush x:Key="ComboBoxBackground" Color="{StaticResource Surface3Color}" />
+  <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="{StaticResource Surface3Color}" />
+  <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{StaticResource StrokeColor}" />
+  <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="{StaticResource TextMutedColor}" />
+  <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="{StaticResource Surface2Color}" />
+  <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="{StaticResource StrokeColor}" />
+  <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{StaticResource Surface2Color}" />
+  <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{StaticResource StrokeColor}" />
+  <SolidColorBrush x:Key="FlyoutPresenterBackground" Color="{StaticResource Surface2Color}" />
+  <SolidColorBrush x:Key="FlyoutBorderThemeBrush" Color="{StaticResource StrokeColor}" />
+  <SolidColorBrush x:Key="ToolTipBackground" Color="{StaticResource Surface3Color}" />
+  <SolidColorBrush x:Key="ToolTipForeground" Color="{StaticResource TextPrimaryColor}" />
+  <SolidColorBrush x:Key="ToolTipBorderBrush" Color="{StaticResource StrokeColor}" />
+  <SolidColorBrush x:Key="ScrollBarThumbFill" Color="{StaticResource StrokeColor}" />
+  <SolidColorBrush x:Key="ScrollBarThumbFillPointerOver" Color="{StaticResource TextMutedColor}" />
+  <SolidColorBrush x:Key="ScrollBarThumbFillPressed" Color="{StaticResource TextSecondaryColor}" />
+</ResourceDictionary>

@@ -1,0 +1,131 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.Gallery.GalleryActions"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:ComponentGalleryViewModel">
+  <StackPanel Spacing="{StaticResource Space24}">
+    <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="BUTTON · VARIANTS × STATES" Classes="label-caps" />
+        <Grid ColumnDefinitions="110,*,*,*,*,*,*" RowDefinitions="Auto,52,52,52,52,52" ColumnSpacing="{StaticResource Space12}">
+          <TextBlock Grid.Column="1" Text="DEFAULT" Classes="label-caps" />
+          <TextBlock Grid.Column="2" Text="HOVER" Classes="label-caps" />
+          <TextBlock Grid.Column="3" Text="PRESSED" Classes="label-caps" />
+          <TextBlock Grid.Column="4" Text="FOCUS" Classes="label-caps" />
+          <TextBlock Grid.Column="5" Text="DISABLED" Classes="label-caps" />
+          <TextBlock Grid.Column="6" Text="LOADING" Classes="label-caps" />
+          <TextBlock Grid.Row="1" Text="PRIMARY" Classes="label-caps" VerticalAlignment="Center" />
+          <Button Grid.Row="1" Grid.Column="1" Classes="primary" Content="OFFER CONTRACT" HorizontalAlignment="Left" />
+          <Button Grid.Row="1" Grid.Column="2" Classes="primary" Content="OFFER CONTRACT" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pointerover" />
+          <Button Grid.Row="1" Grid.Column="3" Classes="primary" Content="OFFER CONTRACT" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pressed" />
+          <Button Grid.Row="1" Grid.Column="4" Classes="primary" Content="OFFER CONTRACT" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="focus-visible" />
+          <Button Grid.Row="1" Grid.Column="5" Classes="primary" Content="OFFER CONTRACT" HorizontalAlignment="Left" IsEnabled="False" />
+          <Button Grid.Row="1" Grid.Column="6" Classes="primary" Content="OFFER CONTRACT" HorizontalAlignment="Left" ctl:Busy.IsBusy="True" />
+          <TextBlock Grid.Row="2" Text="SECONDARY" Classes="label-caps" VerticalAlignment="Center" />
+          <Button Grid.Row="2" Grid.Column="1" Classes="secondary" Content="Compare" HorizontalAlignment="Left" />
+          <Button Grid.Row="2" Grid.Column="2" Classes="secondary" Content="Compare" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pointerover" />
+          <Button Grid.Row="2" Grid.Column="3" Classes="secondary" Content="Compare" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pressed" />
+          <Button Grid.Row="2" Grid.Column="4" Classes="secondary" Content="Compare" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="focus-visible" />
+          <Button Grid.Row="2" Grid.Column="5" Classes="secondary" Content="Compare" HorizontalAlignment="Left" IsEnabled="False" />
+          <Button Grid.Row="2" Grid.Column="6" Classes="secondary" Content="Compare" HorizontalAlignment="Left" ctl:Busy.IsBusy="True" />
+          <TextBlock Grid.Row="3" Text="GHOST" Classes="label-caps" VerticalAlignment="Center" />
+          <Button Grid.Row="3" Grid.Column="1" Classes="ghost" Content="Clear" HorizontalAlignment="Left" />
+          <Button Grid.Row="3" Grid.Column="2" Classes="ghost" Content="Clear" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pointerover" />
+          <Button Grid.Row="3" Grid.Column="3" Classes="ghost" Content="Clear" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pressed" />
+          <Button Grid.Row="3" Grid.Column="4" Classes="ghost" Content="Clear" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="focus-visible" />
+          <Button Grid.Row="3" Grid.Column="5" Classes="ghost" Content="Clear" HorizontalAlignment="Left" IsEnabled="False" />
+          <Button Grid.Row="3" Grid.Column="6" Classes="ghost" Content="Clear" HorizontalAlignment="Left" ctl:Busy.IsBusy="True" />
+          <TextBlock Grid.Row="4" Text="DANGER" Classes="label-caps" VerticalAlignment="Center" />
+          <Button Grid.Row="4" Grid.Column="1" Classes="danger" Content="Release" HorizontalAlignment="Left" />
+          <Button Grid.Row="4" Grid.Column="2" Classes="danger" Content="Release" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pointerover" />
+          <Button Grid.Row="4" Grid.Column="3" Classes="danger" Content="Release" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pressed" />
+          <Button Grid.Row="4" Grid.Column="4" Classes="danger" Content="Release" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="focus-visible" />
+          <Button Grid.Row="4" Grid.Column="5" Classes="danger" Content="Release" HorizontalAlignment="Left" IsEnabled="False" />
+          <Button Grid.Row="4" Grid.Column="6" Classes="danger" Content="Release" HorizontalAlignment="Left" ctl:Busy.IsBusy="True" />
+          <TextBlock Grid.Row="5" Text="DEFAULT" Classes="label-caps" VerticalAlignment="Center" />
+          <Button Grid.Row="5" Grid.Column="1" Classes="" Content="Columns" HorizontalAlignment="Left" />
+          <Button Grid.Row="5" Grid.Column="2" Classes="" Content="Columns" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pointerover" />
+          <Button Grid.Row="5" Grid.Column="3" Classes="" Content="Columns" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pressed" />
+          <Button Grid.Row="5" Grid.Column="4" Classes="" Content="Columns" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="focus-visible" />
+          <Button Grid.Row="5" Grid.Column="5" Classes="" Content="Columns" HorizontalAlignment="Left" IsEnabled="False" />
+          <Button Grid.Row="5" Grid.Column="6" Classes="" Content="Columns" HorizontalAlignment="Left" ctl:Busy.IsBusy="True" />
+        </Grid>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+          <TextBlock Text="SIZES" Classes="label-caps" VerticalAlignment="Center" Width="110" />
+          <Button Classes="primary small" Content="SMALL" />
+          <Button Classes="primary" Content="MEDIUM" />
+          <Button Classes="primary large" Content="LARGE" />
+          <Button Classes="secondary small" Content="Small" />
+          <Button Classes="secondary large" Content="Large" />
+          <Button Classes="icon" ToolTip.Tip="Search" AutomationProperties.Name="Search"><PathIcon Data="{StaticResource Icon.Search}" /></Button>
+          <Button Classes="icon" ToolTip.Tip="Settings" AutomationProperties.Name="Settings" ctl:ForceState.PseudoClasses="pointerover"><PathIcon Data="{StaticResource Icon.Settings}" /></Button>
+          <Button Classes="icon" ToolTip.Tip="Columns" AutomationProperties.Name="Columns" ctl:ForceState.PseudoClasses="focus-visible"><PathIcon Data="{StaticResource Icon.Columns}" /></Button>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <Border Background="{DynamicResource TeamGradientBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="CONTINUE · READY / BLOCKED / GAME DAY / SIMULATING — ON THE TEAM HERO" Classes="label-caps" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+        <WrapPanel ItemSpacing="{StaticResource Space24}" LineSpacing="{StaticResource Space12}">
+          <ctl:ContinueButton Label="CONTINUE" Subtitle="vs IRV · 7:30 PM" State="Ready" Command="{Binding NoOpCommand}" Options="{Binding ContinueOptions}" />
+          <ctl:ContinueButton Label="RESPOND" Subtitle="2 items need you" State="Blocked" Command="{Binding NoOpCommand}" />
+          <ctl:ContinueButton Label="GO TO GAME" Subtitle="@ NCV · 8:00 PM" State="GameDay" Command="{Binding NoOpCommand}" />
+          <ctl:ContinueButton Label="STOP" Subtitle="Thu 16 Jan" State="Simulating" Command="{Binding NoOpCommand}" />
+        </WrapPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+          <Button Classes="primary" Content="PROPOSE TRADE" />
+          <Button Classes="secondary" Content="Clear" ctl:ForceState.PseudoClasses="focus-visible" />
+          <SplitButton Content="Offer contract">
+            <SplitButton.Flyout>
+              <MenuFlyout>
+                <MenuItem Header="Minimum salary" />
+                <MenuItem Header="Cap room" />
+              </MenuFlyout>
+            </SplitButton.Flyout>
+          </SplitButton>
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
+      <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+        <StackPanel Spacing="{StaticResource Space12}">
+          <TextBlock Text="ENTITY LINK · DEFAULT / HOVER / FOCUS / DISABLED / TRIMMED" Classes="label-caps" />
+          <ctl:EntityLink Text="Maximilian Okonkwo-Vanderbilt" Kind="Player" Classes="body-strong" />
+          <ctl:EntityLink Text="Harbor City Mariners" Kind="Team" ctl:ForceState.PseudoClasses="pointerover" />
+          <ctl:EntityLink Text="D'Shawn O'Malley-Fitzgerald" Kind="Player" ctl:ForceState.PseudoClasses="focus-visible" />
+          <ctl:EntityLink Text="Port Saint Augustine Navigators" Kind="Team" IsEnabled="False" />
+          <ctl:EntityLink Text="Tyrese-Montgomery Abernathy-Clarke" Kind="Player" MaxWidth="160" />
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="1" Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+        <StackPanel Spacing="{StaticResource Space12}">
+          <TextBlock Text="TOGGLES · CHECK BOX · RADIO" Classes="label-caps" />
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
+            <ToggleSwitch Content="Team colours" IsChecked="True" />
+            <ToggleSwitch Content="Ticker" IsChecked="False" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
+            <CheckBox Content="Injured only" IsChecked="True" />
+            <CheckBox Content="Expiring" />
+            <CheckBox Content="Disabled" IsEnabled="False" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
+            <RadioButton GroupName="units" Content="Imperial" IsChecked="True" />
+            <RadioButton GroupName="units" Content="Metric" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <ToggleButton Classes="chip" Content="PG" IsChecked="True" />
+            <ToggleButton Classes="chip" Content="SG" />
+            <ToggleButton Classes="chip" Content="SF" ctl:ForceState.PseudoClasses="pointerover" />
+            <ToggleButton Classes="chip" Content="PF" ctl:ForceState.PseudoClasses="focus-visible" />
+            <ToggleButton Classes="chip" Content="C" IsEnabled="False" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </StackPanel>
+</UserControl>

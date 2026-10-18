@@ -1,0 +1,45 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.Gallery.ComponentGalleryView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  xmlns:gallery="clr-namespace:BallGM.Client.Avalonia.Views.Gallery"
+  x:DataType="vm:ComponentGalleryViewModel"
+  Background="{StaticResource CanvasBrush}">
+  <DockPanel>
+    <Border DockPanel.Dock="Top" Background="{DynamicResource TeamGradientBrush}" Padding="{StaticResource Pad24x16}">
+      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space12}">
+        <StackPanel>
+          <TextBlock Text="COMPONENT GALLERY" Classes="h1" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+          <TextBlock Text="Developer reference: every component, variant and state. Not part of the game's navigation." Classes="caption" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+        </StackPanel>
+        <ItemsControl Grid.Column="1" ItemsSource="{Binding Teams}" VerticalAlignment="Center">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:GalleryTeam">
+              <Button
+                Classes="secondary small"
+                Content="{Binding Abbreviation}"
+                Command="{Binding $parent[ItemsControl].((vm:ComponentGalleryViewModel)DataContext).SelectTeamCommand}"
+                CommandParameter="{Binding}"
+                ToolTip.Tip="{Binding Name}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ctl:SkewTabStrip Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding Sections}" SelectedIndex="{Binding SectionIndex}" />
+      </Grid>
+    </Border>
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+      <Panel Margin="{StaticResource Pad24}">
+        <gallery:GalleryFoundations IsVisible="{Binding Section, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Foundations}" />
+        <gallery:GalleryActions IsVisible="{Binding Section, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Actions}" />
+        <gallery:GalleryNavigation IsVisible="{Binding Section, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Navigation}" />
+      </Panel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

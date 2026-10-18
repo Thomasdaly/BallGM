@@ -1,0 +1,9 @@
+<!-- Control themes for built-in controls (docs/ui/spec/02_AVALONIA_GUIDE.md section 4). -->
+<ResourceDictionary
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <ResourceDictionary.MergedDictionaries>
+    <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Controls/FluentOverrides.axaml" />
+    <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Controls/Buttons.axaml" />
+  </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>

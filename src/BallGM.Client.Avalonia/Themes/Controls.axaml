@@ -21,16 +21,6 @@
   xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels">
 
-  <!-- Base. -->
-  <Style Selector="Window">
-    <Setter Property="Background" Value="{StaticResource Bg0Brush}" />
-    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
-  </Style>
-  <Style Selector="TextBlock">
-    <Setter Property="FontSize" Value="13" />
-  </Style>
-
   <!-- Type scale. Headings are Barlow Condensed: the jersey-lettering voice, upright, never italic. -->
   <Style Selector="TextBlock.display">
     <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
@@ -492,26 +482,6 @@
     <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
   </Style>
 
-  <!-- Lists. -->
-  <Style Selector="ListBox">
-    <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
-    <Setter Property="Padding" Value="4" />
-  </Style>
-  <Style Selector="ListBox ListBoxItem">
-    <Setter Property="CornerRadius" Value="2" />
-    <Setter Property="Padding" Value="10,7" />
-    <Setter Property="Margin" Value="0,1" />
-  </Style>
-  <Style Selector="ListBox ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
-  </Style>
-  <Style Selector="ListBox ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
-  </Style>
-
   <!-- Row templates inside lists: text lines up with the rating badge's centre. -->
   <Style Selector="ListBoxItem Grid > TextBlock">
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -626,39 +596,6 @@
     <Setter Property="Margin" Value="23,14,0,4" />
   </Style>
 
-  <!-- Buttons: ghost by default, primary (paint) for the one action a screen is about. -->
-  <Style Selector="Button">
-    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
-    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource Bg4Brush}" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
-    <Setter Property="Padding" Value="14,7" />
-    <Setter Property="FontWeight" Value="SemiBold" />
-  </Style>
-  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource Bg3Brush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource TextFaintBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-  </Style>
-  <Style Selector="Button.primary">
-    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
-    <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
-    <Setter Property="FontWeight" Value="Bold" />
-  </Style>
-  <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
-    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
-  </Style>
-  <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}" />
-  </Style>
-  <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource TextFaintBrush}" />
-  </Style>
 
   <!-- The season ribbon: every day of the season in one strip. Phases are alternating bands, the
        current one tinted in paint; a win is a bar above the centre line, a loss one below it. -->
@@ -891,10 +828,4 @@
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
   </Style>
 
-  <!-- Inputs sit on the raised surface. -->
-  <Style Selector="ComboBox, TextBox, NumericUpDown">
-    <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource Bg4Brush}" />
-    <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
-  </Style>
 </Styles>

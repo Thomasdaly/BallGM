@@ -3,9 +3,9 @@
 > Maintained by Claude Code. Read at the start of every turn, update at the end (spec 00 §9).
 > A turn started by a `/goal` command begins a new run: increment **Run**, set **Turn** to 1.
 
-**Run:** 1 · **Turn:** 2/40 · **Phase:** 2 — Components
+**Run:** 1 · **Turn:** 3/40 · **Phase:** 2 — Components
 **Base branch:** `main` @ `2c42a3c` · **Work branch:** `ui/release-overhaul`
-**Last updated:** 2026-10-18 (Run 1 · Turn 2, end)
+**Last updated:** 2026-10-18 (Run 1 · Turn 3, start)
 
 ## Next up
 1. Phase 2 — geometry and action controls: `SkewBorder`, `CutCornerBorder`, `Divider`, Button ControlTheme (primary/secondary/ghost/danger/icon, S/M/L, loading, focus ring outside), `ContinueButton`, `SplitButton`, `EntityLink`, toggles; scrollbar/tooltip/menu/flyout/combo restyle

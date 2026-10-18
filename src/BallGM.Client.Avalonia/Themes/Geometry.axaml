@@ -31,6 +31,8 @@
   <Thickness x:Key="PadV12">0,12</Thickness>
   <Thickness x:Key="PadV16">0,16</Thickness>
   <Thickness x:Key="Pad8x4">8,4</Thickness>
+  <Thickness x:Key="Pad16x4">16,4</Thickness>
+  <Thickness x:Key="Pad24x4">24,4</Thickness>
   <Thickness x:Key="Pad12x4">12,4</Thickness>
   <Thickness x:Key="Pad12x8">12,8</Thickness>
   <Thickness x:Key="Pad16x8">16,8</Thickness>

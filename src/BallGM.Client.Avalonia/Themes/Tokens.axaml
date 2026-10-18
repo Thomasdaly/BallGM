@@ -57,6 +57,9 @@
   <SolidColorBrush x:Key="FocusRingBrush" Color="{StaticResource FocusRingColor}" />
   <SolidColorBrush x:Key="ScrimBrush" Color="{StaticResource ScrimColor}" />
   <SolidColorBrush x:Key="PureWhiteBrush" Color="#FFFFFF" />
+  <!-- Hover and press on coloured plates (accent, team bands): a light or dark veil, not a new colour. -->
+  <SolidColorBrush x:Key="HoverOverlayBrush" Color="#1FFFFFFF" />
+  <SolidColorBrush x:Key="PressedOverlayBrush" Color="#29000000" />
   <SolidColorBrush x:Key="PureBlackBrush" Color="#000000" />
   <!-- Soft fills behind semantic chips: the colour at 16% over the surface. -->
   <SolidColorBrush x:Key="WarningSoftBrush" Color="{StaticResource WarningColor}" Opacity="0.16" />

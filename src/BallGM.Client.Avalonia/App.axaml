@@ -11,6 +11,8 @@
         <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Geometry.axaml" />
         <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Icons.axaml" />
         <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Motion.axaml" />
+        <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Controls/Index.axaml" />
+        <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Components/Index.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>
