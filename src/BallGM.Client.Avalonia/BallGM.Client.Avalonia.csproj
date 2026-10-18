@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="BallGM.Client.Avalonia.Tests" />
+    <InternalsVisibleTo Include="BallGM.Client.Avalonia.UiTests" />
   </ItemGroup>
 
   <!-- Developer tooling: lets Avalonia Developer Tools (`avdt mcp`) and the Zafiro Avalonia MCP

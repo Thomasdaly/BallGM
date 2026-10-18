@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The UI release suite (docs/ui/spec/06_QUALITY_GATES.md section 3): headless tests that render
+       through Skia so screenshots carry real pixels. Its own project, rather than more tests in
+       BallGM.Client.Avalonia.Tests, because the headless platform is configured once per assembly
+       and real-pixel rendering must not change how the existing client tests run.
+       xunit v3, like the existing client tests, because Avalonia.Headless.XUnit 12 requires it. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless.XUnit" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BallGM.Client.Avalonia\BallGM.Client.Avalonia.csproj" />
+  </ItemGroup>
+
+</Project>
