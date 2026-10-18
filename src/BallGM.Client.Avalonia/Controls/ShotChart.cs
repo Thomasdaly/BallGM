@@ -64,7 +64,7 @@ public sealed class ShotChart : Control
         var scale = Math.Min(Bounds.Width / CourtWidth, Bounds.Height / CourtDepth);
         Point At(double x, double y) => new(x * scale, y * scale);
         IBrush Fill(ShotZone zone) => Brush(zones[(int)zone].Step);
-        var line = new Pen(Brush("LineBrush"), 1.5);
+        var line = new Pen(Brush("StrokeBrush"), 1.5);
 
         using (context.PushClip(new Rect(0, 0, CourtWidth * scale, CourtDepth * scale)))
         {
@@ -106,7 +106,7 @@ public sealed class ShotChart : Control
             FlowDirection.LeftToRight,
             new Typeface(TextElement.GetFontFamily(this), weight: FontWeight.SemiBold),
             12,
-            Brush("TextBrush"))
+            Brush("TextPrimaryBrush"))
         {
             TextAlignment = TextAlignment.Center,
         };

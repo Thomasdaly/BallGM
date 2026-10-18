@@ -27,6 +27,8 @@
       <StackPanel Grid.Column="1" Spacing="{StaticResource Space16}">
         <TextBlock Text="CALENDAR MONTH" Classes="label-caps" />
         <ctl:CalendarMonth Days="{Binding CalendarDays}" OpenGameCommand="{Binding NoOpCommand}" />
+        <TextBlock Text="SHOT CHART" Classes="label-caps" />
+        <ctl:ShotChart Zones="{Binding ShotZonesSample}" Width="420" Height="320" HorizontalAlignment="Left" />
       </StackPanel>
     </Grid>
     <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">

@@ -162,6 +162,15 @@ public sealed class ComponentGalleryViewModel : ViewModelBase
             return new CalendarDay(inMonth ? day : (day < 1 ? 30 + day : day - 31), inMonth, day == 14, game);
         }).ToList();
 
+    public IReadOnlyList<ShotZoneCell> ShotZonesSample =>
+    [
+        new(BallGM.Domain.Seasons.ShotZone.Rim, "At the rim", "68.2% · 120/176", "+4.1 pts", "64.1%", 1),
+        new(BallGM.Domain.Seasons.ShotZone.Paint, "In the paint", "41.0% · 41/100", "-1.2 pts", "42.2%", 0),
+        new(BallGM.Domain.Seasons.ShotZone.MidRange, "Mid-range", "36.5% · 46/126", "-5.9 pts", "42.4%", -1),
+        new(BallGM.Domain.Seasons.ShotZone.Corner3, "Corner three", "44.4% · 24/54", "+5.8 pts", "38.6%", 2),
+        new(BallGM.Domain.Seasons.ShotZone.AboveBreak3, "Above-the-break three", "35.1% · 66/188", "-0.2 pts", "35.3%", 0),
+    ];
+
     public IReadOnlyList<TimelineEntry> TimelineEntries =>
     [
         new("14 Jan 2041", "Signed a 3-year extension", "$31.2M a season, player option in the final year"),
