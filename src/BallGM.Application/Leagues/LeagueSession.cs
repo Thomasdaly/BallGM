@@ -132,6 +132,12 @@ public sealed partial class LeagueSession
         return _overviewQuery.Project(_snapshot);
     }
 
+    /// <summary>
+    /// The held league's image mapping (team logos, player portraits, team colours) as the data
+    /// source stated it - read-only, for the client's asset resolver. Empty before a league loads.
+    /// </summary>
+    public LeagueArtwork Artwork => _snapshot?.Artwork ?? LeagueArtwork.None;
+
     /// <summary>The current state of the held league, re-projected from the aggregates as they stand.</summary>
     public DomainOperationResult<LeagueOverview> Overview() =>
         _snapshot is null
