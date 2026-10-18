@@ -1,0 +1,60 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.Gallery.GalleryFeedback"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:ComponentGalleryViewModel">
+  <StackPanel Spacing="{StaticResource Space24}">
+    <ctl:Banner Text="Trade deadline in 3 days" Kind="Warning" />
+    <ctl:Banner Text="Regular season · 47 games to play" Kind="Info" />
+    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space24}">
+      <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Height="280">
+        <ctl:EmptyState IconKey="Icon.Injury" Headline="No injuries" Message="Players hurt in games or practice show up here." />
+      </Border>
+      <Border Grid.Column="1" Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Height="280">
+        <ctl:EmptyState IconKey="Icon.Filter" Headline="No players match" Message="Nobody on this roster fits these filters." ActionText="Clear filters" ActionCommand="{Binding NoOpCommand}" />
+      </Border>
+      <Border Grid.Column="2" Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Height="280">
+        <ctl:ErrorState Headline="Standings unavailable" Message="The season could not be read. Your league is safe; try again." Details="season.read_failed" RetryCommand="{Binding NoOpCommand}" />
+      </Border>
+    </Grid>
+    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space24}">
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="SKELETONS · TEXT / ROW / CARD / HEADSHOT" Classes="label-caps" />
+        <ctl:Skeleton Shape="Text" Lines="3" />
+        <ctl:Skeleton Shape="Row" />
+        <ctl:Skeleton Shape="Row" />
+        <ctl:Skeleton Shape="Card" />
+        <ctl:Skeleton Shape="Headshot" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="{StaticResource Space12}">
+        <TextBlock Text="TOASTS · SUCCESS / WARNING / ERROR / INFO" Classes="label-caps" />
+        <ctl:ToastHost ItemsSource="{Binding Toasts}" ItemTemplate="{StaticResource ToastTemplate}" DismissCommand="{Binding NoOpCommand}" />
+      </StackPanel>
+      <StackPanel Grid.Column="2" Spacing="{StaticResource Space12}">
+        <TextBlock Text="PROGRESS OVERLAY · DETERMINATE / INDETERMINATE" Classes="label-caps" />
+        <Panel Height="200">
+          <Border Background="{StaticResource Surface1Brush}" />
+          <ctl:ProgressOverlay IsActive="True" IsIndeterminate="False" Progress="0.45" Title="Simulating" StepText="Thu 16 Jan · 5 of 11 days" StopCommand="{Binding NoOpCommand}" />
+        </Panel>
+        <Panel Height="180">
+          <Border Background="{StaticResource Surface1Brush}" />
+          <ctl:ProgressOverlay IsActive="True" Title="Loading league" StepText="Reading rosters" />
+        </Panel>
+      </StackPanel>
+    </Grid>
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="DIALOG · DESTRUCTIVE CONFIRM" Classes="label-caps" />
+        <ctl:DialogHost Request="{Binding ConfirmDialog}" Height="260">
+          <Border Background="{StaticResource Surface1Brush}" />
+        </ctl:DialogHost>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="{StaticResource Space12}">
+        <TextBlock Text="CRASH DIALOG" Classes="label-caps" />
+        <ctl:CrashDialog Height="420" Summary="Something unexpected stopped the game. Your last save is safe." LogPath="~/BallGM/logs/ballgm-20401014.log" Details="System.InvalidOperationException: sample stack for the gallery" CopyDetailsCommand="{Binding NoOpCommand}" OpenLogsCommand="{Binding NoOpCommand}" QuitCommand="{Binding NoOpCommand}" />
+      </StackPanel>
+    </Grid>
+  </StackPanel>
+</UserControl>

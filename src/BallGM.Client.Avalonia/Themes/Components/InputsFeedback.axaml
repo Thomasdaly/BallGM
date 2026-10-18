@@ -1,0 +1,254 @@
+<!--
+  Inputs and feedback (docs/ui/spec/03_COMPONENTS.md sections 6 and 8): RangeFilter, FilterBar,
+  EmptyState, ErrorState, Banner, Skeleton, ProgressOverlay, DialogHost, CrashDialog, and the toast
+  template used by the shell's toast stack.
+-->
+<ResourceDictionary
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters">
+
+  <ControlTheme x:Key="{x:Type ctl:RangeFilter}" TargetType="ctl:RangeFilter">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+          <TextBlock Text="{TemplateBinding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" VerticalAlignment="Center" />
+          <NumericUpDown Value="{TemplateBinding Low, Mode=TwoWay}" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Width="96" FormatString="0" AutomationProperties.Name="Lowest" />
+          <TextBlock Text="–" Classes="secondary" VerticalAlignment="Center" />
+          <NumericUpDown Value="{TemplateBinding High, Mode=TwoWay}" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Width="96" FormatString="0" AutomationProperties.Name="Highest" />
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:FilterBar}" TargetType="ctl:FilterBar">
+    <Setter Property="Background" Value="{StaticResource Surface1Brush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" Padding="{StaticResource Pad12x8}" CornerRadius="{StaticResource RadiusCard}">
+          <Grid ColumnDefinitions="240,*,Auto,Auto" ColumnSpacing="{StaticResource Space12}">
+            <ctl:SearchBox Text="{TemplateBinding SearchText, Mode=TwoWay}" PlaceholderText="{TemplateBinding SearchPlaceholder}" VerticalAlignment="Center" />
+            <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="2" Text="{TemplateBinding ActiveCountText}" Classes="caption" VerticalAlignment="Center" />
+            <Button Grid.Column="3" Classes="ghost small" Content="RESET" Command="{TemplateBinding ResetCommand}" ToolTip.Tip="Restore the default filters" />
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:EmptyState}" TargetType="ctl:EmptyState">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <Path Data="{StaticResource Court.HalfCourt}" Stroke="{StaticResource StrokeBrush}" StrokeThickness="2" Opacity="0.5" Stretch="Uniform" Width="360" HorizontalAlignment="Center" VerticalAlignment="Top" IsHitTestVisible="False" />
+          <StackPanel Spacing="{StaticResource Space8}" MaxWidth="420" HorizontalAlignment="Center" Margin="{StaticResource Pad24}">
+            <PathIcon Data="{TemplateBinding IconKey, Converter={x:Static conv:ResourceKeyConverter.Instance}}" Classes="large" Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" />
+            <TextBlock Text="{TemplateBinding Headline, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            <TextBlock Text="{TemplateBinding Message}" Classes="body secondary wrap" TextAlignment="Center" />
+            <Button Name="PART_Action" Classes="secondary" Content="{TemplateBinding ActionText}" Command="{TemplateBinding ActionCommand}" HorizontalAlignment="Center" IsVisible="False" Margin="{StaticResource GapTop8}" />
+          </StackPanel>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:has-action /template/ Button#PART_Action">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:ErrorState}" TargetType="ctl:ErrorState">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel Spacing="{StaticResource Space8}" MaxWidth="480" Margin="{StaticResource Pad24}">
+          <PathIcon Data="{StaticResource Icon.Error}" Classes="large" Foreground="{DynamicResource NegativeBrush}" HorizontalAlignment="Center" />
+          <TextBlock Text="{TemplateBinding Headline, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+          <TextBlock Text="{TemplateBinding Message}" Classes="body secondary wrap" TextAlignment="Center" />
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" HorizontalAlignment="Center" Margin="{StaticResource GapTop8}">
+            <Button Classes="secondary" Content="Retry" Command="{TemplateBinding RetryCommand}" />
+            <Button Name="PART_Copy" Classes="ghost" Content="Copy details" />
+          </StackPanel>
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:Banner}" TargetType="ctl:Banner">
+    <Setter Property="Foreground" Value="{StaticResource InfoBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{StaticResource Surface2Brush}" Padding="{StaticResource Pad12x8}">
+          <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="{StaticResource Space12}">
+            <Border Width="{StaticResource AccentStripeWidth}" Background="{TemplateBinding Foreground}" />
+            <PathIcon Grid.Column="1" Data="{StaticResource Icon.Clock}" Classes="small" Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="2" Text="{TemplateBinding Text, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="caps large" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:warning">
+      <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+    </Style>
+    <Style Selector="^:negative">
+      <Setter Property="Foreground" Value="{DynamicResource NegativeBrush}" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:Skeleton}" TargetType="ctl:Skeleton">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Classes="skeleton">
+          <ItemsControl Name="PART_Text" ItemsSource="{TemplateBinding LineIndexes}" IsVisible="False">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:Int32">
+                <Border Classes="bone" Height="12" Margin="{StaticResource GapBottom8}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Grid Name="PART_Row" ColumnDefinitions="32,*,48,48" ColumnSpacing="{StaticResource Space12}" Height="40" IsVisible="False">
+            <Ellipse Classes="bone" Width="32" Height="32" />
+            <Border Grid.Column="1" Classes="bone" Height="12" />
+            <Border Grid.Column="2" Classes="bone" Height="12" />
+            <Border Grid.Column="3" Classes="bone" Height="12" />
+          </Grid>
+          <StackPanel Name="PART_Card" Spacing="{StaticResource Space12}" IsVisible="False">
+            <Border Classes="bone" Height="20" Width="140" HorizontalAlignment="Left" />
+            <Border Classes="bone" Height="64" />
+            <Border Classes="bone" Height="12" />
+            <Border Classes="bone" Height="12" Width="200" HorizontalAlignment="Left" />
+          </StackPanel>
+          <Ellipse Name="PART_Headshot" Classes="bone" Width="96" Height="96" HorizontalAlignment="Left" IsVisible="False" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:text /template/ ItemsControl#PART_Text">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:row /template/ Grid#PART_Row">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:card /template/ StackPanel#PART_Card">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:headshot /template/ Ellipse#PART_Headshot">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:ProgressOverlay}" TargetType="ctl:ProgressOverlay">
+    <Setter Property="IsVisible" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Background="{StaticResource ScrimBrush}">
+          <Border Background="{StaticResource Surface2Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad24}" Width="420" HorizontalAlignment="Center" VerticalAlignment="Center" BoxShadow="0 8 24 0 #59000000">
+            <StackPanel Spacing="{StaticResource Space12}">
+              <TextBlock Text="{TemplateBinding Title, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3" />
+              <ProgressBar IsIndeterminate="{TemplateBinding IsIndeterminate}" Value="{TemplateBinding Progress}" Minimum="0" Maximum="1" Height="6" />
+              <TextBlock Text="{TemplateBinding StepText}" Classes="body secondary wrap" />
+              <Button Name="PART_Stop" Classes="secondary" Content="Stop" Command="{TemplateBinding StopCommand}" HorizontalAlignment="Right" IsVisible="False" />
+            </StackPanel>
+          </Border>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:can-stop /template/ Button#PART_Stop">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:DialogHost}" TargetType="ctl:DialogHost">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <ContentPresenter Name="PART_Content" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
+          <Panel Name="PART_Layer" Background="{StaticResource ScrimBrush}" IsVisible="False">
+            <Border
+              Name="PART_Card"
+              Background="{StaticResource Surface2Brush}"
+              CornerRadius="{StaticResource RadiusCard}"
+              Padding="{StaticResource Pad24}"
+              MinWidth="400"
+              MaxWidth="560"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              BoxShadow="0 8 24 0 #59000000"
+              KeyboardNavigation.TabNavigation="Cycle"
+              DataContext="{TemplateBinding Request}"
+              x:DataType="ctl:DialogRequest">
+              <StackPanel Spacing="{StaticResource Space16}">
+                <TextBlock Text="{Binding Title, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h2 wrap" />
+                <TextBlock Text="{Binding Message}" Classes="body secondary wrap" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <ContentPresenter Content="{Binding Content}" IsVisible="{Binding Content, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" HorizontalAlignment="Right">
+                  <Button Name="PART_Cancel" Classes="ghost" Content="{Binding CancelText}" IsVisible="{Binding HasCancel}" ToolTip.Tip="Esc" />
+                  <Button Name="PART_Confirm" Classes="primary" Content="{Binding ConfirmText}" ToolTip.Tip="Enter" />
+                </StackPanel>
+              </StackPanel>
+            </Border>
+          </Panel>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:open /template/ Panel#PART_Layer">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:open /template/ ContentPresenter#PART_Content">
+      <Setter Property="IsEnabled" Value="False" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:CrashDialog}" TargetType="ctl:CrashDialog">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Background="{StaticResource CanvasGradientBrush}">
+          <Path Data="{StaticResource Court.HalfCourt}" Stroke="{StaticResource StrokeBrush}" StrokeThickness="2" Opacity="0.4" Stretch="Uniform" Width="720" VerticalAlignment="Bottom" IsHitTestVisible="False" />
+          <ctl:CutCornerBorder Background="{StaticResource Surface2Brush}" Width="640" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <StackPanel Spacing="{StaticResource Space16}" Margin="{StaticResource Pad32}">
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
+                <PathIcon Data="{StaticResource Icon.Error}" Classes="large" Foreground="{DynamicResource NegativeBrush}" />
+                <TextBlock Text="BALLGM HIT A PROBLEM" Classes="h1" />
+              </StackPanel>
+              <TextBlock Text="{TemplateBinding Summary}" Classes="body wrap" />
+              <StackPanel Spacing="{StaticResource Space4}">
+                <TextBlock Text="LOG FILE" Classes="label-caps" />
+                <TextBlock Text="{TemplateBinding LogPath}" Classes="caption wrap" />
+              </StackPanel>
+              <Border Background="{StaticResource Surface1Brush}" Padding="{StaticResource Pad12}" MaxHeight="140">
+                <ScrollViewer>
+                  <TextBlock Text="{TemplateBinding Details}" Classes="caption wrap" />
+                </ScrollViewer>
+              </Border>
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" HorizontalAlignment="Right">
+                <Button Classes="secondary" Content="Copy details" Command="{TemplateBinding CopyDetailsCommand}" />
+                <Button Classes="secondary" Content="Open logs folder" Command="{TemplateBinding OpenLogsCommand}" />
+                <Button Classes="primary" Content="QUIT" Command="{TemplateBinding QuitCommand}" />
+              </StackPanel>
+            </StackPanel>
+          </ctl:CutCornerBorder>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <!-- One toast, for the shell's toast stack (an ItemsControl of ToastMessage). -->
+  <DataTemplate x:Key="ToastTemplate" x:DataType="ctl:ToastMessage">
+    <Border Classes="toast" Classes.success="{Binding IsSuccess}" Classes.warning="{Binding IsWarning}" Classes.error="{Binding IsError}" Width="360" Background="{StaticResource Surface2Brush}" CornerRadius="{StaticResource RadiusCard}" BoxShadow="0 8 24 0 #59000000" Margin="{StaticResource GapBottom8}">
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="{StaticResource Space12}">
+        <Border Classes="toast-stripe" Width="{StaticResource AccentStripeWidth}" />
+        <PathIcon Grid.Column="1" Classes="toast-icon" Data="{Binding IconKey, Converter={x:Static conv:ResourceKeyConverter.Instance}}" VerticalAlignment="Top" Margin="0,14,0,0" />
+        <StackPanel Grid.Column="2" Spacing="{StaticResource Space4}" Margin="{StaticResource PadV12}">
+          <TextBlock Text="{Binding Title}" Classes="body-strong wrap" />
+          <TextBlock Text="{Binding Message}" Classes="caption wrap" IsVisible="{Binding HasMessage}" />
+          <Button Classes="ghost small" Content="{Binding ActionText}" Command="{Binding ActionCommand}" IsVisible="{Binding HasAction}" HorizontalAlignment="Left" Margin="-8,0,0,0" />
+        </StackPanel>
+        <Button Grid.Column="3" Classes="icon small" VerticalAlignment="Top" Margin="{StaticResource Pad8}" ToolTip.Tip="Dismiss" AutomationProperties.Name="Dismiss notification" Command="{Binding $parent[ctl:ToastHost].DismissCommand}" CommandParameter="{Binding}">
+          <PathIcon Data="{StaticResource Icon.Close}" Classes="small" />
+        </Button>
+      </Grid>
+    </Border>
+  </DataTemplate>
+</ResourceDictionary>

@@ -1,0 +1,51 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.Gallery.GalleryMedia"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:ComponentGalleryViewModel">
+  <StackPanel Spacing="{StaticResource Space24}">
+    <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="PLAYER HEADSHOT · XS / S / M / L / XL / HERO · FALLBACK · INJURED · NUMBER" Classes="label-caps" />
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+          <ctl:PlayerHeadshot PlayerId="gallery-player-1" PlayerName="Maximilian Okonkwo-Vanderbilt" Size="ExtraSmall" VerticalAlignment="Bottom" />
+          <ctl:PlayerHeadshot PlayerId="gallery-player-1" PlayerName="Maximilian Okonkwo-Vanderbilt" Size="Small" VerticalAlignment="Bottom" />
+          <ctl:PlayerHeadshot PlayerId="gallery-player-2" PlayerName="D'Shawn O'Malley-Fitzgerald" Size="Medium" IsInjured="True" VerticalAlignment="Bottom" />
+          <ctl:PlayerHeadshot PlayerId="gallery-player-2" PlayerName="D'Shawn O'Malley-Fitzgerald" Size="Large" Number="3" IsInjured="True" VerticalAlignment="Bottom" />
+          <ctl:PlayerHeadshot PlayerId="gallery-player-1" PlayerName="Maximilian Okonkwo-Vanderbilt" Size="ExtraLarge" Number="7" VerticalAlignment="Bottom" />
+          <ctl:PlayerHeadshot PlayerId="gallery-player-1" PlayerName="Maximilian Okonkwo-Vanderbilt" Size="Hero" Width="200" Height="240" VerticalAlignment="Bottom" />
+        </StackPanel>
+        <TextBlock Text="TEAM LOGO · 16 – 256 · MONOGRAM FALLBACK" Classes="label-caps" />
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+          <ctl:TeamLogo TeamId="gallery-team-hcm" TeamName="Harbor City Mariners" Size="16" VerticalAlignment="Bottom" />
+          <ctl:TeamLogo TeamId="gallery-team-ngg" TeamName="Northgate Glaciers" Size="24" VerticalAlignment="Bottom" />
+          <ctl:TeamLogo TeamId="gallery-team-sms" TeamName="Sun Mesa Scorch" Size="32" VerticalAlignment="Bottom" />
+          <ctl:TeamLogo TeamId="gallery-team-ncv" TeamName="Neon Coast Voltage" Size="48" VerticalAlignment="Bottom" />
+          <ctl:TeamLogo TeamId="gallery-team-irv" TeamName="Ironvale Forge" Size="64" VerticalAlignment="Bottom" />
+          <ctl:TeamLogo TeamId="gallery-team-psa" TeamName="Port Saint Augustine Navigators" Size="128" VerticalAlignment="Bottom" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="PLAYER CARD · FULL / COMPACT" Classes="label-caps" />
+        <ctl:PlayerCard Model="{Binding StarCard}" />
+        <ctl:PlayerCard Model="{Binding InjuredCard}" IsCompact="True" />
+        <TextBlock Text="TEAM CARD · FULL / COMPACT (LONGEST NAME)" Classes="label-caps" />
+        <ctl:TeamCard Model="{Binding TeamCardSample}" />
+        <ctl:TeamCard Model="{Binding LongTeamCard}" IsCompact="True" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="{StaticResource Space12}">
+        <TextBlock Text="HOVER CARD · PLAYER / TEAM" Classes="label-caps" />
+        <Border Background="{StaticResource Surface3Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" HorizontalAlignment="Left">
+          <ctl:HoverCard Player="{Binding StarCard}" />
+        </Border>
+        <Border Background="{StaticResource Surface3Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" HorizontalAlignment="Left">
+          <ctl:HoverCard Team="{Binding LongTeamCard}" />
+        </Border>
+      </StackPanel>
+    </Grid>
+  </StackPanel>
+</UserControl>

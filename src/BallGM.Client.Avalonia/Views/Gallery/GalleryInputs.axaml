@@ -1,0 +1,59 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.Gallery.GalleryInputs"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:ComponentGalleryViewModel">
+  <StackPanel Spacing="{StaticResource Space24}">
+    <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+      <StackPanel Spacing="{StaticResource Space16}">
+        <TextBlock Text="TEXT BOX · SEARCH · COMBO BOX · NUMERIC · SLIDER" Classes="label-caps" />
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+          <TextBox Width="220" PlaceholderText="Player name" />
+          <TextBox Width="220" Text="Focused field" ctl:ForceState.PseudoClasses="focus-visible" />
+          <TextBox Width="220" Text="Disabled" IsEnabled="False" />
+          <ctl:SearchBox Width="240" />
+          <ctl:SearchBox Width="240" Text="Okonkwo" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+          <ComboBox Width="220" ItemsSource="{Binding Teams}" SelectedIndex="0">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:GalleryTeam">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <NumericUpDown Width="180" Value="18.2" FormatString="$0.0M" Increment="0.1" Minimum="0" Maximum="60" AutomationProperties.Name="First season salary" />
+          <NumericUpDown Width="140" Value="3" Minimum="1" Maximum="5" AutomationProperties.Name="Seasons" />
+          <Slider Width="240" Minimum="0" Maximum="48" Value="32" TickFrequency="4" IsSnapToTickEnabled="True" TickPlacement="BottomRight" AutomationProperties.Name="Minutes" />
+          <TextBlock Text="32 MIN" Classes="label-caps" VerticalAlignment="Center" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+    <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+      <StackPanel Spacing="{StaticResource Space16}">
+        <TextBlock Text="FILTER BAR · CHIP TOGGLES · RANGE FILTERS" Classes="label-caps" />
+        <ctl:FilterBar SearchPlaceholder="Search roster" ActiveCount="2" ResetCommand="{Binding NoOpCommand}" Background="{StaticResource Surface2Brush}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+            <ItemsControl ItemsSource="{Binding Positions}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <ToggleButton Classes="chip" Content="{Binding}" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ctl:RangeFilter Label="Age" Minimum="19" Maximum="40" Low="19" High="40" />
+            <ctl:RangeFilter Label="OVR" Minimum="0" Maximum="100" Low="40" High="99" />
+          </StackPanel>
+        </ctl:FilterBar>
+        <ctl:FilterBar SearchPlaceholder="Search free agents" ActiveCount="0" ResetCommand="{Binding NoOpCommand}" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

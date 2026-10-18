@@ -98,10 +98,15 @@ public class SkewBorder : Decorator, ICustomHitTest
     {
         var inset = InsetFor(finalSize.Height);
         var padding = Padding;
+        var inner = Math.Max(0, finalSize.Width - padding.Left - padding.Right);
+
+        // Stretched taller than it measured, the slant runs further; the child keeps its desired width
+        // (centred) rather than being squeezed and clipped, since its glyphs never fill their corners.
+        var width = Math.Min(inner, Math.Max(inner - (2 * inset), Child?.DesiredSize.Width ?? 0));
         var rect = new Rect(
-            padding.Left + inset,
+            padding.Left + ((inner - width) / 2),
             padding.Top,
-            Math.Max(0, finalSize.Width - padding.Left - padding.Right - (2 * inset)),
+            width,
             Math.Max(0, finalSize.Height - padding.Top - padding.Bottom));
         Child?.Arrange(rect);
         return finalSize;

@@ -36,9 +36,21 @@ public static class FallbackArt
         });
     }
 
-    private static DrawingImage PlayerSilhouette(Color primary, Color secondary, string? number)
+    /// <summary>The team backdrop alone, for a transparent cutout to sit on.</summary>
+    public static IImage Backdrop(AssetEntry entry)
     {
-        var group = new DrawingGroup();
+        var primary = Parse(entry.PrimaryColour) ?? Neutral;
+        var secondary = Parse(entry.SecondaryColour) ?? Wcag.Lighten(primary, 0.2);
+        return Cache.GetOrAdd($"backdrop|{primary}|{secondary}", _ =>
+        {
+            var group = new DrawingGroup();
+            AddBackdrop(group, primary, secondary);
+            return new DrawingImage(group);
+        });
+    }
+
+    private static void AddBackdrop(DrawingGroup group, Color primary, Color secondary)
+    {
         var backdrop = new LinearGradientBrush
         {
             StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
@@ -51,6 +63,12 @@ public static class FallbackArt
         };
         group.Children.Add(new GeometryDrawing { Brush = backdrop, Geometry = new RectangleGeometry(new Rect(0, 0, Grid, Grid)) });
         group.Children.Add(new GeometryDrawing { Brush = new SolidColorBrush(secondary, 0.35), Geometry = Stripe(62, 100, 14) });
+    }
+
+    private static DrawingImage PlayerSilhouette(Color primary, Color secondary, string? number)
+    {
+        var group = new DrawingGroup();
+        AddBackdrop(group, primary, secondary);
         group.Children.Add(new GeometryDrawing { Brush = new SolidColorBrush(Silhouette, 0.72), Geometry = StreamGeometry.Parse(SilhouettePath) });
         if (number is not null)
         {

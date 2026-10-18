@@ -13,6 +13,9 @@ public interface IAssetResolver
 
     bool TryGetCached(AssetKey key, AssetSlot slot, out IImage image);
 
+    /// <summary>What the catalog knows about an entity (label, colours, file), or null.</summary>
+    AssetEntry? Describe(AssetKey key);
+
     /// <summary>Resolves off the UI thread; returns the fallback when there is no usable image.</summary>
     Task<IImage> ResolveAsync(AssetKey key, AssetSlot slot, CancellationToken cancellationToken);
 

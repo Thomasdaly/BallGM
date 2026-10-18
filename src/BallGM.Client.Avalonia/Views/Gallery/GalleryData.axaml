@@ -1,0 +1,86 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.Gallery.GalleryData"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:ComponentGalleryViewModel">
+  <StackPanel Spacing="{StaticResource Space24}">
+    <Grid ColumnDefinitions="2*,*,*" ColumnSpacing="{StaticResource Space24}">
+      <ctl:Tile Title="Next game" ActionText="Preview" ActionCommand="{Binding NoOpCommand}" IsFeatured="True">
+        <StackPanel Spacing="{StaticResource Space8}">
+          <TextBlock Text="TUE 14 JAN · 7:30 PM · HOME" Classes="label-caps" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+          <TextBlock Text="MARINERS vs FORGE" Classes="hero small" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+        </StackPanel>
+      </ctl:Tile>
+      <ctl:Tile Grid.Column="1" Title="Cap space" ActionText="Finances" ActionCommand="{Binding NoOpCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
+          <ctl:StatTile Value="$3.1M" Label="Under the tax" Delta="$1.2M vs last week" Direction="Up" />
+          <ctl:StatTile Value="2" Label="Spots open" />
+        </StackPanel>
+      </ctl:Tile>
+      <ctl:Tile Grid.Column="2" Title="Team leaders">
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
+          <ctl:StatTile Value="24.1" Label="PTS" Delta="4th in league" />
+          <ctl:StatTile Value="-1.8" Label="Net rating" Delta="2.1 vs average" Direction="Down" />
+        </StackPanel>
+      </ctl:Tile>
+    </Grid>
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
+      <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+        <StackPanel Spacing="{StaticResource Space12}">
+          <TextBlock Text="RATING BADGE · S / M / L / XL · EVERY TIER" Classes="label-caps" />
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <ctl:RatingBadge Value="94" Size="Small" />
+            <ctl:RatingBadge Value="84" Size="Small" />
+            <ctl:RatingBadge Value="74" Size="Small" />
+            <ctl:RatingBadge Value="64" Size="Small" />
+            <ctl:RatingBadge Value="54" Size="Small" />
+            <ctl:RatingBadge Value="44" Size="Small" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <ctl:RatingBadge Value="94" />
+            <ctl:RatingBadge Value="84" />
+            <ctl:RatingBadge Value="74" />
+            <ctl:RatingBadge Value="64" />
+            <ctl:RatingBadge Value="54" />
+            <ctl:RatingBadge Value="44" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <ctl:RatingBadge Value="94" Size="Large" />
+            <ctl:RatingBadge Value="84" Size="Large" />
+            <ctl:RatingBadge Value="74" Size="Large" />
+            <ctl:RatingBadge Value="93" Size="ExtraLarge" Caption="OVR" />
+            <ctl:RatingBadge Value="95" Size="ExtraLarge" Caption="POT" />
+          </StackPanel>
+          <TextBlock Text="POSITION CHIP · STATUS CHIP" Classes="label-caps" Margin="{StaticResource GapTop8}" />
+          <WrapPanel ItemSpacing="{StaticResource Space8}" LineSpacing="{StaticResource Space8}">
+            <ctl:PositionChip Text="PG" />
+            <ctl:PositionChip Text="SF/PF" />
+            <ctl:StatusChip Text="Out · 2-3 weeks" Kind="Negative" />
+            <ctl:StatusChip Text="Day to day" Kind="Warning" />
+            <ctl:StatusChip Text="Healthy" Kind="Positive" />
+            <ctl:StatusChip Text="Expiring" Kind="Warning" />
+            <ctl:StatusChip Text="Player option" Kind="Info" />
+            <ctl:StatusChip Text="Team option" Kind="Info" />
+            <ctl:StatusChip Text="Rookie scale" Kind="Neutral" />
+            <ctl:StatusChip Text="Starter" Kind="Accent" />
+            <ctl:StatusChip Text="Traded" Kind="Neutral" />
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+      <Border Grid.Column="1" Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+        <StackPanel Spacing="{StaticResource Space8}">
+          <TextBlock Text="ATTRIBUTE BAR · SINGLE / COMPARE / DELTA" Classes="label-caps" />
+          <ctl:AttributeBar Label="Three-point" Value="85" Delta="2" />
+          <ctl:AttributeBar Label="Mid-range" Value="74" Delta="-1" />
+          <ctl:AttributeBar Label="Perimeter defence" Value="66" CompareValue="81" />
+          <ctl:AttributeBar Label="Block" Value="52" CompareValue="38" />
+          <ctl:AttributeBar Label="Post control" Value="41" />
+          <TextBlock Text="KEY VALUE LIST" Classes="label-caps" Margin="{StaticResource GapTop8}" />
+          <ctl:KeyValueList Items="{Binding BioFacts}" Columns="3" />
+        </StackPanel>
+      </Border>
+    </Grid>
+  </StackPanel>
+</UserControl>

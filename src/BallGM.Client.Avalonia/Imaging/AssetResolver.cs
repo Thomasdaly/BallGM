@@ -62,6 +62,8 @@ public sealed class AssetResolver : IAssetResolver
 
     public IImage Fallback(AssetKey key, AssetSlot slot) => FallbackArt.For(_catalog.Find(key), key, slot);
 
+    public AssetEntry? Describe(AssetKey key) => _catalog.Find(key);
+
     /// <summary>Pixels a slot is decoded at: DIPs x render and UI scale, rounded up to a bucket.</summary>
     public int BucketFor(AssetSlot slot)
     {

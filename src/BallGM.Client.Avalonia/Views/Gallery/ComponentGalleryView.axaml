@@ -39,6 +39,11 @@
         <gallery:GalleryFoundations IsVisible="{Binding Section, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Foundations}" />
         <gallery:GalleryActions IsVisible="{Binding Section, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Actions}" />
         <gallery:GalleryNavigation IsVisible="{Binding Section, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Navigation}" />
+        <gallery:GalleryInputs IsVisible="{Binding Section, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Inputs}" />
+        <gallery:GalleryData IsVisible="{Binding Section, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Data}" />
+        <gallery:GalleryMedia IsVisible="{Binding Section, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Media}" />
+        <gallery:GallerySports IsVisible="{Binding Section, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Sports}" />
+        <gallery:GalleryFeedback IsVisible="{Binding Section, Converter={x:Static ObjectConverters.Equal}, ConverterParameter=Feedback}" />
       </Panel>
     </ScrollViewer>
   </DockPanel>

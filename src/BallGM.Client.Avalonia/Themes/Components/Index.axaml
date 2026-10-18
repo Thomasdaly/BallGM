@@ -4,5 +4,8 @@
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <ResourceDictionary.MergedDictionaries>
     <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Components/ActionsNavigation.axaml" />
+    <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Components/DataDisplay.axaml" />
+    <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Components/InputsFeedback.axaml" />
+    <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Components/Sports.axaml" />
   </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

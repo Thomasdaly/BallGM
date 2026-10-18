@@ -80,7 +80,7 @@
                   IsVisible="False" />
                 <StackPanel VerticalAlignment="Center">
                   <TextBlock Text="{TemplateBinding Label}" Classes="h3" Foreground="{TemplateBinding Foreground}" />
-                  <TextBlock Text="{TemplateBinding Subtitle}" Classes="caption trim" Foreground="{TemplateBinding Foreground}" MaxWidth="200" />
+                  <TextBlock Text="{TemplateBinding Subtitle}" Classes="caption-plain trim" Foreground="{TemplateBinding Foreground}" MaxWidth="200" />
                 </StackPanel>
                 <PathIcon Data="{StaticResource Icon.CaretRight}" Classes="small" VerticalAlignment="Center" Foreground="{TemplateBinding Foreground}" />
               </StackPanel>
@@ -209,7 +209,7 @@
       <DataTemplate x:DataType="ctl:NavEntry">
         <Grid ColumnDefinitions="Auto,*,Auto" Margin="{StaticResource PadH24}" ToolTip.Tip="{Binding ToolTipText}">
           <PathIcon Data="{Binding IconKey, Converter={x:Static conv:ResourceKeyConverter.Instance}}" />
-          <TextBlock Name="Label" Grid.Column="1" Text="{Binding Label}" Classes="label-caps large trim" Foreground="{Binding $parent[ListBoxItem].Foreground}" Margin="{StaticResource GapLeft16}" VerticalAlignment="Center" />
+          <TextBlock Name="Label" Grid.Column="1" Text="{Binding Label}" Classes="caps large trim" Foreground="{Binding $parent[ListBoxItem].Foreground}" Margin="{StaticResource GapLeft16}" VerticalAlignment="Center" />
           <ctl:Badge Name="Count" Grid.Column="2" Count="{Binding BadgeCount}" VerticalAlignment="Center" />
         </Grid>
       </DataTemplate>
@@ -231,7 +231,7 @@
       <ControlTemplate>
         <Panel>
           <Border Name="PART_Pill" Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusRound}" MinWidth="20" Height="20" Padding="{StaticResource PadH8}">
-            <TextBlock Text="{TemplateBinding Count}" Classes="label-caps num" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Text="{TemplateBinding Count}" Classes="caps num" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Border>
           <Ellipse Name="PART_Dot" Width="8" Height="8" Fill="{TemplateBinding Background}" IsVisible="False" />
         </Panel>
@@ -278,7 +278,7 @@
                 <Button Theme="{StaticResource BareButton}" Padding="{StaticResource Pad4}" Command="{Binding Command}" CommandParameter="{Binding Parameter}" IsVisible="{Binding IsLink}" AutomationProperties.Name="{Binding Label}">
                   <TextBlock Text="{Binding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" />
                 </Button>
-                <TextBlock Text="{Binding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="{StaticResource Pad4}" IsVisible="{Binding !IsLink}" />
+                <TextBlock Text="{Binding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="caps" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" Margin="{StaticResource Pad4}" IsVisible="{Binding !IsLink}" />
               </StackPanel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

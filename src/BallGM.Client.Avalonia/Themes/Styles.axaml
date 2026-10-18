@@ -78,6 +78,20 @@
   <Style Selector="TextBlock.label-caps.large">
     <Setter Property="FontSize" Value="{StaticResource FontSizeLabelLarge}" />
   </Style>
+  <!-- The same roles without a colour, for template text that sets its own (a class outranks a value set in a template). -->
+  <Style Selector="TextBlock.caps">
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeLabel}" />
+    <Setter Property="LetterSpacing" Value="{StaticResource TrackingLabel}" />
+  </Style>
+  <Style Selector="TextBlock.caps.large">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeLabelLarge}" />
+  </Style>
+  <Style Selector="TextBlock.caption-plain">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="LineHeight" Value="{StaticResource LineHeightCaption}" />
+  </Style>
   <Style Selector="TextBlock.body">
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
     <Setter Property="FontWeight" Value="Normal" />
@@ -172,7 +186,7 @@
       </Transitions>
     </Setter>
   </Style>
-  <Style Selector="ctl|Spinner">
+  <Style Selector=":is(TopLevel):not(.reduced-motion) ctl|Spinner">
     <Style.Animations>
       <Animation Duration="0:0:0.9" IterationCount="Infinite">
         <KeyFrame Cue="0%">
@@ -189,14 +203,106 @@
   <Style Selector=":is(TopLevel).reduced-motion ctl|SkewBorder.tab-indicator">
     <Setter Property="Transitions" Value="{x:Null}" />
   </Style>
-  <Style Selector=":is(TopLevel).reduced-motion ctl|Spinner">
+
+  <!-- W/L strip: W filled positive, L outlined negative; the letter is always there. -->
+  <Style Selector="Border.wl.win">
+    <Setter Property="Background" Value="{DynamicResource PositiveBrush}" />
+  </Style>
+  <Style Selector="Border.wl.win TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource PureBlackBrush}" />
+  </Style>
+  <Style Selector="Border.wl.loss">
+    <Setter Property="BorderBrush" Value="{DynamicResource NegativeBrush}" />
+    <Setter Property="BorderThickness" Value="1.5" />
+  </Style>
+  <Style Selector="Border.wl.loss TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource NegativeBrush}" />
+  </Style>
+
+  <!-- Bracket: the user's path carries the accent stripe. -->
+  <Style Selector="Border.series.user">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+  </Style>
+
+  <!-- Calendar day cards. -->
+  <Style Selector="Button.daycard">
+    <Setter Property="Background" Value="{StaticResource Surface1Brush}" />
+  </Style>
+  <Style Selector="Button.daycard.out">
+    <Setter Property="Background" Value="{x:Null}" />
+    <Setter Property="Opacity" Value="0.6" />
+  </Style>
+  <Style Selector="Button.daycard.game:pointerover">
+    <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+  </Style>
+  <Style Selector="Button.daycard.today">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.daycard.today /template/ Border#PART_Hover">
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="0,3,0,0" />
+  </Style>
+  <Style Selector="Button.daycard:disabled">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector="Button.daycard.out:disabled">
+    <Setter Property="Opacity" Value="0.6" />
+  </Style>
+
+  <!-- Toasts: a stripe and icon in the kind's colour. -->
+  <Style Selector="Border.toast Border.toast-stripe">
+    <Setter Property="Background" Value="{StaticResource InfoBrush}" />
+  </Style>
+  <Style Selector="Border.toast PathIcon.toast-icon">
+    <Setter Property="Foreground" Value="{StaticResource InfoBrush}" />
+  </Style>
+  <Style Selector="Border.toast.success Border.toast-stripe">
+    <Setter Property="Background" Value="{DynamicResource PositiveBrush}" />
+  </Style>
+  <Style Selector="Border.toast.success PathIcon.toast-icon">
+    <Setter Property="Foreground" Value="{DynamicResource PositiveBrush}" />
+  </Style>
+  <Style Selector="Border.toast.warning Border.toast-stripe">
+    <Setter Property="Background" Value="{StaticResource WarningBrush}" />
+  </Style>
+  <Style Selector="Border.toast.warning PathIcon.toast-icon">
+    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+  </Style>
+  <Style Selector="Border.toast.error Border.toast-stripe">
+    <Setter Property="Background" Value="{DynamicResource NegativeBrush}" />
+  </Style>
+  <Style Selector="Border.toast.error PathIcon.toast-icon">
+    <Setter Property="Foreground" Value="{DynamicResource NegativeBrush}" />
+  </Style>
+
+  <!-- Skeleton bones shimmer; still under reduced motion. -->
+  <Style Selector=":is(Control).bone">
+    <Setter Property="Opacity" Value="0.9" />
+  </Style>
+  <Style Selector="Border.bone">
+    <Setter Property="Background" Value="{StaticResource Surface3Brush}" />
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusChip}" />
+  </Style>
+  <Style Selector="Ellipse.bone">
+    <Setter Property="Fill" Value="{StaticResource Surface3Brush}" />
+  </Style>
+  <Style Selector=":is(TopLevel):not(.reduced-motion) Panel.skeleton">
     <Style.Animations>
-      <Animation Duration="0:0:1" IterationCount="1">
+      <Animation Duration="0:0:1.4" IterationCount="Infinite" PlaybackDirection="Alternate">
         <KeyFrame Cue="0%">
-          <Setter Property="RotateTransform.Angle" Value="0" />
+          <Setter Property="Opacity" Value="1" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="Opacity" Value="0.55" />
         </KeyFrame>
       </Animation>
     </Style.Animations>
+  </Style>
+
+  <!-- Reduced motion: progress bars stop sweeping (the step text still says what is happening). -->
+  <Style Selector=":is(TopLevel).reduced-motion ProgressBar">
+    <Setter Property="IsIndeterminate" Value="False" />
   </Style>
 
   <!-- Size-only helpers for screens not yet rebuilt (they replaced literal FontSize values). -->

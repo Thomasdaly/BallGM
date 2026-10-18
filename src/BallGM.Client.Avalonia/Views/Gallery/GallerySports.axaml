@@ -1,0 +1,49 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.Gallery.GallerySports"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:ComponentGalleryViewModel">
+  <StackPanel Spacing="{StaticResource Space24}">
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
+      <StackPanel Spacing="{StaticResource Space16}">
+        <TextBlock Text="SCORE BUG · LINESCORE" Classes="label-caps" />
+        <ctl:ScoreBug Away="{Binding BugAway}" Home="{Binding BugHome}" Status="Final" />
+        <ctl:Linescore PeriodLabels="{Binding PeriodLabels}" Rows="{Binding LinescoreRows}" />
+        <TextBlock Text="FORM · SPARKLINE · W/L STRIP" Classes="label-caps" />
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+          <ctl:FormSparkline Values="{Binding FormValues}" Width="160" />
+          <TextBlock Text="108.6 PTS" Classes="table body-strong" VerticalAlignment="Center" />
+          <ctl:WinLossStrip Results="{Binding FormResults}" />
+        </StackPanel>
+        <TextBlock Text="COMPARISON BAR" Classes="label-caps" />
+        <ctl:ComparisonBar Label="Points per game" LeftValue="112.4" RightValue="108.1" LeftText="112.4" RightText="108.1" />
+        <ctl:ComparisonBar Label="Rebounds" LeftValue="41.2" RightValue="46.9" LeftText="41.2" RightText="46.9" RightBrush="{StaticResource InfoBrush}" />
+        <TextBlock Text="CAP BAR · UNDER / OVER THE TAX" Classes="label-caps" />
+        <ctl:CapBar Segments="{Binding CapSegments}" Markers="{Binding CapMarkers}" />
+        <ctl:CapBar Segments="{Binding CapOverSegments}" Markers="{Binding CapMarkers}" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="{StaticResource Space16}">
+        <TextBlock Text="CALENDAR MONTH" Classes="label-caps" />
+        <ctl:CalendarMonth Days="{Binding CalendarDays}" OpenGameCommand="{Binding NoOpCommand}" />
+      </StackPanel>
+    </Grid>
+    <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="BRACKET" Classes="label-caps" />
+        <ctl:BracketView Rounds="{Binding BracketRounds}" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="{StaticResource Space12}">
+        <TextBlock Text="TIMELINE · NEWS CARD · INBOX ITEM" Classes="label-caps" />
+        <ctl:Timeline Entries="{Binding TimelineEntries}" />
+        <ctl:NewsCard Headline="Glaciers win ninth straight" Meta="League news · Mon 13 Jan" Summary="Northgate stretched the league's longest streak with a 112-98 win." />
+        <ctl:NewsCard Headline="Kovac wants extension talks" Meta="Inbox · Agent · Tue 14 Jan" Summary="His agent asks for an answer before the deadline." IsUnread="True" NeedsDecision="True" />
+      </StackPanel>
+    </Grid>
+    <StackPanel Spacing="{StaticResource Space8}">
+      <TextBlock Text="TICKER" Classes="label-caps" />
+      <ctl:Ticker Items="{Binding TickerItems}" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

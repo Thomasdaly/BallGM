@@ -32,6 +32,7 @@ internal sealed class ShellDriver
     /// <summary>Opens the shell on <paramref name="packPath"/> (the UI fixture league by default), mid-season, viewing the user's team.</summary>
     public static ShellDriver Open(int width, int height, string? packPath = null, bool midSeason = true)
     {
+        Controls.UiServices.ReducedMotion = true;
         Environment.SetEnvironmentVariable(LeagueClientComposition.LeaguePackEnvironmentVariable, packPath ?? RepoPaths.UiLeaguePack);
         var viewModel = LeagueClientComposition.CreateMainWindowViewModel();
 

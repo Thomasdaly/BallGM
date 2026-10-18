@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using BallGM.Client.Avalonia.Controls;
 using BallGM.Client.Avalonia.UiTests.Harness;
 using BallGM.Client.Avalonia.ViewModels;
 using BallGM.Client.Avalonia.Views.Gallery;
@@ -14,6 +15,7 @@ public sealed class GalleryTests
     [AvaloniaFact]
     public void Gallery_RendersEverySectionAndCapturesIt()
     {
+        UiServices.ReducedMotion = true;
         var sink = BindingLogSink.Install();
         var viewModel = new ComponentGalleryViewModel();
         var window = new Window { Width = 1920, Height = 1080, Content = new ComponentGalleryView { DataContext = viewModel } };
@@ -33,6 +35,14 @@ public sealed class GalleryTests
                 ShellDriver.Settle();
                 using var frame = window.CaptureRenderedFrame()!;
                 frame.Save(Path.Combine(directory, $"S33_gallery-{viewModel.Section.ToLowerInvariant()}_1920x1080@100.png"));
+
+                // The whole section, for review of what sits below the fold.
+                window.Height = 2400;
+                ShellDriver.Settle();
+                using var full = window.CaptureRenderedFrame()!;
+                full.Save(Path.Combine(directory, $"S33_gallery-{viewModel.Section.ToLowerInvariant()}_full.png"));
+                window.Height = 1080;
+                ShellDriver.Settle();
                 failures.AddRange(sink.Messages.Select(message => $"{viewModel.Section}: {message}"));
             }
         }

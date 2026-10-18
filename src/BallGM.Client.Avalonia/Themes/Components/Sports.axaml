@@ -1,0 +1,331 @@
+<!--
+  Sports data display (docs/ui/spec/03_COMPONENTS.md section 7 and 01 section 12): FormSparkline,
+  WinLossStrip, ComparisonBar, CapBar, Linescore, ScoreBug, Ticker, BracketView, CalendarMonth,
+  Timeline, NewsCard.
+-->
+<ResourceDictionary
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters">
+
+  <ControlTheme x:Key="{x:Type ctl:FormSparkline}" TargetType="ctl:FormSparkline">
+    <Setter Property="Stroke" Value="{StaticResource TextSecondaryBrush}" />
+    <Setter Property="LastPoint" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Height" Value="24" />
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:WinLossStrip}" TargetType="ctl:WinLossStrip">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <ItemsControl ItemsSource="{TemplateBinding Results}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="ctl:FormResult">
+              <Border Classes="wl" Classes.win="{Binding Won}" Classes.loss="{Binding Lost}" Width="22" Height="22" CornerRadius="{StaticResource RadiusChip}" ToolTip.Tip="{Binding Detail}">
+                <TextBlock Text="{Binding Letter}" Classes="label-caps" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:SplitBar}" TargetType="ctl:SplitBar">
+    <Setter Property="Height" Value="8" />
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:ComparisonBar}" TargetType="ctl:ComparisonBar">
+    <Setter Property="LeftBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="RightBrush" Value="{StaticResource TextMutedBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid ColumnDefinitions="56,*,56" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space4}">
+          <TextBlock Grid.ColumnSpan="3" Text="{TemplateBinding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" HorizontalAlignment="Center" />
+          <TextBlock Grid.Row="1" Text="{TemplateBinding LeftText}" Classes="table body-strong" HorizontalAlignment="Left" VerticalAlignment="Center" />
+          <ctl:SplitBar Grid.Row="1" Grid.Column="1" LeftValue="{TemplateBinding LeftValue}" RightValue="{TemplateBinding RightValue}" LeftBrush="{TemplateBinding LeftBrush}" RightBrush="{TemplateBinding RightBrush}" VerticalAlignment="Center" />
+          <TextBlock Grid.Row="1" Grid.Column="2" Text="{TemplateBinding RightText}" Classes="table body-strong" HorizontalAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:CapBar}" TargetType="ctl:CapBar">
+    <Setter Property="Track" Value="{StaticResource Surface3Brush}" />
+    <Setter Property="Fill" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Over" Value="{StaticResource WarningBrush}" />
+    <Setter Property="Tax" Value="{DynamicResource NegativeBrush}" />
+    <Setter Property="Marker" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="LabelBrush" Value="{StaticResource TextSecondaryBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:Linescore}" TargetType="ctl:Linescore">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12x8}">
+          <StackPanel>
+            <Grid ColumnDefinitions="64,*,56">
+              <TextBlock Text="TEAM" Classes="label-caps" />
+              <ItemsControl Grid.Column="1" ItemsSource="{TemplateBinding PeriodLabels}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Rows="1" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <TextBlock Text="{Binding}" Classes="label-caps" HorizontalAlignment="Right" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Grid.Column="2" Text="T" Classes="label-caps" HorizontalAlignment="Right" />
+            </Grid>
+            <ItemsControl ItemsSource="{TemplateBinding Rows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="ctl:LinescoreRow">
+                  <Grid ColumnDefinitions="64,*,56" Height="32">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                      <ctl:TeamLogo TeamId="{Binding TeamId}" TeamName="{Binding Abbreviation}" Size="20" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding Abbreviation}" Classes="body-strong" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Periods}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <UniformGrid Rows="1" />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:Int32">
+                          <TextBlock Text="{Binding}" Classes="table" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Grid.Column="2" Text="{Binding Total}" Classes="stat-m" Classes.secondary="{Binding !IsWinner}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:ScoreBug}" TargetType="ctl:ScoreBug">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel Orientation="Horizontal" Spacing="0">
+          <ctl:SkewBorder Angle="{StaticResource SkewAngle}" Background="{StaticResource Surface2Brush}" Padding="{StaticResource Pad12x4}" DataContext="{TemplateBinding Away}" x:DataType="ctl:ScoreBugSide">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <ctl:TeamLogo TeamId="{Binding TeamId}" TeamName="{Binding Name}" Size="32" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding Abbreviation}" Classes="h3" VerticalAlignment="Center" ToolTip.Tip="{Binding Name}" />
+              <TextBlock Text="{Binding Score}" Classes="stat-m" Classes.secondary="{Binding !IsWinner}" VerticalAlignment="Center" MinWidth="40" TextAlignment="Right" />
+            </StackPanel>
+          </ctl:SkewBorder>
+          <ctl:SkewBorder Angle="{StaticResource SkewAngle}" Background="{DynamicResource AccentBrush}" Padding="{StaticResource Pad16x4}">
+            <TextBlock Text="{TemplateBinding Status, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="caps large" Foreground="{DynamicResource OnAccentBrush}" VerticalAlignment="Center" />
+          </ctl:SkewBorder>
+          <ctl:SkewBorder Angle="{StaticResource SkewAngle}" Background="{StaticResource Surface2Brush}" Padding="{StaticResource Pad12x4}" DataContext="{TemplateBinding Home}" x:DataType="ctl:ScoreBugSide">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <TextBlock Text="{Binding Score}" Classes="stat-m" Classes.secondary="{Binding !IsWinner}" VerticalAlignment="Center" MinWidth="40" />
+              <TextBlock Text="{Binding Abbreviation}" Classes="h3" VerticalAlignment="Center" ToolTip.Tip="{Binding Name}" />
+              <ctl:TeamLogo TeamId="{Binding TeamId}" TeamName="{Binding Name}" Size="32" VerticalAlignment="Center" />
+            </StackPanel>
+          </ctl:SkewBorder>
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:Ticker}" TargetType="ctl:Ticker">
+    <Setter Property="Height" Value="{StaticResource TickerHeight}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid ColumnDefinitions="Auto,*" Background="{StaticResource Surface1Brush}">
+          <ctl:SkewBorder Angle="{StaticResource SkewAngle}" Background="{DynamicResource AccentBrush}" Padding="{StaticResource PadH16}" Margin="-6,0,0,0">
+            <TextBlock Text="{TemplateBinding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="caps large" Foreground="{DynamicResource OnAccentBrush}" VerticalAlignment="Center" />
+          </ctl:SkewBorder>
+          <Panel Grid.Column="1" ClipToBounds="True" Margin="{StaticResource GapLeft8}">
+            <ItemsControl Name="PART_Strip" ItemsSource="{TemplateBinding Shown}" HorizontalAlignment="Left">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="ctl:TickerItem">
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" Margin="{StaticResource GapRight16}" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Tag}" Classes="label-caps" IsVisible="{Binding HasTag}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Text}" Classes="table" VerticalAlignment="Center" />
+                    <TextBlock Text="·" Classes="muted" VerticalAlignment="Center" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Panel>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:BracketView}" TargetType="ctl:BracketView">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <ItemsControl ItemsSource="{TemplateBinding Rounds}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="ctl:BracketRound">
+              <StackPanel Width="220" Spacing="{StaticResource Space12}">
+                <TextBlock Text="{Binding Name, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" />
+                <ItemsControl ItemsSource="{Binding Series}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="ctl:BracketSeries">
+                      <Border Classes="series" Classes.user="{Binding IsUserSeries}" Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Margin="{StaticResource GapBottom12}">
+                        <StackPanel>
+                          <Grid ColumnDefinitions="24,Auto,*,24" ColumnSpacing="{StaticResource Space8}" Height="32" Margin="{StaticResource PadH8}">
+                            <TextBlock Text="{Binding TopSeed}" Classes="caption num" VerticalAlignment="Center" />
+                            <ctl:TeamLogo Grid.Column="1" TeamId="{Binding TopTeamId}" TeamName="{Binding TopName}" Size="20" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="{Binding TopName}" Classes="body-strong trim" Classes.secondary="{Binding BottomLeads}" VerticalAlignment="Center" ToolTip.Tip="{Binding TopName}" />
+                            <TextBlock Grid.Column="3" Text="{Binding TopWins}" Classes="table body-strong" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                          </Grid>
+                          <ctl:Divider />
+                          <Grid ColumnDefinitions="24,Auto,*,24" ColumnSpacing="{StaticResource Space8}" Height="32" Margin="{StaticResource PadH8}">
+                            <TextBlock Text="{Binding BottomSeed}" Classes="caption num" VerticalAlignment="Center" />
+                            <ctl:TeamLogo Grid.Column="1" TeamId="{Binding BottomTeamId}" TeamName="{Binding BottomName}" Size="20" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Text="{Binding BottomName}" Classes="body-strong trim" Classes.secondary="{Binding TopLeads}" VerticalAlignment="Center" ToolTip.Tip="{Binding BottomName}" />
+                            <TextBlock Grid.Column="3" Text="{Binding BottomWins}" Classes="table body-strong" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                          </Grid>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:CalendarMonth}" TargetType="ctl:CalendarMonth">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel Spacing="{StaticResource Space4}">
+          <ItemsControl ItemsSource="{x:Static ctl:CalendarMonth.WeekdayLabels}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="7" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding}" Classes="label-caps" Margin="{StaticResource PadH8}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <ItemsControl ItemsSource="{TemplateBinding Days}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Columns="7" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="ctl:CalendarDay">
+                <Button
+                  Classes="daycard"
+                  Classes.out="{Binding !InMonth}"
+                  Classes.today="{Binding IsToday}"
+                  Classes.game="{Binding HasGame}"
+                  Command="{Binding $parent[ctl:CalendarMonth].OpenGameCommand}"
+                  CommandParameter="{Binding GameId}"
+                  IsEnabled="{Binding HasGame}"
+                  Theme="{StaticResource BareButton}"
+                  Height="80"
+                  Margin="2"
+                  Padding="{StaticResource Pad8}"
+                  HorizontalAlignment="Stretch"
+                  VerticalContentAlignment="Top"
+                  HorizontalContentAlignment="Stretch">
+                  <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{Binding Label}" Classes="caption num" />
+                    <TextBlock Grid.Column="1" Text="B2B" Classes="caps" Foreground="{StaticResource WarningBrush}" IsVisible="{Binding IsBackToBack}" ToolTip.Tip="Second game of a back-to-back" />
+                    <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center" IsVisible="{Binding HasGame}">
+                      <TextBlock Text="{Binding Venue}" Classes="caption" VerticalAlignment="Center" />
+                      <ctl:TeamLogo TeamId="{Binding OpponentId}" TeamName="{Binding OpponentAbbreviation}" Size="20" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding OpponentAbbreviation}" Classes="body-strong" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="{StaticResource Space4}" IsVisible="{Binding IsPlayed}">
+                      <TextBlock Text="{Binding ResultLetter}" Classes="label-caps" Classes.positive="{Binding IsWin}" Classes.negative="{Binding IsLoss}" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding Result}" Classes="caption num" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </Grid>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:Timeline}" TargetType="ctl:Timeline">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <ItemsControl ItemsSource="{TemplateBinding Entries}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="ctl:TimelineEntry">
+              <Grid ColumnDefinitions="96,16,*" MinHeight="44">
+                <TextBlock Text="{Binding When}" Classes="caption num" Margin="{StaticResource GapTop8}" />
+                <Panel Grid.Column="1">
+                  <Border Width="2" Background="{StaticResource StrokeBrush}" HorizontalAlignment="Center" />
+                  <Ellipse Width="8" Height="8" Fill="{DynamicResource AccentBrush}" VerticalAlignment="Top" Margin="0,12,0,0" />
+                </Panel>
+                <StackPanel Grid.Column="2" Margin="12,8,0,8" Spacing="{StaticResource Space4}">
+                  <TextBlock Text="{Binding Title}" Classes="body-strong wrap" />
+                  <TextBlock Text="{Binding Detail}" Classes="caption wrap" IsVisible="{Binding HasDetail}" />
+                </StackPanel>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:NewsCard}" TargetType="ctl:NewsCard">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid ColumnDefinitions="Auto,*" Background="{StaticResource Surface1Brush}">
+          <Border Name="PART_Stripe" Width="{StaticResource AccentStripeWidth}" Background="{StaticResource StrokeBrush}" />
+          <StackPanel Grid.Column="1" Spacing="{StaticResource Space4}" Margin="{StaticResource Pad12}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <ctl:StatusChip Name="PART_Decision" Text="Decision needed" Kind="Warning" IsVisible="False" />
+              <TextBlock Text="{TemplateBinding Meta, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" VerticalAlignment="Center" />
+            </StackPanel>
+            <ctl:SkewBorder Angle="{StaticResource SkewAngle}" Background="{StaticResource Surface3Brush}" Padding="{StaticResource Pad8x4}" HorizontalAlignment="Left">
+              <TextBlock Name="PART_Headline" Text="{TemplateBinding Headline, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3 wrap" />
+            </ctl:SkewBorder>
+            <TextBlock Text="{TemplateBinding Summary}" Classes="body secondary wrap" />
+          </StackPanel>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:unread /template/ Border#PART_Stripe">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    </Style>
+    <Style Selector="^:decision /template/ ctl|StatusChip#PART_Decision">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+  </ControlTheme>
+</ResourceDictionary>
