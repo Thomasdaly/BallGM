@@ -7,7 +7,7 @@
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   x:DataType="vm:FreeAgencyViewModel">
   <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="10">
-    <TextBlock Text="{Binding LeagueTermsLine}" FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+    <TextBlock Classes="size-caption" Text="{Binding LeagueTermsLine}" Opacity="0.7" TextWrapping="Wrap" />
 
     <Grid Grid.Row="1" ColumnDefinitions="*,20,320">
       <DockPanel>
@@ -25,8 +25,8 @@
                 <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
                 <TextBlock Grid.Column="1" Text="{Binding Position}" Opacity="0.7" />
                 <Border Grid.Column="2" Classes="ovr" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}"><TextBlock Text="{Binding Overall}" /></Border>
-                <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding Detail}" FontSize="11" Opacity="0.6" />
-                <TextBlock Grid.Row="2" Grid.ColumnSpan="3" Text="{Binding PermittedRange}" FontSize="11" Opacity="0.6" />
+                <TextBlock Classes="size-caption" Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding Detail}" Opacity="0.6" />
+                <TextBlock Classes="size-caption" Grid.Row="2" Grid.ColumnSpan="3" Text="{Binding PermittedRange}" Opacity="0.6" />
               </Grid>
             </DataTemplate>
           </ListBox.ItemTemplate>
@@ -56,11 +56,10 @@
 
         <DockPanel Margin="0,12,0,0">
           <TextBlock Classes="section" DockPanel.Dock="Top" Text="How this would be paid for" />
-          <TextBlock
+          <TextBlock Classes="size-caption"
             DockPanel.Dock="Top"
             Text="Check the offer to see every route this league has, which of them would pay for it, and how much each one leaves."
             IsVisible="{Binding !HasAssessment}"
-            FontSize="11"
             Opacity="0.5"
             TextWrapping="Wrap"
             Margin="0,6,0,0" />
@@ -69,11 +68,11 @@
               <DataTemplate x:DataType="vm:SigningRouteRow">
                 <StackPanel Spacing="1">
                   <Grid ColumnDefinitions="*,Auto">
-                    <TextBlock Text="{Binding RouteName}" FontSize="12" />
-                    <TextBlock Grid.Column="1" Text="{Binding Status}" FontSize="11" Opacity="0.7" />
+                    <TextBlock Classes="size-caption" Text="{Binding RouteName}" />
+                    <TextBlock Classes="size-caption" Grid.Column="1" Text="{Binding Status}" Opacity="0.7" />
                   </Grid>
-                  <TextBlock Text="{Binding Explanation}" FontSize="10" Opacity="0.6" TextWrapping="Wrap" />
-                  <TextBlock Text="{Binding RuleCode}" FontSize="10" Opacity="0.4" />
+                  <TextBlock Classes="size-caption" Text="{Binding Explanation}" Opacity="0.6" TextWrapping="Wrap" />
+                  <TextBlock Classes="size-caption" Text="{Binding RuleCode}" Opacity="0.4" />
                 </StackPanel>
               </DataTemplate>
             </ListBox.ItemTemplate>
@@ -84,14 +83,14 @@
 
     <StackPanel Grid.Row="2" Spacing="6" IsVisible="{Binding HasAssessment}">
       <TextBlock Text="{Binding Verdict}" FontWeight="SemiBold" />
-      <TextBlock Text="{Binding OutcomeLine}" FontSize="12" Opacity="0.75" TextWrapping="Wrap" />
+      <TextBlock Classes="size-caption" Text="{Binding OutcomeLine}" Opacity="0.75" TextWrapping="Wrap" />
 
       <ItemsControl ItemsSource="{Binding Violations}" IsVisible="{Binding HasViolations}">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:SigningFindingRow">
             <StackPanel Spacing="0" Margin="0,2,0,0">
-              <TextBlock Text="{Binding RuleCode}" FontSize="10" Opacity="0.5" />
-              <TextBlock Text="{Binding Explanation}" FontSize="12" TextWrapping="Wrap" />
+              <TextBlock Classes="size-caption" Text="{Binding RuleCode}" Opacity="0.5" />
+              <TextBlock Classes="size-caption" Text="{Binding Explanation}" TextWrapping="Wrap" />
             </StackPanel>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
@@ -101,8 +100,8 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:SigningFindingRow">
             <StackPanel Spacing="0" Margin="0,2,0,0">
-              <TextBlock Text="{Binding RuleCode}" FontSize="10" Opacity="0.5" />
-              <TextBlock Text="{Binding Explanation}" FontSize="12" Opacity="0.8" TextWrapping="Wrap" />
+              <TextBlock Classes="size-caption" Text="{Binding RuleCode}" Opacity="0.5" />
+              <TextBlock Classes="size-caption" Text="{Binding Explanation}" Opacity="0.8" TextWrapping="Wrap" />
             </StackPanel>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
@@ -112,8 +111,8 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:SigningFindingRow">
             <StackPanel Spacing="0" Margin="0,2,0,0">
-              <TextBlock Text="{Binding RuleCode}" FontSize="10" Opacity="0.4" />
-              <TextBlock Text="{Binding Explanation}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" />
+              <TextBlock Classes="size-caption" Text="{Binding RuleCode}" Opacity="0.4" />
+              <TextBlock Classes="size-caption" Text="{Binding Explanation}" Opacity="0.6" TextWrapping="Wrap" />
             </StackPanel>
           </DataTemplate>
         </ItemsControl.ItemTemplate>

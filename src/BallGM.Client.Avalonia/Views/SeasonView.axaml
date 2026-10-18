@@ -311,15 +311,15 @@
             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="20">
               <StackPanel>
                 <TextBlock Classes="eyebrow" Text="{Binding StretchLabel}" />
-                <TextBlock Classes="num" Text="{Binding StretchVenues}" FontSize="20" />
+                <TextBlock Classes="num size-h3" Text="{Binding StretchVenues}" />
               </StackPanel>
               <StackPanel Grid.Column="1">
                 <TextBlock Classes="eyebrow" Text="Back-to-backs" />
-                <TextBlock Classes="num" Text="{Binding StretchBackToBacks}" FontSize="20" />
+                <TextBlock Classes="num size-h3" Text="{Binding StretchBackToBacks}" />
               </StackPanel>
               <StackPanel Grid.Column="2">
                 <TextBlock Classes="eyebrow" Text="Opponents" ToolTip.Tip="Combined winning percentage of the opponents in this stretch" />
-                <TextBlock Classes="num" Text="{Binding StretchOpponents}" FontSize="20" />
+                <TextBlock Classes="num size-h3" Text="{Binding StretchOpponents}" />
               </StackPanel>
             </Grid>
 
@@ -352,7 +352,7 @@
                       </StackPanel>
                       <TextBlock Grid.Row="1" Grid.Column="1" Classes="h3" Text="{Binding OpponentName}" TextTrimming="CharacterEllipsis" />
                       <StackPanel Grid.Column="2" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <TextBlock Classes="num" Text="{Binding OpponentRecord}" HorizontalAlignment="Right" FontSize="20" />
+                        <TextBlock Classes="num size-h3" Text="{Binding OpponentRecord}" HorizontalAlignment="Right" />
                         <ProgressBar
                           Classes="attr"
                           Width="72"
@@ -505,15 +505,15 @@
           <!-- The tale of the tape. -->
           <Border Classes="panel">
             <Grid ColumnDefinitions="*,160,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="16">
-              <TextBlock Grid.Row="0" Text="{Binding Away.PointsFor}" Classes="num" HorizontalAlignment="Right" FontSize="18" />
+              <TextBlock Grid.Row="0" Text="{Binding Away.PointsFor}" Classes="num size-h3" HorizontalAlignment="Right" />
               <TextBlock Grid.Row="0" Grid.Column="1" Text="Points per game" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Home.PointsFor}" Classes="num" HorizontalAlignment="Left" FontSize="18" />
-              <TextBlock Grid.Row="1" Text="{Binding Away.PointsAgainst}" Classes="num" HorizontalAlignment="Right" FontSize="18" />
+              <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Home.PointsFor}" Classes="num size-h3" HorizontalAlignment="Left" />
+              <TextBlock Grid.Row="1" Text="{Binding Away.PointsAgainst}" Classes="num size-h3" HorizontalAlignment="Right" />
               <TextBlock Grid.Row="1" Grid.Column="1" Text="Allowed per game" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Home.PointsAgainst}" Classes="num" HorizontalAlignment="Left" FontSize="18" />
-              <TextBlock Grid.Row="2" Text="{Binding Away.Differential}" Classes="num" HorizontalAlignment="Right" FontSize="18" />
+              <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Home.PointsAgainst}" Classes="num size-h3" HorizontalAlignment="Left" />
+              <TextBlock Grid.Row="2" Text="{Binding Away.Differential}" Classes="num size-h3" HorizontalAlignment="Right" />
               <TextBlock Grid.Row="2" Grid.Column="1" Text="Margin per game" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Home.Differential}" Classes="num" HorizontalAlignment="Left" FontSize="18" />
+              <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Home.Differential}" Classes="num size-h3" HorizontalAlignment="Left" />
               <Panel Grid.Row="3">
                       <ItemsControl ItemsSource="{Binding Away.Form}" HorizontalAlignment="Right">
                         <ItemsControl.ItemsPanel>

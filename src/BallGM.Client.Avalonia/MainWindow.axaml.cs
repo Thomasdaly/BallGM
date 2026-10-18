@@ -28,8 +28,14 @@ public sealed partial class MainWindow : Window
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-            TeamPaint.Apply(_viewModel.SelectedTeam?.Colours, _viewModel.SelectedTeam?.LogoPath);
+            ApplyTeamTheme();
         }
+    }
+
+    private void ApplyTeamTheme()
+    {
+        var colours = _viewModel?.SelectedTeam?.Colours;
+        ThemeResources.ApplyUserTeam(TeamTheme.From(colours?.Primary, colours?.Secondary));
     }
 
     // The accent follows the team being viewed: switching teams repaints the whole client.
@@ -37,7 +43,7 @@ public sealed partial class MainWindow : Window
     {
         if (e.PropertyName == nameof(MainWindowViewModel.SelectedTeam))
         {
-            TeamPaint.Apply(_viewModel?.SelectedTeam?.Colours, _viewModel?.SelectedTeam?.LogoPath);
+            ApplyTeamTheme();
         }
     }
 }

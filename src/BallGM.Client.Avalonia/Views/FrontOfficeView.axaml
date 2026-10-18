@@ -51,7 +51,7 @@
         <ItemsControl ItemsSource="{Binding NeedsNotes}" IsVisible="{Binding HasNeedsNotes}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:AIFindingRow">
-              <TextBlock Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" FontSize="12" />
+              <TextBlock Classes="size-caption" Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" />
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -66,13 +66,13 @@
               <Border Classes="card" Margin="0,0,0,8">
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding SummaryLine}" FontWeight="SemiBold" TextWrapping="Wrap" />
-                  <TextBlock Text="{Binding PayrollLine}" Opacity="0.7" FontSize="12" />
+                  <TextBlock Classes="size-caption" Text="{Binding PayrollLine}" Opacity="0.7" />
                   <TextBlock Text="{Binding IncomingProduction}" Classes="small dim figures" TextWrapping="Wrap" ToolTip.Tip="{x:Static vm:ProductionLine.Tooltip}" />
                   <TextBlock Text="{Binding OutgoingProduction}" Classes="small dim figures" TextWrapping="Wrap" ToolTip.Tip="{x:Static vm:ProductionLine.Tooltip}" />
                   <ItemsControl ItemsSource="{Binding Rationale}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:AIFindingRow">
-                        <TextBlock Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" FontSize="12" />
+                        <TextBlock Classes="size-caption" Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -92,12 +92,12 @@
               <Border Classes="card" Margin="0,0,0,8">
                 <StackPanel Spacing="2">
                   <TextBlock Text="{Binding PlayerName}" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding OfferLine}" Opacity="0.7" FontSize="12" />
+                  <TextBlock Classes="size-caption" Text="{Binding OfferLine}" Opacity="0.7" />
                   <TextBlock Text="{Binding Production}" Classes="small dim figures" TextWrapping="Wrap" ToolTip.Tip="{x:Static vm:ProductionLine.Tooltip}" />
                   <ItemsControl ItemsSource="{Binding Rationale}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:AIFindingRow">
-                        <TextBlock Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" FontSize="12" />
+                        <TextBlock Classes="size-caption" Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -110,7 +110,7 @@
 
       <StackPanel Spacing="8">
         <TextBlock Classes="section" Text="Draft preview" />
-        <TextBlock TextWrapping="Wrap" Opacity="0.65" FontSize="12">
+        <TextBlock Classes="size-caption" TextWrapping="Wrap" Opacity="0.65">
           Generated fresh for this screen and never persisted — not the class the real draft will
           actually use.
         </TextBlock>
@@ -121,7 +121,7 @@
             <ItemsControl ItemsSource="{Binding DraftPreview.Rationale}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:AIFindingRow">
-                  <TextBlock Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" FontSize="12" />
+                  <TextBlock Classes="size-caption" Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

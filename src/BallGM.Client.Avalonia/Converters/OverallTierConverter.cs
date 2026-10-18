@@ -22,13 +22,6 @@ public sealed class OverallTierConverter : IValueConverter
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 
-    internal static string TierKey(int overall) => overall switch
-    {
-        >= 90 => "TierEliteBrush",
-        >= 80 => "TierStarBrush",
-        >= 72 => "TierStarterBrush",
-        >= 64 => "TierRotationBrush",
-        >= 56 => "TierBenchBrush",
-        _ => "TierFringeBrush",
-    };
+    /// <summary>The tier's brush key; tiers per docs/ui/spec/01_DESIGN_LANGUAGE.md section 12 (90/80/70/60/50).</summary>
+    internal static string TierKey(int overall) => Theming.RatingTiers.For(overall).BrushKey;
 }

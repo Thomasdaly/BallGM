@@ -20,7 +20,7 @@
         <TextBlock Classes="section" Text="Cap position" />
         <Canvas Width="820" Height="80" HorizontalAlignment="Left">
           <Border Canvas.Top="30" Width="820" Height="12" CornerRadius="6" Background="{StaticResource Bg3Brush}" />
-          <Border Canvas.Top="30" Width="{Binding GaugeFill}" Height="12" CornerRadius="6" Background="{StaticResource AccentBrush}" />
+          <Border Canvas.Top="30" Width="{Binding GaugeFill}" Height="12" CornerRadius="6" Background="{DynamicResource AccentBrush}" />
           <ItemsControl ItemsSource="{Binding GaugeMarkers}" Width="820" Height="80">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
@@ -137,7 +137,7 @@
                   <TextBlock Grid.Column="1" Text="{Binding Amount}" />
                   <TextBlock Grid.Column="2" Text="{Binding Distance}" FontWeight="SemiBold" />
                 </Grid>
-                <TextBlock Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" FontSize="12" />
+                <TextBlock Classes="size-caption" Text="{Binding Explanation}" Opacity="0.65" TextWrapping="Wrap" />
               </StackPanel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

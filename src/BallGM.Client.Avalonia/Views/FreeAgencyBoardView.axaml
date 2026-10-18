@@ -79,7 +79,7 @@
       <DockPanel Grid.Column="2">
         <StackPanel DockPanel.Dock="Top" Spacing="6">
           <TextBlock Classes="section" Text="Selected" />
-          <TextBlock Text="{Binding CandidateLine}" FontSize="11" Opacity="0.75" TextWrapping="Wrap" />
+          <TextBlock Classes="size-caption" Text="{Binding CandidateLine}" Opacity="0.75" TextWrapping="Wrap" />
 
           <TextBlock Classes="eyebrow" Text="First season ($M)" Margin="0,8,0,0" />
           <TextBox Text="{Binding FirstSeasonSalary}" />
@@ -97,8 +97,8 @@
             <Button Grid.Column="2" Content="Resolve market" Command="{Binding ResolveMarketCommand}" IsEnabled="{Binding HasCandidate}" HorizontalAlignment="Stretch" />
           </Grid>
 
-          <TextBlock Text="{Binding Status}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" Margin="0,4,0,0" />
-          <TextBlock Text="{Binding MarketLine}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Classes="size-caption" Text="{Binding Status}" Opacity="0.7" TextWrapping="Wrap" Margin="0,4,0,0" />
+          <TextBlock Classes="size-caption" Text="{Binding MarketLine}" FontWeight="SemiBold" TextWrapping="Wrap" />
         </StackPanel>
 
         <ScrollViewer Margin="0,10,0,0">
@@ -110,10 +110,10 @@
                     <StackPanel Spacing="2">
                       <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Text="{Binding TeamName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Grid.Column="1" Text="{Binding RankLabel}" FontSize="11" Opacity="0.7" />
+                        <TextBlock Classes="size-caption" Grid.Column="1" Text="{Binding RankLabel}" Opacity="0.7" />
                       </Grid>
-                      <TextBlock Text="{Binding Terms}" FontSize="11" Opacity="0.7" />
-                      <TextBlock Text="{Binding Narrative}" FontSize="11" Opacity="0.8" TextWrapping="Wrap" />
+                      <TextBlock Classes="size-caption" Text="{Binding Terms}" Opacity="0.7" />
+                      <TextBlock Classes="size-caption" Text="{Binding Narrative}" Opacity="0.8" TextWrapping="Wrap" />
 
                       <ItemsControl ItemsSource="{Binding Factors}" Margin="0,4,0,0">
                         <ItemsControl.ItemTemplate>
@@ -121,7 +121,7 @@
                             <StackPanel Margin="0,2" ToolTip.Tip="{Binding BandLine}">
                               <Grid ColumnDefinitions="*,Auto">
                                 <TextBlock Text="{Binding Factor}" Classes="small strong" />
-                                <TextBlock Grid.Column="1" Text="{Binding ScoreLine}" Classes="num" FontSize="13" />
+                                <TextBlock Grid.Column="1" Text="{Binding ScoreLine}" Classes="num size-table" />
                               </Grid>
                               <TextBlock Text="{Binding Explanation}" Classes="tiny dim" TextWrapping="Wrap" />
                             </StackPanel>
@@ -132,7 +132,7 @@
                       <ItemsControl ItemsSource="{Binding Exclusions}" IsVisible="{Binding HasExclusions}" Margin="0,4,0,0">
                         <ItemsControl.ItemTemplate>
                           <DataTemplate x:DataType="vm:SigningFindingRow">
-                            <TextBlock Text="{Binding Explanation}" FontSize="10" Opacity="0.75" TextWrapping="Wrap" Margin="0,1" />
+                            <TextBlock Classes="size-caption" Text="{Binding Explanation}" Opacity="0.75" TextWrapping="Wrap" Margin="0,1" />
                           </DataTemplate>
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
@@ -147,7 +147,7 @@
               <ItemsControl ItemsSource="{Binding Warnings}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:SigningFindingRow">
-                    <TextBlock Text="{Binding Explanation}" FontSize="10" Opacity="0.7" TextWrapping="Wrap" Margin="0,1" />
+                    <TextBlock Classes="size-caption" Text="{Binding Explanation}" Opacity="0.7" TextWrapping="Wrap" Margin="0,1" />
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -158,7 +158,7 @@
               <ItemsControl ItemsSource="{Binding Notes}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:SigningFindingRow">
-                    <TextBlock Text="{Binding Explanation}" FontSize="10" Opacity="0.7" TextWrapping="Wrap" Margin="0,1" />
+                    <TextBlock Classes="size-caption" Text="{Binding Explanation}" Opacity="0.7" TextWrapping="Wrap" Margin="0,1" />
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -171,10 +171,10 @@
                   <DataTemplate x:DataType="vm:BoardNegotiationRow">
                     <Grid ColumnDefinitions="*,Auto" Margin="0,1">
                       <StackPanel>
-                        <TextBlock Text="{Binding PlayerName}" FontSize="11" />
-                        <TextBlock Text="{Binding Detail}" FontSize="10" Opacity="0.6" />
+                        <TextBlock Classes="size-caption" Text="{Binding PlayerName}" />
+                        <TextBlock Classes="size-caption" Text="{Binding Detail}" Opacity="0.6" />
                       </StackPanel>
-                      <TextBlock Grid.Column="1" Text="{Binding State}" FontSize="10" Opacity="0.6" />
+                      <TextBlock Classes="size-caption" Grid.Column="1" Text="{Binding State}" Opacity="0.6" />
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>

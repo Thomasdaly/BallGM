@@ -22,7 +22,7 @@
             <Ellipse Width="22" Height="22" Stroke="{StaticResource MapleBrush}" StrokeThickness="2" />
             <Path Data="{StaticResource Icon.BallSeams}" Stroke="{StaticResource MapleBrush}" StrokeThickness="1.6" Stretch="Uniform" Margin="2" />
           </Panel>
-          <TextBlock Text="BallGM" Classes="display" FontSize="27" VerticalAlignment="Center" />
+          <TextBlock Text="BallGM" Classes="display size-h3" VerticalAlignment="Center" />
         </StackPanel>
 
         <!-- Which team every screen is about: a navigation choice, so it lives with the navigation. -->
@@ -55,7 +55,7 @@
                           Data="{Binding Converter={x:Static conv:SectionIconConverter.Instance}}"
                           Width="15"
                           Height="15" />
-                        <TextBlock Text="{Binding}" FontSize="14" FontWeight="Medium" VerticalAlignment="Center" />
+                        <TextBlock Classes="size-body" Text="{Binding}" FontWeight="Medium" VerticalAlignment="Center" />
                       </StackPanel>
                     </DataTemplate>
                   </ListBox.ItemTemplate>
@@ -117,22 +117,22 @@
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="22" VerticalAlignment="Center" IsVisible="{Binding HasLeague}">
               <StackPanel Spacing="0">
                 <TextBlock Text="Record" Classes="eyebrow" />
-                <TextBlock Text="{Binding BannerRecord}" Classes="num" FontSize="26" FontWeight="Bold" />
+                <TextBlock Text="{Binding BannerRecord}" Classes="num size-stat-m" FontWeight="Bold" />
               </StackPanel>
               <Rectangle Width="1" Fill="{StaticResource LineBrush}" Margin="0,4" />
               <StackPanel Spacing="0">
                 <TextBlock Text="Payroll" Classes="eyebrow" />
-                <TextBlock Text="{Binding BannerPayroll}" Classes="num" FontSize="26" FontWeight="Bold" />
+                <TextBlock Text="{Binding BannerPayroll}" Classes="num size-stat-m" FontWeight="Bold" />
               </StackPanel>
               <Rectangle Width="1" Fill="{StaticResource LineBrush}" Margin="0,4" />
               <StackPanel Spacing="0">
                 <TextBlock Text="{Binding BannerCapLabel}" Classes="eyebrow" />
-                <TextBlock Text="{Binding BannerCapValue}" Classes="num" FontSize="26" FontWeight="Bold" />
+                <TextBlock Text="{Binding BannerCapValue}" Classes="num size-stat-m" FontWeight="Bold" />
               </StackPanel>
               <Rectangle Width="1" Fill="{StaticResource LineBrush}" Margin="0,4" />
               <StackPanel Spacing="0">
                 <TextBlock Text="Players" Classes="eyebrow" />
-                <TextBlock Text="{Binding BannerRosterCount}" Classes="num" FontSize="26" FontWeight="Bold" />
+                <TextBlock Text="{Binding BannerRosterCount}" Classes="num size-stat-m" FontWeight="Bold" />
               </StackPanel>
             </StackPanel>
 

@@ -7,45 +7,47 @@
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Tokens.axaml" />
+        <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Typography.axaml" />
+        <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Geometry.axaml" />
+        <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Icons.axaml" />
+        <ResourceInclude Source="avares://BallGM.Client.Avalonia/Themes/Motion.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>
   <Application.Styles>
-    <!-- Fluent supplies control templates; its dark palette is retuned to the design tokens so
+    <!-- Fluent supplies control templates; its dark palette is set to the design tokens (docs/ui/spec/01 section 3) so
          stock controls (combo boxes, focus rings, scroll bars) match the custom surfaces. -->
     <FluentTheme>
       <FluentTheme.Palettes>
         <ColorPaletteResources
           x:Key="Dark"
-          Accent="#E06A2C"
-          AltHigh="#0D1522"
-          AltLow="#0D1522"
-          AltMedium="#0D1522"
-          AltMediumHigh="#0D1522"
-          AltMediumLow="#0D1522"
-          BaseHigh="#EAEEF4"
-          BaseLow="#22314A"
-          BaseMedium="#A3AEC2"
-          BaseMediumHigh="#C3CAD6"
-          BaseMediumLow="#7A869C"
-          ChromeAltLow="#C3CAD6"
-          ChromeBlackHigh="#000000"
-          ChromeBlackLow="#C3CAD6"
-          ChromeBlackMedium="#000000"
-          ChromeBlackMediumLow="#000000"
-          ChromeDisabledHigh="#22314A"
-          ChromeDisabledLow="#7A869C"
-          ChromeGray="#8592AA"
-          ChromeHigh="#8592AA"
-          ChromeLow="#121C2C"
-          ChromeMedium="#172338"
-          ChromeMediumLow="#1F2D45"
-          ChromeWhite="#FFFFFF"
-          ListLow="#172338"
-          ListMedium="#22314A"
-          RegionColor="#0D1522" />
+          Accent="{StaticResource AccentFallbackColor}"
+          AltHigh="{StaticResource CanvasRaisedColor}"
+          AltLow="{StaticResource CanvasRaisedColor}"
+          AltMedium="{StaticResource CanvasRaisedColor}"
+          AltMediumHigh="{StaticResource CanvasRaisedColor}"
+          AltMediumLow="{StaticResource CanvasRaisedColor}"
+          BaseHigh="{StaticResource TextPrimaryColor}"
+          BaseLow="{StaticResource StrokeColor}"
+          BaseMedium="{StaticResource TextSecondaryColor}"
+          BaseMediumHigh="{StaticResource TextPrimaryColor}"
+          BaseMediumLow="{StaticResource TextMutedColor}"
+          ChromeAltLow="{StaticResource TextPrimaryColor}"
+          ChromeBlackLow="{StaticResource TextPrimaryColor}"
+          ChromeDisabledHigh="{StaticResource StrokeColor}"
+          ChromeDisabledLow="{StaticResource TextDisabledColor}"
+          ChromeGray="{StaticResource TextMutedColor}"
+          ChromeHigh="{StaticResource TextMutedColor}"
+          ChromeLow="{StaticResource Surface1Color}"
+          ChromeMedium="{StaticResource Surface2Color}"
+          ChromeMediumLow="{StaticResource Surface3Color}"
+          ListLow="{StaticResource Surface2Color}"
+          ListMedium="{StaticResource Surface3Color}"
+          RegionColor="{StaticResource CanvasRaisedColor}" />
       </FluentTheme.Palettes>
     </FluentTheme>
+    <!-- Legacy class styles of the screens not yet rebuilt; removed once none uses them. -->
     <StyleInclude Source="avares://BallGM.Client.Avalonia/Themes/Controls.axaml" />
+    <StyleInclude Source="avares://BallGM.Client.Avalonia/Themes/Styles.axaml" />
   </Application.Styles>
 </Application>

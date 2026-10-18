@@ -68,7 +68,7 @@
     <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
   </Style>
   <Style Selector="TextBlock.eyebrow.accent">
-    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
   </Style>
   <Style Selector="TextBlock.dim">
     <Setter Property="Foreground" Value="{StaticResource TextDimBrush}" />
@@ -103,7 +103,7 @@
     <Setter Property="FontFeatures" Value="+tnum" />
   </Style>
   <Style Selector="TextBlock.accent">
-    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
   </Style>
   <Style Selector="TextBlock.good">
     <Setter Property="Foreground" Value="{StaticResource GoodBrush}" />
@@ -129,13 +129,13 @@
     <Setter Property="Padding" Value="12" />
   </Style>
   <Style Selector="Border.card.accent">
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="3,0,0,0" />
   </Style>
   <!-- An explanation the GM should read: a paint rule down the left on the panel surface. -->
   <Style Selector="Border.callout">
     <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="3,0,0,0" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusSmall}" />
     <Setter Property="Padding" Value="14,12" />
@@ -258,7 +258,7 @@
   <!-- Coach's stars: the accent's warmth without being team paint; the accessible name carries the count. -->
   <Style Selector="TextBlock.stars">
     <Setter Property="FontSize" Value="16" />
-    <Setter Property="Foreground" Value="{StaticResource TierStarterBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TierStarterBrush}" />
   </Style>
   <!-- Position familiarity: one sequential hue, deeper as he is more at home; the word is always printed. -->
   <Style Selector="Border.poschip">
@@ -334,7 +334,7 @@
   </Style>
   <!-- Team crest for a pack without logos: the team's initials on a paint plate. -->
   <Style Selector="Border.crest">
-    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusMedium}" />
     <Setter Property="Width" Value="72" />
     <Setter Property="Height" Value="72" />
@@ -343,13 +343,13 @@
     <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
     <Setter Property="FontSize" Value="28" />
     <Setter Property="FontWeight" Value="Bold" />
-    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <!-- A short paint tick that marks a heading as the current one. -->
   <Style Selector="Border.slash">
-    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Width" Value="3" />
     <Setter Property="Height" Value="14" />
     <Setter Property="CornerRadius" Value="1" />
@@ -463,7 +463,7 @@
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
   <Style Selector="Button.rowbtn:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource AccentFaintBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentFaintBrush}" />
   </Style>
   <!-- Attribute bar on the player profile; the fill colour comes from the rating tier. -->
   <Style Selector="ProgressBar.attr">
@@ -486,10 +486,10 @@
 
   <!-- The viewed team's own line in a league table: a paint rule at the left edge. -->
   <Style Selector="ItemsControl.table Grid.viewed">
-    <Setter Property="Background" Value="{StaticResource AccentFaintBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentFaintBrush}" />
   </Style>
   <Style Selector="ItemsControl.table Grid.viewed > TextBlock:nth-child(1)">
-    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
   </Style>
 
   <!-- Lists. -->
@@ -506,10 +506,10 @@
     <Setter Property="Margin" Value="0,1" />
   </Style>
   <Style Selector="ListBox ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
   </Style>
   <Style Selector="ListBox ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
   </Style>
 
   <!-- Row templates inside lists: text lines up with the rating badge's centre. -->
@@ -538,11 +538,11 @@
     <Setter Property="Background" Value="{StaticResource Bg3Brush}" />
   </Style>
   <Style Selector="ListBox.table ListBoxItem:selected">
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
   <Style Selector="ListBox.table ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource AccentSoftBrush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
   <Style Selector="ListBox.table ListBoxItem Grid > TextBlock">
     <Setter Property="VerticalAlignment" Value="Center" />
@@ -564,7 +564,7 @@
   </Style>
   <Style Selector="ListBox.strip ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
   <!-- :is() so a RadioButton chip (one-of-N, which a click cannot uncheck) wears the same style. -->
   <Style Selector=":is(ToggleButton).chip">
@@ -585,7 +585,7 @@
   </Style>
   <Style Selector=":is(ToggleButton).chip:checked /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
   </Style>
 
@@ -608,15 +608,15 @@
     <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
   </Style>
   <Style Selector="ListBox.nav ListBoxItem:selected">
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
   </Style>
   <Style Selector="ListBox.nav ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
   <Style Selector="ListBox.nav ListBoxItem:selected PathIcon">
-    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
   </Style>
   <Style Selector="TextBlock.navgroup">
     <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
@@ -642,17 +642,17 @@
     <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
   </Style>
   <Style Selector="Button.primary">
-    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
     <Setter Property="FontWeight" Value="Bold" />
   </Style>
   <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource AccentHoverBrush}" />
-    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
   </Style>
   <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="{StaticResource AccentPressedBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}" />
   </Style>
   <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="{StaticResource Bg1Brush}" />
@@ -669,7 +669,7 @@
     <Setter Property="Background" Value="{StaticResource Bg2Brush}" />
   </Style>
   <Style Selector="Border.ribbon-phase.current">
-    <Setter Property="Background" Value="{StaticResource AccentFaintBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentFaintBrush}" />
   </Style>
   <Style Selector="Border.ribbon-label">
     <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
@@ -678,7 +678,7 @@
     <Setter Property="ClipToBounds" Value="True" />
   </Style>
   <Style Selector="Border.ribbon-label.current">
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
   <Style Selector="Border.ribbon-win">
     <Setter Property="Background" Value="{StaticResource GoodBrush}" />
@@ -697,7 +697,7 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
   <Style Selector="Border.ribbon-today">
-    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
     <Setter Property="MinWidth" Value="2" />
     <Setter Property="HorizontalAlignment" Value="Center" />
   </Style>
@@ -734,11 +734,11 @@
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
   <Style Selector="Button.daycell.today">
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="2" />
   </Style>
   <Style Selector="Button.daycell.today:pointerover /template/ ContentPresenter#PART_ContentPresenter, Button.daycell.today:disabled /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
   <Style Selector="Border.result-rule">
     <Setter Property="Width" Value="3" />
@@ -760,7 +760,7 @@
     <Setter Property="Padding" Value="14,10" />
   </Style>
   <Style Selector="Border.matchup.home">
-    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
   </Style>
   <Style Selector="Border.pill.warn">
     <Setter Property="Background" Value="{StaticResource WarnSoftBrush}" />
@@ -888,7 +888,7 @@
     <Setter Property="MinHeight" Value="36" />
   </Style>
   <Style Selector="TabControl.profile TabItem:selected /template/ Border#PART_SelectedPipe">
-    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
   </Style>
 
   <!-- Inputs sit on the raised surface. -->

@@ -1,0 +1,172 @@
+<!--
+  Class styles, declared last (docs/ui/spec/02_AVALONIA_GUIDE.md section 2): the text roles of spec 01
+  section 5, density, and the reduced-motion overrides. Views say Classes="h1" or "label-caps"; they
+  never set a font size, family or colour themselves (the token lint enforces it).
+
+  Text roles: hero, h1, h2, h3, stat-xl, stat-l, stat-m, label-caps, body, body-strong, table, caption,
+  plus modifiers: num (tabular figures, right-aligned by the caller), secondary, muted, accent,
+  positive, negative, warning, italic (hero and score contexts only).
+-->
+<Styles
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{StaticResource CanvasBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+  </Style>
+
+  <Style Selector="TextBlock.hero">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeHero}" />
+    <Setter Property="LineHeight" Value="{StaticResource LineHeightHero}" />
+    <Setter Property="LetterSpacing" Value="{StaticResource TrackingHero}" />
+  </Style>
+  <Style Selector="TextBlock.hero.small">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeHeroSmall}" />
+    <Setter Property="LineHeight" Value="{StaticResource FontSizeHeroSmall}" />
+  </Style>
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeH1}" />
+    <Setter Property="LetterSpacing" Value="{StaticResource TrackingH1}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeH2}" />
+    <Setter Property="LetterSpacing" Value="{StaticResource TrackingH2}" />
+  </Style>
+  <Style Selector="TextBlock.h3">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeH3}" />
+    <Setter Property="LetterSpacing" Value="{StaticResource TrackingH3}" />
+  </Style>
+  <Style Selector="TextBlock.stat-xl">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeStatXL}" />
+    <Setter Property="LineHeight" Value="{StaticResource FontSizeStatXL}" />
+    <Setter Property="FontFeatures" Value="{StaticResource TabularFigures}" />
+  </Style>
+  <Style Selector="TextBlock.stat-l">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeStatL}" />
+    <Setter Property="FontFeatures" Value="{StaticResource TabularFigures}" />
+  </Style>
+  <Style Selector="TextBlock.stat-m">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeStatM}" />
+    <Setter Property="FontFeatures" Value="{StaticResource TabularFigures}" />
+  </Style>
+  <Style Selector="TextBlock.label-caps">
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeLabel}" />
+    <Setter Property="LetterSpacing" Value="{StaticResource TrackingLabel}" />
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="TextBlock.label-caps.large">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeLabelLarge}" />
+  </Style>
+  <Style Selector="TextBlock.body">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="LineHeight" Value="{StaticResource LineHeightBody}" />
+  </Style>
+  <Style Selector="TextBlock.body-strong">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.table">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeTable}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="FontFeatures" Value="{StaticResource TabularFigures}" />
+  </Style>
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+    <Setter Property="FontWeight" Value="Normal" />
+    <Setter Property="LineHeight" Value="{StaticResource LineHeightCaption}" />
+    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+  </Style>
+
+  <!-- Modifiers. -->
+  <Style Selector="TextBlock.num">
+    <Setter Property="FontFeatures" Value="{StaticResource TabularFigures}" />
+  </Style>
+  <Style Selector="TextBlock.secondary">
+    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+  </Style>
+  <Style Selector="TextBlock.muted">
+    <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+  </Style>
+  <Style Selector="TextBlock.accent">
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="TextBlock.positive">
+    <Setter Property="Foreground" Value="{DynamicResource PositiveBrush}" />
+  </Style>
+  <Style Selector="TextBlock.negative">
+    <Setter Property="Foreground" Value="{DynamicResource NegativeBrush}" />
+  </Style>
+  <Style Selector="TextBlock.warning">
+    <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+  </Style>
+  <Style Selector="TextBlock.on-accent">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+  <Style Selector="TextBlock.on-primary">
+    <Setter Property="Foreground" Value="{DynamicResource OnPrimaryRawBrush}" />
+  </Style>
+  <Style Selector="TextBlock.italic">
+    <Setter Property="FontStyle" Value="Italic" />
+  </Style>
+  <Style Selector="TextBlock.wrap">
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.trim">
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <!-- Icons: PathIcon sizes 16 / 20 / 24. -->
+  <Style Selector="PathIcon">
+    <Setter Property="Width" Value="{StaticResource IconMedium}" />
+    <Setter Property="Height" Value="{StaticResource IconMedium}" />
+  </Style>
+  <Style Selector="PathIcon.small">
+    <Setter Property="Width" Value="{StaticResource IconSmall}" />
+    <Setter Property="Height" Value="{StaticResource IconSmall}" />
+  </Style>
+  <Style Selector="PathIcon.large">
+    <Setter Property="Width" Value="{StaticResource IconLarge}" />
+    <Setter Property="Height" Value="{StaticResource IconLarge}" />
+  </Style>
+
+  <!-- Size-only helpers for screens not yet rebuilt (they replaced literal FontSize values). -->
+  <Style Selector="TextBlock.size-caption">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
+  </Style>
+  <Style Selector="TextBlock.size-table">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeTable}" />
+  </Style>
+  <Style Selector="TextBlock.size-body">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
+  </Style>
+  <Style Selector="TextBlock.size-h3">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeH3}" />
+  </Style>
+  <Style Selector="TextBlock.size-stat-m">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeStatM}" />
+  </Style>
+  <Style Selector="TextBlock.size-h1">
+    <Setter Property="FontSize" Value="{StaticResource FontSizeH1}" />
+  </Style>
+</Styles>

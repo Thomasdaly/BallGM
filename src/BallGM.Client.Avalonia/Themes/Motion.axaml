@@ -1,0 +1,23 @@
+<!--
+  Motion tokens (docs/ui/spec/01_DESIGN_LANGUAGE.md section 10). Transitions are declared in styles
+  using these, so the reduced-motion styles in Styles.axaml can remove them.
+-->
+<ResourceDictionary
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+  <sys:TimeSpan x:Key="MotionPage">0:0:0.200</sys:TimeSpan>
+  <sys:TimeSpan x:Key="MotionTab">0:0:0.160</sys:TimeSpan>
+  <sys:TimeSpan x:Key="MotionHover">0:0:0.120</sys:TimeSpan>
+  <sys:TimeSpan x:Key="MotionListItem">0:0:0.180</sys:TimeSpan>
+  <sys:TimeSpan x:Key="MotionCountUp">0:0:0.400</sys:TimeSpan>
+  <sys:TimeSpan x:Key="MotionDialog">0:0:0.160</sys:TimeSpan>
+  <sys:TimeSpan x:Key="MotionToast">0:0:0.180</sys:TimeSpan>
+  <sys:TimeSpan x:Key="MotionImageFade">0:0:0.120</sys:TimeSpan>
+  <sys:TimeSpan x:Key="MotionReducedFade">0:0:0.100</sys:TimeSpan>
+  <x:Double x:Key="MotionPageOffset">24</x:Double>
+  <x:Double x:Key="TickerSpeed">40</x:Double>
+  <sys:TimeSpan x:Key="TickerPageInterval">0:0:6</sys:TimeSpan>
+  <sys:TimeSpan x:Key="HoverCardDelay">0:0:0.400</sys:TimeSpan>
+  <sys:TimeSpan x:Key="ToastDuration">0:0:5</sys:TimeSpan>
+</ResourceDictionary>

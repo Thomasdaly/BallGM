@@ -30,7 +30,7 @@
                   <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="1" Text="{Binding Position}" Opacity="0.7" />
                   <Border Grid.Column="2" Classes="ovr" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}"><TextBlock Text="{Binding Overall}" /></Border>
-                  <TextBlock Grid.Column="3" Text="{Binding Salary}" Opacity="0.7" FontSize="12" />
+                  <TextBlock Classes="size-caption" Grid.Column="3" Text="{Binding Salary}" Opacity="0.7" />
                 </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
@@ -44,11 +44,10 @@
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:TradePickRow">
                 <StackPanel Spacing="0">
-                  <TextBlock Text="{Binding Label}" FontSize="12" />
-                  <TextBlock
+                  <TextBlock Classes="size-caption" Text="{Binding Label}" />
+                  <TextBlock Classes="size-caption"
                     Text="{Binding Protection}"
                     IsVisible="{Binding IsConditional}"
-                    FontSize="10"
                     Opacity="0.6"
                     TextTrimming="CharacterEllipsis" />
                 </StackPanel>
@@ -80,7 +79,7 @@
                   <TextBlock Text="{Binding FullName}" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="1" Text="{Binding Position}" Opacity="0.7" />
                   <Border Grid.Column="2" Classes="ovr" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}"><TextBlock Text="{Binding Overall}" /></Border>
-                  <TextBlock Grid.Column="3" Text="{Binding Salary}" Opacity="0.7" FontSize="12" />
+                  <TextBlock Classes="size-caption" Grid.Column="3" Text="{Binding Salary}" Opacity="0.7" />
                 </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>
@@ -94,11 +93,10 @@
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="vm:TradePickRow">
                 <StackPanel Spacing="0">
-                  <TextBlock Text="{Binding Label}" FontSize="12" />
-                  <TextBlock
+                  <TextBlock Classes="size-caption" Text="{Binding Label}" />
+                  <TextBlock Classes="size-caption"
                     Text="{Binding Protection}"
                     IsVisible="{Binding IsConditional}"
-                    FontSize="10"
                     Opacity="0.6"
                     TextTrimming="CharacterEllipsis" />
                 </StackPanel>
@@ -129,7 +127,7 @@
               <DataTemplate x:DataType="vm:TradeFindingRow">
                 <Border Classes="callout bad" Margin="0,0,0,6">
                   <StackPanel Spacing="2">
-                    <TextBlock Text="{Binding Heading}" FontSize="11" FontWeight="SemiBold" Opacity="0.8" />
+                    <TextBlock Classes="size-caption" Text="{Binding Heading}" FontWeight="SemiBold" Opacity="0.8" />
                     <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
                   </StackPanel>
                 </Border>
@@ -145,7 +143,7 @@
               <DataTemplate x:DataType="vm:TradeFindingRow">
                 <Border Classes="callout warn" Margin="0,0,0,6">
                   <StackPanel Spacing="2">
-                    <TextBlock Text="{Binding Heading}" FontSize="11" FontWeight="SemiBold" Opacity="0.8" />
+                    <TextBlock Classes="size-caption" Text="{Binding Heading}" FontWeight="SemiBold" Opacity="0.8" />
                     <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
                   </StackPanel>
                 </Border>
@@ -161,7 +159,7 @@
               <DataTemplate x:DataType="vm:TradeFindingRow">
                 <Border Classes="callout" Margin="0,0,0,6">
                   <StackPanel Spacing="2">
-                    <TextBlock Text="{Binding Heading}" FontSize="11" FontWeight="SemiBold" Opacity="0.8" />
+                    <TextBlock Classes="size-caption" Text="{Binding Heading}" FontWeight="SemiBold" Opacity="0.8" />
                     <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
                   </StackPanel>
                 </Border>
@@ -178,13 +176,13 @@
                 <Border Classes="callout" Margin="0,0,0,6">
                   <StackPanel Spacing="2">
                     <TextBlock Text="{Binding TeamName}" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding SalaryLine}" FontSize="12" Opacity="0.85" />
-                    <TextBlock Text="{Binding PayrollLine}" FontSize="12" Opacity="0.85" />
+                    <TextBlock Classes="size-caption" Text="{Binding SalaryLine}" Opacity="0.85" />
+                    <TextBlock Classes="size-caption" Text="{Binding PayrollLine}" Opacity="0.85" />
                     <StackPanel Orientation="Horizontal" Spacing="16">
-                      <TextBlock Text="{Binding RosterLine}" FontSize="12" Opacity="0.7" />
-                      <TextBlock Text="{Binding PickLine}" FontSize="12" Opacity="0.7" />
+                      <TextBlock Classes="size-caption" Text="{Binding RosterLine}" Opacity="0.7" />
+                      <TextBlock Classes="size-caption" Text="{Binding PickLine}" Opacity="0.7" />
                     </StackPanel>
-                    <TextBlock Text="{Binding ThresholdLine}" FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+                    <TextBlock Classes="size-caption" Text="{Binding ThresholdLine}" Opacity="0.7" TextWrapping="Wrap" />
                   </StackPanel>
                 </Border>
               </DataTemplate>

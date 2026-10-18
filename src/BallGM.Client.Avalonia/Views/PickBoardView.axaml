@@ -44,13 +44,12 @@
                               <DataTemplate x:DataType="vm:PickChip">
                                 <StackPanel Spacing="0" Margin="0,0,0,3">
                                   <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <TextBlock Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" />
-                                    <TextBlock Text="{Binding State}" FontSize="12" Opacity="0.8" />
+                                    <TextBlock Classes="size-caption" Text="{Binding Label}" FontWeight="SemiBold" />
+                                    <TextBlock Classes="size-caption" Text="{Binding State}" Opacity="0.8" />
                                   </StackPanel>
-                                  <TextBlock
+                                  <TextBlock Classes="size-caption"
                                     Text="{Binding Protection}"
                                     IsVisible="{Binding IsConditional}"
-                                    FontSize="10"
                                     Opacity="0.65"
                                     TextWrapping="Wrap" />
                                 </StackPanel>
@@ -83,7 +82,7 @@
                 <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding State}" Opacity="0.7" />
               </StackPanel>
-              <TextBlock Text="{Binding Protection}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+              <TextBlock Classes="size-caption" Text="{Binding Protection}" Opacity="0.7" TextWrapping="Wrap" />
             </StackPanel>
           </DataTemplate>
         </ListBox.ItemTemplate>
@@ -110,10 +109,10 @@
                 <DataTemplate x:DataType="vm:LedgerRow">
                   <StackPanel Spacing="1" Margin="0,0,0,8">
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                      <TextBlock Text="{Binding RecordedAt}" FontSize="11" Opacity="0.6" />
-                      <TextBlock Text="{Binding Kind}" FontSize="11" FontWeight="SemiBold" />
+                      <TextBlock Classes="size-caption" Text="{Binding RecordedAt}" Opacity="0.6" />
+                      <TextBlock Classes="size-caption" Text="{Binding Kind}" FontWeight="SemiBold" />
                     </StackPanel>
-                    <TextBlock Text="{Binding Reason}" FontSize="12" TextWrapping="Wrap" Opacity="0.85" />
+                    <TextBlock Classes="size-caption" Text="{Binding Reason}" TextWrapping="Wrap" Opacity="0.85" />
                   </StackPanel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
