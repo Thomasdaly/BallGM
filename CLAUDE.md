@@ -197,3 +197,15 @@ Never report a command as passing unless you actually ran it and saw it pass.
 7. Summarize changed files, trade-offs, risks, and follow-up work when reporting back.
 
 A task is done only when: acceptance criteria are met, the solution builds, relevant tests pass, no engine dependency has leaked into the simulation core, and docs are updated if architecture or behavior changed.
+
+## UI release overhaul (active)
+
+- Spec pack: read `docs/ui/spec/00_START_HERE.md` first, then 01–06. Spec files are read-only; gaps and adaptations go in `docs/ui/AUDIT.md` → Decisions.
+- Ledgers: `docs/ui/PROGRESS.md` (read at the start of every turn, update at the end), `docs/ui/AUDIT.md`, `docs/ui/FOLLOWUPS.md`, `docs/ui/VISUAL_QA.md`.
+- Frozen: simulation, game rules, save format, mod on-disk format, entity IDs. No Avalonia major-version upgrade. No paid dependencies.
+- No NBA, team, league, 2K or EA logos, photos, player likenesses, fonts or art in the base build or test fixtures.
+- Views use theme tokens only: no literal colors, font families or font sizes outside `Themes/`. Compiled bindings with `x:DataType` everywhere.
+- Every image goes through the asset resolver; no image decoding on the UI thread.
+- Never weaken, skip or delete a test, lint rule or threshold. Deferred or blocked work goes in `docs/ui/FOLLOWUPS.md`.
+- Branch `ui/release-overhaul`; commit each finished step with a `ui:` prefix; green build at the end of every turn; `artifacts/` stays uncommitted.
+- Exact build, test and screenshot commands: `docs/ui/AUDIT.md` §3.
