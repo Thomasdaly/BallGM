@@ -305,6 +305,17 @@
     <Setter Property="IsIndeterminate" Value="False" />
   </Style>
 
+  <!-- Data table rows: zebra, the user's own row, the sorted header. -->
+  <Style Selector="ListBox.datatable ListBoxItem:nth-child(2n) DockPanel">
+    <Setter Property="Background" Value="{StaticResource ZebraBrush}" />
+  </Style>
+  <Style Selector="ListBox.datatable DockPanel.highlight">
+    <Setter Property="Background" Value="{DynamicResource AccentFaintBrush}" />
+  </Style>
+  <Style Selector="TextBlock.label-caps.sorted">
+    <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+
   <!-- Size-only helpers for screens not yet rebuilt (they replaced literal FontSize values). -->
   <Style Selector="TextBlock.size-caption">
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />

@@ -1,0 +1,234 @@
+<!--
+  The data table (docs/ui/spec/03_COMPONENTS.md section 7, 02 section 10): sticky header with sort
+  glyphs, frozen name column, horizontally scrolling body inside its own frame, virtualized rows with
+  zebra and an accent stripe on the selected row, column chooser, and empty / loading / error overlays.
+-->
+<ResourceDictionary
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters">
+
+  <!-- How each kind of cell is drawn. -->
+  <DataTemplates x:Key="TableCellTemplates">
+    <DataTemplate DataType="ctl:TextCell">
+      <TextBlock Text="{Binding Text}" Classes="table trim" Classes.body-strong="{Binding IsStrong}" VerticalAlignment="Center" ToolTip.Tip="{Binding Text}" />
+    </DataTemplate>
+    <DataTemplate DataType="ctl:DeltaCell">
+      <TextBlock Text="{Binding Text}" Classes="table" Classes.positive="{Binding IsPositive}" Classes.negative="{Binding IsNegative}" VerticalAlignment="Center" />
+    </DataTemplate>
+    <DataTemplate DataType="ctl:RatingCell">
+      <ctl:RatingBadge Value="{Binding Value}" Size="Small" />
+    </DataTemplate>
+    <DataTemplate DataType="ctl:PositionCell">
+      <ctl:PositionChip Text="{Binding Text}" />
+    </DataTemplate>
+    <DataTemplate DataType="ctl:StatusCell">
+      <ctl:StatusChip Text="{Binding Text}" Kind="{Binding Kind}" IsVisible="{Binding HasStatus}" />
+    </DataTemplate>
+    <DataTemplate DataType="ctl:PlayerCell">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+        <ctl:PlayerHeadshot PlayerId="{Binding PlayerId}" PlayerName="{Binding Text}" Size="ExtraSmall" IsInjured="{Binding IsInjured}" VerticalAlignment="Center" />
+        <ctl:EntityLink Text="{Binding Text}" Kind="Player" EntityId="{Binding PlayerId}" Command="{Binding Open}" CommandParameter="{Binding PlayerId}" Classes="body-strong" FontSize="{StaticResource FontSizeTable}" FontWeight="SemiBold" MaxWidth="200" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate DataType="ctl:TeamCell">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+        <ctl:TeamLogo TeamId="{Binding TeamId}" TeamName="{Binding Text}" Size="20" VerticalAlignment="Center" />
+        <ctl:EntityLink Text="{Binding Text}" Kind="Team" EntityId="{Binding TeamId}" Command="{Binding Open}" CommandParameter="{Binding TeamId}" FontSize="{StaticResource FontSizeTable}" FontWeight="SemiBold" MaxWidth="220" />
+      </StackPanel>
+    </DataTemplate>
+  </DataTemplates>
+
+  <!-- One placed cell: its column's width and alignment. -->
+  <DataTemplate x:Key="TableCellViewTemplate" x:DataType="ctl:TableCellView">
+    <ContentControl
+      Width="{Binding Width}"
+      Padding="{StaticResource PadH8}"
+      Content="{Binding Cell}"
+      HorizontalContentAlignment="{Binding AlignRight, Converter={x:Static conv:RightAlignConverter.Instance}}"
+      VerticalContentAlignment="Center" />
+  </DataTemplate>
+
+  <DataTemplate x:Key="TableHeaderTemplate" x:DataType="ctl:TableHeaderView">
+    <Button
+      Classes="th"
+      Theme="{StaticResource BareButton}"
+      Width="{Binding Width}"
+      Padding="{StaticResource PadH8}"
+      Command="{Binding $parent[ctl:DataTable].HeaderSortCommand}"
+      CommandParameter="{Binding}"
+      HorizontalContentAlignment="{Binding AlignRight, Converter={x:Static conv:RightAlignConverter.Instance}}"
+      ToolTip.Tip="{Binding Column.ToolTip}"
+      AutomationProperties.Name="{Binding Column.Header}">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+        <TextBlock Text="{Binding Column.Header}" Classes="label-caps" Classes.sorted="{Binding IsSorted}" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding Glyph}" Classes="caption-plain" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+      </StackPanel>
+    </Button>
+  </DataTemplate>
+
+  <ItemsPanelTemplate x:Key="TableCellsPanel">
+    <StackPanel Orientation="Horizontal" />
+  </ItemsPanelTemplate>
+
+  <ControlTheme x:Key="TableRowItem" TargetType="ListBoxItem">
+    <Setter Property="Background" Value="{x:Null}" />
+    <Setter Property="Height" Value="{DynamicResource RowHeight}" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Background="{TemplateBinding Background}">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" VerticalContentAlignment="Stretch" HorizontalContentAlignment="Stretch" />
+          <Border Name="PART_Stripe" Width="{StaticResource AccentStripeWidth}" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" IsVisible="False" />
+          <Border Name="PART_FocusRing" BorderThickness="{StaticResource FocusRingThickness}" BorderBrush="{StaticResource FocusRingBrush}" IsHitTestVisible="False" IsVisible="False" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+    </Style>
+    <Style Selector="^:pressed">
+      <Setter Property="Background" Value="{StaticResource Surface3Brush}" />
+    </Style>
+    <Style Selector="^:selected">
+      <Setter Property="Background" Value="{StaticResource Surface3Brush}" />
+    </Style>
+    <Style Selector="^:selected /template/ Border#PART_Stripe">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:DataTable}" TargetType="ctl:DataTable">
+    <Setter Property="Background" Value="{StaticResource Surface1Brush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusCard}" ClipToBounds="True">
+          <Grid RowDefinitions="Auto,*,Auto">
+            <!-- Header: frozen part, scrolling part, column chooser. -->
+            <Border Background="{StaticResource Surface2Brush}" Height="36">
+              <DockPanel>
+                <Button
+                  DockPanel.Dock="Right"
+                  Classes="icon small"
+                  Margin="{StaticResource PadH8}"
+                  ToolTip.Tip="Choose columns"
+                  AutomationProperties.Name="Choose columns"
+                  VerticalAlignment="Center">
+                  <PathIcon Data="{StaticResource Icon.Columns}" Classes="small" />
+                  <Button.Flyout>
+                    <Flyout Placement="BottomEdgeAlignedRight">
+                      <StackPanel Spacing="{StaticResource Space4}" MinWidth="200">
+                        <TextBlock Text="COLUMNS" Classes="label-caps" Margin="{StaticResource GapBottom4}" />
+                        <ItemsControl ItemsSource="{Binding $parent[ctl:DataTable].ColumnChoices}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="ctl:ColumnChoice">
+                              <CheckBox Content="{Binding Header}" IsChecked="{Binding IsShown, Mode=TwoWay}" />
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Flyout>
+                  </Button.Flyout>
+                </Button>
+                <ItemsControl
+                  DockPanel.Dock="Left"
+                  ItemsSource="{TemplateBinding FrozenHeaders}"
+                  ItemTemplate="{StaticResource TableHeaderTemplate}"
+                  ItemsPanel="{StaticResource TableCellsPanel}"
+                  Width="{TemplateBinding FrozenWidth}" />
+                <Panel ClipToBounds="True">
+                  <ItemsControl
+                    HorizontalAlignment="Left"
+                    ItemsSource="{TemplateBinding ScrollingHeaders}"
+                    ItemTemplate="{StaticResource TableHeaderTemplate}"
+                    ItemsPanel="{StaticResource TableCellsPanel}"
+                    RenderTransform="{TemplateBinding ScrollTransform}" />
+                </Panel>
+              </DockPanel>
+            </Border>
+
+            <!-- Body: virtualized rows. -->
+            <ListBox
+              Name="PART_Rows"
+              Grid.Row="1"
+              Classes="datatable"
+              Background="{x:Null}"
+              ItemsSource="{TemplateBinding RowViews}"
+              ItemContainerTheme="{StaticResource TableRowItem}"
+              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+              AutomationProperties.Name="Table rows">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="ctl:TableRowView">
+                  <DockPanel Classes.highlight="{Binding IsHighlighted}">
+                    <ItemsControl
+                      DockPanel.Dock="Left"
+                      ItemsSource="{Binding Frozen}"
+                      ItemTemplate="{StaticResource TableCellViewTemplate}"
+                      ItemsPanel="{StaticResource TableCellsPanel}"
+                      Width="{Binding $parent[ctl:DataTable].FrozenWidth}" />
+                    <Panel ClipToBounds="True">
+                      <ItemsControl
+                        HorizontalAlignment="Left"
+                        ItemsSource="{Binding Scrolling}"
+                        ItemTemplate="{StaticResource TableCellViewTemplate}"
+                        ItemsPanel="{StaticResource TableCellsPanel}"
+                        RenderTransform="{Binding $parent[ctl:DataTable].ScrollTransform}" />
+                    </Panel>
+                  </DockPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Overlays. -->
+            <ctl:EmptyState
+              Name="PART_Empty"
+              Grid.Row="1"
+              Headline="{TemplateBinding EmptyHeadline}"
+              Message="{TemplateBinding EmptyMessage}"
+              ActionText="{TemplateBinding EmptyActionText}"
+              ActionCommand="{TemplateBinding EmptyActionCommand}"
+              IconKey="Icon.Filter"
+              IsVisible="False" />
+            <ctl:ErrorState
+              Name="PART_Error"
+              Grid.Row="1"
+              Headline="Could not load this table"
+              Message="{TemplateBinding ErrorMessage}"
+              RetryCommand="{TemplateBinding RetryCommand}"
+              IsVisible="False" />
+            <StackPanel Name="PART_Loading" Grid.Row="1" Spacing="{StaticResource Space4}" Margin="{StaticResource Pad12}" IsVisible="False">
+              <ctl:Skeleton Shape="Row" />
+              <ctl:Skeleton Shape="Row" />
+              <ctl:Skeleton Shape="Row" />
+              <ctl:Skeleton Shape="Row" />
+              <ctl:Skeleton Shape="Row" />
+            </StackPanel>
+
+            <ScrollBar Name="PART_HorizontalBar" Grid.Row="2" Orientation="Horizontal" Minimum="0" SmallChange="40" LargeChange="200" IsVisible="False" AllowAutoHide="False" />
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:empty /template/ ctl|EmptyState#PART_Empty">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:error /template/ ctl|ErrorState#PART_Error">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:error /template/ ListBox#PART_Rows">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="^:loading /template/ StackPanel#PART_Loading">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:loading /template/ ListBox#PART_Rows">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+  </ControlTheme>
+</ResourceDictionary>

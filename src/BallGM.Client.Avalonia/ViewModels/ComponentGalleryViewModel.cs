@@ -15,7 +15,7 @@ public sealed record GalleryTeam(string Abbreviation, string Name, string Primar
 /// </summary>
 public sealed class ComponentGalleryViewModel : ViewModelBase
 {
-    public static readonly IReadOnlyList<string> SectionNames = ["Foundations", "Actions", "Navigation", "Inputs", "Data", "Media", "Sports", "Feedback"];
+    public static readonly IReadOnlyList<string> SectionNames = ["Foundations", "Actions", "Navigation", "Inputs", "Data", "Tables", "Media", "Sports", "Feedback"];
 
     private int _sectionIndex;
     private GalleryTeam _team;
@@ -182,6 +182,87 @@ public sealed class ComponentGalleryViewModel : ViewModelBase
     public IReadOnlyList<ToastMessage> Toasts => [SuccessToast, WarningToast, ErrorToast, InfoToast];
 
     public DialogRequest ConfirmDialog { get; } = new("Release player?", "Releasing Jonah Kovac leaves $18.2M of dead money on this season's cap.", "Release", "Cancel", isDestructive: true);
+
+    public IReadOnlyList<TableColumn> TableColumns { get; } =
+    [
+        new("player", "PLAYER", 260, IsFrozen: true, CanSort: true),
+        new("pos", "POS", 64),
+        new("age", "AGE", 56, IsNumeric: true),
+        new("ovr", "OVR", 64, IsNumeric: true),
+        new("pot", "POT", 64, IsNumeric: true),
+        new("team", "TEAM", 220, Priority: 1),
+        new("pts", "PTS", 64, IsNumeric: true),
+        new("reb", "REB", 64, IsNumeric: true, Priority: 2),
+        new("ast", "AST", 64, IsNumeric: true, Priority: 2),
+        new("pm", "+/-", 72, IsNumeric: true, Priority: 2),
+        new("salary", "SALARY", 96, IsNumeric: true),
+        new("status", "STATUS", 180),
+    ];
+
+    private string _tableSort = "ovr";
+    private bool _tableDescending = true;
+
+    public string TableSort
+    {
+        get => _tableSort;
+        set => SetProperty(ref _tableSort, value);
+    }
+
+    public bool TableDescending
+    {
+        get => _tableDescending;
+        set => SetProperty(ref _tableDescending, value);
+    }
+
+    public ICommand TableSortCommand => new ParameterCommand<string>(key =>
+    {
+        TableDescending = key == TableSort ? !TableDescending : true;
+        TableSort = key;
+        RaisePropertyChanged(nameof(TableRows));
+    });
+
+    public IReadOnlyList<TableRow> TableRows
+    {
+        get
+        {
+            var rows = SampleRows(40);
+            var index = TableColumns.ToList().FindIndex(column => column.Key == TableSort);
+            var ordered = rows.OrderBy(row => row.Cells[index] is RatingCell rating ? rating.Value : double.TryParse(row.Cells[index].Text.TrimStart('$', '+').TrimEnd('M'), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var number) ? number : 0);
+            return (TableDescending ? ordered.Reverse() : ordered).ToList();
+        }
+    }
+
+    public IReadOnlyList<TableRow> NoRows { get; } = [];
+
+    /// <summary>Generated sample rows (fictional), also used by the 1,000-row virtualization test.</summary>
+    public static IReadOnlyList<TableRow> SampleRows(int count)
+    {
+        string[] names = ["Maximilian Okonkwo-Vanderbilt", "D'Shawn O'Malley-Fitzgerald", "Jean-Baptiste Kouyaté-Lindqvist", "Tyrese-Montgomery Abernathy-Clarke", "Đorđe Vukčević-Ilunga", "Nguyễn Thành Long", "Kaleo", "Gideon Whitcombe"];
+        string[] teams = ["Harbor City Mariners", "Ironvale Forge", "Port Saint Augustine Navigators", "Sun Mesa Scorch"];
+        string[] positions = ["PG", "SG", "SF", "PF", "C"];
+        return Enumerable.Range(0, count).Select(index =>
+        {
+            var overall = 95 - (index * 37 % 50);
+            var injured = index % 9 == 4;
+            return new TableRow(
+                "row-" + index,
+                [
+                    new PlayerCell(names[index % names.Length] + (index >= names.Length ? $" {index / names.Length + 1}" : string.Empty), "gallery-player-" + (1 + (index % 2)), injured),
+                    new PositionCell(positions[index % 5]),
+                    new TextCell((20 + (index % 17)).ToString(System.Globalization.CultureInfo.InvariantCulture), IsNumeric: true),
+                    new RatingCell(overall),
+                    new RatingCell(Math.Min(99, overall + (index % 7))),
+                    new TeamCell(teams[index % teams.Length], "gallery-team-" + (index % 4 == 0 ? "hcm" : index % 4 == 1 ? "irv" : index % 4 == 2 ? "psa" : "sms")),
+                    new TextCell((8 + (overall - 40) * 0.3).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), IsNumeric: true),
+                    new TextCell((2 + (index % 9) * 0.9).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), IsNumeric: true),
+                    new TextCell((1 + (index % 6) * 1.1).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), IsNumeric: true),
+                    new DeltaCell(((index % 11) - 5 > 0 ? "+" : string.Empty) + ((index % 11) - 5).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture), (index % 11) > 5, (index % 11) < 5),
+                    new TextCell("$" + (1.2 + (overall - 40) * 0.6).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "M", IsNumeric: true),
+                    new StatusCell(injured ? "Out · 2-3 weeks" : index % 5 == 2 ? "Expiring" : string.Empty, injured ? StatusKind.Negative : StatusKind.Warning),
+                ],
+                IsHighlighted: index == 3);
+        }).ToList();
+    }
 
     private void ApplyTeam() => ThemeResources.ApplyUserTeam(TeamTheme.From(_team.Primary, _team.Secondary));
 }

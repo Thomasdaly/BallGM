@@ -1,0 +1,28 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.Gallery.GalleryTables"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  x:DataType="vm:ComponentGalleryViewModel">
+  <StackPanel Spacing="{StaticResource Space24}">
+    <StackPanel Spacing="{StaticResource Space8}">
+      <TextBlock Text="DATA TABLE · STICKY HEADER · SORT · FROZEN NAME · ZEBRA · SELECTED · YOUR ROW · COLUMN CHOOSER" Classes="label-caps" />
+      <ctl:DataTable Name="SampleTable" Height="460" Columns="{Binding TableColumns}" Rows="{Binding TableRows}" SortKey="{Binding TableSort}" SortDescending="{Binding TableDescending}" SortCommand="{Binding TableSortCommand}" />
+    </StackPanel>
+    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space24}">
+      <StackPanel Spacing="{StaticResource Space8}">
+        <TextBlock Text="LOADING" Classes="label-caps" />
+        <ctl:DataTable Height="260" Columns="{Binding TableColumns}" Rows="{Binding NoRows}" State="Loading" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Spacing="{StaticResource Space8}">
+        <TextBlock Text="EMPTY (FILTERED)" Classes="label-caps" />
+        <ctl:DataTable Height="260" Columns="{Binding TableColumns}" Rows="{Binding NoRows}" EmptyHeadline="No players match" EmptyMessage="Nobody fits these filters." EmptyActionText="Clear filters" EmptyActionCommand="{Binding NoOpCommand}" />
+      </StackPanel>
+      <StackPanel Grid.Column="2" Spacing="{StaticResource Space8}">
+        <TextBlock Text="ERROR" Classes="label-caps" />
+        <ctl:DataTable Height="260" Columns="{Binding TableColumns}" Rows="{Binding NoRows}" State="Error" ErrorMessage="The roster could not be read." RetryCommand="{Binding NoOpCommand}" />
+      </StackPanel>
+    </Grid>
+  </StackPanel>
+</UserControl>
