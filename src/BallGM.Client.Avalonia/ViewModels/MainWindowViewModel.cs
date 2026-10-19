@@ -12,7 +12,7 @@ namespace BallGM.Client.Avalonia.ViewModels;
 /// the trade screen keeps itself, because it is the one holding the result a GM is reading.
 /// </para>
 /// </summary>
-public sealed class MainWindowViewModel : ViewModelBase
+public sealed partial class MainWindowViewModel : ViewModelBase
 {
     private readonly LeagueSession? _session;
     private RosterViewModel? _roster;
@@ -39,6 +39,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             : $"{overview.Teams.Count} teams · {overview.RegularSeasonGameCount}-game regular season · ruleset \"{overview.RulesetName}\"";
 
         _teams = overview.Teams;
+        _freeAgentNames = overview.FreeAgents.Players.Select(agent => (agent.PlayerId, agent.FullName)).ToList();
         _roster = new RosterViewModel(overview, () => session.PlayerSeasonTotals(SeasonPhase.RegularSeason), session.PlayerProfile);
         _capSheet = new CapSheetViewModel(overview);
         _pickBoard = new PickBoardViewModel(overview);
@@ -62,6 +63,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (args.PropertyName == nameof(SeasonViewModel.Standings))
             {
                 RaisePropertyChanged(nameof(BannerRecord));
+                RaiseShellChanged();
             }
         };
         SelectedTeam = Teams.FirstOrDefault();
@@ -200,6 +202,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
             RaisePropertyChanged(nameof(SelectedTeamDetail));
             RaiseBannerChanged();
+            RaiseShellChanged();
 
             if (_roster is not null)
             {
@@ -249,10 +252,24 @@ public sealed class MainWindowViewModel : ViewModelBase
         get => _selectedSection;
         set
         {
+            var previous = _selectedSection;
             if (!SetProperty(ref _selectedSection, value))
             {
                 return;
             }
+
+            if (!_navigatingHistory && previous.Length > 0)
+            {
+                if (_back.Count == 0 || _back[^1] != previous)
+                {
+                    _back.Add(previous);
+                }
+
+                _forward.Clear();
+                RaiseHistoryChanged();
+            }
+
+            _profileScreen = null;
 
             CurrentScreen = value switch
             {
@@ -291,6 +308,9 @@ public sealed class MainWindowViewModel : ViewModelBase
 
             RaisePropertyChanged(nameof(AlertLine));
             RaisePropertyChanged(nameof(HasAlerts));
+            RaisePropertyChanged(nameof(PageTitle));
+            RaisePropertyChanged(nameof(Breadcrumb));
+            RaisePropertyChanged(nameof(SelectedNavEntry));
         }
     }
 
@@ -320,6 +340,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         var selectedTeamId = _selectedTeam?.TeamId;
 
         Teams = overview.Teams;
+        _freeAgentNames = overview.FreeAgents.Players.Select(agent => (agent.PlayerId, agent.FullName)).ToList();
         _roster = new RosterViewModel(overview, _session is null ? null : () => _session.PlayerSeasonTotals(SeasonPhase.RegularSeason), _session is null ? null : _session.PlayerProfile);
         _capSheet = new CapSheetViewModel(overview);
         _pickBoard = new PickBoardViewModel(overview);
@@ -365,6 +386,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         // Read fresh rather than kept: a diagnostics screen showing stale suggestions after a trade
         // or signing just happened would be actively misleading about what is still legal to do.
         FrontOffice?.Refresh();
+        RaiseShellChanged();
 
         // The trade and free-agency screens stay put: whichever one is showing is showing the result
         // of what just happened, and rebuilding it would throw that away the moment it became worth

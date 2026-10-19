@@ -48,6 +48,7 @@ internal sealed class ShellDriver
             viewModel.SelectedTeam = viewModel.Teams.FirstOrDefault(team => team.TeamName == UserTeamName) ?? viewModel.Teams[0];
         }
 
+        viewModel.Settings = new Settings.UiSettings { ReducedMotion = true };
         var window = new MainWindow { DataContext = viewModel, Width = width, Height = height };
         window.Show();
         Settle();
@@ -63,7 +64,16 @@ internal sealed class ShellDriver
 
     public void Navigate(string section)
     {
+        ViewModel.IsSearchOpen = false;
         ViewModel.SelectedSection = section;
+        Settle();
+    }
+
+    /// <summary>Applies a UI scale (and reduced motion) the way the settings screen does.</summary>
+    public void SetScale(int percent)
+    {
+        ViewModel.Settings = ViewModel.Settings with { UiScalePercent = percent, ReducedMotion = true };
+        Window.ApplySettings(ViewModel.Settings);
         Settle();
     }
 

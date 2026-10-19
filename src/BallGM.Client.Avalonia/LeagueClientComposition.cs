@@ -1,4 +1,7 @@
 using BallGM.Application.Leagues;
+using BallGM.Client.Avalonia.Controls;
+using BallGM.Client.Avalonia.Diagnostics;
+using BallGM.Client.Avalonia.Imaging;
 using BallGM.Client.Avalonia.ViewModels;
 using BallGM.Infrastructure.AI;
 using BallGM.Infrastructure.Cap;
@@ -49,6 +52,12 @@ internal static class LeagueClientComposition
             new RulesFrontOfficeAdvisor(new RulesCapLedger()));
 
         var result = session.Load();
+
+        // Every image in the UI resolves through one service, built on the loaded pack's own mapping.
+        UiServices.Assets = new AssetResolver(() => session.Overview() is { IsSuccess: true } overview
+            ? AssetCatalogBuilder.Build(overview.Value, session.Artwork, string.IsNullOrWhiteSpace(packPath) ? null : packPath)
+            : AssetCatalog.Empty,
+            log: UiLog.Warn);
 
         if (result.IsFailure)
         {

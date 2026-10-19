@@ -67,6 +67,9 @@
   <CornerRadius x:Key="RadiusCard">4</CornerRadius>
   <CornerRadius x:Key="RadiusRound">999</CornerRadius>
 
+  <!-- Shadows: floating layers only (menus, dialogs, toasts), spec 01 section 6. -->
+  <BoxShadows x:Key="ShadowFloating">0 8 24 0 #59000000</BoxShadows>
+
   <!-- Signature shapes. -->
   <x:Double x:Key="SkewAngle">12</x:Double>
   <x:Double x:Key="CutSize">16</x:Double>

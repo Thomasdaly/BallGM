@@ -2,195 +2,178 @@
   x:Class="BallGM.Client.Avalonia.MainWindow"
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:app="clr-namespace:BallGM.Application.Leagues;assembly=BallGM.Application"
   xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
   xmlns:views="clr-namespace:BallGM.Client.Avalonia.Views"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   Title="BallGM"
-  Width="1360"
-  Height="860"
-  MinWidth="1080"
-  MinHeight="640"
+  Width="1600"
+  Height="900"
+  MinWidth="1280"
+  MinHeight="720"
+  Background="{StaticResource CanvasBrush}"
   x:DataType="vm:MainWindowViewModel">
-  <Grid ColumnDefinitions="220,*">
+  <LayoutTransformControl Name="ScaleHost">
+    <ctl:DialogHost Name="Dialogs" Request="{Binding Dialog}">
+      <Panel>
+        <Grid RowDefinitions="Auto,*,Auto">
 
-    <!-- Sidebar: wordmark, grouped navigation, league footer. -->
-    <Border Background="{StaticResource Bg1Brush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,1,0">
-      <DockPanel>
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="9" Margin="22,24,20,14">
-          <Panel Width="24" Height="24" VerticalAlignment="Center">
-            <Ellipse Width="22" Height="22" Stroke="{StaticResource MapleBrush}" StrokeThickness="2" />
-            <Path Data="{StaticResource Icon.BallSeams}" Stroke="{StaticResource MapleBrush}" StrokeThickness="1.6" Stretch="Uniform" Margin="2" />
+          <!-- (A) Header band: the user's team colour fading into the canvas. -->
+          <Panel Name="HeaderBand" Height="{StaticResource HeaderBandHeight}" Background="{StaticResource CanvasBrush}">
+            <Grid ColumnDefinitions="2*,3*" IsHitTestVisible="False">
+              <Border Background="{DynamicResource TeamGradientBrush}" />
+            </Grid>
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="{StaticResource Space16}" Margin="{StaticResource PadH16}" IsVisible="{Binding HasLeague}">
+              <ctl:TeamLogo TeamId="{Binding UserTeamId}" TeamName="{Binding UserTeamName}" Size="40" VerticalAlignment="Center" />
+              <StackPanel Grid.Column="1" VerticalAlignment="Center" MaxWidth="360">
+                <TextBlock Name="HeaderTeam" Text="{Binding UserTeamName, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3 trim on-primary" ToolTip.Tip="{Binding UserTeamName}" />
+                <TextBlock Text="{Binding HeaderRecordLine}" Classes="caps num on-primary" />
+              </StackPanel>
+              <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="{StaticResource Space4}" VerticalAlignment="Center">
+                <Button Classes="icon" Command="{Binding BackCommand}" IsEnabled="{Binding CanGoBack}" ToolTip.Tip="Back (Alt+Left)" AutomationProperties.Name="Back">
+                  <PathIcon Data="{StaticResource Icon.Back}" />
+                </Button>
+                <Button Classes="icon" Command="{Binding ForwardCommand}" IsEnabled="{Binding CanGoForward}" ToolTip.Tip="Forward (Alt+Right)" AutomationProperties.Name="Forward">
+                  <PathIcon Data="{StaticResource Icon.Forward}" />
+                </Button>
+              </StackPanel>
+              <Button Name="SearchButton" Grid.Column="4" Classes="secondary" Command="{Binding OpenSearchCommand}" VerticalAlignment="Center" ToolTip.Tip="Search players and teams (Ctrl+K)" AutomationProperties.Name="Search">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                  <PathIcon Data="{StaticResource Icon.Search}" Classes="small" />
+                  <TextBlock Name="SearchLabel" Text="Search" Classes="body" />
+                  <TextBlock Name="SearchHint" Text="CTRL+K" Classes="label-caps" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <StackPanel Grid.Column="5" VerticalAlignment="Center" HorizontalAlignment="Right">
+                <TextBlock Text="{Binding HeaderDate}" Classes="h3 num" HorizontalAlignment="Right" />
+                <TextBlock Text="{Binding HeaderPhase}" Classes="label-caps" HorizontalAlignment="Right" />
+              </StackPanel>
+              <ctl:ContinueButton
+                Name="Continue"
+                Grid.Column="6"
+                VerticalAlignment="Center"
+                State="{Binding ContinueState}"
+                Label="{Binding ContinueLabel}"
+                Subtitle="{Binding ContinueSubtitle}"
+                Command="{Binding ContinueCommand}"
+                Options="{Binding ContinueOptions}" />
+            </Grid>
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}" Margin="{StaticResource PadH24}" VerticalAlignment="Center" IsVisible="{Binding !HasLeague}">
+              <PathIcon Data="{StaticResource Icon.Ball}" Classes="large" />
+              <TextBlock Text="BALLGM" Classes="h2" VerticalAlignment="Center" />
+            </StackPanel>
           </Panel>
-          <TextBlock Text="BallGM" Classes="display size-h3" VerticalAlignment="Center" />
-        </StackPanel>
 
-        <!-- Which team every screen is about: a navigation choice, so it lives with the navigation. -->
-        <StackPanel DockPanel.Dock="Top" Spacing="5" Margin="20,0,16,6" IsVisible="{Binding HasLeague}">
-          <TextBlock Text="Viewing team" Classes="eyebrow" Margin="3,0,0,0" />
-          <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding SelectedTeam}" HorizontalAlignment="Stretch">
-            <ComboBox.ItemTemplate>
-              <DataTemplate x:DataType="app:TeamSummary">
-                <TextBlock Text="{Binding TeamName}" />
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
-        </StackPanel>
+          <!-- Body: nav rail and the page area. -->
+          <Grid Grid.Row="1" ColumnDefinitions="Auto,*" IsVisible="{Binding HasLeague}">
+            <Border Name="Rail" Width="{StaticResource NavRailExpandedWidth}" Background="{StaticResource CanvasBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="{StaticResource HairlineRight}">
+              <DockPanel>
+                <Button Name="CollapseRail" DockPanel.Dock="Bottom" Classes="ghost small" Margin="{StaticResource Pad8}" HorizontalAlignment="Left" Click="OnToggleRail" ToolTip.Tip="Collapse or expand the menu" AutomationProperties.Name="Collapse or expand the menu">
+                  <PathIcon Data="{StaticResource Icon.Collapse}" Classes="small" />
+                </Button>
+                <ctl:NavRail Name="Nav" ItemsSource="{Binding NavEntries}" SelectedItem="{Binding SelectedNavEntry}" Margin="{StaticResource PadV8}" />
+              </DockPanel>
+            </Border>
+            <Panel Grid.Column="1" Background="{StaticResource CanvasGradientBrush}">
+              <DockPanel Name="Page" Margin="{StaticResource PagePadding}">
+                <ctl:PageHeader DockPanel.Dock="Top" Title="{Binding PageTitle}" Margin="{StaticResource GapBottom16}">
+                  <ctl:PageHeader.Breadcrumb>
+                    <ctl:Breadcrumb Name="Crumbs" Items="{Binding Breadcrumb}" />
+                  </ctl:PageHeader.Breadcrumb>
+                </ctl:PageHeader>
+                <TransitioningContentControl Name="Screen" Content="{Binding CurrentScreen}">
+                  <TransitioningContentControl.DataTemplates>
+                    <DataTemplate DataType="vm:RosterViewModel">
+                      <views:RosterView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:CapSheetViewModel">
+                      <views:CapSheetView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:PickBoardViewModel">
+                      <views:PickBoardView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:TradeProposalViewModel">
+                      <views:TradeProposalView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:FreeAgencyBoardViewModel">
+                      <views:FreeAgencyBoardView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:FreeAgencyViewModel">
+                      <views:FreeAgencyView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:SeasonViewModel">
+                      <views:SeasonView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:FrontOfficeViewModel">
+                      <views:FrontOfficeView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:LeadersViewModel">
+                      <views:LeadersView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:ContractsViewModel">
+                      <views:ContractsView />
+                    </DataTemplate>
+                    <DataTemplate DataType="vm:PlayerProfileViewModel">
+                      <views:PlayerProfileView />
+                    </DataTemplate>
+                  </TransitioningContentControl.DataTemplates>
+                </TransitioningContentControl>
+              </DockPanel>
+              <ctl:ProgressOverlay IsActive="{Binding IsBusy}" Title="Simulating" StepText="{Binding BusyStep}" />
+            </Panel>
+          </Grid>
 
-        <StackPanel DockPanel.Dock="Bottom" Spacing="2" Margin="22,16,20,22">
-          <TextBlock Text="League" Classes="eyebrow" />
-          <TextBlock Text="{Binding LeagueName}" Classes="small strong" TextWrapping="Wrap" />
-        </StackPanel>
+          <!-- League failed to load (S37): the shell still opens, so the reason is visible. -->
+          <ctl:ErrorState
+            Grid.Row="1"
+            IsVisible="{Binding !HasLeague}"
+            Headline="{Binding LeagueName}"
+            Message="{Binding LoadErrorText}"
+            Details="{Binding LoadErrorText}" />
 
-        <ItemsControl ItemsSource="{Binding NavGroups}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:NavGroup">
-              <StackPanel>
-                <TextBlock Text="{Binding Name}" Classes="navgroup" />
-                <ListBox Name="Nav" Classes="nav" ItemsSource="{Binding Sections}" SelectedItem="{Binding Selected}">
+          <!-- (D) Ticker. -->
+          <ctl:Ticker Name="TickerStrip" Grid.Row="2" Items="{Binding TickerItems}" IsVisible="{Binding ShowTicker}" />
+        </Grid>
+
+        <!-- Toasts: top right, under the header. -->
+        <ctl:ToastHost
+          ItemsSource="{Binding Toasts.Toasts}"
+          ItemTemplate="{StaticResource ToastTemplate}"
+          DismissCommand="{Binding Toasts.DismissCommand}"
+          HorizontalAlignment="Right"
+          VerticalAlignment="Top"
+          Margin="0,72,16,0" />
+
+        <!-- Global search (S28): a command palette over a scrim. -->
+        <Panel Name="SearchLayer" Background="{StaticResource ScrimBrush}" IsVisible="{Binding IsSearchOpen}">
+          <Border Background="{StaticResource Surface2Brush}" CornerRadius="{StaticResource RadiusCard}" Width="640" MaxHeight="560" VerticalAlignment="Top" Margin="0,96,0,0" BoxShadow="{StaticResource ShadowFloating}" Padding="{StaticResource Pad16}">
+            <DockPanel>
+              <ctl:SearchBox Name="SearchInput" DockPanel.Dock="Top" Text="{Binding SearchText, Mode=TwoWay}" PlaceholderText="Search players and teams" Margin="{StaticResource GapBottom12}" />
+              <TextBlock DockPanel.Dock="Bottom" Text="ENTER OPENS · ESC CLOSES · ↑↓ MOVE" Classes="label-caps" Margin="{StaticResource GapTop8}" />
+              <Panel>
+                <ListBox Name="SearchList" ItemsSource="{Binding SearchResults}" IsVisible="{Binding HasSearchResults}" Background="{x:Null}" ItemContainerTheme="{StaticResource TableRowItem}">
                   <ListBox.ItemTemplate>
-                    <DataTemplate x:DataType="x:String">
-                      <StackPanel Orientation="Horizontal" Spacing="12">
-                        <PathIcon
-                          Data="{Binding Converter={x:Static conv:SectionIconConverter.Instance}}"
-                          Width="15"
-                          Height="15" />
-                        <TextBlock Classes="size-body" Text="{Binding}" FontWeight="Medium" VerticalAlignment="Center" />
-                      </StackPanel>
+                    <DataTemplate x:DataType="vm:SearchResult">
+                      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}" Margin="{StaticResource PadH8}">
+                        <Panel Width="32" Height="32" VerticalAlignment="Center">
+                          <ctl:PlayerHeadshot PlayerId="{Binding Id}" PlayerName="{Binding Name}" Size="Small" IsVisible="{Binding IsPlayer}" />
+                          <ctl:TeamLogo TeamId="{Binding Id}" TeamName="{Binding Name}" Size="32" IsVisible="{Binding IsTeam}" />
+                        </Panel>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                          <TextBlock Text="{Binding Name}" Classes="body-strong trim" />
+                          <TextBlock Text="{Binding Detail}" Classes="caption trim" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="2" Text="{Binding Group}" Classes="label-caps" VerticalAlignment="Center" />
+                      </Grid>
                     </DataTemplate>
                   </ListBox.ItemTemplate>
                 </ListBox>
-              </StackPanel>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </DockPanel>
-    </Border>
-
-    <Grid Grid.Column="1" RowDefinitions="Auto,*">
-
-      <!-- Identity band: the team's paint, court lines, crest, name, the numbers a GM checks first. -->
-      <Border Background="{StaticResource BannerBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" ClipToBounds="True">
-        <Panel>
-          <!-- In a Canvas so the drawing never sets the band's height; the band clips it. -->
-          <Canvas IsHitTestVisible="False">
-            <Path
-              Canvas.Right="-40"
-              Canvas.Top="-1"
-              Data="{StaticResource Court.HalfCourt}"
-              Stroke="{StaticResource MapleBrush}"
-              StrokeThickness="2"
-              Opacity="0.09" />
-          </Canvas>
-          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="24" Margin="32,20,32,18">
-            <!-- The pack's logo when it supplies one; otherwise a crest drawn from the team's initials. -->
-            <Panel IsVisible="{Binding HasLeague}" Width="72" Height="72" VerticalAlignment="Center">
-              <Border Classes="crest" IsVisible="{Binding SelectedTeam.LogoPath, Converter={x:Static ObjectConverters.IsNull}, FallbackValue=True}">
-                <TextBlock Text="{Binding SelectedTeam.TeamName, Converter={x:Static conv:TeamInitialsConverter.Instance}, FallbackValue=''}" />
-              </Border>
-              <Image
-                Source="{Binding SelectedTeam.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}, FallbackValue={x:Null}}"
-                IsVisible="{Binding SelectedTeam.LogoPath, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue=False}"
-                Stretch="Uniform" />
-            </Panel>
-
-            <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center" IsVisible="{Binding HasLeague}">
-              <TextBlock Text="{Binding LeagueSubtitle}" Classes="dim small" TextTrimming="CharacterEllipsis" />
-              <TextBlock
-                Text="{Binding SelectedTeam.TeamName, Converter={x:Static conv:UpperCaseConverter.Instance}, FallbackValue=''}"
-                Classes="display"
-                TextTrimming="CharacterEllipsis" />
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock Text="{Binding SelectedTeamDetail}" Classes="dim small" VerticalAlignment="Center" />
-                <Border Classes="pill bad" IsVisible="{Binding HasAlerts}">
-                  <TextBlock Text="{Binding AlertLine}" />
-                </Border>
-              </StackPanel>
-            </StackPanel>
-
-            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding !HasLeague}">
-              <TextBlock Text="{Binding LeagueName}" Classes="display" />
-              <TextBlock Text="{Binding LeagueSubtitle}" Classes="dim" TextWrapping="Wrap" />
-            </StackPanel>
-
-            <!-- The four figures, scoreboard-style: label over number, hairlines between. -->
-            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="22" VerticalAlignment="Center" IsVisible="{Binding HasLeague}">
-              <StackPanel Spacing="0">
-                <TextBlock Text="Record" Classes="eyebrow" />
-                <TextBlock Text="{Binding BannerRecord}" Classes="num size-stat-m" FontWeight="Bold" />
-              </StackPanel>
-              <Rectangle Width="1" Fill="{StaticResource LineBrush}" Margin="0,4" />
-              <StackPanel Spacing="0">
-                <TextBlock Text="Payroll" Classes="eyebrow" />
-                <TextBlock Text="{Binding BannerPayroll}" Classes="num size-stat-m" FontWeight="Bold" />
-              </StackPanel>
-              <Rectangle Width="1" Fill="{StaticResource LineBrush}" Margin="0,4" />
-              <StackPanel Spacing="0">
-                <TextBlock Text="{Binding BannerCapLabel}" Classes="eyebrow" />
-                <TextBlock Text="{Binding BannerCapValue}" Classes="num size-stat-m" FontWeight="Bold" />
-              </StackPanel>
-              <Rectangle Width="1" Fill="{StaticResource LineBrush}" Margin="0,4" />
-              <StackPanel Spacing="0">
-                <TextBlock Text="Players" Classes="eyebrow" />
-                <TextBlock Text="{Binding BannerRosterCount}" Classes="num size-stat-m" FontWeight="Bold" />
-              </StackPanel>
-            </StackPanel>
-
-          </Grid>
+                <TextBlock Text="{Binding SearchEmptyMessage}" Classes="body secondary" IsVisible="{Binding !HasSearchResults}" Margin="{StaticResource PadV16}" HorizontalAlignment="Center" />
+              </Panel>
+            </DockPanel>
+          </Border>
         </Panel>
-      </Border>
-
-      <!-- Load failure: the shell still opens so the reason is visible. -->
-      <Border Grid.Row="1" Classes="callout bad" Margin="32,24" VerticalAlignment="Top" IsVisible="{Binding !HasLeague}">
-        <StackPanel Spacing="8">
-          <TextBlock Text="Load errors" Classes="section" />
-          <ItemsControl ItemsSource="{Binding LoadErrors}">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="x:String">
-                <TextBlock Text="{Binding}" TextWrapping="Wrap" />
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-      </Border>
-
-      <DockPanel Grid.Row="1" Margin="32,22,32,24" IsVisible="{Binding HasLeague}">
-      <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedSection}" Classes="h1" Margin="0,0,0,12" />
-      <ContentControl Content="{Binding CurrentScreen}">
-        <ContentControl.DataTemplates>
-          <DataTemplate DataType="vm:RosterViewModel">
-            <views:RosterView />
-          </DataTemplate>
-          <DataTemplate DataType="vm:CapSheetViewModel">
-            <views:CapSheetView />
-          </DataTemplate>
-          <DataTemplate DataType="vm:PickBoardViewModel">
-            <views:PickBoardView />
-          </DataTemplate>
-          <DataTemplate DataType="vm:TradeProposalViewModel">
-            <views:TradeProposalView />
-          </DataTemplate>
-          <DataTemplate DataType="vm:FreeAgencyBoardViewModel">
-            <views:FreeAgencyBoardView />
-          </DataTemplate>
-          <DataTemplate DataType="vm:FreeAgencyViewModel">
-            <views:FreeAgencyView />
-          </DataTemplate>
-          <DataTemplate DataType="vm:SeasonViewModel">
-            <views:SeasonView />
-          </DataTemplate>
-          <DataTemplate DataType="vm:FrontOfficeViewModel">
-            <views:FrontOfficeView />
-          </DataTemplate>
-          <DataTemplate DataType="vm:LeadersViewModel">
-            <views:LeadersView />
-          </DataTemplate>
-          <DataTemplate DataType="vm:ContractsViewModel">
-            <views:ContractsView />
-          </DataTemplate>
-        </ContentControl.DataTemplates>
-      </ContentControl>
-      </DockPanel>
-    </Grid>
-  </Grid>
+      </Panel>
+    </ctl:DialogHost>
+  </LayoutTransformControl>
 </Window>

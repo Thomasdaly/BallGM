@@ -241,7 +241,7 @@ public sealed class NavRail : ListBox
     }
 }
 
-/// <summary>A count on a nav item or tab, or a dot when <see cref="IsDot"/>.</summary>
+/// <summary>A count on a nav item or tab, or a dot when <see cref="IsDot"/>; hidden at zero.</summary>
 public sealed class Badge : TemplatedControl
 {
     public static readonly StyledProperty<int> CountProperty =
@@ -267,7 +267,7 @@ public sealed class Badge : TemplatedControl
         base.OnPropertyChanged(change);
         if (change.Property == CountProperty || change.Property == IsDotProperty)
         {
-            IsVisible = IsDot || Count > 0;
+            IsVisible = Count > 0;
             PseudoClasses.Set(":dot", IsDot);
         }
     }

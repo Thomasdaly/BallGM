@@ -40,7 +40,7 @@
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
             <ctl:Badge Count="3" />
             <ctl:Badge Count="128" />
-            <ctl:Badge IsDot="True" />
+            <ctl:Badge Count="2" IsDot="True" />
           </StackPanel>
         </StackPanel>
       </Border>
