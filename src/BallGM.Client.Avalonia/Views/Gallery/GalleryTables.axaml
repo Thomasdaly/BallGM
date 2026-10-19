@@ -8,7 +8,7 @@
   <StackPanel Spacing="{StaticResource Space24}">
     <StackPanel Spacing="{StaticResource Space8}">
       <TextBlock Text="DATA TABLE · STICKY HEADER · SORT · FROZEN NAME · ZEBRA · SELECTED · YOUR ROW · COLUMN CHOOSER" Classes="label-caps" />
-      <ctl:DataTable Name="SampleTable" Height="460" Columns="{Binding TableColumns}" Rows="{Binding TableRows}" SortKey="{Binding TableSort}" SortDescending="{Binding TableDescending}" SortCommand="{Binding TableSortCommand}" />
+      <ctl:DataTable Name="SampleTable" Height="460" Columns="{Binding TableColumns}" Rows="{Binding TableRows}" SortKey="{Binding TableSort}" SortDescending="{Binding TableDescending}" SortCommand="{Binding TableSortCommand}" SelectedIndex="5" />
     </StackPanel>
     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space24}">
       <StackPanel Spacing="{StaticResource Space8}">

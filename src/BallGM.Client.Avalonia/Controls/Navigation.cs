@@ -56,6 +56,9 @@ public sealed class PageHeader : TemplatedControl
 public sealed record BreadcrumbItem(string Label, ICommand? Command = null, object? Parameter = null)
 {
     public bool IsLink => Command is not null;
+
+    /// <summary>The first crumb has no separator before it.</summary>
+    public bool IsFirst { get; init; }
 }
 
 /// <summary>A breadcrumb trail that collapses its middle crumbs to "…" when there is no room.</summary>
@@ -96,9 +99,10 @@ public sealed class Breadcrumb : TemplatedControl
     private void Recompute()
     {
         var items = Items ?? [];
-        DisplayItems = items.Count > 2 && Bounds.Width > 0 && Bounds.Width < CollapseBelow
+        IReadOnlyList<BreadcrumbItem> shown = items.Count > 2 && Bounds.Width > 0 && Bounds.Width < CollapseBelow
             ? [items[0], new BreadcrumbItem("…"), items[^1]]
             : items;
+        DisplayItems = shown.Select((item, index) => item with { IsFirst = index == 0 }).ToList();
     }
 }
 
@@ -108,6 +112,9 @@ public enum StepState
     Upcoming,
     Current,
     Done,
+
+    /// <summary>A step whose input fails validation.</summary>
+    Invalid,
 }
 
 public sealed record StepItem(int Number, string Title, StepState State)
@@ -115,6 +122,10 @@ public sealed record StepItem(int Number, string Title, StepState State)
     public bool IsDone => State == StepState.Done;
 
     public bool IsCurrent => State == StepState.Current;
+
+    public bool IsInvalid => State == StepState.Invalid;
+
+    public bool IsFirst => Number == 1;
 }
 
 /// <summary>Wizard progress: numbered steps, done / current / upcoming (spec 03 section 5).</summary>

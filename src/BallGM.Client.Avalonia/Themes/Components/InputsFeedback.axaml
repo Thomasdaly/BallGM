@@ -14,9 +14,9 @@
       <ControlTemplate>
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
           <TextBlock Text="{TemplateBinding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" VerticalAlignment="Center" />
-          <NumericUpDown Value="{TemplateBinding Low, Mode=TwoWay}" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Width="96" FormatString="0" AutomationProperties.Name="Lowest" />
+          <NumericUpDown Value="{TemplateBinding Low, Mode=TwoWay}" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Width="124" FormatString="0" AutomationProperties.Name="Lowest" />
           <TextBlock Text="–" Classes="secondary" VerticalAlignment="Center" />
-          <NumericUpDown Value="{TemplateBinding High, Mode=TwoWay}" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Width="96" FormatString="0" AutomationProperties.Name="Highest" />
+          <NumericUpDown Value="{TemplateBinding High, Mode=TwoWay}" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Width="124" FormatString="0" AutomationProperties.Name="Highest" />
         </StackPanel>
       </ControlTemplate>
     </Setter>
@@ -31,11 +31,14 @@
             <ctl:SearchBox Text="{TemplateBinding SearchText, Mode=TwoWay}" PlaceholderText="{TemplateBinding SearchPlaceholder}" VerticalAlignment="Center" />
             <ContentPresenter Grid.Column="1" Content="{TemplateBinding Content}" VerticalAlignment="Center" />
             <TextBlock Grid.Column="2" Text="{TemplateBinding ActiveCountText}" Classes="caption" VerticalAlignment="Center" />
-            <Button Grid.Column="3" Classes="ghost small" Content="RESET" Command="{TemplateBinding ResetCommand}" ToolTip.Tip="Restore the default filters" />
+            <Button Name="PART_Reset" Grid.Column="3" Classes="ghost small" Content="RESET" Command="{TemplateBinding ResetCommand}" ToolTip.Tip="Restore the default filters" IsEnabled="False" />
           </Grid>
         </Border>
       </ControlTemplate>
     </Setter>
+    <Style Selector="^:active /template/ Button#PART_Reset">
+      <Setter Property="IsEnabled" Value="True" />
+    </Style>
   </ControlTheme>
 
   <ControlTheme x:Key="{x:Type ctl:EmptyState}" TargetType="ctl:EmptyState">
@@ -121,7 +124,7 @@
             <Border Classes="bone" Height="12" />
             <Border Classes="bone" Height="12" Width="200" HorizontalAlignment="Left" />
           </StackPanel>
-          <Ellipse Name="PART_Headshot" Classes="bone" Width="96" Height="96" HorizontalAlignment="Left" IsVisible="False" />
+          <Border Name="PART_Headshot" Classes="bone" Width="96" Height="96" HorizontalAlignment="Left" IsVisible="False" />
         </Panel>
       </ControlTemplate>
     </Setter>
@@ -134,7 +137,7 @@
     <Style Selector="^:card /template/ StackPanel#PART_Card">
       <Setter Property="IsVisible" Value="True" />
     </Style>
-    <Style Selector="^:headshot /template/ Ellipse#PART_Headshot">
+    <Style Selector="^:headshot /template/ Border#PART_Headshot">
       <Setter Property="IsVisible" Value="True" />
     </Style>
   </ControlTheme>

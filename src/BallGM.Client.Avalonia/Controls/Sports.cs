@@ -464,7 +464,7 @@ public sealed class CapBar : Control
         set => SetValue(FontFamilyProperty, value);
     }
 
-    protected override Size MeasureOverride(Size availableSize) => new(0, 44);
+    protected override Size MeasureOverride(Size availableSize) => new(0, 58);
 
     public override void Render(DrawingContext context)
     {
@@ -499,19 +499,19 @@ public sealed class CapBar : Control
             context.FillRectangle(Track ?? Brushes.Black, new Rect(X(running) - 0.5, BarTop, 1, BarHeight));
         }
 
+        // Every marker is labelled: a label that would collide with the previous one drops to a second row.
         var typeface = new Typeface(FontFamily, FontStyle.Normal, FontWeight.SemiBold);
-        var lastLabelEnd = double.NegativeInfinity;
+        var rowEnds = new[] { double.NegativeInfinity, double.NegativeInfinity };
         foreach (var marker in ordered)
         {
             var x = X(marker.Amount);
-            context.FillRectangle(Marker ?? Brushes.White, new Rect(x - 1, 0, 2, BarTop + BarHeight + 4));
             var text = new FormattedText(marker.Label, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, 11, LabelBrush ?? Brushes.White);
             var left = Math.Clamp(x - (text.Width / 2), 0, Math.Max(0, Bounds.Width - text.Width));
-            if (left > lastLabelEnd + 4)
-            {
-                context.DrawText(text, new Point(left, BarTop + BarHeight + 6));
-                lastLabelEnd = left + text.Width;
-            }
+            var row = left > rowEnds[0] + 6 ? 0 : 1;
+            var top = BarTop + BarHeight + 6 + (row * 14);
+            context.FillRectangle(Marker ?? Brushes.White, new Rect(x - 1, 0, 2, top - 2));
+            context.DrawText(text, new Point(left, top));
+            rowEnds[row] = left + text.Width;
         }
     }
 }

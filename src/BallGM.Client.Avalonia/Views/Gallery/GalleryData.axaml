@@ -19,11 +19,25 @@
           <ctl:StatTile Value="2" Label="Spots open" />
         </StackPanel>
       </ctl:Tile>
-      <ctl:Tile Grid.Column="2" Title="Team leaders">
+      <ctl:Tile Grid.Column="2" Title="Team leaders" Classes="clickable" ctl:ForceState.PseudoClasses="pointerover">
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
           <ctl:StatTile Value="24.1" Label="PTS" Delta="4th in league" />
           <ctl:StatTile Value="-1.8" Label="Net rating" Delta="2.1 vs average" Direction="Down" />
         </StackPanel>
+      </ctl:Tile>
+    </Grid>
+    <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="{StaticResource Space24}">
+      <ctl:Tile Title="Compact card" Classes="compact">
+        <TextBlock Text="12px padding for dense dashboards." Classes="body secondary wrap" />
+      </ctl:Tile>
+      <ctl:Tile Grid.Column="1" Title="Clickable card" Classes="clickable">
+        <TextBlock Text="Steps up a surface on hover." Classes="body secondary wrap" />
+      </ctl:Tile>
+      <ctl:Tile Grid.Column="2" Title="Pressed" Classes="clickable" ctl:ForceState.PseudoClasses="pressed">
+        <TextBlock Text="Pressed state." Classes="body secondary wrap" />
+      </ctl:Tile>
+      <ctl:Tile Grid.Column="3" Title="Focused" Classes="clickable" ctl:ForceState.PseudoClasses="focus-visible">
+        <TextBlock Text="Keyboard focus ring outside." Classes="body secondary wrap" />
       </ctl:Tile>
     </Grid>
     <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
@@ -71,12 +85,20 @@
       </Border>
       <Border Grid.Column="1" Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
         <StackPanel Spacing="{StaticResource Space8}">
-          <TextBlock Text="ATTRIBUTE BAR · SINGLE / COMPARE / DELTA" Classes="label-caps" />
-          <ctl:AttributeBar Label="Three-point" Value="85" Delta="2" />
-          <ctl:AttributeBar Label="Mid-range" Value="74" Delta="-1" />
-          <ctl:AttributeBar Label="Perimeter defence" Value="66" CompareValue="81" />
-          <ctl:AttributeBar Label="Block" Value="52" CompareValue="38" />
-          <ctl:AttributeBar Label="Post control" Value="41" />
+          <TextBlock Text="ATTRIBUTE GROUP · BAR · SINGLE / COMPARE / DELTA" Classes="label-caps" />
+          <ctl:AttributeGroup Title="Outside scoring" Average="76">
+            <StackPanel Spacing="{StaticResource Space4}">
+              <ctl:AttributeBar Label="Three-point" Value="85" Delta="2" />
+              <ctl:AttributeBar Label="Mid-range" Value="74" Delta="-1" />
+            </StackPanel>
+          </ctl:AttributeGroup>
+          <ctl:AttributeGroup Title="Defence (compare: tick is the other player)" Average="53">
+            <StackPanel Spacing="{StaticResource Space4}">
+              <ctl:AttributeBar Label="Perimeter defence" Value="66" CompareValue="81" />
+              <ctl:AttributeBar Label="Block" Value="52" CompareValue="38" />
+              <ctl:AttributeBar Label="Post control" Value="41" />
+            </StackPanel>
+          </ctl:AttributeGroup>
           <TextBlock Text="KEY VALUE LIST" Classes="label-caps" Margin="{StaticResource GapTop8}" />
           <ctl:KeyValueList Items="{Binding BioFacts}" Columns="3" />
         </StackPanel>

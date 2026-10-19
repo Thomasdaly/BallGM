@@ -9,7 +9,7 @@
     <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
       <StackPanel Spacing="{StaticResource Space12}">
         <TextBlock Text="BUTTON · VARIANTS × STATES" Classes="label-caps" />
-        <Grid ColumnDefinitions="110,*,*,*,*,*,*" RowDefinitions="Auto,52,52,52,52,52" ColumnSpacing="{StaticResource Space12}">
+        <Grid ColumnDefinitions="110,*,*,*,*,*,*" RowDefinitions="Auto,56,56,56,56" ColumnSpacing="{StaticResource Space12}" RowSpacing="{StaticResource Space8}">
           <TextBlock Grid.Column="1" Text="DEFAULT" Classes="label-caps" />
           <TextBlock Grid.Column="2" Text="HOVER" Classes="label-caps" />
           <TextBlock Grid.Column="3" Text="PRESSED" Classes="label-caps" />
@@ -44,13 +44,6 @@
           <Button Grid.Row="4" Grid.Column="4" Classes="danger" Content="Release" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="focus-visible" />
           <Button Grid.Row="4" Grid.Column="5" Classes="danger" Content="Release" HorizontalAlignment="Left" IsEnabled="False" />
           <Button Grid.Row="4" Grid.Column="6" Classes="danger" Content="Release" HorizontalAlignment="Left" ctl:Busy.IsBusy="True" />
-          <TextBlock Grid.Row="5" Text="DEFAULT" Classes="label-caps" VerticalAlignment="Center" />
-          <Button Grid.Row="5" Grid.Column="1" Classes="" Content="Columns" HorizontalAlignment="Left" />
-          <Button Grid.Row="5" Grid.Column="2" Classes="" Content="Columns" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pointerover" />
-          <Button Grid.Row="5" Grid.Column="3" Classes="" Content="Columns" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="pressed" />
-          <Button Grid.Row="5" Grid.Column="4" Classes="" Content="Columns" HorizontalAlignment="Left" ctl:ForceState.PseudoClasses="focus-visible" />
-          <Button Grid.Row="5" Grid.Column="5" Classes="" Content="Columns" HorizontalAlignment="Left" IsEnabled="False" />
-          <Button Grid.Row="5" Grid.Column="6" Classes="" Content="Columns" HorizontalAlignment="Left" ctl:Busy.IsBusy="True" />
         </Grid>
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
           <TextBlock Text="SIZES" Classes="label-caps" VerticalAlignment="Center" Width="110" />
@@ -58,6 +51,7 @@
           <Button Classes="primary" Content="MEDIUM" />
           <Button Classes="primary large" Content="LARGE" />
           <Button Classes="secondary small" Content="Small" />
+          <Button Classes="secondary" Content="Medium" />
           <Button Classes="secondary large" Content="Large" />
           <Button Classes="icon" ToolTip.Tip="Search" AutomationProperties.Name="Search"><PathIcon Data="{StaticResource Icon.Search}" /></Button>
           <Button Classes="icon" ToolTip.Tip="Settings" AutomationProperties.Name="Settings" ctl:ForceState.PseudoClasses="pointerover"><PathIcon Data="{StaticResource Icon.Settings}" /></Button>
@@ -78,7 +72,7 @@
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
           <Button Classes="primary" Content="PROPOSE TRADE" />
           <Button Classes="secondary" Content="Clear" ctl:ForceState.PseudoClasses="focus-visible" />
-          <SplitButton Content="Offer contract">
+          <SplitButton Content="OFFER CONTRACT">
             <SplitButton.Flyout>
               <MenuFlyout>
                 <MenuItem Header="Minimum salary" />
@@ -86,7 +80,29 @@
               </MenuFlyout>
             </SplitButton.Flyout>
           </SplitButton>
+          <SplitButton Content="OFFER CONTRACT" ctl:ForceState.PseudoClasses="pointerover" />
+          <SplitButton Content="OFFER CONTRACT" ctl:ForceState.PseudoClasses="focus-visible" />
+          <SplitButton Content="OFFER CONTRACT" IsEnabled="False" />
         </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+          <TextBlock Text="SPLIT BUTTON MENU, OPEN" Classes="caps" Foreground="{DynamicResource OnPrimaryRawBrush}" VerticalAlignment="Top" />
+          <MenuFlyoutPresenter HorizontalAlignment="Left">
+            <MenuItem Header="Minimum salary" InputGesture="Ctrl+M" />
+            <MenuItem Header="Cap room" />
+            <MenuItem Header="Standard over-cap allowance" />
+          </MenuFlyoutPresenter>
+        </StackPanel>
+        <TextBlock Text="TOGGLES ON THE HERO · DEFAULT / HOVER / PRESSED / DISABLED" Classes="caps" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+        <WrapPanel ItemSpacing="{StaticResource Space24}" LineSpacing="{StaticResource Space8}">
+          <ToggleSwitch Content="Team colors in interface" IsChecked="True" />
+          <ToggleSwitch Content="Hover" IsChecked="True" ctl:ForceState.PseudoClasses="pointerover" />
+          <ToggleSwitch Content="Pressed" ctl:ForceState.PseudoClasses="pressed" />
+          <ToggleSwitch Content="Disabled" IsChecked="True" IsEnabled="False" />
+          <CheckBox Content="Hover" IsChecked="True" ctl:ForceState.PseudoClasses="pointerover" />
+          <CheckBox Content="Pressed" ctl:ForceState.PseudoClasses="pressed" />
+          <RadioButton GroupName="hero" Content="Hover" IsChecked="True" ctl:ForceState.PseudoClasses="pointerover" />
+          <RadioButton GroupName="hero" Content="Disabled" IsEnabled="False" />
+        </WrapPanel>
       </StackPanel>
     </Border>
 
@@ -103,19 +119,21 @@
       </Border>
       <Border Grid.Column="1" Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
         <StackPanel Spacing="{StaticResource Space12}">
-          <TextBlock Text="TOGGLES · CHECK BOX · RADIO" Classes="label-caps" />
+          <TextBlock Text="TOGGLES · CHECK BOX · RADIO · FOCUSED (KEYBOARD) SAMPLE FIRST" Classes="label-caps" />
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
-            <ToggleSwitch Content="Team colours" IsChecked="True" />
+            <ToggleSwitch Name="FocusSample" Content="Team colors in interface" IsChecked="True" />
             <ToggleSwitch Content="Ticker" IsChecked="False" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
             <CheckBox Content="Injured only" IsChecked="True" />
             <CheckBox Content="Expiring" />
             <CheckBox Content="Disabled" IsEnabled="False" />
+            <CheckBox Content="Disabled, on" IsChecked="True" IsEnabled="False" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
             <RadioButton GroupName="units" Content="Imperial" IsChecked="True" />
             <RadioButton GroupName="units" Content="Metric" />
+            <RadioButton GroupName="units" Content="Disabled" IsEnabled="False" />
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
             <ToggleButton Classes="chip" Content="PG" IsChecked="True" />

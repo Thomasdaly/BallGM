@@ -46,10 +46,32 @@
     </Grid>
     <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
       <StackPanel Spacing="{StaticResource Space12}">
-        <TextBlock Text="DIALOG · DESTRUCTIVE CONFIRM" Classes="label-caps" />
+        <TextBlock Text="DIALOG · DESTRUCTIVE CONFIRM / CONFIRM / FORM" Classes="label-caps" />
         <ctl:DialogHost Request="{Binding ConfirmDialog}" Height="260">
           <Border Background="{StaticResource Surface1Brush}" />
         </ctl:DialogHost>
+        <ctl:DialogHost Request="{Binding PlainDialog}" Height="240">
+          <Border Background="{StaticResource Surface1Brush}" />
+        </ctl:DialogHost>
+        <ctl:DialogHost Request="{Binding FormDialog}" Height="260">
+          <Border Background="{StaticResource Surface1Brush}" />
+        </ctl:DialogHost>
+        <TextBlock Text="CONTEXT MENU · FLYOUT (TOOLTIPS OPEN IN THEIR OWN POPUP, WHICH A FRAME CAPTURE CANNOT SEE; SAME SURFACE AND STROKE TOKENS)" Classes="label-caps wrap" />
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
+          <MenuFlyoutPresenter VerticalAlignment="Top">
+            <MenuItem Header="Open profile" InputGesture="Enter" />
+            <MenuItem Header="View team" />
+            <MenuItem Header="Copy entity ID" InputGesture="Ctrl+C" />
+          </MenuFlyoutPresenter>
+          <FlyoutPresenter VerticalAlignment="Top">
+            <StackPanel Spacing="{StaticResource Space4}">
+              <TextBlock Text="COLUMNS" Classes="label-caps" />
+              <CheckBox Content="PTS" IsChecked="True" />
+              <CheckBox Content="REB" IsChecked="True" />
+              <CheckBox Content="AST" />
+            </StackPanel>
+          </FlyoutPresenter>
+        </StackPanel>
       </StackPanel>
       <StackPanel Grid.Column="1" Spacing="{StaticResource Space12}">
         <TextBlock Text="CRASH DIALOG" Classes="label-caps" />

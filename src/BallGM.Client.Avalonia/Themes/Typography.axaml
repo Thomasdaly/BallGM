@@ -21,11 +21,11 @@
   <x:Double x:Key="FontSizeLabelLarge">12</x:Double>
   <x:Double x:Key="FontSizeBody">14</x:Double>
   <x:Double x:Key="FontSizeTable">13</x:Double>
-  <x:Double x:Key="FontSizeCaption">12</x:Double>
+  <x:Double x:Key="FontSizeCaption">13</x:Double>
 
   <x:Double x:Key="LineHeightHero">56</x:Double>
   <x:Double x:Key="LineHeightBody">20</x:Double>
-  <x:Double x:Key="LineHeightCaption">16</x:Double>
+  <x:Double x:Key="LineHeightCaption">18</x:Double>
 
   <!-- Tracking: LetterSpacing in DIPs at each role's size (+1%, +2%, +3%, +8% of the em). -->
   <x:Double x:Key="TrackingHero">0.56</x:Double>

@@ -62,7 +62,8 @@ public static class FallbackArt
             },
         };
         group.Children.Add(new GeometryDrawing { Brush = backdrop, Geometry = new RectangleGeometry(new Rect(0, 0, Grid, Grid)) });
-        group.Children.Add(new GeometryDrawing { Brush = new SolidColorBrush(secondary, 0.35), Geometry = Stripe(62, 100, 14) });
+        // The secondary colour as a band along the foot of the frame, behind the shoulders.
+        group.Children.Add(new GeometryDrawing { Brush = new SolidColorBrush(secondary, 0.45), Geometry = new RectangleGeometry(new Rect(0, 90, Grid, 10)) });
     }
 
     private static DrawingImage PlayerSilhouette(Color primary, Color secondary, string? number)
@@ -83,10 +84,11 @@ public static class FallbackArt
     {
         var group = new DrawingGroup();
         group.Children.Add(new GeometryDrawing { Brush = new SolidColorBrush(primary), Geometry = new RectangleGeometry(new Rect(0, 0, Grid, Grid)) });
-        group.Children.Add(new GeometryDrawing { Brush = new SolidColorBrush(secondary), Geometry = Stripe(70, 100, 12) });
+        // The secondary colour as a slanted band along the foot of the plate, clear of the letters.
+        group.Children.Add(new GeometryDrawing { Brush = new SolidColorBrush(secondary), Geometry = FootBand() });
         var text = string.IsNullOrWhiteSpace(label) ? "?" : label.ToUpperInvariant();
-        var size = text.Length <= 2 ? 48 : text.Length == 3 ? 40 : 30;
-        group.Children.Add(TextDrawing(text, size, new SolidColorBrush(Wcag.InkOn(primary)), centreX: 50, baselineY: 50 + (size * 0.36)));
+        var size = text.Length <= 2 ? 52 : text.Length == 3 ? 44 : 32;
+        group.Children.Add(TextDrawing(text, size, new SolidColorBrush(Wcag.InkOn(primary)), centreX: 50, baselineY: 44 + (size * 0.36)));
         return new DrawingImage(group);
     }
 
@@ -100,16 +102,16 @@ public static class FallbackArt
         return new DrawingImage(group);
     }
 
-    /// <summary>A diagonal band from the lower-left across, leaning like the interface's 12-degree shapes.</summary>
-    private static Geometry Stripe(double fromY, double toY, double thickness)
+    /// <summary>A band along the bottom of the plate whose top edge leans like the interface's 12-degree shapes.</summary>
+    private static Geometry FootBand()
     {
         var geometry = new StreamGeometry();
         using (var context = geometry.Open())
         {
-            context.BeginFigure(new Point(0, toY), isFilled: true);
-            context.LineTo(new Point(0, toY - thickness));
-            context.LineTo(new Point(Grid, fromY - thickness - 30));
-            context.LineTo(new Point(Grid, fromY - 30));
+            context.BeginFigure(new Point(0, Grid), isFilled: true);
+            context.LineTo(new Point(0, 86));
+            context.LineTo(new Point(Grid, 80));
+            context.LineTo(new Point(Grid, Grid));
             context.EndFigure(isClosed: true);
         }
 

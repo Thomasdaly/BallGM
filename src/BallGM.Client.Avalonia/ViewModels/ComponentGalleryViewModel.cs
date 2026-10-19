@@ -6,7 +6,10 @@ using BallGM.Client.Avalonia.Theming;
 namespace BallGM.Client.Avalonia.ViewModels;
 
 /// <summary>A team the gallery can re-tint to (spec 03 section 2: at least HCM, NGG, SMS, NCV, IRV).</summary>
-public sealed record GalleryTeam(string Abbreviation, string Name, string Primary, string Secondary);
+public sealed record GalleryTeam(string Abbreviation, string Name, string Primary, string Secondary)
+{
+    public string LogoId => "gallery-team-" + Abbreviation.ToLowerInvariant();
+}
 
 /// <summary>
 /// The dev-only Component Gallery (S33): every library component in every variant and state, on
@@ -95,6 +98,21 @@ public sealed class ComponentGalleryViewModel : ViewModelBase
 
     public IReadOnlyList<string> TabNames => ["OVERVIEW", "RATINGS", "CONTRACTS", "STATS"];
 
+    public IReadOnlyList<BreadcrumbItem> OverviewCrumbs => [new("Home", NoOpCommand), new("Roster", NoOpCommand), new("Overview")];
+
+    public IReadOnlyList<NavEntry> NavStateEntries =>
+    [
+        new("home", "Selected", "Icon.Home"),
+        new("roster", "Hover", "Icon.Roster"),
+        new("schedule", "Pressed", "Icon.Calendar"),
+        new("trades", "Focus", "Icon.Trade"),
+        new("finances", "Disabled", "Icon.Finances"),
+    ];
+
+    public IReadOnlyList<string> SegmentStates => ["Selected", "Hover", "Pressed", "Focus", "Disabled"];
+
+    public IReadOnlyList<StepItem> InvalidSteps => [new(1, "League", StepState.Done), new(2, "Team", StepState.Invalid), new(3, "Summary", StepState.Upcoming)];
+
     public IReadOnlyList<string> Segments => ["Per game", "Totals", "Per 36"];
 
     public IReadOnlyList<string> Positions => ["PG", "SG", "SF", "PF", "C"];
@@ -157,7 +175,7 @@ public sealed class ComponentGalleryViewModel : ViewModelBase
             var day = index - 2;
             var inMonth = day is >= 1 and <= 31;
             CalendarGame? game = inMonth && day % 2 == 0
-                ? new CalendarGame($"g{day}", "gallery-team-irv", day % 4 == 0 ? "IRV" : "NCV", day % 4 == 0, day < 14 ? (day % 6 == 0 ? "98-101" : "112-104") : null, day < 14 ? day % 6 != 0 : null, day == 10)
+                ? new CalendarGame($"g{day}", day % 4 == 0 ? "gallery-team-irv" : "gallery-team-ncv", day % 4 == 0 ? "IRV" : "NCV", day % 4 == 0, day < 14 ? (day % 6 == 0 ? "98-101" : "112-104") : null, day < 14 ? day % 6 != 0 : null, day == 10)
                 : null;
             return new CalendarDay(inMonth ? day : (day < 1 ? 30 + day : day - 31), inMonth, day == 14, game);
         }).ToList();
@@ -191,6 +209,10 @@ public sealed class ComponentGalleryViewModel : ViewModelBase
     public IReadOnlyList<ToastMessage> Toasts => [SuccessToast, WarningToast, ErrorToast, InfoToast];
 
     public DialogRequest ConfirmDialog { get; } = new("Release player?", "Releasing Jonah Kovac leaves $18.2M of dead money on this season's cap.", "Release", "Cancel", isDestructive: true);
+
+    public DialogRequest PlainDialog { get; } = new("Start the season?", "The calendar and fixture list are built; nothing else changes.", "Start season", "Not yet");
+
+    public DialogRequest FormDialog { get; } = new("Name this save", null, "Save", "Cancel", content: new global::Avalonia.Controls.TextBox { Text = "Mariners - season 2040", Width = 360, HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left });
 
     public IReadOnlyList<TableColumn> TableColumns { get; } =
     [

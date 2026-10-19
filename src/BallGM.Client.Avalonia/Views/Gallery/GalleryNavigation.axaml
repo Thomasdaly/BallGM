@@ -5,19 +5,53 @@
   xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   x:DataType="vm:ComponentGalleryViewModel">
+  <UserControl.Styles>
+    <!-- Pinned states for the state rows: hover, pressed, focus, disabled on items 2-5. -->
+    <Style Selector=":is(ListBox).states :is(ListBoxItem):nth-child(2)">
+      <Setter Property="ctl:ForceState.PseudoClasses" Value="pointerover" />
+    </Style>
+    <Style Selector=":is(ListBox).states :is(ListBoxItem):nth-child(3)">
+      <Setter Property="ctl:ForceState.PseudoClasses" Value="pressed" />
+    </Style>
+    <Style Selector=":is(ListBox).states :is(ListBoxItem):nth-child(4)">
+      <Setter Property="ctl:ForceState.PseudoClasses" Value="focus-visible" />
+    </Style>
+    <Style Selector=":is(ListBox).states :is(ListBoxItem):nth-child(5)">
+      <Setter Property="IsEnabled" Value="False" />
+    </Style>
+    <Style Selector="ctl|SkewTabStrip.states TabStripItem:nth-child(2)">
+      <Setter Property="ctl:ForceState.PseudoClasses" Value="pointerover" />
+    </Style>
+    <Style Selector="ctl|SkewTabStrip.states TabStripItem:nth-child(3)">
+      <Setter Property="ctl:ForceState.PseudoClasses" Value="focus-visible" />
+    </Style>
+    <Style Selector="ctl|SkewTabStrip.states TabStripItem:nth-child(4)">
+      <Setter Property="IsEnabled" Value="False" />
+    </Style>
+  </UserControl.Styles>
   <Grid ColumnDefinitions="220,64,*" ColumnSpacing="{StaticResource Space24}">
-    <Border Background="{StaticResource CanvasBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" Height="240" VerticalAlignment="Top">
-      <ctl:NavRail ItemsSource="{Binding NavEntries}" SelectedIndex="1" />
-    </Border>
-    <Border Grid.Column="1" Background="{StaticResource CanvasBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" Height="240" VerticalAlignment="Top">
-      <ctl:NavRail ItemsSource="{Binding NavEntries}" SelectedIndex="1" IsCollapsed="True" />
-    </Border>
+    <StackPanel Spacing="{StaticResource Space12}">
+      <TextBlock Text="NAV RAIL" Classes="label-caps" />
+      <Border Background="{StaticResource CanvasBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" Height="200" VerticalAlignment="Top">
+        <ctl:NavRail ItemsSource="{Binding NavEntries}" SelectedIndex="1" />
+      </Border>
+      <TextBlock Text="STATES: SELECTED / HOVER / PRESSED / FOCUS / DISABLED" Classes="label-caps wrap" />
+      <Border Background="{StaticResource CanvasBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" Height="240" VerticalAlignment="Top">
+        <ctl:NavRail Classes="states" ItemsSource="{Binding NavStateEntries}" SelectedIndex="0" />
+      </Border>
+    </StackPanel>
+    <StackPanel Grid.Column="1" Spacing="{StaticResource Space12}">
+      <TextBlock Text="ICONS" Classes="label-caps" />
+      <Border Background="{StaticResource CanvasBrush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" Height="200" VerticalAlignment="Top">
+        <ctl:NavRail ItemsSource="{Binding NavEntries}" SelectedIndex="1" IsCollapsed="True" />
+      </Border>
+    </StackPanel>
     <StackPanel Grid.Column="2" Spacing="{StaticResource Space24}">
       <Border Background="{StaticResource CanvasRaisedBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
         <StackPanel Spacing="{StaticResource Space12}">
           <ctl:PageHeader Title="Roster" Subtitle="14 under contract · 12–15 allowed">
             <ctl:PageHeader.Breadcrumb>
-              <ctl:Breadcrumb Items="{Binding Crumbs}" />
+              <ctl:Breadcrumb Items="{Binding OverviewCrumbs}" />
             </ctl:PageHeader.Breadcrumb>
             <ctl:PageHeader.Actions>
               <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
@@ -27,16 +61,27 @@
             </ctl:PageHeader.Actions>
           </ctl:PageHeader>
           <ctl:SkewTabStrip ItemsSource="{Binding TabNames}" SelectedIndex="0" />
-          <ctl:SkewTabStrip ItemsSource="{Binding TabNames}" SelectedIndex="2" />
+          <TextBlock Text="TAB STATES: SELECTED / HOVER / FOCUS / DISABLED" Classes="label-caps" />
+          <ctl:SkewTabStrip Classes="states" ItemsSource="{Binding TabNames}" SelectedIndex="0" />
         </StackPanel>
       </Border>
       <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
         <StackPanel Spacing="{StaticResource Space16}">
           <TextBlock Text="SEGMENTED CONTROL · BREADCRUMB (WIDE / NARROW) · STEPPER · BADGE" Classes="label-caps" />
-          <ctl:SegmentedControl ItemsSource="{Binding Segments}" SelectedIndex="0" />
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
+            <ctl:SegmentedControl ItemsSource="{Binding Segments}" SelectedIndex="0" />
+            <TextBlock Text="STATES: SELECTED / HOVER / PRESSED / FOCUS / DISABLED" Classes="label-caps" VerticalAlignment="Center" />
+            <ctl:SegmentedControl Classes="states" ItemsSource="{Binding SegmentStates}" SelectedIndex="0" />
+          </StackPanel>
           <ctl:Breadcrumb Items="{Binding Crumbs}" />
           <ctl:Breadcrumb Items="{Binding Crumbs}" Width="260" HorizontalAlignment="Left" />
           <ctl:Stepper Steps="{Binding Steps}" />
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+            <ctl:Stepper Steps="{Binding InvalidSteps}" />
+            <Button Classes="ghost" Content="Back" />
+            <Button Classes="secondary" Content="Next" IsEnabled="False" ToolTip.ShowOnDisabled="True" ToolTip.Tip="Pick a team to continue" />
+            <TextBlock Text="Pick a team to continue." Classes="body negative" VerticalAlignment="Center" />
+          </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
             <ctl:Badge Count="3" />
             <ctl:Badge Count="128" />

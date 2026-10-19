@@ -21,6 +21,9 @@
   <SolidColorBrush x:Key="TextControlForeground" Color="{StaticResource TextPrimaryColor}" />
   <SolidColorBrush x:Key="TextControlForegroundFocused" Color="{StaticResource TextPrimaryColor}" />
   <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{StaticResource TextMutedColor}" />
+  <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="{StaticResource Surface1Color}" />
+  <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="{StaticResource StrokeColor}" />
+  <SolidColorBrush x:Key="TextControlForegroundDisabled" Color="{StaticResource TextDisabledColor}" />
   <SolidColorBrush x:Key="ComboBoxBackground" Color="{StaticResource Surface3Color}" />
   <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="{StaticResource Surface3Color}" />
   <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{StaticResource StrokeColor}" />

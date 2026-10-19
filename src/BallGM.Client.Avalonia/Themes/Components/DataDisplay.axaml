@@ -15,8 +15,11 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Panel>
-          <ctl:CutCornerBorder Name="PART_Plate" Background="{TemplateBinding Background}" Corners="None" />
+          <ctl:CutCornerBorder Name="PART_Plate" Background="{TemplateBinding Background}" Corners="None" ClipContent="True">
+            <Border Name="PART_Gradient" Background="{DynamicResource TeamGradientBrush}" IsVisible="False" />
+          </ctl:CutCornerBorder>
           <Border Name="PART_Stripe" Width="{StaticResource AccentStripeWidth}" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" IsVisible="False" />
+          <Border Name="PART_FocusRing" BorderThickness="{StaticResource FocusRingThickness}" BorderBrush="{StaticResource FocusRingBrush}" CornerRadius="{StaticResource RadiusCard}" IsHitTestVisible="False" IsVisible="False" />
           <DockPanel Margin="{TemplateBinding Padding}">
             <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Margin="{StaticResource GapBottom12}" IsVisible="{TemplateBinding Title, Converter={x:Static ObjectConverters.IsNotNull}}">
               <TextBlock Name="PART_Title" Text="{TemplateBinding Title, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3 trim" VerticalAlignment="Center" />
@@ -32,8 +35,29 @@
       <Setter Property="IsVisible" Value="True" />
     </Style>
     <Style Selector="^:featured /template/ ctl|CutCornerBorder#PART_Plate">
-      <Setter Property="Background" Value="{DynamicResource TeamGradientBrush}" />
       <Setter Property="Corners" Value="TopRight" />
+    </Style>
+    <Style Selector="^:featured /template/ Border#PART_Gradient">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^.compact">
+      <Setter Property="Padding" Value="{StaticResource CardPaddingCompact}" />
+    </Style>
+    <Style Selector="^.clickable">
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Focusable" Value="True" />
+    </Style>
+    <Style Selector="^.clickable:pointerover">
+      <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+    </Style>
+    <Style Selector="^.clickable:pointerover /template/ Border#PART_Stripe">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^.clickable:pressed">
+      <Setter Property="Background" Value="{StaticResource Surface3Brush}" />
+    </Style>
+    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing, ^.force-focus /template/ Border#PART_FocusRing">
+      <Setter Property="IsVisible" Value="True" />
     </Style>
     <Style Selector="^:featured /template/ Border#PART_Stripe">
       <Setter Property="IsVisible" Value="True" />
@@ -49,7 +73,7 @@
         <StackPanel Spacing="{StaticResource Space4}">
           <ctl:CountUpText Value="{TemplateBinding Value}" Classes="stat-l" />
           <TextBlock Text="{TemplateBinding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" />
-          <TextBlock Name="PART_Delta" Text="{TemplateBinding DeltaText}" Classes="caption num" IsVisible="False" />
+          <TextBlock Name="PART_Delta" Text="{TemplateBinding DeltaText}" Classes="caption-plain num" Foreground="{StaticResource TextMutedBrush}" IsVisible="False" />
         </StackPanel>
       </ControlTemplate>
     </Setter>
@@ -226,6 +250,20 @@
     </Setter>
   </ControlTheme>
 
+  <ControlTheme x:Key="{x:Type ctl:AttributeGroup}" TargetType="ctl:AttributeGroup">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel Spacing="{StaticResource Space8}">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{TemplateBinding Title, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3 trim" VerticalAlignment="Center" />
+            <ctl:RatingBadge Grid.Column="1" Value="{TemplateBinding Average}" Caption="Group average" />
+          </Grid>
+          <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
   <ControlTheme x:Key="{x:Type ctl:PlayerCard}" TargetType="ctl:PlayerCard">
     <Setter Property="Background" Value="{StaticResource Surface1Brush}" />
     <Setter Property="Template">
@@ -285,26 +323,26 @@
   </ControlTheme>
 
   <ControlTheme x:Key="{x:Type ctl:HoverCard}" TargetType="ctl:HoverCard">
-    <Setter Property="Width" Value="320" />
+    <Setter Property="Width" Value="380" />
     <Setter Property="Template">
       <ControlTemplate>
         <StackPanel Spacing="{StaticResource Space8}">
           <Grid Name="PART_Player" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}" DataContext="{TemplateBinding Player}" x:DataType="ctl:PlayerCardModel" IsVisible="False">
             <ctl:PlayerHeadshot PlayerId="{Binding PlayerId}" PlayerName="{Binding Name}" Size="Large" IsInjured="{Binding IsInjured}" />
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Space4}">
-              <TextBlock Text="{Binding Name}" Classes="h3 wrap" />
-              <TextBlock Text="{Binding Meta}" Classes="label-caps" />
-              <TextBlock Text="{Binding TeamName}" Classes="caption" />
-              <TextBlock Text="{Binding ContractLine}" Classes="caption" IsVisible="{Binding HasContract}" />
+              <TextBlock Text="{Binding Name}" Classes="h3 trim" ToolTip.Tip="{Binding Name}" />
+              <TextBlock Text="{Binding Meta}" Classes="label-caps trim" />
+              <TextBlock Text="{Binding TeamName}" Classes="caption trim" />
+              <TextBlock Text="{Binding ContractLine}" Classes="caption trim" IsVisible="{Binding HasContract}" ToolTip.Tip="{Binding ContractLine}" />
             </StackPanel>
             <ctl:RatingBadge Grid.Column="2" Value="{Binding Overall}" Size="Large" VerticalAlignment="Top" />
           </Grid>
           <Grid Name="PART_Team" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space12}" DataContext="{TemplateBinding Team}" x:DataType="ctl:TeamCardModel" IsVisible="False">
             <ctl:TeamLogo TeamId="{Binding TeamId}" TeamName="{Binding Name}" Size="64" />
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Space4}">
-              <TextBlock Text="{Binding Name}" Classes="h3 wrap" />
-              <TextBlock Text="{Binding Meta}" Classes="label-caps num" />
-              <TextBlock Text="{Binding Payroll}" Classes="caption" />
+              <TextBlock Text="{Binding Name}" Classes="h3 trim" ToolTip.Tip="{Binding Name}" />
+              <TextBlock Text="{Binding Meta}" Classes="label-caps num trim" />
+              <TextBlock Text="{Binding Payroll}" Classes="caption trim" />
             </StackPanel>
           </Grid>
           <TextBlock Name="PART_Id" Text="{Binding $parent[ctl:HoverCard].EntityId, StringFormat='ID {0}'}" Classes="caption num" IsVisible="False" />

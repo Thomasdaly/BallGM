@@ -11,7 +11,7 @@
         <TextBlock Text="TEXT BOX · SEARCH · COMBO BOX · NUMERIC · SLIDER" Classes="label-caps" />
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
           <TextBox Width="220" PlaceholderText="Player name" />
-          <TextBox Width="220" Text="Focused field" ctl:ForceState.PseudoClasses="focus-visible" />
+          <TextBox Width="220" Text="Focused field" Classes="force-focus" />
           <TextBox Width="220" Text="Disabled" IsEnabled="False" />
           <ctl:SearchBox Width="240" />
           <ctl:SearchBox Width="240" Text="Okonkwo" />
@@ -24,10 +24,44 @@
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
+          <ComboBox Width="260" ItemsSource="{Binding Teams}" SelectedIndex="4" AutomationProperties.Name="Team with logo">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:GalleryTeam">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                  <ctl:TeamLogo TeamId="{Binding LogoId}" TeamName="{Binding Name}" Size="20" />
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                </StackPanel>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
           <NumericUpDown Width="180" Value="18.2" FormatString="$0.0M" Increment="0.1" Minimum="0" Maximum="60" AutomationProperties.Name="First season salary" />
           <NumericUpDown Width="140" Value="3" Minimum="1" Maximum="5" AutomationProperties.Name="Seasons" />
-          <Slider Width="240" Minimum="0" Maximum="48" Value="32" TickFrequency="4" IsSnapToTickEnabled="True" TickPlacement="BottomRight" AutomationProperties.Name="Minutes" />
+          <StackPanel Width="240">
+            <Slider Minimum="0" Maximum="48" Value="32" TickFrequency="12" IsSnapToTickEnabled="False" TickPlacement="BottomRight" AutomationProperties.Name="Minutes" />
+            <Grid ColumnDefinitions="*,*,*,*,*">
+              <TextBlock Text="0" Classes="caption num" HorizontalAlignment="Left" />
+              <TextBlock Grid.Column="1" Text="12" Classes="caption num" HorizontalAlignment="Center" />
+              <TextBlock Grid.Column="2" Text="24" Classes="caption num" HorizontalAlignment="Center" />
+              <TextBlock Grid.Column="3" Text="36" Classes="caption num" HorizontalAlignment="Center" />
+              <TextBlock Grid.Column="4" Text="48" Classes="caption num" HorizontalAlignment="Right" />
+            </Grid>
+          </StackPanel>
           <TextBlock Text="32 MIN" Classes="label-caps" VerticalAlignment="Center" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+          <TextBlock Text="OPEN LIST (THE COMBO BOX POPUP'S LIST)" Classes="label-caps" VerticalAlignment="Top" />
+          <Border Background="{StaticResource Surface2Brush}" BorderBrush="{StaticResource StrokeBrush}" BorderThickness="1" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad4}" BoxShadow="{StaticResource ShadowFloating}">
+            <ListBox ItemsSource="{Binding Teams}" SelectedIndex="0" Width="260" Background="{x:Null}">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:GalleryTeam">
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                    <ctl:TeamLogo TeamId="{Binding LogoId}" TeamName="{Binding Name}" Size="20" />
+                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Border>
         </StackPanel>
       </StackPanel>
     </Border>
@@ -44,7 +78,7 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="x:String">
-                  <ToggleButton Classes="chip" Content="{Binding}" />
+                  <ToggleButton Classes="chip" Content="{Binding}" IsChecked="{Binding Converter={x:Static ObjectConverters.Equal}, ConverterParameter=SF, Mode=OneTime}" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

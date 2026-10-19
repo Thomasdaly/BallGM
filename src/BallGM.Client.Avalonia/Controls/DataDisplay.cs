@@ -374,6 +374,28 @@ public sealed class AttributeBar : TemplatedControl
     }
 }
 
+/// <summary>A group of attribute bars under its caps title and the group's average chip (spec 01 section 12).</summary>
+public sealed class AttributeGroup : ContentControl
+{
+    public static readonly StyledProperty<string?> TitleProperty =
+        AvaloniaProperty.Register<AttributeGroup, string?>(nameof(Title));
+
+    public static readonly StyledProperty<int> AverageProperty =
+        AvaloniaProperty.Register<AttributeGroup, int>(nameof(Average));
+
+    public string? Title
+    {
+        get => GetValue(TitleProperty);
+        set => SetValue(TitleProperty, value);
+    }
+
+    public int Average
+    {
+        get => GetValue(AverageProperty);
+        set => SetValue(AverageProperty, value);
+    }
+}
+
 /// <summary>The 4px bar inside <see cref="AttributeBar"/>: track, tier fill, compare tick. Drawn, not laid out.</summary>
 public sealed class RatingTrack : Control
 {

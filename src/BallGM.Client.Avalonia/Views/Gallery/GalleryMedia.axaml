@@ -15,24 +15,26 @@
           <ctl:PlayerHeadshot PlayerId="gallery-player-2" PlayerName="D'Shawn O'Malley-Fitzgerald" Size="Medium" IsInjured="True" VerticalAlignment="Bottom" />
           <ctl:PlayerHeadshot PlayerId="gallery-player-2" PlayerName="D'Shawn O'Malley-Fitzgerald" Size="Large" Number="3" IsInjured="True" VerticalAlignment="Bottom" />
           <ctl:PlayerHeadshot PlayerId="gallery-player-1" PlayerName="Maximilian Okonkwo-Vanderbilt" Size="ExtraLarge" Number="7" VerticalAlignment="Bottom" />
-          <ctl:PlayerHeadshot PlayerId="gallery-player-1" PlayerName="Maximilian Okonkwo-Vanderbilt" Size="Hero" Width="200" Height="240" VerticalAlignment="Bottom" />
+          <ctl:PlayerHeadshot PlayerId="gallery-player-1" PlayerName="Maximilian Okonkwo-Vanderbilt" Size="Hero" VerticalAlignment="Bottom" />
         </StackPanel>
         <TextBlock Text="TEAM LOGO · 16 – 256 · MONOGRAM FALLBACK" Classes="label-caps" />
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
           <ctl:TeamLogo TeamId="gallery-team-hcm" TeamName="Harbor City Mariners" Size="16" VerticalAlignment="Bottom" />
+          <ctl:TeamLogo TeamId="gallery-team-irv" TeamName="Ironvale Forge" Size="20" VerticalAlignment="Bottom" />
           <ctl:TeamLogo TeamId="gallery-team-ngg" TeamName="Northgate Glaciers" Size="24" VerticalAlignment="Bottom" />
           <ctl:TeamLogo TeamId="gallery-team-sms" TeamName="Sun Mesa Scorch" Size="32" VerticalAlignment="Bottom" />
           <ctl:TeamLogo TeamId="gallery-team-ncv" TeamName="Neon Coast Voltage" Size="48" VerticalAlignment="Bottom" />
           <ctl:TeamLogo TeamId="gallery-team-irv" TeamName="Ironvale Forge" Size="64" VerticalAlignment="Bottom" />
           <ctl:TeamLogo TeamId="gallery-team-psa" TeamName="Port Saint Augustine Navigators" Size="128" VerticalAlignment="Bottom" />
+          <ctl:TeamLogo TeamId="gallery-team-hcm" TeamName="Harbor City Mariners" Size="256" VerticalAlignment="Bottom" />
         </StackPanel>
       </StackPanel>
     </Border>
     <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
       <StackPanel Spacing="{StaticResource Space12}">
         <TextBlock Text="PLAYER CARD · FULL / COMPACT" Classes="label-caps" />
-        <ctl:PlayerCard Model="{Binding StarCard}" />
-        <ctl:PlayerCard Model="{Binding InjuredCard}" IsCompact="True" />
+        <ctl:PlayerCard Model="{Binding StarCard}" OpenCommand="{Binding NoOpCommand}" />
+        <ctl:PlayerCard Model="{Binding InjuredCard}" IsCompact="True" OpenCommand="{Binding NoOpCommand}" />
         <TextBlock Text="TEAM CARD · FULL / COMPACT (LONGEST NAME)" Classes="label-caps" />
         <ctl:TeamCard Model="{Binding TeamCardSample}" />
         <ctl:TeamCard Model="{Binding LongTeamCard}" IsCompact="True" />

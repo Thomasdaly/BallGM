@@ -89,6 +89,7 @@
     <Setter Property="FontSize" Value="{StaticResource FontSizeLabelLarge}" />
   </Style>
   <Style Selector="TextBlock.caption-plain">
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     <Setter Property="LineHeight" Value="{StaticResource LineHeightCaption}" />
   </Style>
@@ -107,6 +108,7 @@
     <Setter Property="FontFeatures" Value="{StaticResource TabularFigures}" />
   </Style>
   <Style Selector="TextBlock.caption">
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     <Setter Property="FontWeight" Value="Normal" />
     <Setter Property="LineHeight" Value="{StaticResource LineHeightCaption}" />
@@ -171,7 +173,7 @@
   </Style>
   <Style Selector="ctl|NavRail:collapsed ctl|Badge#Count">
     <Setter Property="IsDot" Value="True" />
-    <Setter Property="Margin" Value="-12,-16,0,0" />
+    <Setter Property="Margin" Value="-4,-22,0,0" />
   </Style>
   <Style Selector="ctl|NavRail:collapsed ListBoxItem Grid">
     <Setter Property="Margin" Value="22,0,0,0" />
@@ -310,10 +312,25 @@
     <Setter Property="Background" Value="{StaticResource ZebraBrush}" />
   </Style>
   <Style Selector="ListBox.datatable DockPanel.highlight">
-    <Setter Property="Background" Value="{DynamicResource AccentFaintBrush}" />
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
   </Style>
   <Style Selector="TextBlock.label-caps.sorted">
     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+  </Style>
+
+  <!-- Stock text inputs: legible placeholders and an outside-weight focus border. -->
+  <Style Selector="TextBox">
+    <Setter Property="PlaceholderForeground" Value="{StaticResource TextMutedBrush}" />
+    <Setter Property="MinHeight" Value="32" />
+  </Style>
+  <Style Selector="TextBox:focus /template/ Border#PART_BorderElement, TextBox.force-focus /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="{StaticResource FocusRingBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="NumericUpDown">
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
 
   <!-- Size-only helpers for screens not yet rebuilt (they replaced literal FontSize values). -->

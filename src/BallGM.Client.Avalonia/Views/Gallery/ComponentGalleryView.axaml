@@ -12,25 +12,18 @@
       <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space12}">
         <StackPanel>
           <TextBlock Text="COMPONENT GALLERY" Classes="h1" Foreground="{DynamicResource OnPrimaryRawBrush}" />
-          <TextBlock Text="Developer reference: every component, variant and state. Not part of the game's navigation." Classes="caption" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+          <TextBlock Text="Developer reference: every component, variant and state. Not part of the game's navigation." Classes="body" Foreground="{DynamicResource OnPrimaryRawBrush}" />
         </StackPanel>
-        <ItemsControl Grid.Column="1" ItemsSource="{Binding Teams}" VerticalAlignment="Center">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:GalleryTeam">
-              <Button
-                Classes="secondary small"
-                Content="{Binding Abbreviation}"
-                Command="{Binding $parent[ItemsControl].((vm:ComponentGalleryViewModel)DataContext).SelectTeamCommand}"
-                CommandParameter="{Binding}"
-                ToolTip.Tip="{Binding Name}" />
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space12}" VerticalAlignment="Center">
+          <TextBlock Text="TEAM" Classes="caps" Foreground="{DynamicResource OnPrimaryRawBrush}" VerticalAlignment="Center" />
+          <ctl:SegmentedControl ItemsSource="{Binding Teams}" SelectedItem="{Binding Team}" AutomationProperties.Name="Gallery team">
+            <ctl:SegmentedControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:GalleryTeam">
+                <TextBlock Text="{Binding Abbreviation}" ToolTip.Tip="{Binding Name}" />
+              </DataTemplate>
+            </ctl:SegmentedControl.ItemTemplate>
+          </ctl:SegmentedControl>
+        </StackPanel>
         <ctl:SkewTabStrip Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding Sections}" SelectedIndex="{Binding SectionIndex}" />
       </Grid>
     </Border>

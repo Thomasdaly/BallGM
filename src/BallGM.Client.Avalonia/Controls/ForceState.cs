@@ -38,6 +38,13 @@ public static class ForceState
         var pseudo = (global::Avalonia.Controls.IPseudoClasses)control.Classes;
         foreach (var name in value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
+            // Focus is reset by the focus manager whenever focus moves, so a pinned focus ring is a class.
+            if (name == "focus-visible")
+            {
+                control.Classes.Add("force-focus");
+                continue;
+            }
+
             pseudo.Set(":" + name, true);
         }
     }

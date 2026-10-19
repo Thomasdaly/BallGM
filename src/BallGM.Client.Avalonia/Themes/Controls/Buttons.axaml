@@ -15,8 +15,8 @@
     <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
     <Setter Property="CornerRadius" Value="{StaticResource RadiusChip}" />
     <Setter Property="Padding" Value="{StaticResource Pad16x8}" />
-    <Setter Property="MinHeight" Value="32" />
-    <Setter Property="MinWidth" Value="32" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="MinWidth" Value="40" />
     <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeBody}" />
     <Setter Property="FontWeight" Value="SemiBold" />
@@ -28,15 +28,8 @@
       <ControlTemplate>
         <Panel>
           <ctl:SkewBorder
-            Name="PART_FocusRing"
-            Margin="-4"
-            StrokeThickness="2"
-            BorderBrush="{StaticResource FocusRingBrush}"
-            CornerRadius="{TemplateBinding CornerRadius}"
-            IsHitTestVisible="False"
-            IsVisible="False" />
-          <ctl:SkewBorder
             Name="PART_Background"
+            Margin="{StaticResource FocusRingGap}"
             Background="{TemplateBinding Background}"
             BorderBrush="{TemplateBinding BorderBrush}"
             StrokeThickness="1"
@@ -60,6 +53,13 @@
                 IsVisible="False" />
             </Panel>
           </ctl:SkewBorder>
+          <ctl:SkewBorder
+            Name="PART_FocusRing"
+            StrokeThickness="2"
+            BorderBrush="{StaticResource FocusRingBrush}"
+            CornerRadius="{TemplateBinding CornerRadius}"
+            IsHitTestVisible="False"
+            IsVisible="False" />
         </Panel>
       </ControlTemplate>
     </Setter>
@@ -71,13 +71,7 @@
     <Style Selector="^:pressed">
       <Setter Property="Background" Value="{StaticResource Surface1Brush}" />
     </Style>
-    <Style Selector="^:disabled">
-      <Setter Property="Background" Value="{StaticResource Surface1Brush}" />
-      <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
-      <Setter Property="Foreground" Value="{StaticResource TextDisabledBrush}" />
-      <Setter Property="Cursor" Value="Arrow" />
-    </Style>
-    <Style Selector="^:focus-visible /template/ ctl|SkewBorder#PART_FocusRing">
+    <Style Selector="^:focus-visible /template/ ctl|SkewBorder#PART_FocusRing, ^.force-focus /template/ ctl|SkewBorder#PART_FocusRing">
       <Setter Property="IsVisible" Value="True" />
     </Style>
     <Style Selector="^.busy">
@@ -112,10 +106,6 @@
     </Style>
     <Style Selector="^.primary:pressed">
       <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}" />
-    </Style>
-    <Style Selector="^.primary:disabled">
-      <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
-      <Setter Property="Foreground" Value="{StaticResource TextDisabledBrush}" />
     </Style>
 
     <!-- Secondary: outline only. -->
@@ -163,18 +153,33 @@
 
     <!-- Sizes. -->
     <Style Selector="^.small">
-      <Setter Property="MinHeight" Value="24" />
-      <Setter Property="MinWidth" Value="24" />
+      <Setter Property="MinHeight" Value="32" />
+      <Setter Property="MinWidth" Value="32" />
       <Setter Property="Padding" Value="{StaticResource Pad8x4}" />
       <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     </Style>
     <Style Selector="^.large">
-      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="MinHeight" Value="52" />
       <Setter Property="Padding" Value="{StaticResource Pad24x12}" />
     </Style>
     <Style Selector="^.primary.large">
       <Setter Property="FontSize" Value="{StaticResource FontSizeH2}" />
       <Setter Property="Padding" Value="{StaticResource Pad24x4}" />
+    </Style>
+
+    <!-- Disabled last, so no variant's colours outrank it. -->
+    <Style Selector="^:disabled">
+      <Setter Property="Background" Value="{StaticResource Surface1Brush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextDisabledBrush}" />
+      <Setter Property="Cursor" Value="Arrow" />
+    </Style>
+    <Style Selector="^.ghost:disabled, ^.icon:disabled">
+      <Setter Property="Background" Value="{x:Null}" />
+      <Setter Property="BorderBrush" Value="{x:Null}" />
+    </Style>
+    <Style Selector="^.primary:disabled">
+      <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
     </Style>
   </ControlTheme>
 
@@ -184,11 +189,114 @@
       <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
       <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
+    <Style Selector="^.chip:checked">
+      <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+    </Style>
     <Style Selector="^.chip">
-      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="MinHeight" Value="36" />
       <Setter Property="Padding" Value="{StaticResource Pad12x4}" />
       <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
       <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+  </ControlTheme>
+
+  <!-- A button with no chrome of its own: the part of a composite that its parent paints. -->
+  <ControlTheme x:Key="BareButton" TargetType="Button">
+    <Setter Property="Background" Value="{x:Null}" />
+    <Setter Property="Padding" Value="{StaticResource Pad12x8}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <Border Name="PART_Hover" Background="{TemplateBinding Background}" />
+          <ContentPresenter
+            Name="PART_ContentPresenter"
+            Padding="{TemplateBinding Padding}"
+            Content="{TemplateBinding Content}"
+            ContentTemplate="{TemplateBinding ContentTemplate}"
+            Foreground="{TemplateBinding Foreground}"
+            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          <Border
+            Name="PART_FocusRing"
+            Margin="2"
+            BorderThickness="{StaticResource FocusRingThickness}"
+            BorderBrush="{StaticResource FocusRingBrush}"
+            IsHitTestVisible="False"
+            IsVisible="False" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{StaticResource HoverOverlayBrush}" />
+    </Style>
+    <Style Selector="^:pressed">
+      <Setter Property="Background" Value="{StaticResource PressedOverlayBrush}" />
+    </Style>
+    <Style Selector="^:disabled">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing, ^.force-focus /template/ Border#PART_FocusRing">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+  </ControlTheme>
+
+  <!-- SplitButton: the primary action on a skewed accent plate with its menu segment attached. -->
+  <ControlTheme x:Key="{x:Type SplitButton}" TargetType="SplitButton">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="{StaticResource FontSizeH3}" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <ctl:SkewBorder Name="PART_Plate" Angle="{StaticResource SkewAngle}" Background="{TemplateBinding Background}">
+          <Grid ColumnDefinitions="*,1,Auto">
+            <Button
+              Name="PART_PrimaryButton"
+              Theme="{StaticResource BareButton}"
+              Content="{TemplateBinding Content}"
+              ContentTemplate="{TemplateBinding ContentTemplate}"
+              Command="{TemplateBinding Command}"
+              CommandParameter="{TemplateBinding CommandParameter}"
+              Foreground="{TemplateBinding Foreground}"
+              FontFamily="{TemplateBinding FontFamily}"
+              FontWeight="{TemplateBinding FontWeight}"
+              FontSize="{TemplateBinding FontSize}"
+              Padding="{StaticResource Pad16x4}" />
+            <Border Grid.Column="1" Background="{TemplateBinding Foreground}" Opacity="0.3" Margin="{StaticResource PadV8}" />
+            <Button
+              Name="PART_SecondaryButton"
+              Grid.Column="2"
+              Theme="{StaticResource BareButton}"
+              Foreground="{TemplateBinding Foreground}"
+              Padding="{StaticResource Pad8}"
+              ToolTip.Tip="More options"
+              AutomationProperties.Name="More options">
+              <PathIcon Data="{StaticResource Icon.CaretDown}" Classes="small" />
+            </Button>
+          </Grid>
+        </ctl:SkewBorder>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover">
+      <Setter Property="Background" Value="{DynamicResource AccentHoverBrush}" />
+    </Style>
+    <Style Selector="^:pressed">
+      <Setter Property="Background" Value="{DynamicResource AccentPressedBrush}" />
+    </Style>
+    <Style Selector="^:disabled">
+      <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextDisabledBrush}" />
+    </Style>
+    <Style Selector="^:focus-visible /template/ ctl|SkewBorder#PART_Plate, ^.force-focus /template/ ctl|SkewBorder#PART_Plate">
+      <Setter Property="BorderBrush" Value="{StaticResource FocusRingBrush}" />
+      <Setter Property="StrokeThickness" Value="2" />
     </Style>
   </ControlTheme>
 

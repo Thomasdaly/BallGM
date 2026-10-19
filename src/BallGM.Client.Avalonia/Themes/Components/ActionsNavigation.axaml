@@ -10,49 +10,6 @@
   xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
   xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters">
 
-  <!-- A button with no chrome of its own: the part of a composite that its parent paints. -->
-  <ControlTheme x:Key="BareButton" TargetType="Button">
-    <Setter Property="Background" Value="{x:Null}" />
-    <Setter Property="Padding" Value="{StaticResource Pad12x8}" />
-    <Setter Property="Cursor" Value="Hand" />
-    <Setter Property="FocusAdorner" Value="{x:Null}" />
-    <Setter Property="HorizontalContentAlignment" Value="Left" />
-    <Setter Property="VerticalContentAlignment" Value="Center" />
-    <Setter Property="Template">
-      <ControlTemplate>
-        <Panel>
-          <Border Name="PART_Hover" Background="{TemplateBinding Background}" />
-          <ContentPresenter
-            Name="PART_ContentPresenter"
-            Padding="{TemplateBinding Padding}"
-            Content="{TemplateBinding Content}"
-            ContentTemplate="{TemplateBinding ContentTemplate}"
-            Foreground="{TemplateBinding Foreground}"
-            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
-          <Border
-            Name="PART_FocusRing"
-            Margin="2"
-            BorderThickness="{StaticResource FocusRingThickness}"
-            BorderBrush="{StaticResource FocusRingBrush}"
-            IsHitTestVisible="False"
-            IsVisible="False" />
-        </Panel>
-      </ControlTemplate>
-    </Setter>
-    <Style Selector="^:pointerover">
-      <Setter Property="Background" Value="{StaticResource HoverOverlayBrush}" />
-    </Style>
-    <Style Selector="^:pressed">
-      <Setter Property="Background" Value="{StaticResource PressedOverlayBrush}" />
-    </Style>
-    <Style Selector="^:disabled">
-      <Setter Property="Opacity" Value="0.5" />
-    </Style>
-    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
-      <Setter Property="IsVisible" Value="True" />
-    </Style>
-  </ControlTheme>
 
   <ControlTheme x:Key="{x:Type ctl:ContinueButton}" TargetType="ctl:ContinueButton">
     <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
@@ -123,6 +80,7 @@
         <Panel>
           <TextBlock
             Name="PART_Text"
+            Margin="4,2"
             Text="{TemplateBinding Text}"
             Foreground="{TemplateBinding Foreground}"
             FontWeight="{TemplateBinding FontWeight}"
@@ -132,7 +90,6 @@
             VerticalAlignment="Center" />
           <Border
             Name="PART_FocusRing"
-            Margin="-2,-1"
             BorderThickness="{StaticResource FocusRingThickness}"
             BorderBrush="{StaticResource FocusRingBrush}"
             IsHitTestVisible="False"
@@ -149,7 +106,7 @@
     <Style Selector="^:disabled">
       <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
     </Style>
-    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
+    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing, ^.force-focus /template/ Border#PART_FocusRing">
       <Setter Property="IsVisible" Value="True" />
     </Style>
   </ControlTheme>
@@ -196,7 +153,7 @@
     <Style Selector="^:selected /template/ Border#PART_Stripe">
       <Setter Property="IsVisible" Value="True" />
     </Style>
-    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
+    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing, ^.force-focus /template/ Border#PART_FocusRing">
       <Setter Property="IsVisible" Value="True" />
     </Style>
   </ControlTheme>
@@ -209,7 +166,7 @@
       <DataTemplate x:DataType="ctl:NavEntry">
         <Grid ColumnDefinitions="Auto,*,Auto" Margin="{StaticResource PadH24}" ToolTip.Tip="{Binding ToolTipText}">
           <PathIcon Data="{Binding IconKey, Converter={x:Static conv:ResourceKeyConverter.Instance}}" />
-          <TextBlock Name="Label" Grid.Column="1" Text="{Binding Label}" Classes="caps large trim" Foreground="{Binding $parent[ListBoxItem].Foreground}" Margin="{StaticResource GapLeft16}" VerticalAlignment="Center" />
+          <TextBlock Name="Label" Grid.Column="1" Text="{Binding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="caps large trim" Foreground="{Binding $parent[ListBoxItem].Foreground}" Margin="{StaticResource GapLeft16}" VerticalAlignment="Center" />
           <ctl:Badge Name="Count" Grid.Column="2" Count="{Binding BadgeCount}" VerticalAlignment="Center" />
         </Grid>
       </DataTemplate>
@@ -274,7 +231,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="ctl:BreadcrumbItem">
               <StackPanel Orientation="Horizontal">
-                <TextBlock Classes="caption sep" Text="/" Margin="{StaticResource PadH8}" VerticalAlignment="Center" />
+                <TextBlock Classes="caption" Text="/" Margin="{StaticResource PadH8}" VerticalAlignment="Center" IsVisible="{Binding !IsFirst}" />
                 <Button Theme="{StaticResource BareButton}" Padding="{StaticResource Pad4}" Command="{Binding Command}" CommandParameter="{Binding Parameter}" IsVisible="{Binding IsLink}" AutomationProperties.Name="{Binding Label}">
                   <TextBlock Text="{Binding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" />
                 </Button>
@@ -282,11 +239,6 @@
               </StackPanel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
-          <ItemsControl.Styles>
-            <Style Selector="ContentPresenter:nth-child(1) TextBlock.sep">
-              <Setter Property="IsVisible" Value="False" />
-            </Style>
-          </ItemsControl.Styles>
         </ItemsControl>
       </ControlTemplate>
     </Setter>
@@ -304,10 +256,11 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="ctl:StepItem">
               <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-                <Border Classes="connector" Width="32" Height="2" Background="{StaticResource StrokeBrush}" VerticalAlignment="Center" />
+                <Border Width="32" Height="2" Background="{StaticResource StrokeBrush}" VerticalAlignment="Center" IsVisible="{Binding !IsFirst}" />
                 <Panel Width="28" Height="28">
-                  <Ellipse Classes.done="{Binding IsDone}" Classes.current="{Binding IsCurrent}" Classes="step" />
+                  <Ellipse Classes.done="{Binding IsDone}" Classes.current="{Binding IsCurrent}" Classes.invalid="{Binding IsInvalid}" Classes="step" />
                   <TextBlock Text="{Binding Number}" Classes="label-caps num" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !IsDone}" />
+                  <Ellipse Width="8" Height="8" Fill="{DynamicResource NegativeBrush}" HorizontalAlignment="Right" VerticalAlignment="Top" IsVisible="{Binding IsInvalid}" ToolTip.Tip="This step needs attention" />
                   <PathIcon Data="{StaticResource Icon.Check}" Classes="small" Foreground="{DynamicResource OnAccentBrush}" IsVisible="{Binding IsDone}" />
                 </Panel>
                 <TextBlock Text="{Binding Title, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps large" Classes.current="{Binding IsCurrent}" VerticalAlignment="Center" />
@@ -315,8 +268,8 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
           <ItemsControl.Styles>
-            <Style Selector="ContentPresenter:nth-child(1) Border.connector">
-              <Setter Property="IsVisible" Value="False" />
+            <Style Selector="Ellipse.step.invalid">
+              <Setter Property="Stroke" Value="{DynamicResource NegativeBrush}" />
             </Style>
             <Style Selector="Ellipse.step">
               <Setter Property="Stroke" Value="{StaticResource TextMutedBrush}" />
@@ -382,13 +335,18 @@
     <Style Selector="^:disabled">
       <Setter Property="Foreground" Value="{StaticResource TextDisabledBrush}" />
     </Style>
-    <Style Selector="^:focus-visible /template/ ctl|SkewBorder#PART_FocusRing">
+    <Style Selector="^:focus-visible /template/ ctl|SkewBorder#PART_FocusRing, ^.force-focus /template/ ctl|SkewBorder#PART_FocusRing">
       <Setter Property="IsVisible" Value="True" />
     </Style>
   </ControlTheme>
 
   <ControlTheme x:Key="{x:Type ctl:SkewTabStrip}" TargetType="ctl:SkewTabStrip">
     <Setter Property="ItemContainerTheme" Value="{StaticResource SkewTabItem}" />
+    <Setter Property="ItemTemplate">
+      <DataTemplate x:DataType="x:String">
+        <TextBlock Text="{Binding Converter={x:Static conv:UpperCaseConverter.Instance}}" />
+      </DataTemplate>
+    </Setter>
     <Setter Property="ItemsPanel">
       <ItemsPanelTemplate>
         <StackPanel Orientation="Horizontal" />
@@ -435,7 +393,6 @@
             HorizontalContentAlignment="Center" />
           <Border
             Name="PART_FocusRing"
-            Margin="-2"
             BorderThickness="{StaticResource FocusRingThickness}"
             BorderBrush="{StaticResource FocusRingBrush}"
             CornerRadius="{StaticResource RadiusChip}"
@@ -454,7 +411,7 @@
       <Setter Property="Background" Value="{StaticResource Surface3Brush}" />
       <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
-    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
+    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing, ^.force-focus /template/ Border#PART_FocusRing">
       <Setter Property="IsVisible" Value="True" />
     </Style>
   </ControlTheme>

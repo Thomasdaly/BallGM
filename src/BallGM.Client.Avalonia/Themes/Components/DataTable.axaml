@@ -99,7 +99,7 @@
     <Style Selector="^:selected /template/ Border#PART_Stripe">
       <Setter Property="IsVisible" Value="True" />
     </Style>
-    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
+    <Style Selector="^:focus-visible /template/ Border#PART_FocusRing, ^.force-focus /template/ Border#PART_FocusRing">
       <Setter Property="IsVisible" Value="True" />
     </Style>
   </ControlTheme>
@@ -160,6 +160,7 @@
               Classes="datatable"
               Background="{x:Null}"
               ItemsSource="{TemplateBinding RowViews}"
+              SelectedIndex="{TemplateBinding SelectedIndex, Mode=TwoWay}"
               ItemContainerTheme="{StaticResource TableRowItem}"
               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
               AutomationProperties.Name="Table rows">
@@ -210,7 +211,7 @@
               <ctl:Skeleton Shape="Row" />
             </StackPanel>
 
-            <ScrollBar Name="PART_HorizontalBar" Grid.Row="2" Orientation="Horizontal" Minimum="0" SmallChange="40" LargeChange="200" IsVisible="False" AllowAutoHide="False" />
+            <ScrollBar Name="PART_HorizontalBar" Grid.Row="2" Orientation="Horizontal" Minimum="0" SmallChange="40" LargeChange="200" IsVisible="False" AllowAutoHide="True" />
           </Grid>
         </Border>
       </ControlTemplate>

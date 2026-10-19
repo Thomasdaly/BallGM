@@ -328,6 +328,16 @@ public sealed class DataTable : TemplatedControl
 
     public ICommand HeaderSortCommand { get; }
 
+    public static readonly StyledProperty<int> SelectedIndexProperty =
+        AvaloniaProperty.Register<DataTable, int>(nameof(SelectedIndex), -1, defaultBindingMode: global::Avalonia.Data.BindingMode.TwoWay);
+
+    /// <summary>The selected row's index (-1 for none).</summary>
+    public int SelectedIndex
+    {
+        get => GetValue(SelectedIndexProperty);
+        set => SetValue(SelectedIndexProperty, value);
+    }
+
     /// <summary>The list hosting the rows (for tests of virtualization and keyboard).</summary>
     public ListBox? RowList => _list;
 

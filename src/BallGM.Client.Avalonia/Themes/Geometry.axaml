@@ -60,6 +60,8 @@
   <Thickness x:Key="Hairline">1</Thickness>
   <Thickness x:Key="AccentStripeLeft">3,0,0,0</Thickness>
   <Thickness x:Key="FocusRingThickness">2</Thickness>
+  <!-- The space a control keeps around its plate for the 2px focus ring, 2px off it (spec 01 section 3). -->
+  <Thickness x:Key="FocusRingGap">4</Thickness>
 
   <!-- Radii: 0 for structure, 2 for chips and inputs, 4 maximum for cards. -->
   <CornerRadius x:Key="RadiusNone">0</CornerRadius>

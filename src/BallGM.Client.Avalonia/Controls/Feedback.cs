@@ -498,6 +498,8 @@ public sealed class DialogHost : ContentControl
         if (_confirm is not null)
         {
             _confirm.Click += (_, _) => Close(true);
+            _confirm.Classes.Set("danger", Request?.IsDestructive == true);
+            _confirm.Classes.Set("primary", Request?.IsDestructive != true);
         }
 
         if (e.NameScope.Find<Button>("PART_Cancel") is { } cancel)

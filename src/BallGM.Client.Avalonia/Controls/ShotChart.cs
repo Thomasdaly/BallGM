@@ -88,20 +88,49 @@ public sealed class ShotChart : Control
             context.DrawRectangle(Fill(ShotZone.Paint), line, new Rect(At(BasketX - PaintHalfWidth, 0), At(BasketX + PaintHalfWidth, PaintDepth)));
             context.DrawEllipse(Fill(ShotZone.Rim), line, At(BasketX, BasketY), RimRadius * scale, RimRadius * scale);
             context.DrawRectangle(null, line, new Rect(At(0, 0), At(CourtWidth, CourtDepth)));
+
+            // The court's own markings over the zones (spec 01 section 12), so the chart reads as a half-court.
+            var muted = Brush("TextMutedBrush") is ISolidColorBrush solid ? solid.Color : Colors.Gray;
+            var marking = new Pen(new SolidColorBrush(muted, 0.6), 1.25);
+            var court = new StreamGeometry();
+            using (var path = court.Open())
+            {
+                // Three-point line: corner straights and the arc.
+                path.BeginFigure(At(3, 0), isFilled: false);
+                path.LineTo(At(3, CornerDepth));
+                path.ArcTo(At(CourtWidth - 3, CornerDepth), new Size(ArcRadius * scale, ArcRadius * scale), 0, isLargeArc: false, SweepDirection.CounterClockwise);
+                path.LineTo(At(CourtWidth - 3, 0));
+                path.EndFigure(isClosed: false);
+
+                // Free-throw circle at the top of the key.
+                path.BeginFigure(At(BasketX - 6, PaintDepth), isFilled: false);
+                path.ArcTo(At(BasketX + 6, PaintDepth), new Size(6 * scale, 6 * scale), 0, isLargeArc: false, SweepDirection.CounterClockwise);
+                path.EndFigure(isClosed: false);
+
+                // Backboard.
+                path.BeginFigure(At(BasketX - 3, 4), isFilled: false);
+                path.LineTo(At(BasketX + 3, 4));
+                path.EndFigure(isClosed: false);
+            }
+
+            context.DrawGeometry(null, marking, court);
+            context.DrawEllipse(null, marking, At(BasketX, BasketY), 0.75 * scale, 0.75 * scale);
         }
 
         // Each zone's figures on a dark plate, so they read on any fill.
         Label(context, zones[(int)ShotZone.Rim], At(BasketX, BasketY));
         Label(context, zones[(int)ShotZone.Paint], At(BasketX, PaintLabelY));
         Label(context, zones[(int)ShotZone.MidRange], At(BasketX, MidRangeLabelY));
-        Label(context, zones[(int)ShotZone.Corner3], At(CornerWidth / 2, CornerDepth / 2));
+        Label(context, zones[(int)ShotZone.Corner3], At(CornerWidth / 2, CornerDepth / 2), compact: true);
         Label(context, zones[(int)ShotZone.AboveBreak3], At(BasketX, AboveBreakLabelY));
     }
 
-    private void Label(DrawingContext context, ShotZoneCell zone, Point centre)
+    private void Label(DrawingContext context, ShotZoneCell zone, Point centre, bool compact = false)
     {
+        // A narrow zone prints its percentage and difference only, so the plate fits inside it.
+        var label = compact ? $"{zone.Shooting.Split(" · ")[0]}\n{zone.Difference.Replace(" pts", string.Empty, StringComparison.Ordinal)}" : zone.Label;
         var text = new FormattedText(
-            zone.Label,
+            label,
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             new Typeface(TextElement.GetFontFamily(this), weight: FontWeight.SemiBold),
