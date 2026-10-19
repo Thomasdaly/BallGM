@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using System.Globalization;
 using BallGM.Application.Leagues;
 using BallGM.Application.Players;
@@ -13,7 +14,7 @@ namespace BallGM.Client.Avalonia.ViewModels;
 /// are the shared <see cref="StatColumns.Season"/> set, on whichever <see cref="StatBasis"/> is chosen;
 /// every figure is derived by <c>StatFormulas</c>, never here.
 /// </summary>
-public sealed class RosterViewModel : ViewModelBase
+public sealed partial class RosterViewModel : ViewModelBase
 {
     private readonly LeagueOverview _overview;
     private readonly Func<IReadOnlyDictionary<string, PlayerSeasonTotals>> _seasonTotals;
@@ -48,6 +49,7 @@ public sealed class RosterViewModel : ViewModelBase
         {
             RaisePropertyChanged(nameof(StatHeaders));
             RaisePropertyChanged(nameof(Rows));
+            RaiseTable();
         };
     }
 
@@ -74,11 +76,13 @@ public sealed class RosterViewModel : ViewModelBase
         {
             nameof(TeamName), nameof(FranchiseName), nameof(RosterCountLabel), nameof(Roster), nameof(Rows),
             nameof(AverageOverall), nameof(TopPlayerName), nameof(TopPlayerOverall), nameof(TopPlayerPortrait),
-            nameof(InjuredCount), nameof(Payroll), nameof(HasSeasonStats), nameof(SortLabel),
+            nameof(InjuredCount), nameof(Payroll), nameof(TopPlayerId), nameof(HasSeasonStats), nameof(SortLabel),
         })
         {
             RaisePropertyChanged(name);
         }
+
+        RaiseTable();
     }
 
     /// <summary>The profile open over the squad list, if any. Null shows the list.</summary>
@@ -190,12 +194,22 @@ public sealed class RosterViewModel : ViewModelBase
 
     public string? TopPlayerPortrait => Roster.Count == 0 ? null : Roster.MaxBy(spot => spot.Overall)!.PortraitPath;
 
+    public string? TopPlayerId => Roster.Count == 0 ? null : Roster.MaxBy(spot => spot.Overall)!.PlayerId;
+
+    public ICommand OpenTopPlayerCommand => new ParameterCommand<string>(ShowProfile);
+
     public int InjuredCount => Roster.Count(spot => spot.IsInjured);
 
     public string Payroll => MoneyDisplay.ToMillions(Roster.Sum(spot => spot.CapCharge));
 
     private void ShowProfile(string playerId)
     {
+        if (_openPlayer is not null)
+        {
+            _openPlayer(playerId);
+            return;
+        }
+
         if (_profile is null)
         {
             return;

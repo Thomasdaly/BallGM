@@ -41,6 +41,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _teams = overview.Teams;
         _freeAgentNames = overview.FreeAgents.Players.Select(agent => (agent.PlayerId, agent.FullName)).ToList();
         _roster = new RosterViewModel(overview, () => session.PlayerSeasonTotals(SeasonPhase.RegularSeason), session.PlayerProfile);
+        _roster.UseShellProfiles(OpenPlayer);
         _capSheet = new CapSheetViewModel(overview);
         _pickBoard = new PickBoardViewModel(overview);
         Trade = new TradeProposalViewModel(overview, session, ApplyLeagueChange);
@@ -342,6 +343,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         Teams = overview.Teams;
         _freeAgentNames = overview.FreeAgents.Players.Select(agent => (agent.PlayerId, agent.FullName)).ToList();
         _roster = new RosterViewModel(overview, _session is null ? null : () => _session.PlayerSeasonTotals(SeasonPhase.RegularSeason), _session is null ? null : _session.PlayerProfile);
+        _roster.UseShellProfiles(OpenPlayer);
         _capSheet = new CapSheetViewModel(overview);
         _pickBoard = new PickBoardViewModel(overview);
 

@@ -2,126 +2,64 @@
   x:Class="BallGM.Client.Avalonia.Views.RosterView"
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
-  xmlns:views="clr-namespace:BallGM.Client.Avalonia.Views"
   x:DataType="vm:RosterViewModel">
-  <Panel>
-  <ContentControl Content="{Binding Profile}" IsVisible="{Binding !IsShowingList}">
-    <ContentControl.DataTemplates>
-      <DataTemplate DataType="vm:PlayerProfileViewModel">
-        <views:PlayerProfileView />
-      </DataTemplate>
-    </ContentControl.DataTemplates>
-  </ContentControl>
-  <Grid RowDefinitions="Auto,Auto,*" RowSpacing="18" IsVisible="{Binding IsShowingList}">
-    <TextBlock Text="{Binding RosterCountLabel}" Classes="dim" />
-
-    <!-- Header tiles. -->
-    <WrapPanel Grid.Row="1" Orientation="Horizontal" ItemSpacing="12" LineSpacing="12">
-      <Border Classes="stat accent">
-        <StackPanel Spacing="2">
-          <TextBlock Text="Average overall" Classes="eyebrow" />
-          <TextBlock Text="{Binding AverageOverall}" Classes="value" />
-        </StackPanel>
-      </Border>
-      <Border Classes="stat" MinWidth="240">
-        <StackPanel Spacing="2">
-          <TextBlock Text="Top player" Classes="eyebrow" />
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <Border Classes="face large">
-              <Image Source="{Binding TopPlayerPortrait, Converter={x:Static conv:ImagePathConverter.Instance}}" Stretch="UniformToFill" />
-            </Border>
-            <Border Classes="ovr" Background="{Binding TopPlayerOverall, Converter={x:Static conv:OverallTierConverter.Instance}}">
-              <TextBlock Text="{Binding TopPlayerOverall}" />
-            </Border>
-            <TextBlock Text="{Binding TopPlayerName}" Classes="h2" VerticalAlignment="Center" />
+  <!-- S07 Roster, template T2: summary tiles, sub-tabs, filter bar, data table. -->
+  <DockPanel>
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,2*,*,*" ColumnSpacing="{StaticResource Space16}" Margin="{StaticResource GapBottom16}">
+      <ctl:Tile Classes="compact">
+        <ctl:StatTile Value="{Binding AverageOverall}" Label="Average overall" />
+      </ctl:Tile>
+      <ctl:Tile Grid.Column="1" Classes="compact">
+        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}">
+          <ctl:PlayerHeadshot PlayerId="{Binding TopPlayerId}" PlayerName="{Binding TopPlayerName}" Size="Medium" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Space4}">
+            <TextBlock Text="TOP PLAYER" Classes="label-caps" />
+            <ctl:EntityLink Text="{Binding TopPlayerName}" Kind="Player" EntityId="{Binding TopPlayerId}" Command="{Binding OpenTopPlayerCommand}" CommandParameter="{Binding TopPlayerId}" FontFamily="{StaticResource DisplayFont}" FontWeight="Bold" FontSize="{StaticResource FontSizeH3}" />
           </StackPanel>
-        </StackPanel>
-      </Border>
-      <Border Classes="stat">
-        <StackPanel Spacing="2">
-          <TextBlock Text="Injured" Classes="eyebrow" />
-          <TextBlock Text="{Binding InjuredCount}" Classes="value" />
-        </StackPanel>
-      </Border>
-    </WrapPanel>
+          <ctl:RatingBadge Grid.Column="2" Value="{Binding TopPlayerOverall}" Size="Large" VerticalAlignment="Center" />
+        </Grid>
+      </ctl:Tile>
+      <ctl:Tile Grid.Column="2" Classes="compact">
+        <ctl:StatTile Value="{Binding InjuredCount}" Label="Injured" />
+      </ctl:Tile>
+      <ctl:Tile Grid.Column="3" Classes="compact">
+        <ctl:StatTile Value="{Binding Payroll}" Label="Payroll" Delta="{Binding RosterCountLabel}" />
+      </ctl:Tile>
+    </Grid>
 
-    <DockPanel Grid.Row="2">
-      <TextBlock DockPanel.Dock="Bottom" Text="{Binding SortLabel, StringFormat='{}{0} · click a player for their profile'}" Classes="faint tiny" Margin="10,8,0,0" />
-      <Panel DockPanel.Dock="Top" Margin="10,0,0,8" IsVisible="{Binding HasSeasonStats}">
-        <views:BasisToggle DataContext="{Binding Basis}" />
-      </Panel>
-      <!-- One scroller for both directions: the table scrolls sideways rather than squeezing names and
-           contracts out when the window is narrow (see ScrollViewer.tablewrap), and the vertical bar
-           stays at the viewport's edge. The status column is fixed width: a second stretching column
-           could resolve differently row by row. -->
-      <ScrollViewer HorizontalScrollBarVisibility="Auto">
-        <DockPanel>
-          <Grid DockPanel.Dock="Top" Classes="thead" ColumnDefinitions="56,86,40,*,56,50,Auto,90,64,160">
-            <Button Classes="th" Content="OVR" Command="{Binding SortByOverallCommand}" />
-            <Button Grid.Column="1" Classes="th" Content="POT" Command="{Binding SortByPotentialCommand}" ToolTip.Tip="Potential: how good he could become, as the coaches see it" />
-            <Button Grid.Column="3" Classes="th" Content="Player" Command="{Binding SortByNameCommand}" MinWidth="{StaticResource TableNameMinWidth}" />
-            <Button Grid.Column="4" Classes="th" Content="POS" Command="{Binding SortByPositionCommand}" />
-            <Button Grid.Column="5" Classes="th" Content="RTG" Command="{Binding SortByRatingCommand}" HorizontalAlignment="Center" ToolTip.Tip="{x:Static vm:StatColumns.RatingTooltip}" />
-            <ItemsControl Grid.Column="6" ItemsSource="{Binding StatHeaders}" Margin="{StaticResource StatBlockGutter}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <StackPanel Orientation="Horizontal" />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:RosterStatHeader">
-                  <Button
-                    Classes="th statsort"
-                    Width="{Binding Header.Width}"
-                    Content="{Binding Label}"
-                    ToolTip.Tip="{Binding Header.Tooltip}"
-                    Command="{Binding $parent[ItemsControl].((vm:RosterViewModel)DataContext).SortByStatCommand}"
-                    CommandParameter="{Binding Index}" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <Button Grid.Column="7" Classes="th" Content="Salary" Command="{Binding SortBySalaryCommand}" />
-            <Button Grid.Column="8" Classes="th" Content="Years" Command="{Binding SortByYearsCommand}" ToolTip.Tip="Contract seasons remaining" />
-            <TextBlock Grid.Column="9" Text="Status" VerticalAlignment="Center" />
-          </Grid>
+    <ctl:SkewTabStrip DockPanel.Dock="Top" ItemsSource="{Binding Tabs}" SelectedIndex="{Binding TabIndex}" Margin="{StaticResource GapBottom12}" />
 
-            <ItemsControl Classes="table" ItemsSource="{Binding Rows}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:RosterRow">
-                  <Button
-                    Classes="rowbtn"
-                    Command="{Binding $parent[ItemsControl].((vm:RosterViewModel)DataContext).OpenProfileCommand}"
-                    CommandParameter="{Binding PlayerId}"
-                    ToolTip.Tip="Open player profile">
-                  <Grid ColumnDefinitions="56,86,40,*,56,50,Auto,90,64,160" Height="{StaticResource RowHeight}">
-                    <Border Classes="ovr" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}">
-                      <TextBlock Text="{Binding Overall}" />
-                    </Border>
-                    <TextBlock Grid.Column="1" Text="{Binding Potential}" Classes="stars small" HorizontalAlignment="Center" VerticalAlignment="Center" ToolTip.Tip="Potential, as the coaches see it" AutomationProperties.Name="{Binding Potential, StringFormat='Potential {0}'}" />
-                    <Border Grid.Column="2" Classes="face">
-                      <Image Source="{Binding PortraitPath, Converter={x:Static conv:ImagePathConverter.Instance}}" Stretch="UniformToFill" />
-                    </Border>
-                    <TextBlock Grid.Column="3" Text="{Binding FullName}" Classes="strong" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                    <Border Grid.Column="4" Classes="pill">
-                      <TextBlock Text="{Binding Position}" />
-                    </Border>
-                    <views:RatingPill Grid.Column="5" DataContext="{Binding Rating}" />
-                    <ItemsControl Grid.Column="6" Classes="statrow" ItemsSource="{Binding Stats}" Margin="{StaticResource StatBlockGutter}" />
-                    <TextBlock Grid.Column="7" Text="{Binding Salary}" Classes="num" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="8" Text="{Binding Years}" Classes="dim" VerticalAlignment="Center" />
-                    <Border Grid.Column="9" Classes="pill bad" IsVisible="{Binding IsInjured}">
-                      <TextBlock Text="{Binding InjuryDescription}" TextTrimming="CharacterEllipsis" />
-                    </Border>
-                  </Grid>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </DockPanel>
-      </ScrollViewer>
-    </DockPanel>
-  </Grid>
-  </Panel>
+    <ctl:FilterBar DockPanel.Dock="Top" SearchText="{Binding SearchText}" SearchPlaceholder="Search roster" ActiveCount="{Binding ActiveFilterCount}" ResetCommand="{Binding ResetFiltersCommand}" Margin="{StaticResource GapBottom12}">
+      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+        <ItemsControl ItemsSource="{Binding PositionFilters}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ChipFilter">
+              <ToggleButton Classes="chip" Content="{Binding Label}" IsChecked="{Binding IsChecked}" AutomationProperties.Name="{Binding Label}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ctl:RangeFilter Label="OVR" Minimum="0" Maximum="100" Low="{Binding OverallLow}" High="{Binding OverallHigh}" />
+        <ctl:SegmentedControl ItemsSource="{Binding BasisOptions}" SelectedIndex="{Binding BasisIndex}" IsVisible="{Binding IsStatsTab}" AutomationProperties.Name="Stat basis" />
+      </StackPanel>
+    </ctl:FilterBar>
+
+    <ctl:DataTable
+      Columns="{Binding TableColumns}"
+      Rows="{Binding TableRows}"
+      SortKey="{Binding TableSortKey}"
+      SortDescending="{Binding TableSortDescending}"
+      SortCommand="{Binding TableSortCommand}"
+      OpenRowCommand="{Binding OpenRowCommand}"
+      EmptyHeadline="No players match"
+      EmptyMessage="Nobody on this roster fits these filters."
+      EmptyActionText="Clear filters"
+      EmptyActionCommand="{Binding ResetFiltersCommand}" />
+  </DockPanel>
 </UserControl>
