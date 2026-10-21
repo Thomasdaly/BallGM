@@ -120,26 +120,26 @@
 | Q105 | S33 Feedback | S33_gallery-feedback_full | S3 | R11 | Dialog primary labels sentence case; 'Return' not 'Enter' | open | |
 | Q106 | S33 Feedback | S33_gallery-feedback_full | S3 | 03 §2 | ErrorState only one variant | open | |
 
-| Q107 | S07/S33 | S07_roster_*; S33_gallery-inputs | S1 | 06 §6.2; 01 §3 | Placeholder text at 2.25:1 (Fluent half opacity) | fixed (pending commit) | |
-| Q108 | S33 | S33_gallery-inputs | S1 | 06 §6.2; 01 §4 | Selected text white on accent, 2.71:1 | fixed (pending commit) | |
-| Q109 | S07 | S07_roster_1280x720, _150 | S2 | 01 §14; 03 §1 | Payroll caption hard-clipped | fixed (pending commit) | |
-| Q110 | S07 | S07_roster_* | S2 | 04 S07 | No # / AGE columns; POT as stars | fixed (AGE; POT stars by Decision 24; no jersey numbers in game data) (pending commit) | |
-| Q111 | S07 | S07_roster_* | S2 | 04 S07; 04 §1 | No table/card toggle, no Compare | partly fixed (cards); Compare F16 (pending commit) | |
-| Q112 | S07 | S07_roster_* | S2 | 04 S07 | No age range or status filters | fixed (pending commit) | |
-| Q113 | S07 | S07_roster_* | S2 | 01 §5 | Top player name mixed case in display face | fixed (pending commit) | |
-| Q114 | S07/S10 | shell Continue | S2 | 04 §4 | Game day reads PLAY TODAY | fixed (Decision 27) (pending commit) | |
-| Q115 | S10 | S10_player-profile_* | S2 | 04 S10 | Hero has no actions | fixed (pending commit) | |
-| Q116 | S10 | S10_player-profile_* | S2 | 04 S10 | Hero meta lacks height/weight | fixed (pending commit) | |
-| Q117 | S10 | S10_player-profile_* | S2 | 04 S10; 03 §7 | POT as stars, not XL badge | Decision 24 (pending commit) | |
-| Q118 | S10 | S10_player-profile_* | S2 | 04 S10 | Headshot clipped at band bottom | fixed (pending commit) | |
-| Q119 | S10 | S10_player-profile_1280, _150 | S2 | 01 §5 | Hero name shrinks below 44px | fixed (wraps) (pending commit) | |
-| Q120 | S10 | S10_player-profile_* | S2 | 01 §5 | Scouting panel uses four sizes | fixed (pending commit) | |
-| Q121 | S10 | S10_player-profile_* | S2 | 01 §12 | Last 10 strip shows 5 | fixed (pending commit) | |
-| Q122 | S33 | S33_gallery-actions | S2 | 01 §3 | Blocked Continue filled Warning | fixed (pending commit) | |
-| Q123 | S33 | S33_gallery-sports | S2 | 01 §12 | Shot chart heat map, no legend | Decision 25 + legend (pending commit) | |
-| Q124 | S33 | S33_gallery-sports | S2 | 01 §12 | Cap bar not by contract type | fixed (pending commit) | |
-| Q125 | S33 | S33_gallery-media | S2 | 03 §7 | Player hover card lacks status | fixed (pending commit) | |
-| Q126 | S33 | S33_gallery-data | S2 | 03 §7 | Status chip variants missing | fixed (gallery samples; taxonomy F13) (pending commit) | |
+| Q107 | S07/S33 | S07_roster_*; S33_gallery-inputs | S1 | 06 §6.2; 01 §3 | Placeholder text at 2.25:1 (Fluent half opacity) | fixed — 0501005 | |
+| Q108 | S33 | S33_gallery-inputs | S1 | 06 §6.2; 01 §4 | Selected text white on accent, 2.71:1 | fixed — 0501005 | |
+| Q109 | S07 | S07_roster_1280x720, _150 | S2 | 01 §14; 03 §1 | Payroll caption hard-clipped | fixed — 0501005 | |
+| Q110 | S07 | S07_roster_* | S2 | 04 S07 | No # / AGE columns; POT as stars | fixed (AGE; POT stars by Decision 24; no jersey numbers in game data) — 0501005 | |
+| Q111 | S07 | S07_roster_* | S2 | 04 S07; 04 §1 | No table/card toggle, no Compare | partly fixed (cards); Compare F16 — 0501005 | |
+| Q112 | S07 | S07_roster_* | S2 | 04 S07 | No age range or status filters | fixed — 0501005 | |
+| Q113 | S07 | S07_roster_* | S2 | 01 §5 | Top player name mixed case in display face | fixed — 0501005 | |
+| Q114 | S07/S10 | shell Continue | S2 | 04 §4 | Game day reads PLAY TODAY | fixed (Decision 27) — 0501005 | |
+| Q115 | S10 | S10_player-profile_* | S2 | 04 S10 | Hero has no actions | fixed — 0501005 | |
+| Q116 | S10 | S10_player-profile_* | S2 | 04 S10 | Hero meta lacks height/weight | fixed — 0501005 | |
+| Q117 | S10 | S10_player-profile_* | S2 | 04 S10; 03 §7 | POT as stars, not XL badge | Decision 24 — 0501005 | |
+| Q118 | S10 | S10_player-profile_* | S2 | 04 S10 | Headshot clipped at band bottom | fixed — 0501005 | |
+| Q119 | S10 | S10_player-profile_1280, _150 | S2 | 01 §5 | Hero name shrinks below 44px | fixed (wraps) — 0501005 | |
+| Q120 | S10 | S10_player-profile_* | S2 | 01 §5 | Scouting panel uses four sizes | fixed — 0501005 | |
+| Q121 | S10 | S10_player-profile_* | S2 | 01 §12 | Last 10 strip shows 5 | fixed — 0501005 | |
+| Q122 | S33 | S33_gallery-actions | S2 | 01 §3 | Blocked Continue filled Warning | fixed — 0501005 | |
+| Q123 | S33 | S33_gallery-sports | S2 | 01 §12 | Shot chart heat map, no legend | Decision 25 + legend — 0501005 | |
+| Q124 | S33 | S33_gallery-sports | S2 | 01 §12 | Cap bar not by contract type | fixed — 0501005 | |
+| Q125 | S33 | S33_gallery-media | S2 | 03 §7 | Player hover card lacks status | fixed — 0501005 | |
+| Q126 | S33 | S33_gallery-data | S2 | 03 §7 | Status chip variants missing | fixed (gallery samples; taxonomy F13) — 0501005 | |
 
 Pass 1 (R1 T4): fresh subagent reviewed all 18 gallery screenshots against 01, 03, 04 and 06 §6 only.
 
