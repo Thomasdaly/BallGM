@@ -6,6 +6,25 @@
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   x:DataType="vm:ComponentGalleryViewModel">
   <StackPanel Spacing="{StaticResource Space24}">
+    <ctl:HeroBand>
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="ON THE TEAM HERO" Classes="caps" />
+        <WrapPanel ItemSpacing="{StaticResource Space24}" LineSpacing="{StaticResource Space12}">
+          <TextBlock Text="HERO 56" Classes="hero" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+          <StackPanel Spacing="{StaticResource Space4}" VerticalAlignment="Center">
+            <TextBlock Text="H1 PAGE TITLE" Classes="h1" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+            <TextBlock Text="CAPS LABEL · BODY BELOW" Classes="caps" />
+            <TextBlock Text="Body text sits on the solid part of the band." Classes="body" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+          </StackPanel>
+          <ctl:SkewBorder Angle="{StaticResource SkewAngle}" Background="{StaticResource ScrimBrush}" Padding="{StaticResource Pad8x4}" VerticalAlignment="Center">
+            <TextBlock Text="LOWER THIRD ON SCRIM" Classes="h3" Foreground="{StaticResource TextPrimaryBrush}" />
+          </ctl:SkewBorder>
+          <ctl:CutCornerBorder Corners="TopRight" Background="{StaticResource Surface1Brush}" Padding="{StaticResource Pad12}" VerticalAlignment="Center">
+            <TextBlock Text="CUT CORNER" Classes="caps" Foreground="{StaticResource TextPrimaryBrush}" />
+          </ctl:CutCornerBorder>
+        </WrapPanel>
+      </StackPanel>
+    </ctl:HeroBand>
     <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
       <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
         <StackPanel Spacing="{StaticResource Space8}">

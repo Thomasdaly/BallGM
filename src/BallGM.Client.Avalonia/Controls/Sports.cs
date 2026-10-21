@@ -23,7 +23,8 @@ public sealed record PlayerCardModel(
     int Potential,
     string? ContractLine,
     IReadOnlyList<StatusItem> Statuses,
-    bool IsInjured = false)
+    bool IsInjured = false,
+    string? Number = null)
 {
     public string Meta => string.Create(CultureInfo.InvariantCulture, $"{Positions} · AGE {Age}");
 
@@ -262,6 +263,25 @@ public sealed class ComparisonBar : TemplatedControl
 
     public static readonly StyledProperty<IBrush?> LeftBrushProperty =
         AvaloniaProperty.Register<ComparisonBar, IBrush?>(nameof(LeftBrush));
+
+    public static readonly StyledProperty<string?> LeftTeamProperty =
+        AvaloniaProperty.Register<ComparisonBar, string?>(nameof(LeftTeam));
+
+    public static readonly StyledProperty<string?> RightTeamProperty =
+        AvaloniaProperty.Register<ComparisonBar, string?>(nameof(RightTeam));
+
+    /// <summary>The left side's team abbreviation, printed above its end.</summary>
+    public string? LeftTeam
+    {
+        get => GetValue(LeftTeamProperty);
+        set => SetValue(LeftTeamProperty, value);
+    }
+
+    public string? RightTeam
+    {
+        get => GetValue(RightTeamProperty);
+        set => SetValue(RightTeamProperty, value);
+    }
 
     public static readonly StyledProperty<IBrush?> RightBrushProperty =
         AvaloniaProperty.Register<ComparisonBar, IBrush?>(nameof(RightBrush));
@@ -888,6 +908,16 @@ public sealed class NewsCard : TemplatedControl
 
     public static readonly StyledProperty<bool> NeedsDecisionProperty =
         AvaloniaProperty.Register<NewsCard, bool>(nameof(NeedsDecision));
+
+    public static readonly StyledProperty<object?> ActionsProperty =
+        AvaloniaProperty.Register<NewsCard, object?>(nameof(Actions));
+
+    /// <summary>The message's decision buttons, under its summary.</summary>
+    public object? Actions
+    {
+        get => GetValue(ActionsProperty);
+        set => SetValue(ActionsProperty, value);
+    }
 
     public string? Headline
     {

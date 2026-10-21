@@ -29,6 +29,22 @@
       <Setter Property="IsEnabled" Value="False" />
     </Style>
   </UserControl.Styles>
+  <StackPanel Spacing="{StaticResource Space24}">
+    <ctl:HeroBand>
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="ON THE TEAM HERO" Classes="caps" />
+        <WrapPanel ItemSpacing="{StaticResource Space24}" LineSpacing="{StaticResource Space12}">
+          <ctl:SkewTabStrip ItemsSource="{Binding TabNames}" SelectedIndex="0" VerticalAlignment="Center" />
+          <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center">
+            <ctl:SegmentedControl ItemsSource="{Binding BasisOptions}" SelectedIndex="0" />
+          </Border>
+          <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center">
+            <ctl:Breadcrumb Items="{Binding Crumbs}" />
+          </Border>
+          <ctl:Badge Count="3" VerticalAlignment="Center" />
+        </WrapPanel>
+      </StackPanel>
+    </ctl:HeroBand>
   <Grid ColumnDefinitions="220,64,*" ColumnSpacing="{StaticResource Space24}">
     <StackPanel Spacing="{StaticResource Space12}">
       <TextBlock Text="NAV RAIL" Classes="label-caps" />
@@ -91,4 +107,5 @@
       </Border>
     </StackPanel>
   </Grid>
+  </StackPanel>
 </UserControl>

@@ -27,16 +27,16 @@
       <ctl:StatusChip Text="{Binding Text}" Kind="{Binding Kind}" IsVisible="{Binding HasStatus}" />
     </DataTemplate>
     <DataTemplate DataType="ctl:PlayerCell">
-      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-        <ctl:PlayerHeadshot PlayerId="{Binding PlayerId}" PlayerName="{Binding Text}" Size="ExtraSmall" IsInjured="{Binding IsInjured}" VerticalAlignment="Center" />
-        <ctl:EntityLink Text="{Binding Text}" Kind="Player" EntityId="{Binding PlayerId}" Command="{Binding Open}" CommandParameter="{Binding PlayerId}" Classes="body-strong" FontSize="{StaticResource FontSizeTable}" FontWeight="SemiBold" MaxWidth="200" />
-      </StackPanel>
+      <DockPanel>
+        <ctl:PlayerHeadshot PlayerId="{Binding PlayerId}" PlayerName="{Binding Text}" Size="ExtraSmall" IsInjured="{Binding IsInjured}" VerticalAlignment="Center" Margin="{StaticResource GapRight8}" />
+        <ctl:EntityLink Text="{Binding Text}" Kind="Player" EntityId="{Binding PlayerId}" Command="{Binding Open}" CommandParameter="{Binding PlayerId}" Classes="body-strong" FontSize="{StaticResource FontSizeTable}" FontWeight="SemiBold" />
+      </DockPanel>
     </DataTemplate>
     <DataTemplate DataType="ctl:TeamCell">
-      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
-        <ctl:TeamLogo TeamId="{Binding TeamId}" TeamName="{Binding Text}" Size="20" VerticalAlignment="Center" />
-        <ctl:EntityLink Text="{Binding Text}" Kind="Team" EntityId="{Binding TeamId}" Command="{Binding Open}" CommandParameter="{Binding TeamId}" FontSize="{StaticResource FontSizeTable}" FontWeight="SemiBold" MaxWidth="220" />
-      </StackPanel>
+      <DockPanel>
+        <ctl:TeamLogo TeamId="{Binding TeamId}" TeamName="{Binding Text}" Size="20" VerticalAlignment="Center" Margin="{StaticResource GapRight8}" />
+        <ctl:EntityLink Text="{Binding Text}" Kind="Team" EntityId="{Binding TeamId}" Command="{Binding Open}" CommandParameter="{Binding TeamId}" FontSize="{StaticResource FontSizeTable}" FontWeight="SemiBold" />
+      </DockPanel>
     </DataTemplate>
   </DataTemplates>
 
@@ -63,7 +63,7 @@
       AutomationProperties.Name="{Binding Column.Header}">
       <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
         <TextBlock Text="{Binding Column.Header}" Classes="label-caps" Classes.sorted="{Binding IsSorted}" VerticalAlignment="Center" />
-        <TextBlock Text="{Binding Glyph}" Classes="caption-plain" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding Glyph}" Classes="caption-plain" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding IsSorted}" />
       </StackPanel>
     </Button>
   </DataTemplate>
@@ -166,7 +166,8 @@
               AutomationProperties.Name="Table rows">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="ctl:TableRowView">
-                  <DockPanel Classes.highlight="{Binding IsHighlighted}">
+                  <Panel>
+                  <DockPanel Classes="row" Classes.highlight="{Binding IsHighlighted}">
                     <ItemsControl
                       DockPanel.Dock="Left"
                       ItemsSource="{Binding Frozen}"
@@ -182,6 +183,9 @@
                         RenderTransform="{Binding $parent[ctl:DataTable].ScrollTransform}" />
                     </Panel>
                   </DockPanel>
+                  <!-- The user's own row carries the accent stripe (spec 01 section 6). -->
+                  <Border Width="{StaticResource AccentStripeWidth}" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" IsVisible="{Binding IsHighlighted}" />
+                  </Panel>
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
@@ -203,13 +207,31 @@
               Message="{TemplateBinding ErrorMessage}"
               RetryCommand="{TemplateBinding RetryCommand}"
               IsVisible="False" />
-            <StackPanel Name="PART_Loading" Grid.Row="1" Spacing="{StaticResource Space4}" Margin="{StaticResource Pad12}" IsVisible="False">
-              <ctl:Skeleton Shape="Row" />
-              <ctl:Skeleton Shape="Row" />
-              <ctl:Skeleton Shape="Row" />
-              <ctl:Skeleton Shape="Row" />
-              <ctl:Skeleton Shape="Row" />
-            </StackPanel>
+            <ItemsControl Name="PART_Loading" Grid.Row="1" ItemsSource="{TemplateBinding SkeletonRows}" ClipToBounds="True" IsVisible="False">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:Object">
+                  <Panel Classes="skeleton" Height="{StaticResource RowHeight}">
+                    <ItemsControl ItemsSource="{Binding}">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="ctl:SkeletonCell">
+                          <Border Width="{Binding Width}" Height="{StaticResource RowHeight}" Padding="{StaticResource PadH8}">
+                            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}" HorizontalAlignment="{Binding BoneAlignment}">
+                              <Ellipse Classes="bone" Width="24" Height="24" VerticalAlignment="Center" IsVisible="{Binding HasAvatar}" />
+                              <Border Classes="bone" Width="{Binding BoneWidth}" Height="12" VerticalAlignment="Center" />
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </Panel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
             <ScrollBar Name="PART_HorizontalBar" Grid.Row="2" Orientation="Horizontal" Minimum="0" SmallChange="40" LargeChange="200" IsVisible="False" AllowAutoHide="True" />
           </Grid>
@@ -225,7 +247,7 @@
     <Style Selector="^:error /template/ ListBox#PART_Rows">
       <Setter Property="IsVisible" Value="False" />
     </Style>
-    <Style Selector="^:loading /template/ StackPanel#PART_Loading">
+    <Style Selector="^:loading /template/ ItemsControl#PART_Loading">
       <Setter Property="IsVisible" Value="True" />
     </Style>
     <Style Selector="^:loading /template/ ListBox#PART_Rows">

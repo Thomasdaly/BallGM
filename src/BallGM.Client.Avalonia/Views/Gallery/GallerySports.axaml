@@ -6,6 +6,20 @@
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   x:DataType="vm:ComponentGalleryViewModel">
   <StackPanel Spacing="{StaticResource Space24}">
+    <ctl:HeroBand>
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="ON THE TEAM HERO" Classes="caps" />
+        <WrapPanel ItemSpacing="{StaticResource Space24}" LineSpacing="{StaticResource Space12}">
+          <ctl:ScoreBug Away="{Binding BugAway}" Home="{Binding BugHome}" Status="Final" />
+          <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center">
+            <StackPanel Spacing="{StaticResource Space8}">
+              <ctl:FormSparkline Values="{Binding FormValues}" Width="160" />
+              <ctl:WinLossStrip Results="{Binding FormResults}" />
+            </StackPanel>
+          </Border>
+        </WrapPanel>
+      </StackPanel>
+    </ctl:HeroBand>
     <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
       <StackPanel Spacing="{StaticResource Space16}">
         <TextBlock Text="SCORE BUG · LINESCORE" Classes="label-caps" />
@@ -18,8 +32,8 @@
           <ctl:WinLossStrip Results="{Binding FormResults}" />
         </StackPanel>
         <TextBlock Text="COMPARISON BAR" Classes="label-caps" />
-        <ctl:ComparisonBar Label="Points per game" LeftValue="112.4" RightValue="108.1" LeftText="112.4" RightText="108.1" />
-        <ctl:ComparisonBar Label="Rebounds" LeftValue="41.2" RightValue="46.9" LeftText="41.2" RightText="46.9" RightBrush="{StaticResource InfoBrush}" />
+        <ctl:ComparisonBar Label="Points per game" LeftValue="112.4" RightValue="108.1" LeftText="112.4" RightText="108.1" LeftTeam="{Binding Team.Abbreviation}" RightTeam="{Binding Opponent.Abbreviation}" RightBrush="{Binding OpponentAccent}" />
+        <ctl:ComparisonBar Label="Rebounds" LeftValue="41.2" RightValue="46.9" LeftText="41.2" RightText="46.9" LeftTeam="{Binding Team.Abbreviation}" RightTeam="{Binding Opponent.Abbreviation}" RightBrush="{Binding OpponentAccent}" />
         <TextBlock Text="CAP BAR · UNDER / OVER THE TAX" Classes="label-caps" />
         <ctl:CapBar Segments="{Binding CapSegments}" Markers="{Binding CapMarkers}" />
         <ctl:CapBar Segments="{Binding CapOverSegments}" Markers="{Binding CapMarkers}" />
@@ -39,8 +53,15 @@
       <StackPanel Grid.Column="1" Spacing="{StaticResource Space12}">
         <TextBlock Text="TIMELINE · NEWS CARD · INBOX ITEM" Classes="label-caps" />
         <ctl:Timeline Entries="{Binding TimelineEntries}" />
-        <ctl:NewsCard Headline="Glaciers win ninth straight" Meta="League news · Mon 13 Jan" Summary="Northgate stretched the league's longest streak with a 112-98 win." />
-        <ctl:NewsCard Headline="Kovac wants extension talks" Meta="Inbox · Agent · Tue 14 Jan" Summary="His agent asks for an answer before the deadline." IsUnread="True" NeedsDecision="True" />
+        <ctl:NewsCard Headline="Glaciers win ninth straight" Meta="League news · Mon 13 Jan" Summary="Northgate stretched the league's longest streak with a 112–98 win." />
+        <ctl:NewsCard Headline="Kovac wants extension talks" Meta="Inbox · Agent · Tue 14 Jan" Summary="His agent asks for an answer before the deadline." IsUnread="True" NeedsDecision="True">
+          <ctl:NewsCard.Actions>
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <Button Classes="primary small" Content="Open talks" Command="{Binding NoOpCommand}" />
+              <Button Classes="ghost small" Content="Decline" Command="{Binding NoOpCommand}" />
+            </StackPanel>
+          </ctl:NewsCard.Actions>
+        </ctl:NewsCard>
       </StackPanel>
     </Grid>
     <StackPanel Spacing="{StaticResource Space8}">

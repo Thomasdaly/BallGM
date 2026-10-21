@@ -160,3 +160,52 @@ public sealed class FilterBar : ContentControl
         }
     }
 }
+
+/// <summary>
+/// Labels under a slider's ticks (spec 03 section 6): child i is centred on tick i, the ticks spaced
+/// evenly between <see cref="Inset"/> from each end (half the thumb, where the track's ticks start).
+/// </summary>
+public sealed class TickLabelPanel : Panel
+{
+    public static readonly StyledProperty<double> InsetProperty =
+        AvaloniaProperty.Register<TickLabelPanel, double>(nameof(Inset), 10);
+
+    static TickLabelPanel()
+    {
+        AffectsArrange<TickLabelPanel>(InsetProperty);
+    }
+
+    public double Inset
+    {
+        get => GetValue(InsetProperty);
+        set => SetValue(InsetProperty, value);
+    }
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        var height = 0.0;
+        foreach (var child in Children)
+        {
+            child.Measure(Size.Infinity);
+            height = Math.Max(height, child.DesiredSize.Height);
+        }
+
+        return new Size(double.IsInfinity(availableSize.Width) ? 0 : availableSize.Width, height);
+    }
+
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        var count = Children.Count;
+        var span = Math.Max(0, finalSize.Width - (2 * Inset));
+        for (var index = 0; index < count; index++)
+        {
+            var child = Children[index];
+            var centre = Inset + (count == 1 ? span / 2 : span * index / (count - 1));
+            var width = child.DesiredSize.Width;
+            var left = Math.Clamp(centre - (width / 2), 0, Math.Max(0, finalSize.Width - width));
+            child.Arrange(new Rect(left, 0, width, finalSize.Height));
+        }
+
+        return finalSize;
+    }
+}

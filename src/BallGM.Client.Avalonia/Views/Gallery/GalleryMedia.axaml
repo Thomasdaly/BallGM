@@ -6,6 +6,16 @@
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   x:DataType="vm:ComponentGalleryViewModel">
   <StackPanel Spacing="{StaticResource Space24}">
+    <ctl:HeroBand>
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="ON THE TEAM HERO" Classes="caps" />
+        <WrapPanel ItemSpacing="{StaticResource Space24}" LineSpacing="{StaticResource Space12}">
+          <ctl:PlayerHeadshot PlayerId="gallery-player-1" PlayerName="Maximilian Okonkwo-Vanderbilt" Size="ExtraLarge" Number="7" />
+          <ctl:TeamLogo TeamId="gallery-team-hcm" TeamName="Harbor City Mariners" Size="128" VerticalAlignment="Center" />
+          <ctl:PlayerCard Model="{Binding StarCard}" Width="560" VerticalAlignment="Center" />
+        </WrapPanel>
+      </StackPanel>
+    </ctl:HeroBand>
     <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
       <StackPanel Spacing="{StaticResource Space12}">
         <TextBlock Text="PLAYER HEADSHOT · XS / S / M / L / XL / HERO · FALLBACK · INJURED · NUMBER" Classes="label-caps" />
@@ -15,7 +25,7 @@
           <ctl:PlayerHeadshot PlayerId="gallery-player-2" PlayerName="D'Shawn O'Malley-Fitzgerald" Size="Medium" IsInjured="True" VerticalAlignment="Bottom" />
           <ctl:PlayerHeadshot PlayerId="gallery-player-2" PlayerName="D'Shawn O'Malley-Fitzgerald" Size="Large" Number="3" IsInjured="True" VerticalAlignment="Bottom" />
           <ctl:PlayerHeadshot PlayerId="gallery-player-1" PlayerName="Maximilian Okonkwo-Vanderbilt" Size="ExtraLarge" Number="7" VerticalAlignment="Bottom" />
-          <ctl:PlayerHeadshot PlayerId="gallery-player-1" PlayerName="Maximilian Okonkwo-Vanderbilt" Size="Hero" VerticalAlignment="Bottom" />
+          <ctl:PlayerHeadshot PlayerId="gallery-player-1" PlayerName="Maximilian Okonkwo-Vanderbilt" Size="Hero" Number="7" VerticalAlignment="Bottom" />
         </StackPanel>
         <TextBlock Text="TEAM LOGO · 16 – 256 · MONOGRAM FALLBACK" Classes="label-caps" />
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">

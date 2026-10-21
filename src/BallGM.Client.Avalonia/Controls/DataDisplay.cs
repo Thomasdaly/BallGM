@@ -708,3 +708,12 @@ public static class AssetKinds
 
     public static AssetEntityKind Team => AssetEntityKind.Team;
 }
+
+/// <summary>
+/// A team hero band (spec 01 section 4): the team's primary as a solid field where text sits, fading
+/// out across the last two fifths. Content inherits OnPrimaryRaw; put small text on a Scrim inside it
+/// when it has to reach the fading part.
+/// </summary>
+public sealed class HeroBand : ContentControl
+{
+}

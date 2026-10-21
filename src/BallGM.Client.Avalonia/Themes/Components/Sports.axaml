@@ -46,7 +46,9 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Grid ColumnDefinitions="56,*,56" RowDefinitions="Auto,Auto" RowSpacing="{StaticResource Space4}">
-          <TextBlock Grid.ColumnSpan="3" Text="{TemplateBinding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" HorizontalAlignment="Center" />
+          <TextBlock Text="{TemplateBinding LeftTeam}" Classes="caps" Foreground="{TemplateBinding LeftBrush}" HorizontalAlignment="Left" />
+          <TextBlock Grid.Column="1" Text="{TemplateBinding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" HorizontalAlignment="Center" />
+          <TextBlock Grid.Column="2" Text="{TemplateBinding RightTeam}" Classes="caps" Foreground="{TemplateBinding RightBrush}" HorizontalAlignment="Right" />
           <TextBlock Grid.Row="1" Text="{TemplateBinding LeftText}" Classes="table body-strong" HorizontalAlignment="Left" VerticalAlignment="Center" />
           <ctl:SplitBar Grid.Row="1" Grid.Column="1" LeftValue="{TemplateBinding LeftValue}" RightValue="{TemplateBinding RightValue}" LeftBrush="{TemplateBinding LeftBrush}" RightBrush="{TemplateBinding RightBrush}" VerticalAlignment="Center" />
           <TextBlock Grid.Row="1" Grid.Column="2" Text="{TemplateBinding RightText}" Classes="table body-strong" HorizontalAlignment="Right" VerticalAlignment="Center" />
@@ -317,6 +319,7 @@
               <TextBlock Name="PART_Headline" Text="{TemplateBinding Headline, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3 wrap" />
             </ctl:SkewBorder>
             <TextBlock Text="{TemplateBinding Summary}" Classes="body secondary wrap" />
+            <ContentPresenter Content="{TemplateBinding Actions}" Margin="{StaticResource GapTop8}" IsVisible="{TemplateBinding Actions, Converter={x:Static ObjectConverters.IsNotNull}}" />
           </StackPanel>
         </Grid>
       </ControlTemplate>

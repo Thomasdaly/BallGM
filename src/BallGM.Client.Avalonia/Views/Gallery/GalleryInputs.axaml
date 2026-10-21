@@ -6,12 +6,25 @@
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   x:DataType="vm:ComponentGalleryViewModel">
   <StackPanel Spacing="{StaticResource Space24}">
+    <ctl:HeroBand>
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="ON THE TEAM HERO" Classes="caps" />
+          <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center" HorizontalAlignment="Left">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+              <ctl:SearchBox Width="240" />
+              <ComboBox Width="180" ItemsSource="{Binding BasisOptions}" SelectedIndex="0" AutomationProperties.Name="Basis" />
+              <ToggleSwitch Content="Team colors" IsChecked="True" />
+              <CheckBox Content="Starters only" IsChecked="True" />
+            </StackPanel>
+          </Border>
+      </StackPanel>
+    </ctl:HeroBand>
     <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
       <StackPanel Spacing="{StaticResource Space16}">
         <TextBlock Text="TEXT BOX · SEARCH · COMBO BOX · NUMERIC · SLIDER" Classes="label-caps" />
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
           <TextBox Width="220" PlaceholderText="Player name" />
-          <TextBox Width="220" Text="Focused field" Classes="force-focus" />
+          <TextBox Name="FocusField" Width="220" Text="Focused field" />
           <TextBox Width="220" Text="Disabled" IsEnabled="False" />
           <ctl:SearchBox Width="240" />
           <ctl:SearchBox Width="240" Text="Okonkwo" />
@@ -38,13 +51,13 @@
           <NumericUpDown Width="140" Value="3" Minimum="1" Maximum="5" AutomationProperties.Name="Seasons" />
           <StackPanel Width="240">
             <Slider Minimum="0" Maximum="48" Value="32" TickFrequency="12" IsSnapToTickEnabled="False" TickPlacement="BottomRight" AutomationProperties.Name="Minutes" />
-            <Grid ColumnDefinitions="*,*,*,*,*">
-              <TextBlock Text="0" Classes="caption num" HorizontalAlignment="Left" />
-              <TextBlock Grid.Column="1" Text="12" Classes="caption num" HorizontalAlignment="Center" />
-              <TextBlock Grid.Column="2" Text="24" Classes="caption num" HorizontalAlignment="Center" />
-              <TextBlock Grid.Column="3" Text="36" Classes="caption num" HorizontalAlignment="Center" />
-              <TextBlock Grid.Column="4" Text="48" Classes="caption num" HorizontalAlignment="Right" />
-            </Grid>
+            <ctl:TickLabelPanel>
+              <TextBlock Text="0" Classes="caption num" />
+              <TextBlock Text="12" Classes="caption num" />
+              <TextBlock Text="24" Classes="caption num" />
+              <TextBlock Text="36" Classes="caption num" />
+              <TextBlock Text="48" Classes="caption num" />
+            </ctl:TickLabelPanel>
           </StackPanel>
           <TextBlock Text="32 MIN" Classes="label-caps" VerticalAlignment="Center" />
         </StackPanel>

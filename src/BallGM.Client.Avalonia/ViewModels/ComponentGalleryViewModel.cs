@@ -78,9 +78,17 @@ public sealed class ComponentGalleryViewModel : ViewModelBase
             if (SetProperty(ref _team, value))
             {
                 ApplyTeam();
+                RaisePropertyChanged(nameof(Opponent));
+                RaisePropertyChanged(nameof(OpponentAccent));
             }
         }
     }
+
+    /// <summary>The other side in head-to-head samples: the first gallery team that is not the one showing.</summary>
+    public GalleryTeam Opponent => Teams.First(team => team != _team);
+
+    public global::Avalonia.Media.IBrush OpponentAccent =>
+        new global::Avalonia.Media.SolidColorBrush(Theming.TeamTheme.From(Opponent.Primary, Opponent.Secondary).Accent);
 
     public IReadOnlyList<ContinueOption> ContinueOptions => [new("To next game", NoOpCommand), new("One week", NoOpCommand), new("To the trade deadline", NoOpCommand)];
 
@@ -95,6 +103,8 @@ public sealed class ComponentGalleryViewModel : ViewModelBase
     public IReadOnlyList<BreadcrumbItem> Crumbs => [new("Home", NoOpCommand), new("Roster", NoOpCommand), new("Contracts")];
 
     public IReadOnlyList<StepItem> Steps => [new(1, "League", StepState.Done), new(2, "Team", StepState.Current), new(3, "Summary", StepState.Upcoming)];
+
+    public IReadOnlyList<string> BasisOptions { get; } = ["Per game", "Per 36", "Totals"];
 
     public IReadOnlyList<string> TabNames => ["OVERVIEW", "RATINGS", "CONTRACTS", "STATS"];
 
@@ -125,11 +135,11 @@ public sealed class ComponentGalleryViewModel : ViewModelBase
 
     public PlayerCardModel StarCard => new(
         "gallery-player-1", "Maximilian Okonkwo-Vanderbilt", "gallery-team-hcm", "Harbor City Mariners", "SF/PF", 27, 93, 95,
-        "$31.2M · 3 YRS · PLAYER OPTION", [new("Healthy", StatusKind.Positive), new("Extension eligible", StatusKind.Info)]);
+        "$31.2M · 3 YRS · PLAYER OPTION", [new("Healthy", StatusKind.Positive), new("Extension eligible", StatusKind.Info)], Number: "7");
 
     public PlayerCardModel InjuredCard => new(
         "gallery-player-2", "D'Shawn O'Malley-Fitzgerald", "gallery-team-irv", "Ironvale Forge", "PG", 24, 82, 90,
-        "$9.8M · 2 YRS · ROOKIE SCALE", [new("Out · 2-3 weeks", StatusKind.Negative), new("Rookie scale", StatusKind.Neutral)], IsInjured: true);
+        "$9.8M · 2 YRS · ROOKIE SCALE", [new("Out · 2–3 weeks", StatusKind.Negative), new("Rookie scale", StatusKind.Neutral)], IsInjured: true, Number: "3");
 
     public TeamCardModel TeamCardSample => new("gallery-team-hcm", "Harbor City Mariners", "24–11", "2nd East", "$179.7M payroll");
 
@@ -141,7 +151,9 @@ public sealed class ComponentGalleryViewModel : ViewModelBase
 
     public IReadOnlyList<CapSegment> CapSegments => [new("Guaranteed", 128_400_000), new("Options", 9_200_000), new("Holds", 3_600_000)];
 
-    public IReadOnlyList<CapMarker> CapMarkers => [new("CAP $141M", 141_000_000), new("TAX $172M", 172_000_000), new("APRON $179M", 179_000_000)];
+    public IReadOnlyList<CapMarker> CapMarkers => [Marker("CAP", 141_000_000), Marker("TAX", 172_000_000), Marker("APRON", 179_000_000)];
+
+    private static CapMarker Marker(string name, long amount) => new($"{name} {Formatting.Fmt.Money(amount)}", amount);
 
     public IReadOnlyList<CapSegment> CapOverSegments => [new("Guaranteed", 168_000_000), new("Options", 11_700_000)];
 
@@ -251,6 +263,9 @@ public sealed class ComponentGalleryViewModel : ViewModelBase
         TableSort = key;
         RaisePropertyChanged(nameof(TableRows));
     });
+
+    /// <summary>Three rows for the table drawn on the team hero.</summary>
+    public IReadOnlyList<TableRow> HeroRows => TableRows.Take(3).ToList();
 
     public IReadOnlyList<TableRow> TableRows
     {

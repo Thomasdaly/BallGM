@@ -60,7 +60,7 @@
       </StackPanel>
     </Border>
 
-    <Border Background="{DynamicResource TeamGradientBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">
+    <ctl:HeroBand>
       <StackPanel Spacing="{StaticResource Space12}">
         <TextBlock Text="CONTINUE · READY / BLOCKED / GAME DAY / SIMULATING — ON THE TEAM HERO" Classes="label-caps" Foreground="{DynamicResource OnPrimaryRawBrush}" />
         <WrapPanel ItemSpacing="{StaticResource Space24}" LineSpacing="{StaticResource Space12}">
@@ -75,8 +75,8 @@
           <SplitButton Content="OFFER CONTRACT">
             <SplitButton.Flyout>
               <MenuFlyout>
-                <MenuItem Header="Minimum salary" />
-                <MenuItem Header="Cap room" />
+                <MenuItem Header="Minimum salary" InputGesture="Ctrl+M"><MenuItem.Icon><PathIcon Data="{StaticResource Icon.Contracts}" /></MenuItem.Icon></MenuItem>
+                <MenuItem Header="Cap room" InputGesture="Ctrl+R"><MenuItem.Icon><PathIcon Data="{StaticResource Icon.Finances}" /></MenuItem.Icon></MenuItem>
               </MenuFlyout>
             </SplitButton.Flyout>
           </SplitButton>
@@ -87,12 +87,13 @@
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
           <TextBlock Text="SPLIT BUTTON MENU, OPEN" Classes="caps" Foreground="{DynamicResource OnPrimaryRawBrush}" VerticalAlignment="Top" />
           <MenuFlyoutPresenter HorizontalAlignment="Left">
-            <MenuItem Header="Minimum salary" InputGesture="Ctrl+M" />
-            <MenuItem Header="Cap room" />
-            <MenuItem Header="Standard over-cap allowance" />
+            <MenuItem Header="Minimum salary" InputGesture="Ctrl+M"><MenuItem.Icon><PathIcon Data="{StaticResource Icon.Contracts}" /></MenuItem.Icon></MenuItem>
+            <MenuItem Header="Cap room" InputGesture="Ctrl+R"><MenuItem.Icon><PathIcon Data="{StaticResource Icon.Finances}" /></MenuItem.Icon></MenuItem>
+            <MenuItem Header="Standard over-cap allowance" InputGesture="Ctrl+O"><MenuItem.Icon><PathIcon Data="{StaticResource Icon.CapSheet}" /></MenuItem.Icon></MenuItem>
           </MenuFlyoutPresenter>
         </StackPanel>
-        <TextBlock Text="TOGGLES ON THE HERO · DEFAULT / HOVER / PRESSED / DISABLED" Classes="caps" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+        <TextBlock Text="TOGGLES ON THE HERO, ON A SCRIM · DEFAULT / HOVER / PRESSED / DISABLED" Classes="caps" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+        <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" HorizontalAlignment="Left">
         <WrapPanel ItemSpacing="{StaticResource Space24}" LineSpacing="{StaticResource Space8}">
           <ToggleSwitch Content="Team colors in interface" IsChecked="True" />
           <ToggleSwitch Content="Hover" IsChecked="True" ctl:ForceState.PseudoClasses="pointerover" />
@@ -103,8 +104,9 @@
           <RadioButton GroupName="hero" Content="Hover" IsChecked="True" ctl:ForceState.PseudoClasses="pointerover" />
           <RadioButton GroupName="hero" Content="Disabled" IsEnabled="False" />
         </WrapPanel>
+        </Border>
       </StackPanel>
-    </Border>
+    </ctl:HeroBand>
 
     <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">
       <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPadding}">

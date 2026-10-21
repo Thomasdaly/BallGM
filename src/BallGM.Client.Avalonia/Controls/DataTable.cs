@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 
 namespace BallGM.Client.Avalonia.Controls;
@@ -12,6 +13,12 @@ namespace BallGM.Client.Avalonia.Controls;
 /// One table column. <see cref="Priority"/> 0 never hides; higher numbers hide first when the table is
 /// narrow (spec 04 section 7). Frozen columns stay put while the rest scroll sideways.
 /// </summary>
+/// <summary>One skeleton cell while a table loads: its column's width and the bone drawn in it.</summary>
+public sealed record SkeletonCell(double Width, double BoneWidth, bool HasAvatar, bool AlignRight)
+{
+    public HorizontalAlignment BoneAlignment => AlignRight ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+}
+
 public sealed record TableColumn(
     string Key,
     string Header,
@@ -159,6 +166,9 @@ public sealed class DataTable : TemplatedControl
     public static readonly DirectProperty<DataTable, IReadOnlyList<TableHeaderView>> ScrollingHeadersProperty =
         AvaloniaProperty.RegisterDirect<DataTable, IReadOnlyList<TableHeaderView>>(nameof(ScrollingHeaders), table => table.ScrollingHeaders);
 
+    public static readonly DirectProperty<DataTable, IReadOnlyList<IReadOnlyList<SkeletonCell>>> SkeletonRowsProperty =
+        AvaloniaProperty.RegisterDirect<DataTable, IReadOnlyList<IReadOnlyList<SkeletonCell>>>(nameof(SkeletonRows), table => table.SkeletonRows);
+
     public static readonly DirectProperty<DataTable, IReadOnlyList<TableRowView>> RowViewsProperty =
         AvaloniaProperty.RegisterDirect<DataTable, IReadOnlyList<TableRowView>>(nameof(RowViews), table => table.RowViews);
 
@@ -295,6 +305,16 @@ public sealed class DataTable : TemplatedControl
         private set => SetAndRaise(ScrollingHeadersProperty, ref _scrollingHeaders, value);
     }
 
+    private IReadOnlyList<IReadOnlyList<SkeletonCell>> _skeletonRows = [];
+    private int? _pendingSelection;
+
+    /// <summary>Loading placeholders shaped like this table's columns, as many whole rows as fit.</summary>
+    public IReadOnlyList<IReadOnlyList<SkeletonCell>> SkeletonRows
+    {
+        get => _skeletonRows;
+        private set => SetAndRaise(SkeletonRowsProperty, ref _skeletonRows, value);
+    }
+
     public IReadOnlyList<TableRowView> RowViews
     {
         get => _rowViews;
@@ -392,6 +412,11 @@ public sealed class DataTable : TemplatedControl
             }
 
             UpdateScrollRange();
+            BuildSkeleton();
+        }
+        else if (change.Property == SelectedIndexProperty && RowViews.Count == 0 && change.GetNewValue<int>() >= 0)
+        {
+            _pendingSelection = change.GetNewValue<int>();
         }
         else if (change.Property == StateProperty)
         {
@@ -399,6 +424,8 @@ public sealed class DataTable : TemplatedControl
             {
                 PseudoClasses.Set(":" + state.ToString().ToLowerInvariant(), state == State);
             }
+
+            UpdateScrollRange();
         }
     }
 
@@ -439,7 +466,19 @@ public sealed class DataTable : TemplatedControl
 
         TableCellView Cell(TableRow row, (TableColumn Column, int Index) item) =>
             new(item.Index < row.Cells.Count ? row.Cells[item.Index] : new TextCell(string.Empty), item.Column.Width, item.Column.AlignRight);
+        // New row views reset the list's selection; keep the selected row where it still exists. A selection
+        // asked for before there were rows waits for them.
+        var selected = _pendingSelection ?? SelectedIndex;
         RowViews = (Rows ?? []).Select(row => new TableRowView(row, frozen.Select(item => Cell(row, item)).ToList(), scrolling.Select(item => Cell(row, item)).ToList())).ToList();
+        if (RowViews.Count > 0)
+        {
+            _pendingSelection = null;
+            SelectedIndex = selected < RowViews.Count ? selected : -1;
+        }
+        else if (selected >= 0)
+        {
+            _pendingSelection = selected;
+        }
 
         if (State != TableState.Loading && State != TableState.Error)
         {
@@ -447,6 +486,34 @@ public sealed class DataTable : TemplatedControl
         }
 
         UpdateScrollRange();
+        BuildSkeleton();
+    }
+
+    private const double SkeletonRowHeight = 40;
+    private const double HeaderHeight = 36;
+
+    private void BuildSkeleton()
+    {
+        var hidden = HiddenColumns ?? [];
+        var columns = (Columns ?? []).Where(column => !hidden.Contains(column.Key) && !(_isCompact && column.Priority >= 2)).ToList();
+        var width = Bounds.Width > 0 ? Bounds.Width : double.PositiveInfinity;
+        var cells = new List<SkeletonCell>();
+        var used = 0.0;
+        foreach (var column in columns.OrderBy(column => column.IsFrozen ? 0 : 1))
+        {
+            if (used + column.Width > width)
+            {
+                break;
+            }
+
+            used += column.Width;
+            var avatar = cells.Count == 0 && column.IsFrozen;
+            var bone = column.IsNumeric ? Math.Min(40, column.Width * 0.5) : column.Width * (avatar ? 0.5 : 0.6);
+            cells.Add(new SkeletonCell(column.Width, bone, avatar, column.IsNumeric));
+        }
+
+        var rows = Bounds.Height > 0 ? Math.Max(1, (int)((Bounds.Height - HeaderHeight - 8) / SkeletonRowHeight)) : 5;
+        SkeletonRows = Enumerable.Repeat<IReadOnlyList<SkeletonCell>>(cells, rows).ToList();
     }
 
     private void UpdateScrollRange()
@@ -460,7 +527,7 @@ public sealed class DataTable : TemplatedControl
         var extra = Math.Max(0, ScrollingWidth - viewport);
         _horizontal.Maximum = extra;
         _horizontal.ViewportSize = viewport;
-        _horizontal.IsVisible = extra > 0;
+        _horizontal.IsVisible = extra > 0 && State == TableState.Ready;
         if (_horizontal.Value > extra)
         {
             _horizontal.Value = extra;

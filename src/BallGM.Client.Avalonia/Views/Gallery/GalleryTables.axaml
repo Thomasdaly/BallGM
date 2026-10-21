@@ -6,6 +6,12 @@
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   x:DataType="vm:ComponentGalleryViewModel">
   <StackPanel Spacing="{StaticResource Space24}">
+    <ctl:HeroBand>
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="ON THE TEAM HERO" Classes="caps" />
+        <ctl:DataTable Height="200" Columns="{Binding TableColumns}" Rows="{Binding HeroRows}" />
+      </StackPanel>
+    </ctl:HeroBand>
     <StackPanel Spacing="{StaticResource Space8}">
       <TextBlock Text="DATA TABLE · STICKY HEADER · SORT · FROZEN NAME · ZEBRA · SELECTED · YOUR ROW · COLUMN CHOOSER" Classes="label-caps" />
       <ctl:DataTable Name="SampleTable" Height="460" Columns="{Binding TableColumns}" Rows="{Binding TableRows}" SortKey="{Binding TableSort}" SortDescending="{Binding TableDescending}" SortCommand="{Binding TableSortCommand}" SelectedIndex="5" />

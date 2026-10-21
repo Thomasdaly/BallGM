@@ -6,6 +6,25 @@
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   x:DataType="vm:ComponentGalleryViewModel">
   <StackPanel Spacing="{StaticResource Space24}">
+    <ctl:HeroBand>
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="ON THE TEAM HERO" Classes="caps" />
+        <WrapPanel ItemSpacing="{StaticResource Space24}" LineSpacing="{StaticResource Space12}">
+          <ctl:RatingBadge Value="93" Size="ExtraLarge" Caption="OVR" />
+          <ctl:RatingBadge Value="84" Size="Large" VerticalAlignment="Center" />
+          <ctl:Tile Title="Cap space" Classes="compact" Width="240">
+            <ctl:StatTile Value="$3.1M" Label="Under the tax" />
+          </ctl:Tile>
+          <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+              <ctl:PositionChip Text="SF/PF" />
+              <ctl:StatusChip Text="Healthy" Kind="Positive" />
+              <ctl:StatusChip Text="Day to day" Kind="Warning" />
+            </StackPanel>
+          </Border>
+        </WrapPanel>
+      </StackPanel>
+    </ctl:HeroBand>
     <Grid ColumnDefinitions="2*,*,*" ColumnSpacing="{StaticResource Space24}">
       <ctl:Tile Title="Next game" ActionText="Preview" ActionCommand="{Binding NoOpCommand}" IsFeatured="True">
         <StackPanel Spacing="{StaticResource Space8}">

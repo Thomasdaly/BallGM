@@ -6,11 +6,26 @@
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
   x:DataType="vm:ComponentGalleryViewModel">
   <StackPanel Spacing="{StaticResource Space24}">
+    <ctl:HeroBand>
+      <StackPanel Spacing="{StaticResource Space12}">
+        <TextBlock Text="ON THE TEAM HERO" Classes="caps" />
+        <WrapPanel ItemSpacing="{StaticResource Space24}" LineSpacing="{StaticResource Space12}">
+          <ctl:Banner Text="Trade deadline in 3 days" Kind="Warning" Width="420" />
+          <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
+              <ctl:Spinner Width="24" Height="24" />
+              <TextBlock Text="Simulating day 49" Classes="body" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center" />
+              <ProgressBar Width="160" Minimum="0" Maximum="100" Value="60" VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+        </WrapPanel>
+      </StackPanel>
+    </ctl:HeroBand>
     <ctl:Banner Text="Trade deadline in 3 days" Kind="Warning" />
     <ctl:Banner Text="Regular season · 47 games to play" Kind="Info" />
     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space24}">
       <Border Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Height="280">
-        <ctl:EmptyState IconKey="Icon.Injury" Headline="No injuries" Message="Players hurt in games or practice show up here." />
+        <ctl:EmptyState IconKey="Icon.Injury" Headline="No injuries" Message="Players hurt in games or practice show up here." ActionText="View roster" ActionCommand="{Binding NoOpCommand}" />
       </Border>
       <Border Grid.Column="1" Background="{StaticResource Surface1Brush}" CornerRadius="{StaticResource RadiusCard}" Height="280">
         <ctl:EmptyState IconKey="Icon.Filter" Headline="No players match" Message="Nobody on this roster fits these filters." ActionText="Clear filters" ActionCommand="{Binding NoOpCommand}" />
@@ -59,9 +74,9 @@
         <TextBlock Text="CONTEXT MENU · FLYOUT (TOOLTIPS OPEN IN THEIR OWN POPUP, WHICH A FRAME CAPTURE CANNOT SEE; SAME SURFACE AND STROKE TOKENS)" Classes="label-caps wrap" />
         <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space24}">
           <MenuFlyoutPresenter VerticalAlignment="Top">
-            <MenuItem Header="Open profile" InputGesture="Enter" />
-            <MenuItem Header="View team" />
-            <MenuItem Header="Copy entity ID" InputGesture="Ctrl+C" />
+            <MenuItem Header="Open profile" InputGesture="Enter"><MenuItem.Icon><PathIcon Data="{StaticResource Icon.Player}" /></MenuItem.Icon></MenuItem>
+            <MenuItem Header="View team"><MenuItem.Icon><PathIcon Data="{StaticResource Icon.Team}" /></MenuItem.Icon></MenuItem>
+            <MenuItem Header="Copy entity ID" InputGesture="Ctrl+C"><MenuItem.Icon><PathIcon Data="{StaticResource Icon.Copy}" /></MenuItem.Icon></MenuItem>
           </MenuFlyoutPresenter>
           <FlyoutPresenter VerticalAlignment="Top">
             <StackPanel Spacing="{StaticResource Space4}">

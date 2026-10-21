@@ -120,8 +120,10 @@
     <Setter Property="FocusAdorner" Value="{x:Null}" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Panel Background="{TemplateBinding Background}">
-          <Border Name="PART_Stripe" Width="{StaticResource AccentStripeWidth}" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" IsVisible="False" />
+        <Panel Background="Transparent">
+          <!-- The fill sits inside the item so the focus ring, at the item's edge, has a gap around it. -->
+          <Border Name="PART_Fill" Margin="{StaticResource FocusRingGap}" Background="{TemplateBinding Background}" />
+          <Border Name="PART_Stripe" Margin="{StaticResource FocusRingGap}" Width="{StaticResource AccentStripeWidth}" HorizontalAlignment="Left" Background="{DynamicResource AccentBrush}" IsVisible="False" />
           <ContentPresenter
             Name="PART_ContentPresenter"
             Content="{TemplateBinding Content}"
@@ -131,7 +133,6 @@
             HorizontalContentAlignment="Stretch" />
           <Border
             Name="PART_FocusRing"
-            Margin="4,2"
             BorderThickness="{StaticResource FocusRingThickness}"
             BorderBrush="{StaticResource FocusRingBrush}"
             IsHitTestVisible="False"
@@ -155,6 +156,10 @@
     </Style>
     <Style Selector="^:focus-visible /template/ Border#PART_FocusRing, ^.force-focus /template/ Border#PART_FocusRing">
       <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:disabled">
+      <Setter Property="Foreground" Value="{StaticResource TextDisabledBrush}" />
+      <Setter Property="Background" Value="{x:Null}" />
     </Style>
   </ControlTheme>
 
@@ -374,7 +379,7 @@
     <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
     <Setter Property="Background" Value="{x:Null}" />
     <Setter Property="Padding" Value="{StaticResource Pad12x4}" />
-    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="MinHeight" Value="36" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />
     <Setter Property="Cursor" Value="Hand" />
@@ -382,9 +387,10 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Panel>
-          <Border Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusChip}" />
+          <Border Margin="{StaticResource FocusRingGap}" Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusChip}" />
           <ContentPresenter
             Name="PART_ContentPresenter"
+            Margin="{StaticResource FocusRingGap}"
             Padding="{TemplateBinding Padding}"
             Content="{TemplateBinding Content}"
             ContentTemplate="{TemplateBinding ContentTemplate}"
@@ -405,7 +411,8 @@
       <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
     <Style Selector="^:pressed">
-      <Setter Property="Background" Value="{StaticResource Surface1Brush}" />
+      <Setter Property="Background" Value="{StaticResource Surface3Brush}" />
+      <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
     </Style>
     <Style Selector="^:selected">
       <Setter Property="Background" Value="{StaticResource Surface3Brush}" />
@@ -414,13 +421,17 @@
     <Style Selector="^:focus-visible /template/ Border#PART_FocusRing, ^.force-focus /template/ Border#PART_FocusRing">
       <Setter Property="IsVisible" Value="True" />
     </Style>
+    <Style Selector="^:disabled">
+      <Setter Property="Foreground" Value="{StaticResource TextDisabledBrush}" />
+      <Setter Property="Background" Value="{x:Null}" />
+    </Style>
   </ControlTheme>
 
   <ControlTheme x:Key="{x:Type ctl:SegmentedControl}" TargetType="ctl:SegmentedControl">
     <Setter Property="ItemContainerTheme" Value="{StaticResource SegmentItem}" />
     <Setter Property="ItemsPanel">
       <ItemsPanelTemplate>
-        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" />
+        <StackPanel Orientation="Horizontal" Spacing="0" />
       </ItemsPanelTemplate>
     </Setter>
     <Setter Property="HorizontalAlignment" Value="Left" />

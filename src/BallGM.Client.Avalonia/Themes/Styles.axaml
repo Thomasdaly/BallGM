@@ -308,10 +308,10 @@
   </Style>
 
   <!-- Data table rows: zebra, the user's own row, the sorted header. -->
-  <Style Selector="ListBox.datatable ListBoxItem:nth-child(2n) DockPanel">
+  <Style Selector="ListBox.datatable ListBoxItem:nth-child(2n) DockPanel.row">
     <Setter Property="Background" Value="{StaticResource ZebraBrush}" />
   </Style>
-  <Style Selector="ListBox.datatable DockPanel.highlight">
+  <Style Selector="ListBox.datatable DockPanel.row.highlight">
     <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
   </Style>
   <Style Selector="TextBlock.label-caps.sorted">
@@ -324,8 +324,25 @@
     <Setter Property="MinHeight" Value="32" />
   </Style>
   <Style Selector="TextBox:focus /template/ Border#PART_BorderElement, TextBox.force-focus /template/ Border#PART_BorderElement">
-    <Setter Property="BorderBrush" Value="{StaticResource FocusRingBrush}" />
-    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+  <!-- Menus and flyouts are floating layers: they carry the shared shadow (spec 01 section 6). -->
+  <Style Selector="MenuFlyoutPresenter /template/ Border#LayoutRoot, FlyoutPresenter /template/ Border#LayoutRoot, ContextMenu /template/ Border">
+    <Setter Property="BoxShadow" Value="{StaticResource ShadowFloating}" />
+  </Style>
+  <Style Selector="MenuItem PathIcon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+  </Style>
+
+  <!-- Stock controls draw keyboard focus as the shared ring, 2px off the control's edge (spec 01 section 3). -->
+  <Style Selector="ToggleSwitch, CheckBox, RadioButton, TextBox, ComboBox, NumericUpDown, Slider, ListBox, ScrollViewer">
+    <Setter Property="FocusAdorner">
+      <FocusAdornerTemplate>
+        <Border Margin="-4" AdornerLayer.IsClipEnabled="False" BorderThickness="{StaticResource FocusRingThickness}" BorderBrush="{StaticResource FocusRingBrush}" CornerRadius="{StaticResource RadiusCard}" />
+      </FocusAdornerTemplate>
+    </Setter>
   </Style>
   <Style Selector="NumericUpDown">
     <Setter Property="MinHeight" Value="32" />

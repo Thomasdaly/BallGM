@@ -59,12 +59,32 @@
     <Style Selector="^:focus-visible /template/ Border#PART_FocusRing, ^.force-focus /template/ Border#PART_FocusRing">
       <Setter Property="IsVisible" Value="True" />
     </Style>
+    <!-- Focused, the plate draws in from the ring so the ring stands 2px off the card. -->
+    <Style Selector="^:focus-visible /template/ ctl|CutCornerBorder#PART_Plate, ^.force-focus /template/ ctl|CutCornerBorder#PART_Plate, ^:focus-visible /template/ Border#PART_Stripe, ^.force-focus /template/ Border#PART_Stripe">
+      <Setter Property="Margin" Value="{StaticResource FocusRingGap}" />
+    </Style>
     <Style Selector="^:featured /template/ Border#PART_Stripe">
       <Setter Property="IsVisible" Value="True" />
     </Style>
     <Style Selector="^:featured">
       <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
     </Style>
+  </ControlTheme>
+
+  <ControlTheme x:Key="{x:Type ctl:HeroBand}" TargetType="ctl:HeroBand">
+    <Setter Property="Padding" Value="{StaticResource CardPadding}" />
+    <Setter Property="Foreground" Value="{DynamicResource OnPrimaryRawBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border CornerRadius="{StaticResource RadiusCard}" ClipToBounds="True">
+          <Grid ColumnDefinitions="3*,2*">
+            <Border Background="{DynamicResource TeamPrimaryRawBrush}" />
+            <Border Grid.Column="1" Background="{DynamicResource TeamGradientBrush}" />
+            <ContentPresenter Grid.ColumnSpan="2" Padding="{TemplateBinding Padding}" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" Foreground="{TemplateBinding Foreground}" />
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
   </ControlTheme>
 
   <ControlTheme x:Key="{x:Type ctl:StatTile}" TargetType="ctl:StatTile">
@@ -270,10 +290,10 @@
       <ControlTemplate>
         <Border Background="{TemplateBinding Background}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource CardPaddingCompact}" DataContext="{TemplateBinding Model}" x:DataType="ctl:PlayerCardModel">
           <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}">
-            <ctl:PlayerHeadshot Name="PART_Headshot" PlayerId="{Binding PlayerId}" PlayerName="{Binding Name}" Size="Large" IsInjured="{Binding IsInjured}" />
+            <ctl:PlayerHeadshot Name="PART_Headshot" PlayerId="{Binding PlayerId}" PlayerName="{Binding Name}" Size="Large" Number="{Binding Number}" IsInjured="{Binding IsInjured}" />
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Space4}">
               <TextBlock Text="{Binding Meta}" Classes="label-caps" />
-              <ctl:EntityLink Text="{Binding Name}" Kind="Player" EntityId="{Binding PlayerId}" Command="{Binding $parent[ctl:PlayerCard].OpenCommand}" CommandParameter="{Binding PlayerId}" FontFamily="{StaticResource DisplayFont}" FontWeight="Bold" FontSize="{StaticResource FontSizeH3}" />
+              <ctl:EntityLink Text="{Binding Name, Converter={x:Static conv:UpperCaseConverter.Instance}}" Kind="Player" EntityId="{Binding PlayerId}" Command="{Binding $parent[ctl:PlayerCard].OpenCommand}" CommandParameter="{Binding PlayerId}" FontFamily="{StaticResource DisplayFont}" FontWeight="Bold" FontSize="{StaticResource FontSizeH3}" Margin="-4,-2" />
               <TextBlock Text="{Binding ContractLine}" Classes="caption" IsVisible="{Binding HasContract}" />
               <ItemsControl ItemsSource="{Binding Statuses}">
                 <ItemsControl.ItemsPanel>
@@ -309,7 +329,7 @@
           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space12}">
             <ctl:TeamLogo Name="PART_Logo" TeamId="{Binding TeamId}" TeamName="{Binding Name}" Size="64" />
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Space4}">
-              <ctl:EntityLink Text="{Binding Name}" Kind="Team" EntityId="{Binding TeamId}" FontFamily="{StaticResource DisplayFont}" FontWeight="Bold" FontSize="{StaticResource FontSizeH3}" />
+              <ctl:EntityLink Text="{Binding Name, Converter={x:Static conv:UpperCaseConverter.Instance}}" Kind="Team" EntityId="{Binding TeamId}" FontFamily="{StaticResource DisplayFont}" FontWeight="Bold" FontSize="{StaticResource FontSizeH3}" Margin="-4,-2" />
               <TextBlock Text="{Binding Meta}" Classes="label-caps num" />
               <TextBlock Text="{Binding Payroll}" Classes="caption" IsVisible="{Binding Payroll, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </StackPanel>
@@ -328,9 +348,9 @@
       <ControlTemplate>
         <StackPanel Spacing="{StaticResource Space8}">
           <Grid Name="PART_Player" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}" DataContext="{TemplateBinding Player}" x:DataType="ctl:PlayerCardModel" IsVisible="False">
-            <ctl:PlayerHeadshot PlayerId="{Binding PlayerId}" PlayerName="{Binding Name}" Size="Large" IsInjured="{Binding IsInjured}" />
+            <ctl:PlayerHeadshot PlayerId="{Binding PlayerId}" PlayerName="{Binding Name}" Size="Large" Number="{Binding Number}" IsInjured="{Binding IsInjured}" />
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Space4}">
-              <TextBlock Text="{Binding Name}" Classes="h3 trim" ToolTip.Tip="{Binding Name}" />
+              <TextBlock Text="{Binding Name, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3 wrap" MaxLines="2" />
               <TextBlock Text="{Binding Meta}" Classes="label-caps trim" />
               <TextBlock Text="{Binding TeamName}" Classes="caption trim" />
               <TextBlock Text="{Binding ContractLine}" Classes="caption trim" IsVisible="{Binding HasContract}" ToolTip.Tip="{Binding ContractLine}" />
@@ -340,7 +360,7 @@
           <Grid Name="PART_Team" ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space12}" DataContext="{TemplateBinding Team}" x:DataType="ctl:TeamCardModel" IsVisible="False">
             <ctl:TeamLogo TeamId="{Binding TeamId}" TeamName="{Binding Name}" Size="64" />
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Space4}">
-              <TextBlock Text="{Binding Name}" Classes="h3 trim" ToolTip.Tip="{Binding Name}" />
+              <TextBlock Text="{Binding Name, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3 wrap" MaxLines="2" />
               <TextBlock Text="{Binding Meta}" Classes="label-caps num trim" />
               <TextBlock Text="{Binding Payroll}" Classes="caption trim" />
             </StackPanel>
