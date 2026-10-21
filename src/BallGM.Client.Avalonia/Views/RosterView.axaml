@@ -4,6 +4,7 @@
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
   xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
   x:DataType="vm:RosterViewModel">
   <!-- S07 Roster, template T2: summary tiles, sub-tabs, filter bar, data table. -->
   <DockPanel>
@@ -16,7 +17,7 @@
           <ctl:PlayerHeadshot PlayerId="{Binding TopPlayerId}" PlayerName="{Binding TopPlayerName}" Size="Medium" VerticalAlignment="Center" />
           <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="{StaticResource Space4}">
             <TextBlock Text="TOP PLAYER" Classes="label-caps" />
-            <ctl:EntityLink Text="{Binding TopPlayerName}" Kind="Player" EntityId="{Binding TopPlayerId}" Command="{Binding OpenTopPlayerCommand}" CommandParameter="{Binding TopPlayerId}" FontFamily="{StaticResource DisplayFont}" FontWeight="Bold" FontSize="{StaticResource FontSizeH3}" />
+            <ctl:EntityLink Text="{Binding TopPlayerName, Converter={x:Static conv:UpperCaseConverter.Instance}}" Kind="Player" EntityId="{Binding TopPlayerId}" Command="{Binding OpenTopPlayerCommand}" CommandParameter="{Binding TopPlayerId}" FontFamily="{StaticResource DisplayFont}" FontWeight="Bold" FontSize="{StaticResource FontSizeH3}" />
           </StackPanel>
           <ctl:RatingBadge Grid.Column="2" Value="{Binding TopPlayerOverall}" Size="Large" VerticalAlignment="Center" />
         </Grid>
@@ -25,14 +26,20 @@
         <ctl:StatTile Value="{Binding InjuredCount}" Label="Injured" />
       </ctl:Tile>
       <ctl:Tile Grid.Column="3" Classes="compact">
-        <ctl:StatTile Value="{Binding Payroll}" Label="Payroll" Delta="{Binding RosterCountLabel}" />
+        <StackPanel Spacing="{StaticResource Space4}">
+          <ctl:StatTile Value="{Binding Payroll}" Label="Payroll" />
+          <TextBlock Text="{Binding RosterCountLabel}" Classes="caption wrap" ToolTip.Tip="{Binding RosterCountLabel}" />
+        </StackPanel>
       </ctl:Tile>
     </Grid>
 
-    <ctl:SkewTabStrip DockPanel.Dock="Top" ItemsSource="{Binding Tabs}" SelectedIndex="{Binding TabIndex}" Margin="{StaticResource GapBottom12}" />
+    <DockPanel DockPanel.Dock="Top" Margin="{StaticResource GapBottom12}">
+      <ctl:SegmentedControl DockPanel.Dock="Right" ItemsSource="{Binding LayoutOptions}" SelectedIndex="{Binding LayoutIndex}" VerticalAlignment="Center" AutomationProperties.Name="Table or cards" />
+      <ctl:SkewTabStrip ItemsSource="{Binding Tabs}" SelectedIndex="{Binding TabIndex}" />
+    </DockPanel>
 
     <ctl:FilterBar DockPanel.Dock="Top" SearchText="{Binding SearchText}" SearchPlaceholder="Search roster" ActiveCount="{Binding ActiveFilterCount}" ResetCommand="{Binding ResetFiltersCommand}" Margin="{StaticResource GapBottom12}">
-      <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}">
+      <WrapPanel ItemSpacing="{StaticResource Space16}" LineSpacing="{StaticResource Space8}">
         <ItemsControl ItemsSource="{Binding PositionFilters}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
@@ -46,11 +53,41 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
         <ctl:RangeFilter Label="OVR" Minimum="0" Maximum="100" Low="{Binding OverallLow}" High="{Binding OverallHigh}" />
+        <ctl:RangeFilter Label="AGE" Minimum="16" Maximum="45" Low="{Binding AgeLow}" High="{Binding AgeHigh}" />
+        <ItemsControl ItemsSource="{Binding StatusFilters}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ChipFilter">
+              <ToggleButton Classes="chip" Content="{Binding Label}" IsChecked="{Binding IsChecked}" AutomationProperties.Name="{Binding Label}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
         <ctl:SegmentedControl ItemsSource="{Binding BasisOptions}" SelectedIndex="{Binding BasisIndex}" IsVisible="{Binding IsStatsTab}" AutomationProperties.Name="Stat basis" />
-      </StackPanel>
+      </WrapPanel>
     </ctl:FilterBar>
 
+    <!-- Cards: the same filtered players as player cards. -->
+    <ScrollViewer DockPanel.Dock="Bottom" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding IsCardLayout}">
+      <ItemsControl ItemsSource="{Binding Cards}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel ItemSpacing="{StaticResource Space16}" LineSpacing="{StaticResource Space16}" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="ctl:PlayerCardModel">
+            <ctl:PlayerCard Model="{Binding}" Width="440" OpenCommand="{Binding $parent[UserControl].((vm:RosterViewModel)DataContext).OpenCardCommand}" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
     <ctl:DataTable
+      IsVisible="{Binding IsTableLayout}"
       Columns="{Binding TableColumns}"
       Rows="{Binding TableRows}"
       SortKey="{Binding TableSortKey}"

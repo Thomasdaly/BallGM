@@ -248,9 +248,30 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
     public bool IsCareerTab => _tabIndex == 5;
 
     /// <summary>The hero's identity line: positions, age, experience, team.</summary>
-    public string HeroLine => string.Create(
+    public string HeroLine => string.Join(
+        " · ",
+        new[]
+        {
+            profile.Position,
+            string.Create(CultureInfo.InvariantCulture, $"AGE {profile.Age}"),
+            profile.Attributes.Body is { } body ? Formatting.Fmt.Height(body.HeightCm) : null,
+            profile.Attributes.Body is { } weight ? Formatting.Fmt.Weight(weight.WeightKg).ToUpperInvariant() : null,
+            (profile.TeamName ?? "Free agent").ToUpperInvariant(),
+        }.OfType<string>());
+
+    /// <summary>The hero's second line: birth date and experience (age is already in the line above).</summary>
+    public string HeroSubLine => string.Create(
         CultureInfo.InvariantCulture,
-        $"{profile.Position} · AGE {profile.Age} · {Formatting.Fmt.Ordinal(profile.SeasonsOfService + 1).ToUpperInvariant()} SEASON · {(profile.TeamName ?? "Free agent").ToUpperInvariant()}");
+        $"Born {profile.BirthDate:d MMM yyyy} · {profile.SeasonsOfService} season{(profile.SeasonsOfService == 1 ? string.Empty : "s")} of service");
+
+    /// <summary>True for a player on the user's own team: only then does the hero offer actions.</summary>
+    public bool IsOwnPlayer { get; init; }
+
+    public System.Windows.Input.ICommand? ExtendCommand { get; init; }
+
+    public System.Windows.Input.ICommand? TradeCommand { get; init; }
+
+    public bool CanExtend => IsOwnPlayer && ExtendCommand is not null && HasContract;
 
     public IReadOnlyList<Controls.StatusItem> StatusChips => profile.IsInjured
         ? [new(profile.InjuryDescription ?? "Injured", Controls.StatusKind.Negative)]
@@ -264,7 +285,7 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
 
     public IReadOnlyList<AttributeGroupDisplay> OverviewGroups => Groups.Take(4).ToList();
 
-    public IReadOnlyList<Controls.FormResult> FormResults => RecentGames.Select(game => new Controls.FormResult(game.Won, $"{game.Opponent} · {game.Result}")).Reverse().ToList();
+    public IReadOnlyList<Controls.FormResult> FormResults => GameLog.Take(SparklineGames).Select(game => new Controls.FormResult(game.Won, $"{game.Opponent} · {game.Result}")).Reverse().ToList();
 
     public IReadOnlyList<Controls.TableColumn> GameLogColumns =>
     [

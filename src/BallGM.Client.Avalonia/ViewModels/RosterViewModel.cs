@@ -26,12 +26,15 @@ public sealed partial class RosterViewModel : ViewModelBase
     private bool _sortDescending = true;
     private int _sortStat;
     private IReadOnlyDictionary<string, PlayerSeasonTotals>? _cachedTotals;
+    private readonly Func<DateOnly>? _ageDate;
 
     public RosterViewModel(
         LeagueOverview overview,
         Func<IReadOnlyDictionary<string, PlayerSeasonTotals>>? seasonTotals = null,
-        Func<string, DomainOperationResult<PlayerProfileSummary>>? profile = null)
+        Func<string, DomainOperationResult<PlayerProfileSummary>>? profile = null,
+        Func<DateOnly>? ageDate = null)
     {
+        _ageDate = ageDate;
         _overview = overview ?? throw new ArgumentNullException(nameof(overview));
         _seasonTotals = seasonTotals ?? (() => new Dictionary<string, PlayerSeasonTotals>());
         _profile = profile;
@@ -148,9 +151,11 @@ public sealed partial class RosterViewModel : ViewModelBase
         get
         {
             var totals = SeasonTotals;
+            var asOf = _ageDate?.Invoke();
             var rows = Roster.Select(spot => totals.GetValueOrDefault(spot.PlayerId) is { } season
                     ? RosterRow.From(spot, season.Stats, Basis.Basis, season.AverageRating)
                     : RosterRow.From(spot, basis: Basis.Basis))
+                .Select(row => asOf is { } date && row.BirthDate != default ? row with { Age = AgeOn(row.BirthDate, date) } : row)
                 .ToList();
             IOrderedEnumerable<RosterRow> ordered = _sortColumn switch
             {
@@ -161,6 +166,7 @@ public sealed partial class RosterViewModel : ViewModelBase
                 RosterSortColumn.Stat => RosterRow.OrderByStat(rows, _sortStat, _sortDescending),
                 RosterSortColumn.Rating => TableOrder.NullsLast(rows, row => row.RatingSortKey, _sortDescending),
                 RosterSortColumn.Potential => Order(rows, row => row.PotentialSortKey),
+                RosterSortColumn.Age => Order(rows, row => row.Age),
                 _ => Order(rows, row => row.Overall),
             };
             return ordered.ThenBy(row => row.FullName, StringComparer.Ordinal).ToList();
@@ -220,6 +226,12 @@ public sealed partial class RosterViewModel : ViewModelBase
         Profile = result.IsSuccess ? new PlayerProfileViewModel(result.Value, () => Profile = null) : null;
     }
 
+    private static int AgeOn(DateOnly birthDate, DateOnly asOf)
+    {
+        var age = asOf.Year - birthDate.Year;
+        return asOf < birthDate.AddYears(age) ? age - 1 : age;
+    }
+
     private RelayCommand SortCommand(RosterSortColumn column) => new(() => SortBy(column, 0));
 
     private void SortBy(RosterSortColumn column, int stat)
@@ -252,6 +264,8 @@ public enum RosterSortColumn
 
     /// <summary>Potential Ability.</summary>
     Potential,
+
+    Age,
 
     /// <summary>One of <see cref="StatColumns.Season"/>, by index.</summary>
     Stat,
@@ -291,6 +305,10 @@ public sealed record RosterRow(
 
     public int PotentialSortKey { get; init; }
 
+    public int Age { get; init; }
+
+    public DateOnly BirthDate { get; init; }
+
     /// <summary>The unrounded average, in hundredths: 7.04 ranks above 6.96 though both print 7.0.</summary>
     public int? RatingSortKey { get; init; }
 
@@ -329,6 +347,8 @@ public sealed record RosterRow(
             Potential = AttributeSheetView.Stars(AbilityStars.HalfStars(spot.Potential)),
             PotentialSortKey = spot.Potential,
             RatingSortKey = rating?.Hundredths,
+            Age = spot.Age,
+            BirthDate = spot.BirthDate,
         };
     }
 }

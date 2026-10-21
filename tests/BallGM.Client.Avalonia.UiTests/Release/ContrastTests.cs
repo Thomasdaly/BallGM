@@ -103,4 +103,32 @@ public sealed class ContrastTests
             failures.Add($"{subject}: {what} {ratio:F2} < {minimum}");
         }
     }
+
+    /// <summary>
+    /// Stock text fields draw their placeholder and selected text at full contrast: Fluent's placeholder
+    /// is half-opacity by default and its selection keeps white text on the accent (visual QA pass 3, S1).
+    /// </summary>
+    [AvaloniaFact]
+    public void Contrast_PlaceholderAndSelectedText()
+    {
+        var box = new TextBox { PlaceholderText = "Player name", Width = 220 };
+        var window = new Window { Content = box, Width = 400, Height = 200 };
+        window.Show();
+        global::Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+        var placeholder = global::Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(box)
+            .OfType<TextBlock>()
+            .Single(block => block.Name == "PART_Placeholder");
+        var field = Token("Surface3Color");
+        var ink = Assert.IsAssignableFrom<ISolidColorBrush>(placeholder.Foreground).Color;
+        var effective = Color.FromArgb(255, Blend(ink.R, field.R, placeholder.Opacity), Blend(ink.G, field.G, placeholder.Opacity), Blend(ink.B, field.B, placeholder.Opacity));
+        Assert.True(Wcag.Contrast(effective, field) >= 4.5, $"Placeholder contrast {Wcag.Contrast(effective, field):F2} on Surface3 is below 4.5.");
+
+        var selection = Assert.IsAssignableFrom<ISolidColorBrush>(box.SelectionBrush).Color;
+        var selected = Assert.IsAssignableFrom<ISolidColorBrush>(box.SelectionForegroundBrush).Color;
+        Assert.True(Wcag.Contrast(selected, selection) >= 4.5, $"Selected text contrast {Wcag.Contrast(selected, selection):F2} is below 4.5.");
+        window.Close();
+    }
+
+    private static byte Blend(byte ink, byte background, double opacity) => (byte)Math.Round((ink * opacity) + (background * (1 - opacity)));
 }

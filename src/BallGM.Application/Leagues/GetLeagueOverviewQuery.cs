@@ -429,7 +429,11 @@ public sealed class GetLeagueOverviewQuery(
                 contract?.ChargeFor(snapshot.CurrentSeason)?.Amount.SmallestUnits ?? 0,
                 SeasonsRemaining(contract, snapshot.CurrentSeason),
                 player.Rating.PotentialAbility,
-                snapshot.Artwork.PortraitFor(player.Id)));
+                snapshot.Artwork.PortraitFor(player.Id))
+            {
+                Age = player.AgeOn(AgeReferenceDate(snapshot.CurrentSeason)),
+                BirthDate = player.BirthDate,
+            });
         }
 
         // Best player first: the roster grid's whole job at this milestone is "who have I got".

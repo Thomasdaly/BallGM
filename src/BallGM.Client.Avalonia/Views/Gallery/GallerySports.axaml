@@ -43,6 +43,20 @@
         <ctl:CalendarMonth Days="{Binding CalendarDays}" OpenGameCommand="{Binding NoOpCommand}" />
         <TextBlock Text="SHOT CHART" Classes="label-caps" />
         <ctl:ShotChart Zones="{Binding ShotZonesSample}" Width="420" Height="320" HorizontalAlignment="Left" />
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+                  <Border Width="12" Height="12" CornerRadius="{StaticResource RadiusChip}" Background="{StaticResource ChartCold2Brush}" />
+                  <TextBlock Text="Colder than league" Classes="caption" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+                  <Border Width="12" Height="12" CornerRadius="{StaticResource RadiusChip}" Background="{StaticResource ChartNeutralBrush}" />
+                  <TextBlock Text="Level with league" Classes="caption" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+                  <Border Width="12" Height="12" CornerRadius="{StaticResource RadiusChip}" Background="{StaticResource ChartHot2Brush}" />
+                  <TextBlock Text="Hotter than league" Classes="caption" VerticalAlignment="Center" />
+                </StackPanel>
+              </StackPanel>
       </StackPanel>
     </Grid>
     <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space24}">

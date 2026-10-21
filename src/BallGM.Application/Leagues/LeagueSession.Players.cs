@@ -15,6 +15,14 @@ public sealed partial class LeagueSession
     /// <summary>How many recent games the profile's form guide shows.</summary>
     public const int RecentGameCount = 5;
 
+    /// <summary>
+    /// The date ages are measured on: today in a season under way, the first of July before one.
+    /// The profile and the roster both read it, so a player is the same age on both.
+    /// </summary>
+    public DateOnly AgeDate => _seasonRun is null || _snapshot is null
+        ? new DateOnly(_snapshot?.CurrentSeason.Year ?? 1, 7, 1)
+        : _seasonRun.Calendar.DateOn(_seasonRun.CurrentDay);
+
     public DomainOperationResult<PlayerProfileSummary> PlayerProfile(string playerId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(playerId);
@@ -33,9 +41,7 @@ public sealed partial class LeagueSession
 
         var team = _snapshot.Teams.FirstOrDefault(candidate => candidate.PlayerIds.Contains(player.Id));
         var teamNames = TeamNames(_snapshot);
-        var asOf = _seasonRun is null
-            ? new DateOnly(_snapshot.CurrentSeason.Year, 7, 1)
-            : _seasonRun.Calendar.DateOn(_seasonRun.CurrentDay);
+        var asOf = AgeDate;
 
         // Every live contract from now on, in order: the current deal and any extension that follows it.
         var liveContracts = _snapshot.Contracts

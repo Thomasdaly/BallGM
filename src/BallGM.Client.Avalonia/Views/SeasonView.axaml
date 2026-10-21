@@ -7,179 +7,96 @@
   xmlns:app="clr-namespace:BallGM.Application.Seasons;assembly=BallGM.Application"
   xmlns:theming="clr-namespace:BallGM.Client.Avalonia.Theming"
   xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
   x:DataType="vm:SeasonViewModel">
   <UserControl.KeyBindings>
     <KeyBinding Gesture="Escape" Command="{Binding CloseGameCommand}" />
   </UserControl.KeyBindings>
   <UserControl.Resources>
-    <!-- One player in a game sheet's line-up; the stat cells follow the side's Headers (preview or box score). -->
-    <DataTemplate x:Key="LineupRowTemplate" x:DataType="vm:LineupRow">
-      <Grid ColumnDefinitions="34,*,42,50,Auto" Height="30" ToolTip.Tip="{Binding Tip}">
-        <TextBlock Text="{Binding Position}" Classes="faint small" VerticalAlignment="Center" />
-        <!-- A player who reached the foul limit says so in words, not colour alone. -->
-        <DockPanel Grid.Column="1" Margin="0,0,8,0">
-          <Border DockPanel.Dock="Right" Classes="pill bad" Margin="6,0,0,0" IsVisible="{Binding FouledOut}"
-                  ToolTip.Tip="Reached the foul limit and took no further part in the game."
-                  AutomationProperties.Name="Fouled out">
-            <TextBlock Text="Fouled out" />
-          </Border>
-          <TextBlock Text="{Binding Name}" Classes="small" Classes.strong="{Binding IsStarter}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-        </DockPanel>
-        <Border Grid.Column="2" Classes="ovr small" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}" IsVisible="{Binding HasOverall}">
-          <TextBlock Text="{Binding Overall}" />
-        </Border>
-        <TextBlock Grid.Column="2" Text="—" Classes="faint small" VerticalAlignment="Center" IsVisible="{Binding !HasOverall}" />
-        <views:RatingPill Grid.Column="3" DataContext="{Binding Rating}" />
-        <ItemsControl Grid.Column="4" Classes="statrow" ItemsSource="{Binding Stats}" />
-      </Grid>
-    </DataTemplate>
-
-    <!-- One team's side of the sheet: its line-up table, totals, and team rebounds. -->
-    <DataTemplate x:Key="SideLineupTemplate" x:DataType="vm:GameSheetSide">
-      <StackPanel Spacing="{StaticResource Space1}">
-        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space2}">
-          <Panel Classes="badge small">
-            <Border Classes="badge-plate" Background="{Binding Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Art.HasLogo}" />
-            <Image Source="{Binding Art.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Art.HasLogo}" />
-          </Panel>
-          <TextBlock Text="{Binding TeamName}" Classes="h3" />
-        </StackPanel>
-        <ScrollViewer Classes="tablewrap">
-          <StackPanel Spacing="{StaticResource Space1}">
-            <Grid Classes="thead" ColumnDefinitions="34,*,42,50,Auto" IsVisible="{Binding HasLineup}">
-              <TextBlock Text="Pos" />
-              <TextBlock Grid.Column="1" Text="Player" MinWidth="{StaticResource TableNameMinWidth}" />
-              <TextBlock Grid.Column="2" Text="OVR" />
-              <TextBlock Grid.Column="3" Text="RTG" HorizontalAlignment="Center" ToolTip.Tip="Match rating out of ten: this game's on a final, the season's average on a preview." />
-              <ItemsControl Grid.Column="4" Classes="statheads" ItemsSource="{Binding Headers}" />
-            </Grid>
-            <TextBlock Text="Starters" Classes="eyebrow" IsVisible="{Binding HasLineup}" />
-            <ItemsControl Classes="table" ItemsSource="{Binding Starters}" ItemTemplate="{StaticResource LineupRowTemplate}" />
-            <TextBlock Text="Bench" Classes="eyebrow" IsVisible="{Binding HasLineup}" />
-            <ItemsControl Classes="table" ItemsSource="{Binding Bench}" ItemTemplate="{StaticResource LineupRowTemplate}" />
-            <Grid ColumnDefinitions="34,*,42,50,Auto" Height="30" Margin="10,0" IsVisible="{Binding HasTotals}">
-              <TextBlock Grid.Column="1" Text="Team totals" Classes="small strong" VerticalAlignment="Center" />
-              <ItemsControl Grid.Column="4" Classes="statrow" ItemsSource="{Binding Totals}" />
-            </Grid>
-          </StackPanel>
-        </ScrollViewer>
-        <TextBlock Text="{Binding TeamRebounds}" Classes="faint tiny" TextWrapping="Wrap" IsVisible="{Binding HasTeamRebounds}" />
-        <TextBlock Text="{Binding LineupNote}" Classes="dim" TextWrapping="Wrap" IsVisible="{Binding !HasLineup}" />
-      </StackPanel>
+    <!-- The season series: every other meeting, played or to come. -->
+    <DataTemplate x:Key="MeetingsTemplate" x:DataType="vm:GameSheet">
+      <Panel>
+        <TextBlock Text="First meeting this season, and the only one scheduled." Classes="body secondary" IsVisible="{Binding !HasMeetings}" />
+        <ItemsControl ItemsSource="{Binding Meetings}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel ItemSpacing="{StaticResource Space8}" LineSpacing="{StaticResource Space8}" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:MeetingRow">
+              <Button Classes="matchup-row" Theme="{StaticResource BareButton}" Padding="{StaticResource Pad12}"
+                      Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).ShowGameCommand}" CommandParameter="{Binding GameId}"
+                      AutomationProperties.Name="{Binding Matchup, StringFormat='Open the meeting {0}'}">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding DayLine}" Classes="caption" />
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                    <TextBlock Text="{Binding Matchup}" Classes="body-strong" />
+                    <TextBlock Text="{Binding Score}" Classes="table" Classes.secondary="{Binding !IsPlayed}" />
+                  </StackPanel>
+                  <TextBlock Text="{Binding Winner}" Classes="caption" IsVisible="{Binding IsPlayed}" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Panel>
     </DataTemplate>
   </UserControl.Resources>
   <Panel>
-  <ScrollViewer>
-    <StackPanel Spacing="18">
+  <!-- S12 Schedule / calendar, template T8: the month as game chips or a list; games open their sheet. -->
+  <ScrollViewer Name="CalendarScroll" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsSheetOpen}">
+    <StackPanel Spacing="{StaticResource Space16}">
 
-      <!-- Where the league is, and the controls that move it. -->
-      <Border Classes="panel">
-        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
-          <StackPanel Spacing="3" VerticalAlignment="Center">
-            <TextBlock Classes="h2" Text="{Binding Headline}" />
-            <TextBlock Text="{Binding PhaseLine}" Classes="dim" />
-            <TextBlock Text="{Binding AdvancePreview}" Classes="faint small" TextWrapping="Wrap" IsVisible="{Binding HasSeason}" />
+      <ctl:EmptyState IconKey="Icon.Calendar" Headline="No season under way" Message="{Binding PhaseLine}" ActionText="Start season" ActionCommand="{Binding StartSeasonCommand}" IsVisible="{Binding HasNoSeason}" />
+
+      <ctl:Banner Text="{Binding Message}" Kind="Info" IsVisible="{Binding HasMessage}" />
+
+      <!-- Where the league is, and the controls that move it (Continue in the header does the same). -->
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="{StaticResource Space16}" IsVisible="{Binding HasSeason}">
+        <StackPanel Spacing="{StaticResource Space4}" VerticalAlignment="Center">
+          <TextBlock Classes="h3" Text="{Binding Headline, Converter={x:Static conv:UpperCaseConverter.Instance}}" />
+          <TextBlock Text="{Binding AdvancePreview}" Classes="body secondary wrap" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space8}" VerticalAlignment="Center">
+          <TextBlock Text="DAYS" Classes="label-caps" VerticalAlignment="Center" />
+          <ComboBox ItemsSource="{Binding AdvanceOptions}" SelectedItem="{Binding AdvanceDays}" MinWidth="88" AutomationProperties.Name="Days to advance" />
+          <Button Classes="secondary" Content="Advance" Command="{Binding AdvanceCommand}" />
+          <Button Classes="ghost" Content="To end of season" Command="{Binding AdvanceToEndCommand}" />
+        </StackPanel>
+      </Grid>
+
+      <!-- The viewed team's season at a glance. -->
+      <Grid ColumnDefinitions="*,*,*,2*,2*" ColumnSpacing="{StaticResource Space16}" IsVisible="{Binding HasViewedTeam}">
+        <ctl:Tile Classes="compact">
+          <ctl:StatTile Value="{Binding TeamRecord}" Label="Record" />
+        </ctl:Tile>
+        <ctl:Tile Grid.Column="1" Classes="compact">
+          <ctl:StatTile Value="{Binding TeamStreak}" Label="Streak" />
+        </ctl:Tile>
+        <ctl:Tile Grid.Column="2" Classes="compact">
+          <ctl:StatTile Value="{Binding TeamGamesRemaining}" Label="Games left" />
+        </ctl:Tile>
+        <ctl:Tile Grid.Column="3" Classes="compact">
+          <StackPanel Spacing="{StaticResource Space8}">
+            <TextBlock Text="LAST FIVE" Classes="label-caps" />
+            <ctl:WinLossStrip Results="{Binding FormResults}" IsVisible="{Binding HasForm}" />
+            <TextBlock Text="No games yet" Classes="body secondary" IsVisible="{Binding !HasForm}" />
           </StackPanel>
-
-          <Button Grid.Column="1" Classes="primary" Content="Start season" Command="{Binding StartSeasonCommand}" VerticalAlignment="Center" IsVisible="{Binding HasNoSeason}" />
-
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding HasSeason}">
-            <TextBlock Text="Days" Classes="eyebrow" VerticalAlignment="Center" />
-            <ComboBox ItemsSource="{Binding AdvanceOptions}" SelectedItem="{Binding AdvanceDays}" MinWidth="80" />
-            <Button Classes="primary" Content="Advance" Command="{Binding AdvanceCommand}" />
-            <Button Content="To end of season" Command="{Binding AdvanceToEndCommand}" />
-          </StackPanel>
-        </Grid>
-      </Border>
-
-      <Border Classes="callout" IsVisible="{Binding HasMessage}">
-        <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
-      </Border>
-
-      <!-- The season from the viewed team's chair: its record and form over a ribbon of every day
-           of the season, wins rising above the line and losses falling below it, by margin. -->
-      <Border Classes="panel" IsVisible="{Binding HasViewedTeam}">
-        <StackPanel Spacing="14">
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBlock Classes="section" Text="{Binding TeamSeasonHeadline}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="28">
-              <Border Classes="stat">
-                <StackPanel>
-                  <TextBlock Classes="eyebrow" Text="Record" />
-                  <TextBlock Classes="value" Text="{Binding TeamRecord}" />
-                </StackPanel>
-              </Border>
-              <Border Classes="stat">
-                <StackPanel>
-                  <TextBlock Classes="eyebrow" Text="Streak" />
-                  <TextBlock Classes="value" Text="{Binding TeamStreak}" />
-                </StackPanel>
-              </Border>
-              <Border Classes="stat">
-                <StackPanel>
-                  <TextBlock Classes="eyebrow" Text="Games left" />
-                  <TextBlock Classes="value" Text="{Binding TeamGamesRemaining}" />
-                </StackPanel>
-              </Border>
-              <StackPanel Spacing="6" VerticalAlignment="Center">
-                <TextBlock Classes="eyebrow" Text="Last five" />
-                <ItemsControl ItemsSource="{Binding Form}">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                      <StackPanel Orientation="Horizontal" Spacing="4" />
-                    </ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:FormChip">
-                      <Border Classes="form" Classes.win="{Binding IsWin}" ToolTip.Tip="{Binding Tip}">
-                        <TextBlock Text="{Binding Letter}" />
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <TextBlock Classes="faint tiny" Text="No games yet" IsVisible="{Binding !HasForm}" />
-              </StackPanel>
-            </StackPanel>
+        </ctl:Tile>
+        <ctl:Tile Grid.Column="4" Classes="compact">
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{StaticResource Space16}">
+            <ctl:StatTile Value="{Binding StretchVenues}" Label="{Binding StretchLabel}" />
+            <ctl:StatTile Grid.Column="1" Value="{Binding StretchBackToBacks}" Label="Back-to-backs" />
+            <ctl:StatTile Grid.Column="2" Value="{Binding StretchOpponents}" Label="Opp win %" ToolTip.Tip="Combined winning percentage of the opponents in this stretch" />
           </Grid>
+        </ctl:Tile>
+      </Grid>
 
-          <StackPanel>
-            <Panel Height="52">
-              <ItemsControl ItemsSource="{Binding RibbonPhases}">
-                <ItemsControl.Styles>
-                  <Style Selector="ItemsControl > ContentPresenter" x:DataType="vm:RibbonPhase">
-                    <Setter Property="theming:SpanPanel.Span" Value="{Binding Span}" />
-                  </Style>
-                </ItemsControl.Styles>
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <theming:SpanPanel />
-                  </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:RibbonPhase">
-                    <Border Classes="ribbon-phase" Classes.alt="{Binding IsAlternate}" Classes.current="{Binding IsCurrent}" />
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-              <Border Height="1" Background="{StaticResource LineBrush}" VerticalAlignment="Center" />
-              <ItemsControl ItemsSource="{Binding RibbonDays}">
-                <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate>
-                    <theming:SpanPanel />
-                  </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:RibbonDay">
-                    <Grid RowDefinitions="*,*" Background="Transparent" ToolTip.Tip="{Binding Tip}">
-                      <Border Grid.RowSpan="2" Classes="ribbon-today" IsVisible="{Binding IsToday}" />
-                      <Border Classes="ribbon-win" Height="{Binding WinHeight}" />
-                      <Border Grid.Row="1" Classes="ribbon-loss" Height="{Binding LossHeight}" />
-                      <Border Grid.RowSpan="2" Classes="ribbon-tick" IsVisible="{Binding IsUpcomingGame}" />
-                    </Grid>
-                  </DataTemplate>
-                </ItemsControl.ItemTemplate>
-              </ItemsControl>
-            </Panel>
+      <!-- The season ribbon: every day, wins above the line and losses below it, by margin. -->
+      <ctl:Tile Title="{Binding TeamSeasonHeadline}" IsVisible="{Binding HasViewedTeam}">
+        <StackPanel>
+          <Panel Height="52">
             <ItemsControl ItemsSource="{Binding RibbonPhases}">
               <ItemsControl.Styles>
                 <Style Selector="ItemsControl > ContentPresenter" x:DataType="vm:RibbonPhase">
@@ -193,427 +110,328 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:RibbonPhase">
-                  <Border Classes="ribbon-label" Classes.current="{Binding IsCurrent}" ToolTip.Tip="{Binding Dates}">
-                    <StackPanel>
-                      <TextBlock Classes="eyebrow" Classes.accent="{Binding IsCurrent}" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                      <TextBlock Classes="faint tiny" Text="{Binding Days}" TextTrimming="CharacterEllipsis" />
-                    </StackPanel>
-                  </Border>
+                  <Border Classes="ribbon-phase" Classes.alt="{Binding IsAlternate}" Classes.current="{Binding IsCurrent}" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-          </StackPanel>
-        </StackPanel>
-      </Border>
-
-      <!-- Dashboard: the table on the left, the games on the right. -->
-      <Grid ColumnDefinitions="3*,2*" ColumnSpacing="24" IsVisible="{Binding HasSeason}">
-
-        <StackPanel Spacing="18">
-          <!-- The viewed team's month: one square a day, results ruled green or red, today ringed. -->
-          <StackPanel Spacing="8" IsVisible="{Binding HasViewedTeam}">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
-              <Button Content="‹" Command="{Binding PreviousMonthCommand}" IsEnabled="{Binding CanGoToPreviousMonth}" Padding="12,4" ToolTip.Tip="Previous month" />
-              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                <TextBlock Classes="h2" Text="{Binding MonthTitle}" VerticalAlignment="Center" />
-                <TextBlock Classes="dim" Text="{Binding MonthSummary}" VerticalAlignment="Center" />
-              </StackPanel>
-              <Button Grid.Column="2" Content="›" Command="{Binding NextMonthCommand}" IsEnabled="{Binding CanGoToNextMonth}" Padding="12,4" ToolTip.Tip="Next month" />
-            </Grid>
-            <UniformGrid Columns="7" Classes="thead" Margin="2,0">
-              <TextBlock Text="Mon" Classes="eyebrow" />
-              <TextBlock Text="Tue" Classes="eyebrow" />
-              <TextBlock Text="Wed" Classes="eyebrow" />
-              <TextBlock Text="Thu" Classes="eyebrow" />
-              <TextBlock Text="Fri" Classes="eyebrow" />
-              <TextBlock Text="Sat" Classes="eyebrow" />
-              <TextBlock Text="Sun" Classes="eyebrow" />
-            </UniformGrid>
-            <ItemsControl ItemsSource="{Binding MonthCells}">
+            <Border Height="1" Background="{StaticResource StrokeBrush}" VerticalAlignment="Center" />
+            <ItemsControl ItemsSource="{Binding RibbonDays}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                  <UniformGrid Columns="7" />
+                  <theming:SpanPanel />
                 </ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:CalendarDayCell">
-                  <Button
-                    Classes="daycell"
-                    Classes.off="{Binding !IsInSeason}"
-                    Classes.game="{Binding HasGame}"
-                    Classes.today="{Binding IsToday}"
-                    Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).ShowGameCommand}"
-                    CommandParameter="{Binding GameId}"
-                    ToolTip.Tip="{Binding Tip}">
-                    <Grid ColumnDefinitions="Auto,*" Background="{Binding Opponent, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=wash, FallbackValue={x:Null}}">
-                      <Border Classes="result-rule" Classes.win="{Binding IsWin}" Classes.loss="{Binding IsLoss}" IsVisible="{Binding HasGame}" CornerRadius="2,0,0,2" />
-                      <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto" Margin="6,4,6,4">
-                        <Grid ColumnDefinitions="Auto,*">
-                          <TextBlock Text="{Binding DayOfMonth}" Classes="num small" Classes.faint="{Binding !HasGame}" />
-                          <TextBlock Grid.Column="1" Text="Today" Classes="eyebrow accent" HorizontalAlignment="Right" IsVisible="{Binding IsToday}" />
-                          <TextBlock Grid.Column="1" Text="{Binding Result}" Classes="num small" Classes.good="{Binding IsWin}" Classes.bad="{Binding IsLoss}" HorizontalAlignment="Right" />
-                        </Grid>
-                        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="5" VerticalAlignment="Center" IsVisible="{Binding HasGame}">
-                          <Panel Classes="badge small">
-                            <Border Classes="badge-plate" Background="{Binding Opponent, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate, FallbackValue={x:Null}}" IsVisible="{Binding !Opponent.HasLogo, FallbackValue=False}" />
-                            <Image Source="{Binding Opponent.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}, FallbackValue={x:Null}}" IsVisible="{Binding Opponent.HasLogo, FallbackValue=False}" />
-                          </Panel>
-                          <TextBlock Text="{Binding Matchup}" Classes="num" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                        </StackPanel>
-                        <TextBlock Grid.Row="1" Text="{Binding Marker}" Classes="tiny accent" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" IsVisible="{Binding !HasGame}" />
-                        <TextBlock Grid.Row="2" Text="{Binding Detail}" Classes="num small" Classes.good="{Binding IsWin}" Classes.bad="{Binding IsLoss}" Classes.faint="{Binding IsUpcoming}" />
-                      </Grid>
-                    </Grid>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <TextBlock Text="Select any game to open it: a preview of both rotations before tip-off, the box score after. Upcoming games show the opponent's record." Classes="faint tiny" />
-          </StackPanel>
-
-          <StackPanel Spacing="8">
-            <TextBlock Classes="section" Text="Standings" />
-            <Grid Classes="thead" ColumnDefinitions="30,*,150,62,50,56,62,52">
-              <TextBlock Text="#" />
-              <TextBlock Grid.Column="1" Text="Team" />
-              <TextBlock Grid.Column="2" Text="Group" />
-              <TextBlock Grid.Column="3" Text="W-L" />
-              <TextBlock Grid.Column="4" Text="Div" />
-              <TextBlock Grid.Column="5" Text="Conf" />
-              <TextBlock Grid.Column="6" Text="Diff" />
-              <TextBlock Grid.Column="7" Text="PF" />
-            </Grid>
-            <ItemsControl Classes="table" ItemsSource="{Binding Standings}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:StandingsRowDisplay">
-                  <Grid ColumnDefinitions="30,*,150,62,50,56,62,52" Height="30" Classes.viewed="{Binding IsViewedTeam}">
-                    <TextBlock Text="{Binding Position}" VerticalAlignment="Center" Classes="faint num" />
-                    <TextBlock Grid.Column="1" Text="{Binding TeamName}" VerticalAlignment="Center" Classes="strong" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="2" Text="{Binding Group}" VerticalAlignment="Center" Classes="dim tiny" TextTrimming="CharacterEllipsis" Margin="0,0,10,0" />
-                    <TextBlock Grid.Column="3" Text="{Binding Record}" VerticalAlignment="Center" Classes="num" />
-                    <TextBlock Grid.Column="4" Text="{Binding DivisionRecord}" VerticalAlignment="Center" Classes="dim small" />
-                    <TextBlock Grid.Column="5" Text="{Binding ConferenceRecord}" VerticalAlignment="Center" Classes="dim small" />
-                    <TextBlock Grid.Column="6" Text="{Binding PointDifferential}" VerticalAlignment="Center" Classes="num" />
-                    <TextBlock Grid.Column="7" Text="{Binding PointsFor}" VerticalAlignment="Center" Classes="dim small" />
+                <DataTemplate x:DataType="vm:RibbonDay">
+                  <Grid RowDefinitions="*,*" Background="Transparent" ToolTip.Tip="{Binding Tip}">
+                    <Border Grid.RowSpan="2" Classes="ribbon-today" IsVisible="{Binding IsToday}" />
+                    <Border Classes="ribbon-win" Height="{Binding WinHeight}" />
+                    <Border Grid.Row="1" Classes="ribbon-loss" Height="{Binding LossHeight}" />
+                    <Border Grid.RowSpan="2" Classes="ribbon-tick" IsVisible="{Binding IsUpcomingGame}" />
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <TextBlock Text="{Binding TieBreakLine}" Classes="faint tiny" TextWrapping="Wrap" />
-          </StackPanel>
-
-        </StackPanel>
-
-        <StackPanel Grid.Column="1" Spacing="18">
-          <!-- The road ahead: the viewed team's next games, and the shape of the stretch after them. -->
-          <StackPanel Spacing="10" IsVisible="{Binding HasViewedTeam}">
-            <TextBlock Classes="section" Text="Road ahead" />
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="20">
-              <StackPanel>
-                <TextBlock Classes="eyebrow" Text="{Binding StretchLabel}" />
-                <TextBlock Classes="num size-h3" Text="{Binding StretchVenues}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1">
-                <TextBlock Classes="eyebrow" Text="Back-to-backs" />
-                <TextBlock Classes="num size-h3" Text="{Binding StretchBackToBacks}" />
-              </StackPanel>
-              <StackPanel Grid.Column="2">
-                <TextBlock Classes="eyebrow" Text="Opponents" ToolTip.Tip="Combined winning percentage of the opponents in this stretch" />
-                <TextBlock Classes="num size-h3" Text="{Binding StretchOpponents}" />
-              </StackPanel>
-            </Grid>
-
-            <ItemsControl ItemsSource="{Binding RoadAhead}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <StackPanel Spacing="8" />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:MatchupCard">
-                  <Button
-                    Classes="cardbtn"
-                    Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).ShowGameCommand}"
-                    CommandParameter="{Binding GameId}"
-                    ToolTip.Tip="Open this game">
-                  <Border Classes="matchup" Classes.home="{Binding IsHome}">
-                    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="2">
-                      <Border Grid.ColumnSpan="3" Grid.RowSpan="3" Margin="-14,-10" Background="{Binding Opponent, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=wash}" />
-                      <Panel Grid.RowSpan="2" Classes="badge" VerticalAlignment="Center">
-                        <Border Classes="badge-plate" Background="{Binding Opponent, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Opponent.HasLogo}">
-                          <TextBlock Text="{Binding Opponent.Initials}" Foreground="{Binding Opponent, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=ink}" />
-                        </Border>
-                        <Image Source="{Binding Opponent.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Opponent.HasLogo}" />
-                      </Panel>
-                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                        <TextBlock Classes="eyebrow" Classes.accent="{Binding IsHome}" Text="{Binding When}" />
-                        <TextBlock Classes="eyebrow" Classes.accent="{Binding IsHome}" Text="{Binding Venue}" />
-                        <TextBlock Classes="faint tiny" Text="{Binding DayLine}" VerticalAlignment="Center" />
-                      </StackPanel>
-                      <TextBlock Grid.Row="1" Grid.Column="1" Classes="h3" Text="{Binding OpponentName}" TextTrimming="CharacterEllipsis" />
-                      <StackPanel Grid.Column="2" Grid.RowSpan="2" HorizontalAlignment="Right" VerticalAlignment="Center">
-                        <TextBlock Classes="num size-h3" Text="{Binding OpponentRecord}" HorizontalAlignment="Right" />
-                        <ProgressBar
-                          Classes="attr"
-                          Width="72"
-                          Minimum="0"
-                          Maximum="100"
-                          Value="{Binding OpponentWinPercent}"
-                          Foreground="{StaticResource TextDimBrush}"
-                          IsVisible="{Binding HasOpponentForm}"
-                          ToolTip.Tip="Opponent's winning percentage" />
-                      </StackPanel>
-                      <Grid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4,0,0">
-                        <TextBlock Classes="dim tiny" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
-                          <Run Text="{Binding OpponentDetail}" />
-                          <Run Text=" · " />
-                          <Run Text="{Binding SeriesLine}" />
-                        </TextBlock>
-                        <Border Grid.Column="1" Classes="pill" Classes.warn="{Binding IsBackToBack}">
-                          <TextBlock Text="{Binding RestLine}" />
-                        </Border>
-                      </Grid>
-                    </Grid>
-                  </Border>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <TextBlock Text="{Binding RoadAheadEmptyMessage}" Classes="dim" TextWrapping="Wrap" IsVisible="{Binding !HasRoadAhead}" />
-          </StackPanel>
-
-          <StackPanel Spacing="8">
-            <TextBlock Classes="section" Text="Recent results" />
-            <TextBlock Text="Select a game to open it." Classes="faint tiny" />
-            <ListBox x:Name="RecentResults" ItemsSource="{Binding RecentResults}" SelectedItem="{Binding SelectedFixture}" MaxHeight="260">
-              <ListBox.ItemTemplate>
-                <DataTemplate x:DataType="vm:FixtureRow">
-                  <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-                    <TextBlock Text="{Binding Matchup}" Classes="strong" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="1" Text="{Binding Score}" Classes="num" Margin="12,0,0,0" />
-                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Day}" Classes="faint tiny" />
-                  </Grid>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-          </StackPanel>
-
-          <StackPanel Spacing="8" IsVisible="{Binding HasNoViewedTeam}">
-            <TextBlock Classes="section" Text="Next up" />
-            <ItemsControl Classes="table" ItemsSource="{Binding UpcomingFixtures}">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:FixtureRow">
-                  <Grid ColumnDefinitions="*,Auto" Height="30">
-                    <TextBlock Text="{Binding Matchup}" VerticalAlignment="Center" Classes="small strong" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="1" Text="{Binding Day}" VerticalAlignment="Center" Classes="faint tiny" Margin="12,0,0,0" />
-                  </Grid>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-        </StackPanel>
-      </Grid>
-
-      <StackPanel Spacing="8" IsVisible="{Binding HasWarnings}">
-        <TextBlock Classes="section" Text="Warnings" />
-        <ItemsControl ItemsSource="{Binding Warnings}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:SeasonFindingRow">
-              <Border Classes="callout warn" Margin="0,0,0,8">
-                <StackPanel Spacing="2">
-                  <TextBlock Text="{Binding Scope}" Classes="strong small" />
-                  <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" />
-                  <TextBlock Text="{Binding Code}" Classes="code" />
+          </Panel>
+          <ItemsControl ItemsSource="{Binding RibbonPhases}">
+            <ItemsControl.Styles>
+              <Style Selector="ItemsControl > ContentPresenter" x:DataType="vm:RibbonPhase">
+                <Setter Property="theming:SpanPanel.Span" Value="{Binding Span}" />
+              </Style>
+            </ItemsControl.Styles>
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <theming:SpanPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:RibbonPhase">
+                <StackPanel Margin="{StaticResource PadH8}" ToolTip.Tip="{Binding Dates}">
+                  <TextBlock Classes="label-caps trim" Text="{Binding Name, Converter={x:Static conv:UpperCaseConverter.Instance}}" />
+                  <TextBlock Classes="caption trim" Text="{Binding Days}" />
                 </StackPanel>
-              </Border>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ctl:Tile>
 
-      <StackPanel Spacing="8" IsVisible="{Binding HasNotes}">
-        <TextBlock Classes="section" Text="Rules this league does not state" />
-        <ItemsControl ItemsSource="{Binding Notes}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:SeasonFindingRow">
-              <StackPanel Spacing="1" Margin="0,0,0,8">
-                <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" Classes="dim" />
-                <TextBlock Text="{Binding Code}" Classes="code" />
+      <Grid ColumnDefinitions="3*,2*" ColumnSpacing="{StaticResource Space16}" IsVisible="{Binding HasSeason}">
+        <!-- The viewed team's month. -->
+        <ctl:Tile VerticalAlignment="Top" IsVisible="{Binding HasViewedTeam}">
+          <StackPanel Spacing="{StaticResource Space12}">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="{StaticResource Space8}">
+              <Button Classes="icon" Command="{Binding PreviousMonthCommand}" IsEnabled="{Binding CanGoToPreviousMonth}" ToolTip.Tip="Previous month" AutomationProperties.Name="Previous month">
+                <PathIcon Data="{StaticResource Icon.Back}" />
+              </Button>
+              <Button Grid.Column="1" Classes="icon" Command="{Binding NextMonthCommand}" IsEnabled="{Binding CanGoToNextMonth}" ToolTip.Tip="Next month" AutomationProperties.Name="Next month">
+                <PathIcon Data="{StaticResource Icon.Forward}" />
+              </Button>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Space12}" VerticalAlignment="Center" Margin="{StaticResource GapLeft8}">
+                <TextBlock Classes="h2" Text="{Binding MonthTitle, Converter={x:Static conv:UpperCaseConverter.Instance}}" VerticalAlignment="Center" />
+                <TextBlock Classes="body secondary" Text="{Binding MonthSummary}" VerticalAlignment="Center" />
               </StackPanel>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </StackPanel>
-    </StackPanel>
-  </ScrollViewer>
-  <!-- The game sheet: one game, both teams side by side. Opens over the calendar from any game on it. -->
-  <Panel IsVisible="{Binding IsSheetOpen}">
-    <Button Classes="scrim" Command="{Binding CloseGameCommand}" ToolTip.Tip="Close" />
-    <Border Classes="sheet" DataContext="{Binding Sheet}" x:DataType="vm:GameSheet">
-      <ScrollViewer>
-        <StackPanel Spacing="18" Margin="24,20">
-          <Grid ColumnDefinitions="*,Auto">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <TextBlock Text="{Binding Status}" Classes="eyebrow accent" VerticalAlignment="Center" />
-              <TextBlock Text="{Binding DayLine}" Classes="dim small" VerticalAlignment="Center" />
-            </StackPanel>
-            <Button Grid.Column="1" Content="Close" Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).CloseGameCommand}" />
-          </Grid>
-
-          <!-- Scoreboard: away on the left, home on the right, the score or the venue mark between them. -->
-          <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="24">
-            <Border Margin="-24,-8,0,-8" Background="{Binding Away.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=wash-left}" />
-            <Border Grid.Column="2" Margin="0,-8,-24,-8" Background="{Binding Home.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=wash}" />
-                  <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Left">
-                    <Panel Classes="badge large">
-                      <Border Classes="badge-plate" Background="{Binding Away.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Away.Art.HasLogo}">
-                        <TextBlock Text="{Binding Away.Art.Initials}" Foreground="{Binding Away.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=ink}" />
-                      </Border>
-                      <Image Source="{Binding Away.Art.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Away.Art.HasLogo}" />
-                    </Panel>
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left">
-                      <TextBlock Text="Away" Classes="eyebrow" HorizontalAlignment="Left" />
-                      <TextBlock Text="{Binding Away.TeamName}" Classes="h2" HorizontalAlignment="Left" TextWrapping="Wrap" TextAlignment="Left" />
-                      <TextBlock Text="{Binding Away.Record}" Classes="num dim" HorizontalAlignment="Left" />
-                    </StackPanel>
-                  </StackPanel>
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="2">
-              <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center" IsVisible="{Binding IsFinal}">
-                <TextBlock Text="{Binding Away.Score}" Classes="display" Classes.dim="{Binding !Away.IsWinner}" />
-                <TextBlock Text="–" Classes="display faint" />
-                <TextBlock Text="{Binding Home.Score}" Classes="display" Classes.dim="{Binding !Home.IsWinner}" />
-              </StackPanel>
-              <TextBlock Text="@" Classes="display faint" HorizontalAlignment="Center" IsVisible="{Binding IsPreview}" />
-            </StackPanel>
-            <Panel Grid.Column="2">
-                  <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Right">
-                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Right">
-                      <TextBlock Text="Home" Classes="eyebrow" HorizontalAlignment="Right" />
-                      <TextBlock Text="{Binding Home.TeamName}" Classes="h2" HorizontalAlignment="Right" TextWrapping="Wrap" TextAlignment="Right" />
-                      <TextBlock Text="{Binding Home.Record}" Classes="num dim" HorizontalAlignment="Right" />
-                    </StackPanel>
-                    <Panel Classes="badge large">
-                      <Border Classes="badge-plate" Background="{Binding Home.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=plate}" IsVisible="{Binding !Home.Art.HasLogo}">
-                        <TextBlock Text="{Binding Home.Art.Initials}" Foreground="{Binding Home.Art, Converter={x:Static conv:TeamShadeConverter.Instance}, ConverterParameter=ink}" />
-                      </Border>
-                      <Image Source="{Binding Home.Art.LogoPath, Converter={x:Static conv:ImagePathConverter.Instance}}" IsVisible="{Binding Home.Art.HasLogo}" />
-                    </Panel>
-                  </StackPanel>
-            </Panel>
-          </Grid>
-
-          <!-- The tale of the tape. -->
-          <Border Classes="panel">
-            <Grid ColumnDefinitions="*,160,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="16">
-              <TextBlock Grid.Row="0" Text="{Binding Away.PointsFor}" Classes="num size-h3" HorizontalAlignment="Right" />
-              <TextBlock Grid.Row="0" Grid.Column="1" Text="Points per game" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Home.PointsFor}" Classes="num size-h3" HorizontalAlignment="Left" />
-              <TextBlock Grid.Row="1" Text="{Binding Away.PointsAgainst}" Classes="num size-h3" HorizontalAlignment="Right" />
-              <TextBlock Grid.Row="1" Grid.Column="1" Text="Allowed per game" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Home.PointsAgainst}" Classes="num size-h3" HorizontalAlignment="Left" />
-              <TextBlock Grid.Row="2" Text="{Binding Away.Differential}" Classes="num size-h3" HorizontalAlignment="Right" />
-              <TextBlock Grid.Row="2" Grid.Column="1" Text="Margin per game" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Home.Differential}" Classes="num size-h3" HorizontalAlignment="Left" />
-              <Panel Grid.Row="3">
-                      <ItemsControl ItemsSource="{Binding Away.Form}" HorizontalAlignment="Right">
-                        <ItemsControl.ItemsPanel>
-                          <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" Spacing="3" />
-                          </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate x:DataType="vm:FormChip">
-                            <Border Classes="form" Classes.win="{Binding IsWin}" ToolTip.Tip="{Binding Tip}">
-                              <TextBlock Text="{Binding Letter}" />
-                            </Border>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                <TextBlock Text="No games yet" Classes="faint tiny" HorizontalAlignment="Right" IsVisible="{Binding !Away.HasForm}" />
-              </Panel>
-              <TextBlock Grid.Row="3" Grid.Column="1" Text="Last 5 games" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
-              <Panel Grid.Row="3" Grid.Column="2">
-                      <ItemsControl ItemsSource="{Binding Home.Form}" HorizontalAlignment="Left">
-                        <ItemsControl.ItemsPanel>
-                          <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" Spacing="3" />
-                          </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate x:DataType="vm:FormChip">
-                            <Border Classes="form" Classes.win="{Binding IsWin}" ToolTip.Tip="{Binding Tip}">
-                              <TextBlock Text="{Binding Letter}" />
-                            </Border>
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
-                <TextBlock Text="No games yet" Classes="faint tiny" HorizontalAlignment="Left" IsVisible="{Binding !Home.HasForm}" />
-              </Panel>
+              <ctl:SegmentedControl Grid.Column="3" ItemsSource="{Binding ViewOptions}" SelectedIndex="{Binding ViewIndex}" VerticalAlignment="Center" AutomationProperties.Name="Calendar view" />
             </Grid>
-          </Border>
+            <ctl:CalendarMonth Days="{Binding CalendarDays}" OpenGameCommand="{Binding ShowGameCommand}" IsVisible="{Binding IsMonthView}" />
+            <ctl:DataTable Height="420" Columns="{Binding MonthListColumns}" Rows="{Binding MonthListRows}" OpenRowCommand="{Binding ShowGameCommand}" EmptyHeadline="No games this month" EmptyMessage="Use the arrows to move to a month with games." IsVisible="{Binding IsListView}" />
+            <TextBlock Text="Select any game to open it: a preview before tip-off, the box score after. Upcoming games show the opponent's record." Classes="caption wrap" />
+          </StackPanel>
+        </ctl:Tile>
+        <ctl:EmptyState IconKey="Icon.Team" Headline="No team to follow" Message="Pick a team to see its month and road ahead." IsVisible="{Binding HasNoViewedTeam}" />
 
-          <!-- A final game's four factors, away on the left and home on the right, the tale of the tape's layout. -->
-          <Border Classes="panel" IsVisible="{Binding HasFourFactors}">
-            <StackPanel Spacing="{StaticResource Space2}">
-              <TextBlock Text="Four factors" Classes="section" HorizontalAlignment="Center" />
-              <TextBlock Text="The better figure in each row is brighter; for turnover %, lower is better" Classes="faint small" HorizontalAlignment="Center" />
-              <ItemsControl ItemsSource="{Binding FourFactors}">
+        <StackPanel Grid.Column="1" Spacing="{StaticResource Space16}">
+          <ctl:Tile Title="Road ahead" IsVisible="{Binding HasViewedTeam}">
+            <StackPanel Spacing="{StaticResource Space8}">
+              <ItemsControl ItemsSource="{Binding RoadAhead}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel Spacing="{StaticResource Space8}" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:FactorRow">
-                    <Grid ColumnDefinitions="*,160,*" ColumnSpacing="16" Margin="0,4" ToolTip.Tip="{Binding Tooltip}" AutomationProperties.Name="{Binding AccessibleName}">
-                      <TextBlock Text="{Binding Away}" Classes="num" Classes.dim="{Binding AwayTrails}" HorizontalAlignment="Right" />
-                      <TextBlock Grid.Column="1" Text="{Binding Label}" Classes="eyebrow" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="2" Text="{Binding Home}" Classes="num" Classes.dim="{Binding HomeTrails}" HorizontalAlignment="Left" />
-                    </Grid>
+                  <DataTemplate x:DataType="vm:MatchupCard">
+                    <Button Classes="matchup-row" Theme="{StaticResource BareButton}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="{StaticResource Pad12}"
+                            Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).ShowGameCommand}" CommandParameter="{Binding GameId}"
+                            AutomationProperties.Name="{Binding OpponentName, StringFormat='Open game against {0}'}">
+                      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}">
+                        <ctl:TeamLogo TeamId="{Binding OpponentId}" TeamName="{Binding OpponentName}" Size="40" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                          <TextBlock Classes="label-caps trim" Text="{Binding Eyebrow}" ToolTip.Tip="{Binding DayLine}" />
+                          <TextBlock Classes="body-strong trim" Text="{Binding OpponentName}" />
+                          <TextBlock Classes="caption trim" Text="{Binding DetailLine}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="{StaticResource Space4}" HorizontalAlignment="Right" VerticalAlignment="Center">
+                          <TextBlock Classes="stat-m" Text="{Binding OpponentRecord}" HorizontalAlignment="Right" />
+                          <ctl:StatusChip Text="{Binding RestLine}" Kind="{Binding RestKind}" HorizontalAlignment="Right" />
+                        </StackPanel>
+                      </Grid>
+                    </Button>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
+              <TextBlock Text="{Binding RoadAheadEmptyMessage}" Classes="body secondary wrap" IsVisible="{Binding !HasRoadAhead}" />
             </StackPanel>
-          </Border>
+          </ctl:Tile>
 
-          <!-- The season series: every other meeting, played or to come. -->
-          <StackPanel Spacing="8">
-            <TextBlock Classes="section" Text="Season series" />
-            <TextBlock Text="First meeting this season, and the only one scheduled." Classes="dim" IsVisible="{Binding !HasMeetings}" />
-            <ItemsControl ItemsSource="{Binding Meetings}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <WrapPanel />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
+          <ctl:Tile Title="Recent results">
+            <StackPanel Spacing="{StaticResource Space8}">
+              <ListBox x:Name="RecentResults" Classes="results" ItemsSource="{Binding RecentResults}" SelectedItem="{Binding SelectedFixture}" MaxHeight="320" AutomationProperties.Name="Recent results">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:FixtureRow">
+                    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="{StaticResource Space8}" RowSpacing="2" ToolTip.Tip="{Binding Day}">
+                      <ctl:TeamLogo TeamId="{Binding AwayTeamId}" TeamName="{Binding AwayTeam}" Size="20" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding AwayTeam}" Classes="body trim" Classes.body-strong="{Binding AwayWon}" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="{Binding AwayPoints}" Classes="table" Classes.body-strong="{Binding AwayWon}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                      <ctl:TeamLogo Grid.Row="1" TeamId="{Binding HomeTeamId}" TeamName="{Binding HomeTeam}" Size="20" VerticalAlignment="Center" />
+                      <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding HomeTeam}" Classes="body trim" Classes.body-strong="{Binding HomeWon}" VerticalAlignment="Center" />
+                      <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding HomePoints}" Classes="table" Classes.body-strong="{Binding HomeWon}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <TextBlock Text="No games played in the last few days." Classes="body secondary" IsVisible="{Binding !HasRecentResults}" />
+              <TextBlock Text="Select a result to open its box score." Classes="caption" />
+            </StackPanel>
+          </ctl:Tile>
+
+          <ctl:Tile Title="Next up" IsVisible="{Binding HasNoViewedTeam}">
+            <ItemsControl ItemsSource="{Binding UpcomingFixtures}">
               <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:MeetingRow">
-                  <Button
-                    Classes="meeting"
-                    Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).ShowGameCommand}"
-                    CommandParameter="{Binding GameId}"
-                    ToolTip.Tip="Open this meeting">
-                    <StackPanel Spacing="1">
-                      <TextBlock Text="{Binding DayLine}" Classes="faint tiny" />
-                      <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBlock Text="{Binding Matchup}" Classes="small strong" />
-                        <TextBlock Text="{Binding Score}" Classes="num small" Classes.faint="{Binding !IsPlayed}" />
-                      </StackPanel>
-                      <TextBlock Text="{Binding Winner}" Classes="dim tiny" IsVisible="{Binding IsPlayed}" />
-                    </StackPanel>
-                  </Button>
+                <DataTemplate x:DataType="vm:FixtureRow">
+                  <Grid ColumnDefinitions="*,Auto" Height="{StaticResource RowHeight}">
+                    <TextBlock Text="{Binding Matchup}" Classes="body-strong trim" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Day}" Classes="caption" VerticalAlignment="Center" Margin="{StaticResource GapLeft8}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ctl:Tile>
+        </StackPanel>
+      </Grid>
+
+      <ItemsControl ItemsSource="{Binding Warnings}" IsVisible="{Binding HasWarnings}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Spacing="{StaticResource Space8}" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SeasonFindingRow">
+            <ctl:Banner Text="{Binding Explanation}" Kind="Warning" ToolTip.Tip="{Binding Code}" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <ctl:Tile Title="Rules this league does not state" IsVisible="{Binding HasNotes}">
+        <ItemsControl ItemsSource="{Binding Notes}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SeasonFindingRow">
+              <StackPanel Spacing="2" Margin="{StaticResource GapBottom8}">
+                <TextBlock Text="{Binding Explanation}" Classes="body secondary wrap" />
+                <TextBlock Text="{Binding Code}" Classes="caption" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ctl:Tile>
+    </StackPanel>
+  </ScrollViewer>
+  <!-- S15 pre-game / S17 box score, template T7: opened from any game; Back or Escape returns to the calendar. -->
+  <ScrollViewer Name="SheetScroll" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding IsSheetOpen}">
+    <StackPanel Spacing="{StaticResource Space16}" DataContext="{Binding Sheet}" x:DataType="vm:GameSheet">
+      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space16}">
+        <Button Classes="secondary" Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).CloseGameCommand}" AutomationProperties.Name="Back to the schedule">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <PathIcon Data="{StaticResource Icon.Back}" Classes="small" />
+            <TextBlock Text="Schedule" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space12}" VerticalAlignment="Center">
+          <TextBlock Text="{Binding Headline}" Classes="h3" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding DayLine}" Classes="body secondary" VerticalAlignment="Center" />
+        </StackPanel>
+        <Button Grid.Column="2" Classes="primary" Content="SIM GAME" Command="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).SimGameCommand}"
+                IsVisible="{Binding $parent[UserControl].((vm:SeasonViewModel)DataContext).CanSimGame}" ToolTip.Tip="Play today's games and open this one's box score" />
+      </Grid>
+
+      <!-- Matchup hero: both teams' colours meet in the middle, the score bug over them. -->
+      <Border CornerRadius="{StaticResource RadiusCard}" ClipToBounds="True">
+        <Grid ColumnDefinitions="*,*">
+          <Border Classes="matchup-away" theming:TeamScope.TeamId="{Binding Away.TeamId}">
+            <Border Background="{DynamicResource TeamPrimaryRawBrush}" />
+          </Border>
+          <Border Grid.Column="1" theming:TeamScope.TeamId="{Binding Home.TeamId}">
+            <Border Background="{DynamicResource TeamPrimaryRawBrush}" />
+          </Border>
+          <Grid Grid.ColumnSpan="2" ColumnDefinitions="*,Auto,*" Margin="{StaticResource Pad24}">
+            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}" theming:TeamScope.TeamId="{Binding Away.TeamId}">
+              <ctl:TeamLogo TeamId="{Binding Away.TeamId}" TeamName="{Binding Away.TeamName}" Size="96" VerticalAlignment="Center" />
+              <StackPanel VerticalAlignment="Center" Spacing="{StaticResource Space4}">
+                <TextBlock Text="AWAY" Classes="caps" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+                <TextBlock Text="{Binding Away.TeamName, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h2 wrap" Foreground="{DynamicResource OnPrimaryRawBrush}" MaxWidth="360" />
+                <TextBlock Text="{Binding Away.Record}" Classes="body-strong" Foreground="{DynamicResource OnPrimaryRawBrush}" />
+              </StackPanel>
+            </StackPanel>
+            <Border Grid.Column="1" Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad16}" VerticalAlignment="Center">
+              <ctl:ScoreBug Away="{Binding BugAway}" Home="{Binding BugHome}" Status="{Binding BugStatus}" />
+            </Border>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Space16}" HorizontalAlignment="Right" theming:TeamScope.TeamId="{Binding Home.TeamId}">
+              <StackPanel VerticalAlignment="Center" Spacing="{StaticResource Space4}">
+                <TextBlock Text="HOME" Classes="caps" Foreground="{DynamicResource OnPrimaryRawBrush}" HorizontalAlignment="Right" />
+                <TextBlock Text="{Binding Home.TeamName, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h2 wrap" Foreground="{DynamicResource OnPrimaryRawBrush}" TextAlignment="Right" HorizontalAlignment="Right" MaxWidth="360" />
+                <TextBlock Text="{Binding Home.Record}" Classes="body-strong" Foreground="{DynamicResource OnPrimaryRawBrush}" HorizontalAlignment="Right" />
+              </StackPanel>
+              <ctl:TeamLogo TeamId="{Binding Home.TeamId}" TeamName="{Binding Home.TeamName}" Size="96" VerticalAlignment="Center" />
+            </StackPanel>
+          </Grid>
+        </Grid>
+      </Border>
+
+      <!-- Top performers (finals only). -->
+      <ItemsControl ItemsSource="{Binding TopPerformers}" IsVisible="{Binding HasTopPerformers}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Rows="1" ColumnSpacing="{StaticResource Space16}" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:TopPerformer">
+            <ctl:Tile Classes="compact">
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="{StaticResource Space12}">
+                <ctl:PlayerHeadshot PlayerId="{Binding PlayerId}" PlayerName="{Binding Name}" Size="Medium" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                    <ctl:TeamLogo TeamId="{Binding TeamId}" TeamName="{Binding TeamName}" Size="20" VerticalAlignment="Center" />
+                    <TextBlock Text="TOP PERFORMER" Classes="label-caps" VerticalAlignment="Center" />
+                  </StackPanel>
+                  <TextBlock Text="{Binding Name}" Classes="body-strong trim" ToolTip.Tip="{Binding Name}" />
+                  <TextBlock Text="{Binding Line}" Classes="table" />
+                </StackPanel>
+                <views:RatingPill Grid.Column="2" DataContext="{Binding Rating}" VerticalAlignment="Center" />
+              </Grid>
+            </ctl:Tile>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space16}">
+        <!-- The tale of the tape. -->
+        <ctl:Tile Title="Tale of the tape">
+          <Grid ColumnDefinitions="*,180,*" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="{StaticResource Space8}" ColumnSpacing="{StaticResource Space16}">
+            <TextBlock Text="{Binding Away.PointsFor}" Classes="stat-m" HorizontalAlignment="Right" />
+            <TextBlock Grid.Column="1" Text="POINTS PER GAME" Classes="label-caps" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="2" Text="{Binding Home.PointsFor}" Classes="stat-m" />
+            <TextBlock Grid.Row="1" Text="{Binding Away.PointsAgainst}" Classes="stat-m" HorizontalAlignment="Right" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="ALLOWED PER GAME" Classes="label-caps" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Home.PointsAgainst}" Classes="stat-m" />
+            <TextBlock Grid.Row="2" Text="{Binding Away.Differential}" Classes="stat-m" HorizontalAlignment="Right" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="MARGIN PER GAME" Classes="label-caps" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Home.Differential}" Classes="stat-m" />
+            <Panel Grid.Row="3">
+              <ctl:WinLossStrip Results="{Binding Away.FormResults}" HorizontalAlignment="Right" IsVisible="{Binding Away.HasForm}" />
+              <TextBlock Text="No games yet" Classes="caption" HorizontalAlignment="Right" IsVisible="{Binding !Away.HasForm}" />
+            </Panel>
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="LAST 5 GAMES" Classes="label-caps" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <Panel Grid.Row="3" Grid.Column="2">
+              <ctl:WinLossStrip Results="{Binding Home.FormResults}" HorizontalAlignment="Left" IsVisible="{Binding Home.HasForm}" />
+              <TextBlock Text="No games yet" Classes="caption" IsVisible="{Binding !Home.HasForm}" />
+            </Panel>
+          </Grid>
+        </ctl:Tile>
+
+        <!-- A final's four factors; before tip-off, the season series in its place. -->
+        <ctl:Tile Grid.Column="1" Title="Four factors" IsVisible="{Binding HasFourFactors}">
+          <StackPanel Spacing="{StaticResource Space8}">
+            <TextBlock Text="The better figure in each row is brighter; for turnover %, lower is better." Classes="caption wrap" HorizontalAlignment="Center" />
+            <ItemsControl ItemsSource="{Binding FourFactors}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:FactorRow">
+                  <Grid ColumnDefinitions="*,180,*" ColumnSpacing="{StaticResource Space16}" Height="32" ToolTip.Tip="{Binding Tooltip}" AutomationProperties.Name="{Binding AccessibleName}">
+                    <TextBlock Text="{Binding Away}" Classes="table" Classes.body-strong="{Binding !AwayTrails}" Classes.secondary="{Binding AwayTrails}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Text="{Binding Home}" Classes="table" Classes.body-strong="{Binding !HomeTrails}" Classes.secondary="{Binding HomeTrails}" VerticalAlignment="Center" />
+                  </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </StackPanel>
+        </ctl:Tile>
+        <ctl:Tile Grid.Column="1" Title="Season series" IsVisible="{Binding !HasFourFactors}">
+          <ContentControl Content="{Binding}" ContentTemplate="{StaticResource MeetingsTemplate}" />
+        </ctl:Tile>
+      </Grid>
 
-          <!-- The two line-ups, one above the other: a full stat line per player is too wide to sit side by side. -->
-          <StackPanel Spacing="8">
-            <TextBlock Classes="section" Text="{Binding LineupHeading}" />
-            <TextBlock Text="{Binding LineupNote}" Classes="faint tiny" TextWrapping="Wrap" />
-            <StackPanel Spacing="{StaticResource Space5}">
-              <ContentControl Content="{Binding Away}" ContentTemplate="{StaticResource SideLineupTemplate}" />
-              <ContentControl Content="{Binding Home}" ContentTemplate="{StaticResource SideLineupTemplate}" />
-            </StackPanel>
+      <ctl:Tile Title="Season series" IsVisible="{Binding HasFourFactors}">
+        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource MeetingsTemplate}" />
+      </ctl:Tile>
+
+      <!-- Each side's line-up: starters, then the bench, then team totals. -->
+      <StackPanel Spacing="{StaticResource Space8}">
+        <TextBlock Text="{Binding LineupHeading, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3" />
+        <TextBlock Text="{Binding LineupNote}" Classes="caption wrap" />
+      </StackPanel>
+      <ctl:Tile>
+        <StackPanel Spacing="{StaticResource Space8}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <ctl:TeamLogo TeamId="{Binding Away.TeamId}" TeamName="{Binding Away.TeamName}" Size="32" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Away.TeamName, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3" VerticalAlignment="Center" />
           </StackPanel>
+          <ctl:DataTable Height="{Binding AwayTableHeight}" Columns="{Binding AwayColumns}" Rows="{Binding AwayRows}" EmptyHeadline="No line-up" EmptyMessage="{Binding Away.LineupNote}" />
+          <TextBlock Text="{Binding Away.TeamRebounds}" Classes="caption wrap" IsVisible="{Binding Away.HasTeamRebounds}" />
         </StackPanel>
-      </ScrollViewer>
-    </Border>
-  </Panel>
+      </ctl:Tile>
+      <ctl:Tile>
+        <StackPanel Spacing="{StaticResource Space8}">
+          <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+            <ctl:TeamLogo TeamId="{Binding Home.TeamId}" TeamName="{Binding Home.TeamName}" Size="32" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding Home.TeamName, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="h3" VerticalAlignment="Center" />
+          </StackPanel>
+          <ctl:DataTable Height="{Binding HomeTableHeight}" Columns="{Binding HomeColumns}" Rows="{Binding HomeRows}" EmptyHeadline="No line-up" EmptyMessage="{Binding Home.LineupNote}" />
+          <TextBlock Text="{Binding Home.TeamRebounds}" Classes="caption wrap" IsVisible="{Binding Home.HasTeamRebounds}" />
+        </StackPanel>
+      </ctl:Tile>
+    </StackPanel>
+  </ScrollViewer>
   </Panel>
 </UserControl>

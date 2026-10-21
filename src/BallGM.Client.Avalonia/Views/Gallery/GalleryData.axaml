@@ -20,6 +20,10 @@
               <ctl:PositionChip Text="SF/PF" />
               <ctl:StatusChip Text="Healthy" Kind="Positive" />
               <ctl:StatusChip Text="Day to day" Kind="Warning" />
+            <ctl:StatusChip Text="Doubtful" Kind="Negative" />
+            <ctl:StatusChip Text="Questionable" Kind="Warning" />
+            <ctl:StatusChip Text="Probable" Kind="Info" />
+            <ctl:StatusChip Text="Two-way" Kind="Neutral" />
             </StackPanel>
           </Border>
         </WrapPanel>
@@ -90,7 +94,7 @@
           <WrapPanel ItemSpacing="{StaticResource Space8}" LineSpacing="{StaticResource Space8}">
             <ctl:PositionChip Text="PG" />
             <ctl:PositionChip Text="SF/PF" />
-            <ctl:StatusChip Text="Out · 2-3 weeks" Kind="Negative" />
+            <ctl:StatusChip Text="Out · 2–3 weeks" Kind="Negative" />
             <ctl:StatusChip Text="Day to day" Kind="Warning" />
             <ctl:StatusChip Text="Healthy" Kind="Positive" />
             <ctl:StatusChip Text="Expiring" Kind="Warning" />

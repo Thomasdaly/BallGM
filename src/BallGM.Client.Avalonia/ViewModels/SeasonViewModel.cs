@@ -24,7 +24,7 @@ namespace BallGM.Client.Avalonia.ViewModels;
 /// a silently invented answer would look completely ordinary.
 /// </para>
 /// </summary>
-public sealed class SeasonViewModel : ViewModelBase
+public sealed partial class SeasonViewModel : ViewModelBase
 {
     private string? _viewedTeamName;
     private string? _viewedTeamId;
@@ -450,6 +450,7 @@ public sealed class SeasonViewModel : ViewModelBase
         RaisePropertyChanged(nameof(MonthTitle));
         RaisePropertyChanged(nameof(MonthSummary));
         RaisePropertyChanged(nameof(MonthCells));
+        RaiseCalendar();
         RaisePropertyChanged(nameof(CanGoToPreviousMonth));
         RaisePropertyChanged(nameof(CanGoToNextMonth));
     }
@@ -460,6 +461,7 @@ public sealed class SeasonViewModel : ViewModelBase
         RaisePropertyChanged(nameof(HasSelectedFixture));
         RaisePropertyChanged(nameof(Sheet));
         RaisePropertyChanged(nameof(IsSheetOpen));
+        RaisePropertyChanged(nameof(CanSimGame));
     }
 
     private GameSheet? BuildSheet(string gameId)
@@ -547,6 +549,7 @@ public sealed class SeasonViewModel : ViewModelBase
         RaisePropertyChanged(nameof(TieBreakLine));
         RaisePropertyChanged(nameof(UpcomingFixtures));
         RaisePropertyChanged(nameof(RecentResults));
+        RaisePropertyChanged(nameof(HasRecentResults));
         RaisePropertyChanged(nameof(HasSelectedFixture));
         RaisePropertyChanged(nameof(SelectedFixture));
         RaisePropertyChanged(nameof(Sheet));

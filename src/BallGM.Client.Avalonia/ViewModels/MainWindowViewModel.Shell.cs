@@ -87,7 +87,12 @@ public sealed partial class MainWindowViewModel
     public bool CanGoForward => _forward.Count > 0;
 
     /// <summary>The page title in the page header: the nav label of the section showing, or the page opened from it.</summary>
-    public string PageTitle => CurrentScreen is PlayerProfileViewModel ? "Player profile" : SectionLabel;
+    public string PageTitle => CurrentScreen switch
+    {
+        PlayerProfileViewModel => "Player profile",
+        SeasonViewModel { Sheet: { } sheet } => sheet.IsFinal ? "Box score" : "Pre-game",
+        _ => SectionLabel,
+    };
 
     private string SectionLabel => NavLabels.GetValueOrDefault(SelectedSection, SelectedSection);
 
@@ -95,7 +100,9 @@ public sealed partial class MainWindowViewModel
         ? []
         : CurrentScreen is PlayerProfileViewModel profile
             ? [new BreadcrumbItem(UserTeamName ?? "League", NavigateCommand, Sections.FirstOrDefault()), new BreadcrumbItem(SectionLabel, BackCommand), new BreadcrumbItem(profile.FullName)]
-            : [new BreadcrumbItem(UserTeamName ?? "League", NavigateCommand, Sections.FirstOrDefault()), new BreadcrumbItem(SectionLabel)];
+            : CurrentScreen is SeasonViewModel { Sheet: { } sheet } season
+                ? [new BreadcrumbItem(UserTeamName ?? "League", NavigateCommand, Sections.FirstOrDefault()), new BreadcrumbItem(SectionLabel, season.CloseGameCommand), new BreadcrumbItem($"{sheet.Away.Art.Initials} @ {sheet.Home.Art.Initials}")]
+                : [new BreadcrumbItem(UserTeamName ?? "League", NavigateCommand, Sections.FirstOrDefault()), new BreadcrumbItem(SectionLabel)];
 
     /// <summary>Opens a section by key (rail, shortcut, breadcrumb, a link on another screen).</summary>
     public ICommand NavigateCommand => new ParameterCommand<string>(section => SelectedSection = section);
@@ -166,7 +173,7 @@ public sealed partial class MainWindowViewModel
     public string ContinueLabel => ContinueState switch
     {
         ContinueState.Simulating => "SIMULATING",
-        ContinueState.GameDay => "PLAY TODAY",
+        ContinueState.GameDay => "GO TO GAME",
         _ when Season?.HasNoSeason == true => "START SEASON",
         _ => "CONTINUE",
     };
@@ -210,6 +217,17 @@ public sealed partial class MainWindowViewModel
         {
             Season.StartSeasonCommand.Execute(null);
             RaiseShellChanged();
+            return;
+        }
+
+        // Game day: go to the game first (its pre-game, where it is simulated); there already, play it.
+        if (ContinueState == ContinueState.GameDay && NextUserGame() is { } today
+            && !(CurrentScreen is SeasonViewModel { Sheet: { } open } && open.GameId == today.GameId))
+        {
+            SelectedSection = Season.Title;
+            Season.OpenGame(today.GameId);
+            RaisePropertyChanged(nameof(PageTitle));
+            RaisePropertyChanged(nameof(Breadcrumb));
             return;
         }
 
@@ -393,7 +411,14 @@ public sealed partial class MainWindowViewModel
 
         PushHistory();
         var team = Teams.FirstOrDefault(candidate => candidate.Roster.Any(spot => spot.PlayerId == playerId));
-        _profileScreen = new PlayerProfileViewModel(profile.Value, GoBack) { TeamId = team?.TeamId, TeamColours = team?.Colours };
+        _profileScreen = new PlayerProfileViewModel(profile.Value, GoBack)
+        {
+            TeamId = team?.TeamId,
+            TeamColours = team?.Colours,
+            IsOwnPlayer = team is not null && team.TeamId == SelectedTeam?.TeamId,
+            ExtendCommand = new RelayCommand(() => SelectedSection = "Contracts"),
+            TradeCommand = new RelayCommand(() => SelectedSection = "Trade"),
+        };
         CurrentScreen = _profileScreen;
         RaisePropertyChanged(nameof(PageTitle));
         RaisePropertyChanged(nameof(Breadcrumb));

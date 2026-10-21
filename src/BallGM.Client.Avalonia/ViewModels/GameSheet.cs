@@ -15,7 +15,7 @@ namespace BallGM.Client.Avalonia.ViewModels;
 /// would be stating something the league has not decided.
 /// </para>
 /// </summary>
-public sealed class GameSheet
+public sealed partial class GameSheet
 {
     /// <summary>How many of a team's most recent games its form and recent scoring are read from.</summary>
     public const int RecentGames = 5;
@@ -377,6 +377,8 @@ public sealed record GameSheetSide(
     public bool HasTeamRebounds => TeamRebounds.Length > 0;
 
     public bool HasForm => Form.Count > 0;
+
+    public IReadOnlyList<Controls.FormResult> FormResults => Form.Select(chip => new Controls.FormResult(chip.IsWin, chip.Tip)).ToList();
 }
 
 /// <summary>

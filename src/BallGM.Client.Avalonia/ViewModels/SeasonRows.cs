@@ -56,8 +56,34 @@ public sealed record FixtureRow(string GameId, string Day, string Matchup, strin
             $"Day {line.Day} · {line.Date}",
             $"{line.AwayTeamName} at {line.HomeTeamName}",
             line.Played ? $"{line.AwayPoints}–{line.HomePoints}" : "—",
-            line.Played);
+            line.Played)
+        {
+            AwayTeamId = line.AwayTeamId,
+            HomeTeamId = line.HomeTeamId,
+            AwayTeam = line.AwayTeamName,
+            HomeTeam = line.HomeTeamName,
+            AwayPoints = line.AwayPoints?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+            HomePoints = line.HomePoints?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty,
+            AwayWon = line.Played && line.AwayPoints > line.HomePoints,
+            HomeWon = line.Played && line.HomePoints > line.AwayPoints,
+        };
     }
+
+    public string AwayTeamId { get; init; } = string.Empty;
+
+    public string HomeTeamId { get; init; } = string.Empty;
+
+    public string AwayTeam { get; init; } = string.Empty;
+
+    public string HomeTeam { get; init; } = string.Empty;
+
+    public string AwayPoints { get; init; } = string.Empty;
+
+    public string HomePoints { get; init; } = string.Empty;
+
+    public bool AwayWon { get; init; }
+
+    public bool HomeWon { get; init; }
 }
 
 /// <summary>One thing the season rules had to say, as the screen shows it.</summary>

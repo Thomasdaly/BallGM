@@ -35,6 +35,10 @@
                   VerticalAlignment="Center"
                   Foreground="{TemplateBinding Foreground}"
                   IsVisible="False" />
+                <!-- Blocked keeps the accent fill (semantic colour never fills a large area) and says so with a badge. -->
+                <Border Name="PART_Blocked" Width="22" Height="22" CornerRadius="{StaticResource RadiusRound}" Background="{StaticResource WarningBrush}" VerticalAlignment="Center" IsVisible="False">
+                  <PathIcon Data="{StaticResource Icon.Warning}" Width="14" Height="14" Foreground="{StaticResource PureBlackBrush}" />
+                </Border>
                 <StackPanel VerticalAlignment="Center">
                   <TextBlock Text="{TemplateBinding Label}" Classes="h3" Foreground="{TemplateBinding Foreground}" />
                   <TextBlock Text="{TemplateBinding Subtitle}" Classes="caption-plain trim" Foreground="{TemplateBinding Foreground}" MaxWidth="200" />
@@ -57,9 +61,8 @@
         </ctl:SkewBorder>
       </ControlTemplate>
     </Setter>
-    <Style Selector="^:blocked">
-      <Setter Property="Background" Value="{StaticResource WarningBrush}" />
-      <Setter Property="Foreground" Value="{StaticResource PureBlackBrush}" />
+    <Style Selector="^:blocked /template/ Border#PART_Blocked">
+      <Setter Property="IsVisible" Value="True" />
     </Style>
     <Style Selector="^:simulating /template/ ctl|Spinner#PART_Spinner">
       <Setter Property="IsVisible" Value="True" />

@@ -14,7 +14,8 @@ internal static class ScreenCatalog
     [
         new("S07", "roster", true, shell => shell.Navigate("Roster")),
         new("S10", "player-profile", true, OpenTopPlayer),
-        new("S12", "calendar", true, shell => shell.Navigate("Calendar")),
+        new("S12", "calendar", true, OpenCalendar),
+        new("S15", "pre-game", true, OpenNextGame),
         new("S17", "box-score", true, OpenLatestGame),
         new("S18", "trade", true, shell => shell.Navigate("Trade")),
         new("S19", "free-agency", true, shell => shell.Navigate("Free agency")),
@@ -35,6 +36,14 @@ internal static class ScreenCatalog
         ShellDriver.Settle();
     }
 
+    /// <summary>The calendar itself, with no game open (a box score opened at an earlier size stays open otherwise).</summary>
+    public static void OpenCalendar(ShellDriver shell)
+    {
+        shell.Navigate("Calendar");
+        shell.ViewModel.Season!.CloseGameCommand.Execute(null);
+        ShellDriver.Settle();
+    }
+
     public static void OpenLatestGame(ShellDriver shell)
     {
         shell.Navigate("Calendar");
@@ -42,6 +51,19 @@ internal static class ScreenCatalog
         if (season.RecentResults.LastOrDefault(fixture => fixture.Played) is { } game)
         {
             season.ShowGameCommand.Execute(game.GameId);
+        }
+
+        ShellDriver.Settle();
+    }
+
+    /// <summary>The user's next game before tip-off.</summary>
+    public static void OpenNextGame(ShellDriver shell)
+    {
+        shell.Navigate("Calendar");
+        var season = shell.ViewModel.Season!;
+        if (season.RoadAhead.FirstOrDefault() is { } next)
+        {
+            season.ShowGameCommand.Execute(next.GameId);
         }
 
         ShellDriver.Settle();

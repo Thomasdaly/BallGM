@@ -40,7 +40,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         _teams = overview.Teams;
         _freeAgentNames = overview.FreeAgents.Players.Select(agent => (agent.PlayerId, agent.FullName)).ToList();
-        _roster = new RosterViewModel(overview, () => session.PlayerSeasonTotals(SeasonPhase.RegularSeason), session.PlayerProfile);
+        _roster = new RosterViewModel(overview, () => session.PlayerSeasonTotals(SeasonPhase.RegularSeason), session.PlayerProfile, () => session.AgeDate);
         _roster.UseShellProfiles(OpenPlayer);
         _capSheet = new CapSheetViewModel(overview);
         _pickBoard = new PickBoardViewModel(overview);
@@ -65,6 +65,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             {
                 RaisePropertyChanged(nameof(BannerRecord));
                 RaiseShellChanged();
+            }
+            else if (args.PropertyName == nameof(SeasonViewModel.IsSheetOpen))
+            {
+                RaisePropertyChanged(nameof(PageTitle));
+                RaisePropertyChanged(nameof(Breadcrumb));
             }
         };
         SelectedTeam = Teams.FirstOrDefault();
@@ -342,7 +347,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         Teams = overview.Teams;
         _freeAgentNames = overview.FreeAgents.Players.Select(agent => (agent.PlayerId, agent.FullName)).ToList();
-        _roster = new RosterViewModel(overview, _session is null ? null : () => _session.PlayerSeasonTotals(SeasonPhase.RegularSeason), _session is null ? null : _session.PlayerProfile);
+        _roster = new RosterViewModel(overview, _session is null ? null : () => _session.PlayerSeasonTotals(SeasonPhase.RegularSeason), _session is null ? null : _session.PlayerProfile, _session is null ? null : () => _session.AgeDate);
         _roster.UseShellProfiles(OpenPlayer);
         _capSheet = new CapSheetViewModel(overview);
         _pickBoard = new PickBoardViewModel(overview);

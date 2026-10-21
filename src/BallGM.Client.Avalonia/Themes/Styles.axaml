@@ -321,7 +321,14 @@
   <!-- Stock text inputs: legible placeholders and an outside-weight focus border. -->
   <Style Selector="TextBox">
     <Setter Property="PlaceholderForeground" Value="{StaticResource TextMutedBrush}" />
+    <!-- Selected text takes OnAccent over the accent selection, so it passes contrast on any team. -->
+    <Setter Property="SelectionBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="SelectionForegroundBrush" Value="{DynamicResource OnAccentBrush}" />
     <Setter Property="MinHeight" Value="32" />
+  </Style>
+  <!-- Fluent draws the placeholder at half opacity (a template value, so only a triggered style outranks it), which fails contrast; TextMuted at full strength passes. -->
+  <Style Selector="TextBox:not(:disabled) /template/ TextBlock#PART_Placeholder">
+    <Setter Property="Opacity" Value="1" />
   </Style>
   <Style Selector="TextBox:focus /template/ Border#PART_BorderElement, TextBox.force-focus /template/ Border#PART_BorderElement">
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
@@ -348,6 +355,22 @@
     <Setter Property="MinHeight" Value="32" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <!-- Calendar: the road-ahead rows and the results list. -->
+  <Style Selector="Button.matchup-row">
+    <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+  </Style>
+  <Style Selector="Button.matchup-row:pointerover">
+    <Setter Property="Background" Value="{StaticResource Surface3Brush}" />
+  </Style>
+  <Style Selector="ListBox.results">
+    <Setter Property="Background" Value="{x:Null}" />
+  </Style>
+  <Style Selector="ListBox.results ListBoxItem">
+    <Setter Property="Padding" Value="{StaticResource Pad8}" />
+    <Setter Property="Margin" Value="{StaticResource GapBottom4}" />
+    <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
   </Style>
 
   <!-- Position familiarity chips on the profile: stronger fill for stronger familiarity. -->

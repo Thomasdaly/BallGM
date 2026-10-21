@@ -29,6 +29,11 @@ public sealed record PlayerCardModel(
     public string Meta => string.Create(CultureInfo.InvariantCulture, $"{Positions} · AGE {Age}");
 
     public bool HasContract => !string.IsNullOrEmpty(ContractLine);
+
+    /// <summary>Potential as the scouts' stars, where the game keeps the figure hidden (replaces the POT badge).</summary>
+    public string? PotentialStars { get; init; }
+
+    public bool HasPotentialStars => !string.IsNullOrEmpty(PotentialStars);
 }
 
 /// <summary>What a <see cref="TeamCard"/> or team hover card shows.</summary>
@@ -428,6 +433,7 @@ public sealed class CapBar : Control
     static CapBar()
     {
         AffectsRender<CapBar>(SegmentsProperty, MarkersProperty, TrackProperty, FillProperty, OverProperty, TaxProperty, MarkerProperty, LabelBrushProperty);
+        AffectsMeasure<CapBar>(SegmentsProperty);
     }
 
     public IReadOnlyList<CapSegment>? Segments
@@ -484,7 +490,10 @@ public sealed class CapBar : Control
         set => SetValue(FontFamilyProperty, value);
     }
 
-    protected override Size MeasureOverride(Size availableSize) => new(0, 58);
+    /// <summary>Segment shades, strongest first: each contract type keeps its own step of the zone's colour.</summary>
+    private static readonly double[] SegmentOpacities = [1.0, 0.7, 0.5, 0.35, 0.25];
+
+    protected override Size MeasureOverride(Size availableSize) => new(0, (Segments?.Count ?? 0) > 1 ? 82 : 58);
 
     public override void Render(DrawingContext context)
     {
@@ -500,23 +509,53 @@ public sealed class CapBar : Control
         var ordered = markers.OrderBy(marker => marker.Amount).ToList();
         var firstLine = ordered.FirstOrDefault()?.Amount ?? long.MaxValue;
         var taxLine = ordered.FirstOrDefault(marker => marker.Label.Contains("TAX", StringComparison.OrdinalIgnoreCase))?.Amount ?? long.MaxValue;
-        context.FillRectangle(Fill ?? Brushes.Gray, new Rect(0, BarTop, X(Math.Min(total, firstLine)), BarHeight));
-        if (total > firstLine)
-        {
-            context.FillRectangle(Over ?? Brushes.Orange, new Rect(X(firstLine), BarTop, X(Math.Min(total, taxLine)) - X(firstLine), BarHeight));
-        }
 
-        if (total > taxLine)
-        {
-            context.FillRectangle(Tax ?? Brushes.Red, new Rect(X(taxLine), BarTop, X(total) - X(taxLine), BarHeight));
-        }
-
-        // Segment boundaries as hairlines in the track colour, so stacked kinds stay readable.
+        // Each contract type is its own segment; the part of it past a threshold takes Warning, past the tax Negative.
         var running = 0L;
-        foreach (var segment in segments.Take(Math.Max(0, segments.Count - 1)))
+        for (var index = 0; index < segments.Count; index++)
         {
-            running += segment.Amount;
-            context.FillRectangle(Track ?? Brushes.Black, new Rect(X(running) - 0.5, BarTop, 1, BarHeight));
+            var start = running;
+            var end = running + segments[index].Amount;
+            var opacity = SegmentOpacities[Math.Min(index, SegmentOpacities.Length - 1)];
+            void Span(long from, long to, IBrush? brush, IBrush fallback)
+            {
+                if (to > from)
+                {
+                    using (context.PushOpacity(opacity))
+                    {
+                        context.FillRectangle(brush ?? fallback, new Rect(X(from), BarTop, X(to) - X(from), BarHeight));
+                    }
+                }
+            }
+
+            Span(start, Math.Min(end, firstLine), Fill, Brushes.Gray);
+            Span(Math.Max(start, firstLine), Math.Min(end, taxLine), Over, Brushes.Orange);
+            Span(Math.Max(start, taxLine), end, Tax, Brushes.Red);
+            if (index < segments.Count - 1)
+            {
+                context.FillRectangle(Track ?? Brushes.Black, new Rect(X(end) - 0.5, BarTop, 1, BarHeight));
+            }
+
+            running = end;
+        }
+
+        // The legend: one swatch per contract type, under the marker labels.
+        if (segments.Count > 1)
+        {
+            var legendTypeface = new Typeface(FontFamily, FontStyle.Normal, FontWeight.SemiBold);
+            var x = 0.0;
+            for (var index = 0; index < segments.Count; index++)
+            {
+                var opacity = SegmentOpacities[Math.Min(index, SegmentOpacities.Length - 1)];
+                using (context.PushOpacity(opacity))
+                {
+                    context.FillRectangle(Fill ?? Brushes.Gray, new Rect(x, 66, 10, 10));
+                }
+
+                var label = new FormattedText(segments[index].Label.ToUpperInvariant(), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, legendTypeface, 11, LabelBrush ?? Brushes.White);
+                context.DrawText(label, new Point(x + 14, 64));
+                x += 14 + label.Width + 16;
+            }
         }
 
         // Every marker is labelled: a label that would collide with the previous one drops to a second row.
@@ -823,6 +862,18 @@ public sealed record CalendarGame(string GameId, string? OpponentId, string Oppo
 /// <summary>One cell of a <see cref="CalendarMonth"/>.</summary>
 public sealed record CalendarDay(int DayOfMonth, bool InMonth, bool IsToday, CalendarGame? Game)
 {
+    /// <summary>A line under an unplayed game (the opponent's record, say).</summary>
+    public string? Note { get; init; }
+
+    /// <summary>A phase that starts this day ("Trade deadline"), shown on a day with no game.</summary>
+    public string? Marker { get; init; }
+
+    public bool HasNote => !string.IsNullOrEmpty(Note) && HasGame && !IsPlayed;
+
+    public bool HasMarker => !string.IsNullOrEmpty(Marker) && !HasGame;
+
+    public string? Tip { get; init; }
+
     public bool HasGame => Game is not null;
 
     public string? GameId => Game?.GameId;
@@ -845,7 +896,7 @@ public sealed record CalendarDay(int DayOfMonth, bool InMonth, bool IsToday, Cal
 
     public string Result => Game?.Result ?? string.Empty;
 
-    public string Label => DayOfMonth.ToString(CultureInfo.InvariantCulture);
+    public string Label => DayOfMonth > 0 ? DayOfMonth.ToString(CultureInfo.InvariantCulture) : string.Empty;
 }
 
 /// <summary>A month grid of game chips: home/away, opponent logo, result with score, today, back-to-backs.</summary>

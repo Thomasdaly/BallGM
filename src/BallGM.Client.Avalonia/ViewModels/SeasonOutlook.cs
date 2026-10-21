@@ -251,7 +251,12 @@ internal sealed class SeasonOutlook
                 detail,
                 marker,
                 game.GameId,
-                $"Day {day} · {DateLine(day)} · {Describe(game)}"));
+                $"Day {day} · {DateLine(day)} · {Describe(game)}")
+            {
+                OpponentId = game.OpponentId,
+                OpponentName = game.OpponentName,
+                IsBackToBack = _gamesByDay.ContainsKey(day - 1),
+            });
         }
 
         return cells;
@@ -314,7 +319,10 @@ internal sealed class SeasonOutlook
                     _ => $"{DisplayText.Count(rest.Value, "day")} rest",
                 },
                 rest == 0,
-                Series(game)));
+                Series(game))
+            {
+                OpponentId = game.OpponentId,
+            });
         }
 
         return cards;

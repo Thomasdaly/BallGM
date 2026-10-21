@@ -252,6 +252,7 @@
                   Command="{Binding $parent[ctl:CalendarMonth].OpenGameCommand}"
                   CommandParameter="{Binding GameId}"
                   IsEnabled="{Binding HasGame}"
+                  ToolTip.Tip="{Binding Tip}"
                   Theme="{StaticResource BareButton}"
                   Height="80"
                   Margin="2"
@@ -271,6 +272,8 @@
                       <TextBlock Text="{Binding ResultLetter}" Classes="label-caps" Classes.positive="{Binding IsWin}" Classes.negative="{Binding IsLoss}" VerticalAlignment="Center" />
                       <TextBlock Text="{Binding Result}" Classes="caption num" VerticalAlignment="Center" />
                     </StackPanel>
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding Note}" Classes="caption num trim" IsVisible="{Binding HasNote}" />
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding Marker}" Classes="caption trim" Foreground="{DynamicResource AccentBrush}" VerticalAlignment="Center" IsVisible="{Binding HasMarker}" />
                   </Grid>
                 </Button>
               </DataTemplate>

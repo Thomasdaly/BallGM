@@ -310,7 +310,11 @@
             </StackPanel>
             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Space8}" VerticalAlignment="Center">
               <ctl:RatingBadge Value="{Binding Overall}" Size="Large" Caption="OVR" />
-              <ctl:RatingBadge Value="{Binding Potential}" Size="Large" Caption="POT" />
+              <ctl:RatingBadge Value="{Binding Potential}" Size="Large" Caption="POT" IsVisible="{Binding !HasPotentialStars}" />
+              <StackPanel VerticalAlignment="Center" IsVisible="{Binding HasPotentialStars}" ToolTip.Tip="Potential, as the scouts rate it">
+                <TextBlock Text="{Binding PotentialStars}" Classes="body-strong" HorizontalAlignment="Center" />
+                <TextBlock Text="POT" Classes="label-caps" HorizontalAlignment="Center" />
+              </StackPanel>
             </StackPanel>
           </Grid>
         </Border>
@@ -354,6 +358,18 @@
               <TextBlock Text="{Binding Meta}" Classes="label-caps trim" />
               <TextBlock Text="{Binding TeamName}" Classes="caption trim" />
               <TextBlock Text="{Binding ContractLine}" Classes="caption trim" IsVisible="{Binding HasContract}" ToolTip.Tip="{Binding ContractLine}" />
+              <ItemsControl ItemsSource="{Binding Statuses}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel ItemSpacing="{StaticResource Space4}" LineSpacing="{StaticResource Space4}" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="ctl:StatusItem">
+                    <ctl:StatusChip Text="{Binding Text}" Kind="{Binding Kind}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </StackPanel>
             <ctl:RatingBadge Grid.Column="2" Value="{Binding Overall}" Size="Large" VerticalAlignment="Top" />
           </Grid>

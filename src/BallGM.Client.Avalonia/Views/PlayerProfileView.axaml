@@ -49,17 +49,17 @@
   <ScrollViewer HorizontalScrollBarVisibility="Disabled">
     <StackPanel Spacing="{StaticResource Space16}">
 
-      <!-- Hero: the player's team colour as a solid field (text on it uses OnPrimaryRaw), fading out to the right. -->
-      <ctl:CutCornerBorder Background="{StaticResource Surface1Brush}" ClipContent="True" Height="320">
-        <Grid ColumnDefinitions="3*,2*">
-          <Border Background="{DynamicResource TeamPrimaryRawBrush}" />
-          <Border Grid.Column="1" Background="{DynamicResource TeamGradientBrush}" />
-          <ctl:TeamLogo Grid.Column="1" TeamId="{Binding TeamId}" TeamName="{Binding TeamLine}" Size="256" Opacity="0.07" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="{StaticResource PadH24}" IsHitTestVisible="False" />
-          <Grid ColumnDefinitions="Auto,*" Margin="{StaticResource PadH24}">
-            <ctl:PlayerHeadshot PlayerId="{Binding PlayerId}" PlayerName="{Binding FullName}" Size="Hero" Width="267" Height="320" IsInjured="{Binding IsInjured}" VerticalAlignment="Bottom" />
-            <StackPanel Grid.Column="1" Spacing="{StaticResource Space8}" VerticalAlignment="Center" Margin="{StaticResource GapLeft16}">
-              <TextBlock Text="{Binding HeroLine}" Classes="caps large trim on-primary" ToolTip.Tip="{Binding BioLine}" />
-              <TextBlock Text="{Binding FullName, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="hero small trim on-primary" ToolTip.Tip="{Binding FullName}" />
+      <!-- Hero: the player's team colour as a solid field (text on it uses OnPrimaryRaw), fading out to the
+           right; the headshot stands on the band and overlaps its bottom edge. -->
+      <Panel>
+        <ctl:CutCornerBorder Background="{StaticResource CanvasBrush}" ClipContent="True" Height="296">
+          <Grid ColumnDefinitions="3*,2*">
+            <Border Background="{DynamicResource TeamPrimaryRawBrush}" />
+            <Border Grid.Column="1" Background="{DynamicResource TeamGradientBrush}" />
+            <ctl:TeamLogo Grid.Column="1" TeamId="{Binding TeamId}" TeamName="{Binding TeamLine}" Size="256" Opacity="0.07" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="{StaticResource PadH24}" IsHitTestVisible="False" />
+            <StackPanel Spacing="{StaticResource Space8}" VerticalAlignment="Center" Margin="307,0,16,0">
+              <TextBlock Text="{Binding HeroLine}" Classes="caps large trim on-primary" ToolTip.Tip="{Binding HeroLine}" />
+              <TextBlock Text="{Binding FullName, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="hero small wrap on-primary" MaxLines="2" ToolTip.Tip="{Binding FullName}" />
               <ItemsControl ItemsSource="{Binding StatusChips}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate>
@@ -73,30 +73,34 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
               <TextBlock Text="{Binding ContractSummary}" Classes="body-strong trim on-primary" />
-              <TextBlock Text="{Binding BioLine}" Classes="body trim on-primary" />
+              <TextBlock Text="{Binding HeroSubLine}" Classes="body trim on-primary" />
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}" Margin="{StaticResource GapTop8}" IsVisible="{Binding IsOwnPlayer}">
+                <Button Classes="primary" Content="OFFER EXTENSION" Command="{Binding ExtendCommand}" IsVisible="{Binding CanExtend}" />
+                <Button Classes="secondary" Content="Shop in trades" Command="{Binding TradeCommand}" />
+              </StackPanel>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space16}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="{StaticResource PadH24}">
+              <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center" IsVisible="{Binding SeasonRating, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <StackPanel Spacing="{StaticResource Space4}">
+                  <TextBlock Text="SEASON RATING" Classes="label-caps" HorizontalAlignment="Center" />
+                  <views:RatingPill DataContext="{Binding SeasonRating}" HorizontalAlignment="Center" />
+                  <ctl:FormSparkline Values="{Binding RatingTrend}" Width="128" IsVisible="{Binding HasRatingTrend}" ToolTip.Tip="{Binding RatingTrendText, StringFormat='Last games, oldest first: {0}'}" AutomationProperties.Name="{Binding RatingTrendText, StringFormat='Match ratings, last games oldest first: {0}'}" />
+                </StackPanel>
+              </Border>
+              <ctl:RatingBadge Value="{Binding Overall}" Size="ExtraLarge" Caption="OVR" VerticalAlignment="Center" />
+              <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center" DataContext="{Binding Sheet}" ToolTip.Tip="Potential is kept hidden; the scouts rate it in stars.">
+                <StackPanel Spacing="{StaticResource Space4}">
+                  <TextBlock Text="{Binding PotentialStars}" Classes="h3" HorizontalAlignment="Center" AutomationProperties.Name="{Binding PotentialStarsName}" />
+                  <TextBlock Text="POT" Classes="label-caps" HorizontalAlignment="Center" />
+                </StackPanel>
+              </Border>
             </StackPanel>
           </Grid>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space16}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="{StaticResource PadH24}">
-            <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center" IsVisible="{Binding SeasonRating, Converter={x:Static ObjectConverters.IsNotNull}}">
-              <StackPanel Spacing="{StaticResource Space4}">
-                <TextBlock Text="SEASON RATING" Classes="label-caps" HorizontalAlignment="Center" />
-                <views:RatingPill DataContext="{Binding SeasonRating}" HorizontalAlignment="Center" />
-                <ctl:FormSparkline Values="{Binding RatingTrend}" Width="128" IsVisible="{Binding HasRatingTrend}" ToolTip.Tip="{Binding RatingTrendText, StringFormat='Last games, oldest first: {0}'}" AutomationProperties.Name="{Binding RatingTrendText, StringFormat='Match ratings, last games oldest first: {0}'}" />
-                <TextBlock Text="{Binding RatingTrendCaption}" Classes="caption" HorizontalAlignment="Center" IsVisible="{Binding HasRatingTrend}" />
-              </StackPanel>
-            </Border>
-            <ctl:RatingBadge Value="{Binding Overall}" Size="ExtraLarge" Caption="OVR" VerticalAlignment="Center" />
-            <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center" DataContext="{Binding Sheet}">
-              <StackPanel Spacing="{StaticResource Space4}">
-                <TextBlock Text="{Binding PotentialStars}" Classes="h3" HorizontalAlignment="Center" ToolTip.Tip="{Binding PotentialStarsName}" AutomationProperties.Name="{Binding PotentialStarsName}" />
-                <TextBlock Text="POT" Classes="label-caps" HorizontalAlignment="Center" />
-              </StackPanel>
-            </Border>
-          </StackPanel>
-        </Grid>
-      </ctl:CutCornerBorder>
+        </ctl:CutCornerBorder>
+        <ctl:PlayerHeadshot PlayerId="{Binding PlayerId}" PlayerName="{Binding FullName}" Size="Hero" Width="267" Height="320" IsInjured="{Binding IsInjured}" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="24,0,0,-24" />
+      </Panel>
 
-      <ctl:SkewTabStrip ItemsSource="{Binding Tabs}" SelectedIndex="{Binding TabIndex}" />
+      <ctl:SkewTabStrip ItemsSource="{Binding Tabs}" SelectedIndex="{Binding TabIndex}" Margin="307,0,0,0" />
 
       <!-- Overview: scouting report, top attribute groups, last games. -->
       <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space16}" IsVisible="{Binding IsOverviewTab}">
@@ -124,7 +128,7 @@
                     <Border Classes="familiarity" Classes.natural="{Binding IsNatural}" Classes.accomplished="{Binding IsAccomplished}" Classes.competent="{Binding IsCompetent}" Margin="0,0,4,0" Padding="{StaticResource Pad4}" CornerRadius="{StaticResource RadiusChip}" ToolTip.Tip="{Binding AccessibleName}" AutomationProperties.Name="{Binding AccessibleName}">
                       <StackPanel HorizontalAlignment="Center">
                         <TextBlock Text="{Binding Position}" Classes="body-strong" HorizontalAlignment="Center" />
-                        <TextBlock Text="{Binding Familiarity}" Classes="caption trim" HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding Familiarity, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps trim" HorizontalAlignment="Center" />
                       </StackPanel>
                     </Border>
                   </DataTemplate>
@@ -143,7 +147,6 @@
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-              <TextBlock Text="Current ability is the overall in the hero, weighted across the Ratings tab." Classes="caption wrap" />
             </StackPanel>
           </ctl:Tile>
         </StackPanel>
@@ -152,10 +155,8 @@
           <ctl:Tile Title="Last 10 games">
             <StackPanel Spacing="{StaticResource Space12}">
               <TextBlock Text="Form appears once this player has played in a simulated game." Classes="body secondary wrap" IsVisible="{Binding !HasRecentGames}" />
-              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}" IsVisible="{Binding HasRatingTrend}">
-                <ctl:FormSparkline Values="{Binding RatingTrend}" Width="180" />
-                <TextBlock Text="{Binding RatingTrendCaption}" Classes="caption wrap" VerticalAlignment="Center" MaxWidth="160" />
-              </StackPanel>
+              <TextBlock Text="MATCH RATING" Classes="label-caps" IsVisible="{Binding HasRatingTrend}" />
+              <ctl:FormSparkline Values="{Binding RatingTrend}" Height="40" HorizontalAlignment="Stretch" IsVisible="{Binding HasRatingTrend}" />
               <ctl:WinLossStrip Results="{Binding FormResults}" IsVisible="{Binding HasRecentGames}" />
             </StackPanel>
           </ctl:Tile>
@@ -218,6 +219,20 @@
             <StackPanel Spacing="{StaticResource Space12}">
               <TextBlock Text="Field-goal percentage by zone, against the league from the same spot." Classes="caption wrap" />
               <ctl:ShotChart Zones="{Binding ShotChart.Zones}" MaxWidth="520" HorizontalAlignment="Left" AutomationProperties.Name="Shot chart: field-goal percentage by zone against the league. The same figures are in the list below it." />
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}">
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+                  <Border Width="12" Height="12" CornerRadius="{StaticResource RadiusChip}" Background="{StaticResource ChartCold2Brush}" />
+                  <TextBlock Text="Colder than league" Classes="caption" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+                  <Border Width="12" Height="12" CornerRadius="{StaticResource RadiusChip}" Background="{StaticResource ChartNeutralBrush}" />
+                  <TextBlock Text="{x:Static vm:ShotChartView.LevelLegend}" Classes="caption" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}">
+                  <Border Width="12" Height="12" CornerRadius="{StaticResource RadiusChip}" Background="{StaticResource ChartHot2Brush}" />
+                  <TextBlock Text="Hotter than league" Classes="caption" VerticalAlignment="Center" />
+                </StackPanel>
+              </StackPanel>
               <ItemsControl ItemsSource="{Binding ShotChart.Zones}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:ShotZoneCell">

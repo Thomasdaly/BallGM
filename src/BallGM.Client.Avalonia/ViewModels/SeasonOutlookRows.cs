@@ -47,7 +47,16 @@ public sealed record CalendarDayCell(
     string Detail,
     string Marker,
     string? GameId,
-    string Tip);
+    string Tip)
+{
+    /// <summary>The opponent's team identifier, for its logo through the asset resolver.</summary>
+    public string? OpponentId { get; init; }
+
+    public string? OpponentName { get; init; }
+
+    /// <summary>The second game of a back-to-back: the team also played the day before.</summary>
+    public bool IsBackToBack { get; init; }
+}
 
 /// <summary>One of the viewed team's next games, with what a GM would want to know before it.</summary>
 public sealed record MatchupCard(
@@ -64,7 +73,16 @@ public sealed record MatchupCard(
     double OpponentWinPercent,
     string RestLine,
     bool IsBackToBack,
-    string SeriesLine);
+    string SeriesLine)
+{
+    public string? OpponentId { get; init; }
+
+    public Controls.StatusKind RestKind => IsBackToBack ? Controls.StatusKind.Warning : Controls.StatusKind.Neutral;
+
+    public string Eyebrow => $"{When} · {Venue}".ToUpperInvariant();
+
+    public string DetailLine => $"{OpponentDetail} · {SeriesLine}";
+}
 
 /// <summary>One result in the viewed team's recent form.</summary>
 public sealed record FormChip(string Letter, bool IsWin, string Tip);

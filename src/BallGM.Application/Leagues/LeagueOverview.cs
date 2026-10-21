@@ -38,7 +38,14 @@ public sealed record RosterSpot(
     long CapCharge,
     int ContractSeasonsRemaining,
     int Potential,
-    string? PortraitPath = null);
+    string? PortraitPath = null)
+{
+    /// <summary>Age on the league's age reference date, as the free-agent list states it.</summary>
+    public int Age { get; init; }
+
+    /// <summary>Birth date, so a screen can state age on the current game date.</summary>
+    public DateOnly BirthDate { get; init; }
+}
 
 /// <summary>
 /// The league's configured lines, each null when the league does not have it. Null rather than zero
