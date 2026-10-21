@@ -3,9 +3,9 @@
 > Maintained by Claude Code. Read at the start of every turn, update at the end (spec 00 §9).
 > A turn started by a `/goal` command begins a new run: increment **Run**, set **Turn** to 1.
 
-**Run:** 1 · **Turn:** 4/40 · **Phase:** 4 — Screens
+**Run:** 1 · **Turn:** 5/40 · **Phase:** 4 — Screens
 **Base branch:** `main` @ `2c42a3c` · **Work branch:** `ui/release-overhaul`
-**Last updated:** 2026-10-21 (Run 1 · Turn 4, end)
+**Last updated:** 2026-10-21 (Run 1 · Turn 5, end — stopped at usage limit before S13 work began)
 
 ## Next up
 1. Phase 4 — S13 Standings (new nav section, T2, conference/division/league toggle, play-in and elimination lines), then the remaining legacy views: S18 Trades, S19 Free agency, S20 Negotiations, S14 Leaders, S23 Finances, S34 Contracts, S35 Draft picks, S36 Front office (their binding warnings keep `Screens_RenderMatrix` red, so `Release/ScreenTests.cs` stays uncommitted until they are rebuilt)
@@ -37,3 +37,4 @@
 | 1 | 2 | 1 | Tokens, type, geometry, motion, icons, team theming, resolver, formatting, settings; lint/contrast/resolver tests | 33a82a8, 52e872b | green (0 err, 0 new warn) | 1051/1051 |
 | 1 | 3 | 2 | Component library, gallery, data table, library lints; display-font fix | 0330073, 513b984, aa29945, f2320b1 | green (0 err, 0 new warn) | 1057/1057 |
 | 1 | 4 | 2–4 | Gallery QA passes 1–3 and fixes; shell; roster, profile, calendar, pre-game, box score | b679ab1, d368efa, 666800f, 49904d4, 34b84f3, 0501005 | green (0 err, baseline warning only) | 1058/1058 (matrix uncommitted) |
+| 1 | 5 | 4 | Ledger only: usage limit reached before S13 began; no code change | (this commit) | green (unchanged since 0501005) | 1058/1058 (unchanged) |
