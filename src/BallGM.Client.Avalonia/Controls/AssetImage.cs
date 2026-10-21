@@ -30,6 +30,7 @@ public sealed class AssetImage : Control
         AvaloniaProperty.RegisterDirect<AssetImage, IImage?>(nameof(Source), image => image.Source);
 
     private CancellationTokenSource? _pending;
+    private double _loadedSize;
     private IImage? _source;
     private IAssetResolver? _subscribed;
 
@@ -68,8 +69,8 @@ public sealed class AssetImage : Control
     public AssetKey? ShownKey { get; private set; }
 
     private AssetSlot Slot => Kind == AssetEntityKind.Player
-        ? AssetSlot.Headshot(Math.Max(Bounds.Height, Height is > 0 and not double.NaN ? Height : 48))
-        : new AssetSlot(Kind == AssetEntityKind.League ? AssetSlotKind.LeagueLogo : AssetSlotKind.Logo, Math.Max(Bounds.Width, Width is > 0 and not double.NaN ? Width : 32));
+        ? AssetSlot.Headshot(Math.Max(Math.Max(Bounds.Height, Bounds.Width), Height is > 0 and not double.NaN ? Height : 24))
+        : new AssetSlot(Kind == AssetEntityKind.League ? AssetSlotKind.LeagueLogo : AssetSlotKind.Logo, Math.Max(Math.Max(Bounds.Width, Bounds.Height), Width is > 0 and not double.NaN ? Width : 16));
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -98,6 +99,11 @@ public sealed class AssetImage : Control
         {
             Load();
         }
+        else if (change.Property == BoundsProperty && VisualRoot is not null && Slot.SizeDips > _loadedSize + 0.5)
+        {
+            // Laid out larger than the size first asked for: decode again at the size it is drawn.
+            Load();
+        }
     }
 
     private void OnReloaded(object? sender, EventArgs e) => Dispatcher.UIThread.Post(Load);
@@ -116,6 +122,8 @@ public sealed class AssetImage : Control
         var resolver = UiServices.Assets;
         var key = new AssetKey(Kind, id);
         var slot = Slot;
+        _loadedSize = slot.SizeDips;
+        var sameEntity = ShownKey == key && Source is not null;
         ShownKey = key;
         if (resolver.TryGetCached(key, slot, out var cached))
         {
@@ -123,7 +131,11 @@ public sealed class AssetImage : Control
             return;
         }
 
-        Source = resolver.Fallback(key, slot);
+        // A new entity shows its fallback at once; the same one keeps its current image until the sharper one arrives.
+        if (!sameEntity)
+        {
+            Source = resolver.Fallback(key, slot);
+        }
         var pending = new CancellationTokenSource();
         _pending = pending;
         _ = Resolve(resolver, key, slot, pending.Token);

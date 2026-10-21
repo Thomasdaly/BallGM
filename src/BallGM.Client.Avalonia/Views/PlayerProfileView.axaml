@@ -7,422 +7,273 @@
   xmlns:views="clr-namespace:BallGM.Client.Avalonia.Views"
   xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
   x:DataType="vm:PlayerProfileViewModel">
+  <!-- S10 Player profile, template T3: hero band in the player's team colours, tab strip, panels. -->
   <UserControl.Resources>
-    <!-- A game log's header and rows, for recent form and the full game log alike. -->
-    <DataTemplate x:Key="GameLogHeaderTemplate" x:DataType="vm:PlayerProfileViewModel">
-      <Grid Classes="thead" ColumnDefinitions="64,*,96,50,Auto">
-        <TextBlock Text="Date" />
-        <TextBlock Grid.Column="1" Text="Opponent" MinWidth="{StaticResource TableNameMinWidth}" />
-        <TextBlock Grid.Column="2" Text="Result" />
-        <TextBlock Grid.Column="3" Text="RTG" HorizontalAlignment="Center" ToolTip.Tip="Match rating out of ten. Open one for how it was built." />
-        <ItemsControl Grid.Column="4" Classes="statheads" ItemsSource="{Binding GameLogHeaders}" />
-      </Grid>
+    <DataTemplate x:Key="GroupTile" x:DataType="vm:AttributeGroupDisplay">
+      <ctl:Tile Margin="{StaticResource GapBottom16}">
+        <ctl:AttributeGroup Title="{Binding Title}" Average="{Binding Average}">
+          <ItemsControl ItemsSource="{Binding Attributes}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:AttributeCell">
+                <ctl:AttributeBar Label="{Binding Name}" Value="{Binding Value}" ToolTip.Tip="{Binding Description}" AutomationProperties.Name="{Binding AccessibleName}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ctl:AttributeGroup>
+      </ctl:Tile>
     </DataTemplate>
-    <DataTemplate x:Key="GameRowTemplate" x:DataType="vm:RecentGameRow">
-      <Grid ColumnDefinitions="64,*,96,50,Auto" Height="30">
-        <TextBlock Text="{Binding Date}" Classes="dim small" VerticalAlignment="Center" />
-        <TextBlock Grid.Column="1" Text="{Binding Opponent}" Classes="strong small" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-        <TextBlock Grid.Column="2" Text="{Binding Result}" Classes="num small" Classes.good="{Binding Won}" Classes.bad="{Binding !Won}" VerticalAlignment="Center" />
-        <views:RatingPill Grid.Column="3" DataContext="{Binding Rating}" />
-        <ItemsControl Grid.Column="4" Classes="statrow" ItemsSource="{Binding Stats}" />
-      </Grid>
-    </DataTemplate>
-    <!-- One titled panel of stat tiles, for the simulated and the stated season alike. -->
-    <DataTemplate x:Key="StatGroupTemplate" x:DataType="vm:StatGroup">
-      <Border Classes="panel" Margin="0,0,0,14">
-        <StackPanel Spacing="10">
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <TextBlock Text="{Binding Title}" Classes="section" VerticalAlignment="Center" />
-            <TextBlock Text="{Binding Subtitle}" Classes="faint tiny" VerticalAlignment="Center" />
-          </StackPanel>
+    <DataTemplate x:Key="StatGroupTile" x:DataType="vm:StatGroup">
+      <ctl:Tile Title="{Binding Title}" Margin="{StaticResource GapBottom16}">
+        <StackPanel Spacing="{StaticResource Space8}">
+          <TextBlock Text="{Binding Subtitle}" Classes="caption wrap" />
           <ItemsControl ItemsSource="{Binding Cells}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
-                <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
+                <WrapPanel ItemSpacing="{StaticResource Space16}" LineSpacing="{StaticResource Space12}" />
               </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:StatCell">
-                <Border Classes="stat" MinWidth="104" Padding="12,8" ToolTip.Tip="{Binding Definition}" AutomationProperties.Name="{Binding AccessibleName}">
-                  <StackPanel Spacing="1">
-                    <TextBlock Text="{Binding Label}" Classes="eyebrow" />
-                    <TextBlock Text="{Binding Value}" Classes="num statvalue" />
-                  </StackPanel>
-                </Border>
+                <StackPanel MinWidth="88" ToolTip.Tip="{Binding Definition}" AutomationProperties.Name="{Binding AccessibleName}">
+                  <TextBlock Text="{Binding Value}" Classes="stat-m" />
+                  <TextBlock Text="{Binding Label, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="label-caps" />
+                </StackPanel>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </StackPanel>
-      </Border>
+      </ctl:Tile>
     </DataTemplate>
   </UserControl.Resources>
-  <ScrollViewer>
-    <StackPanel Spacing="18">
-      <Button Content="{Binding BackLabel}" Command="{Binding BackCommand}" HorizontalAlignment="Left" />
 
-      <!-- Identity: portrait, name, rating, bio. -->
-      <Border Classes="panel">
-        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="20">
-          <Border Classes="face" Width="104" Height="104" CornerRadius="52">
-            <Image Source="{Binding PortraitPath, Converter={x:Static conv:ImagePathConverter.Instance}}" Stretch="UniformToFill" />
-          </Border>
-          <StackPanel Grid.Column="1" Spacing="6" VerticalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-              <Border Classes="pill">
-                <TextBlock Text="{Binding Position}" />
-              </Border>
-              <TextBlock Text="{Binding TeamLine}" Classes="eyebrow accent" VerticalAlignment="Center" />
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Spacing="{StaticResource Space16}">
+
+      <!-- Hero: the player's team colour as a solid field (text on it uses OnPrimaryRaw), fading out to the right. -->
+      <ctl:CutCornerBorder Background="{StaticResource Surface1Brush}" ClipContent="True" Height="320">
+        <Grid ColumnDefinitions="3*,2*">
+          <Border Background="{DynamicResource TeamPrimaryRawBrush}" />
+          <Border Grid.Column="1" Background="{DynamicResource TeamGradientBrush}" />
+          <ctl:TeamLogo Grid.Column="1" TeamId="{Binding TeamId}" TeamName="{Binding TeamLine}" Size="256" Opacity="0.07" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="{StaticResource PadH24}" IsHitTestVisible="False" />
+          <Grid ColumnDefinitions="Auto,*" Margin="{StaticResource PadH24}">
+            <ctl:PlayerHeadshot PlayerId="{Binding PlayerId}" PlayerName="{Binding FullName}" Size="Hero" Width="267" Height="320" IsInjured="{Binding IsInjured}" VerticalAlignment="Bottom" />
+            <StackPanel Grid.Column="1" Spacing="{StaticResource Space8}" VerticalAlignment="Center" Margin="{StaticResource GapLeft16}">
+              <TextBlock Text="{Binding HeroLine}" Classes="caps large trim on-primary" ToolTip.Tip="{Binding BioLine}" />
+              <TextBlock Text="{Binding FullName, Converter={x:Static conv:UpperCaseConverter.Instance}}" Classes="hero small trim on-primary" ToolTip.Tip="{Binding FullName}" />
+              <ItemsControl ItemsSource="{Binding StatusChips}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel ItemSpacing="{StaticResource Space8}" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="ctl:StatusItem">
+                    <ctl:StatusChip Text="{Binding Text}" Kind="{Binding Kind}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="{Binding ContractSummary}" Classes="body-strong trim on-primary" />
+              <TextBlock Text="{Binding BioLine}" Classes="body trim on-primary" />
             </StackPanel>
-            <TextBlock Text="{Binding FullName}" Classes="display" />
-            <TextBlock Text="{Binding BioLine}" Classes="dim" />
-            <Border Classes="pill bad" IsVisible="{Binding IsInjured}">
-              <TextBlock Text="{Binding InjuryDescription}" />
+          </Grid>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="{StaticResource Space16}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="{StaticResource PadH24}">
+            <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center" IsVisible="{Binding SeasonRating, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <StackPanel Spacing="{StaticResource Space4}">
+                <TextBlock Text="SEASON RATING" Classes="label-caps" HorizontalAlignment="Center" />
+                <views:RatingPill DataContext="{Binding SeasonRating}" HorizontalAlignment="Center" />
+                <ctl:FormSparkline Values="{Binding RatingTrend}" Width="128" IsVisible="{Binding HasRatingTrend}" ToolTip.Tip="{Binding RatingTrendText, StringFormat='Last games, oldest first: {0}'}" AutomationProperties.Name="{Binding RatingTrendText, StringFormat='Match ratings, last games oldest first: {0}'}" />
+                <TextBlock Text="{Binding RatingTrendCaption}" Classes="caption" HorizontalAlignment="Center" IsVisible="{Binding HasRatingTrend}" />
+              </StackPanel>
             </Border>
-          </StackPanel>
-          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="{StaticResource Space5}" VerticalAlignment="Center" HorizontalAlignment="Right">
-          <!-- The season's average match rating and its last ten games, the line always beside its figures. -->
-          <StackPanel Spacing="4" VerticalAlignment="Center" IsVisible="{Binding SeasonRating, Converter={x:Static ObjectConverters.IsNotNull}}">
-            <TextBlock Text="Season rating" Classes="eyebrow" HorizontalAlignment="Center" />
-            <views:RatingPill DataContext="{Binding SeasonRating}" HorizontalAlignment="Center" />
-            <ctl:Sparkline Values="{Binding RatingTrend}" Width="128" Height="40" IsVisible="{Binding HasRatingTrend}"
-                           ToolTip.Tip="{Binding RatingTrendText, StringFormat='Last games, oldest first: {0}'}"
-                           AutomationProperties.Name="{Binding RatingTrendText, StringFormat='Match ratings, last games oldest first: {0}'}" />
-            <TextBlock Text="{Binding RatingTrendCaption}" Classes="faint tiny" HorizontalAlignment="Center" IsVisible="{Binding HasRatingTrend}" />
-          </StackPanel>
-          <StackPanel Spacing="4" VerticalAlignment="Center">
-            <TextBlock Text="Overall" Classes="eyebrow" HorizontalAlignment="Center" />
-            <Border Classes="ovr" Width="84" Height="56" CornerRadius="6" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}">
-              <TextBlock Classes="size-h1" Text="{Binding Overall}" />
+            <ctl:RatingBadge Value="{Binding Overall}" Size="ExtraLarge" Caption="OVR" VerticalAlignment="Center" />
+            <Border Background="{StaticResource ScrimBrush}" CornerRadius="{StaticResource RadiusCard}" Padding="{StaticResource Pad12}" VerticalAlignment="Center" DataContext="{Binding Sheet}">
+              <StackPanel Spacing="{StaticResource Space4}">
+                <TextBlock Text="{Binding PotentialStars}" Classes="h3" HorizontalAlignment="Center" ToolTip.Tip="{Binding PotentialStarsName}" AutomationProperties.Name="{Binding PotentialStarsName}" />
+                <TextBlock Text="POT" Classes="label-caps" HorizontalAlignment="Center" />
+              </StackPanel>
             </Border>
-          </StackPanel>
           </StackPanel>
         </Grid>
-      </Border>
+      </ctl:CutCornerBorder>
 
-      <TabControl Classes="profile">
-        <TabItem Header="Overview">
-          <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="24" RowSpacing="18" Margin="0,14,0,0">
-            <StackPanel Spacing="18">
-          <!-- The scouting report: ability as a coach's stars, personality, body, positions, traits. -->
-          <Border Classes="panel" DataContext="{Binding Sheet}">
-            <StackPanel Spacing="12">
-              <TextBlock Text="Scouting report" Classes="section" />
-              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="14" RowSpacing="6">
-                <TextBlock Text="Current" Classes="dim small" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1" Text="{Binding CurrentStars}" Classes="stars" AutomationProperties.Name="{Binding CurrentStarsName}" ToolTip.Tip="{Binding CurrentStarsName}" />
-                <TextBlock Grid.Row="1" Text="Potential" Classes="dim small" VerticalAlignment="Center" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PotentialStars}" Classes="stars" AutomationProperties.Name="{Binding PotentialStarsName}" ToolTip.Tip="{Binding PotentialStarsName}" />
-                <TextBlock Grid.Row="2" Text="Personality" Classes="dim small" VerticalAlignment="Center" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Personality}" Classes="strong" />
+      <ctl:SkewTabStrip ItemsSource="{Binding Tabs}" SelectedIndex="{Binding TabIndex}" />
+
+      <!-- Overview: scouting report, top attribute groups, last games. -->
+      <Grid ColumnDefinitions="*,*,*" ColumnSpacing="{StaticResource Space16}" IsVisible="{Binding IsOverviewTab}">
+        <StackPanel Spacing="{StaticResource Space16}" DataContext="{Binding Sheet}">
+          <ctl:Tile Title="Scouting report">
+            <StackPanel Spacing="{StaticResource Space12}">
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="{StaticResource Space16}" RowSpacing="{StaticResource Space8}">
+                <TextBlock Text="CURRENT" Classes="label-caps" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding CurrentStars}" Classes="body-strong" AutomationProperties.Name="{Binding CurrentStarsName}" ToolTip.Tip="{Binding CurrentStarsName}" />
+                <TextBlock Grid.Row="1" Text="POTENTIAL" Classes="label-caps" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PotentialStars}" Classes="body-strong" AutomationProperties.Name="{Binding PotentialStarsName}" ToolTip.Tip="{Binding PotentialStarsName}" />
+                <TextBlock Grid.Row="2" Text="PERSONALITY" Classes="label-caps" VerticalAlignment="Center" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Personality}" Classes="body-strong" />
               </Grid>
-              <TextBlock Text="Current ability is the Overall in the header, weighted across the Attributes tab." Classes="faint tiny" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding Body}" Classes="small figures" TextWrapping="Wrap" IsVisible="{Binding HasBody}" />
-              <StackPanel Spacing="4">
-                <TextBlock Text="Positions" Classes="dim small" />
-                <ItemsControl ItemsSource="{Binding Positions}">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                      <UniformGrid Columns="5" />
-                    </ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:PositionChip">
-                      <Border Classes="poschip" Classes.natural="{Binding IsNatural}" Classes.accomplished="{Binding IsAccomplished}" Classes.competent="{Binding IsCompetent}"
-                              ToolTip.Tip="{Binding AccessibleName}" AutomationProperties.Name="{Binding AccessibleName}">
-                        <StackPanel HorizontalAlignment="Center">
-                          <TextBlock Text="{Binding Position}" Classes="strong small" HorizontalAlignment="Center" />
-                          <TextBlock Text="{Binding Familiarity}" Classes="tiny" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                        </StackPanel>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </StackPanel>
-              <StackPanel Spacing="4" IsVisible="{Binding HasTraits}">
-                <TextBlock Text="Traits" Classes="dim small" />
-                <ItemsControl ItemsSource="{Binding Traits}">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                      <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6" />
-                    </ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="x:String">
-                      <Border Classes="pill">
-                        <TextBlock Text="{Binding}" />
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </StackPanel>
-            </StackPanel>
-          </Border>
-
-            </StackPanel>
-            <StackPanel Grid.Column="1" Spacing="18">
-          <StackPanel Spacing="8">
-            <TextBlock Text="This season" Classes="section" />
-            <TextBlock Text="No games played this season yet." Classes="faint small" IsVisible="{Binding !HasSeason}" />
-            <ItemsControl ItemsSource="{Binding SeasonTiles}" IsVisible="{Binding HasSeason}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <WrapPanel Orientation="Horizontal" ItemSpacing="10" LineSpacing="10" />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:StatTile">
-                  <Border Classes="stat" MinWidth="88">
-                    <StackPanel Spacing="2">
-                      <TextBlock Text="{Binding Label}" Classes="eyebrow" />
-                      <TextBlock Text="{Binding Value}" Classes="value" />
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-
-
-            </StackPanel>
-          <!-- Full width: a game log carries the whole box-score line and needs the room. -->
-          <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Spacing="8">
-            <TextBlock Text="Recent form" Classes="section" />
-            <TextBlock Text="Form appears once this player has played in a simulated game." Classes="faint small" IsVisible="{Binding !HasRecentGames}" />
-            <ScrollViewer Classes="tablewrap" IsVisible="{Binding HasRecentGames}">
-              <StackPanel Spacing="4">
-                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameLogHeaderTemplate}" />
-                <ItemsControl Classes="table" ItemsSource="{Binding RecentGames}" ItemTemplate="{StaticResource GameRowTemplate}" />
-              </StackPanel>
-            </ScrollViewer>
-          </StackPanel>
-          </Grid>
-        </TabItem>
-
-        <TabItem Header="Attributes">
-          <!-- The full sheet, grouped as a scout reads it; every value printed, its badge tint only repeats the tier. -->
-          <ItemsControl ItemsSource="{Binding Sheet.Columns}" Margin="0,14,0,0">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate>
-                <UniformGrid Columns="3" />
-              </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate x:DataType="x:Object">
-                <ItemsControl ItemsSource="{Binding}" Margin="0,0,18,0">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:AttributeGroupView">
-                      <Border Classes="panel" Margin="0,0,0,14">
-                        <StackPanel Spacing="4">
-                          <TextBlock Text="{Binding Title}" Classes="section" Margin="0,0,0,4" />
-                          <ItemsControl ItemsSource="{Binding Attributes}">
-                            <ItemsControl.ItemTemplate>
-                              <DataTemplate x:DataType="vm:AttributeCell">
-                                <Grid ColumnDefinitions="*,42" Height="28" ToolTip.Tip="{Binding Description}" AutomationProperties.Name="{Binding AccessibleName}">
-                                  <TextBlock Text="{Binding Name}" Classes="small" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                  <Border Grid.Column="1" Classes="ovr small" Background="{Binding Value, Converter={x:Static conv:OverallTierConverter.Instance}}">
-                                    <TextBlock Text="{Binding Value}" />
-                                  </Border>
-                                </Grid>
-                              </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                          </ItemsControl>
-                        </StackPanel>
-                      </Border>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </TabItem>
-
-        <TabItem Header="Stats">
-          <StackPanel Spacing="8" Margin="0,14,0,0">
-            <TextBlock Text="This season, simulated" Classes="section" />
-            <TextBlock Text="No games played this season yet. Start or advance the season on the Calendar." Classes="faint small" IsVisible="{Binding !HasSimulatedStats}" />
-            <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space4}" Margin="0,0,0,6" IsVisible="{Binding HasSimulatedStats}">
-              <views:BasisToggle DataContext="{Binding Basis}" />
-              <TextBlock Text="{Binding SimulatedSample}" Classes="faint small" VerticalAlignment="Center" />
-            </StackPanel>
-            <ItemsControl ItemsSource="{Binding SimulatedGroups}" ItemTemplate="{StaticResource StatGroupTemplate}" />
-            <!-- Against the league: a percentile per stat, the figure printed beside every bar. -->
-            <Border Classes="panel" Margin="0,0,0,14" IsVisible="{Binding HasSimulatedStats}">
-              <StackPanel Spacing="{StaticResource Space3}">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                  <TextBlock Text="Against the league" Classes="section" VerticalAlignment="Center" />
-                  <TextBlock Text="Percentile among qualified players this regular season, per game. Higher is better on every row." Classes="faint tiny" VerticalAlignment="Center" />
-                </StackPanel>
-                <TextBlock Text="{Binding NotRankedNote}" Classes="faint small" IsVisible="{Binding !HasPercentiles}" />
-                <ItemsControl ItemsSource="{Binding Percentiles}" IsVisible="{Binding HasPercentiles}">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                      <WrapPanel Orientation="Horizontal" ItemSpacing="{StaticResource Space5}" LineSpacing="{StaticResource Space2}" />
-                    </ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:PercentileRow">
-                      <Grid ColumnDefinitions="44,140,44" ColumnSpacing="{StaticResource Space2}" ToolTip.Tip="{Binding Tooltip}"
-                            AutomationProperties.Name="{Binding AccessibleName}">
-                        <TextBlock Text="{Binding Stat}" Classes="small strong" VerticalAlignment="Center" />
-                        <ProgressBar Grid.Column="1" Classes="percentile" Minimum="0" Maximum="100" Value="{Binding Percentile}"
-                                     AutomationProperties.Name="{Binding AccessibleName}" />
-                        <TextBlock Grid.Column="2" Text="{Binding Text}" Classes="num small" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                      </Grid>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-              </StackPanel>
-            </Border>
-            <!-- Shooting by zone: the chart, its legend in words, and the same figures as a table. -->
-            <Border Classes="panel" Margin="0,0,0,14" IsVisible="{Binding HasShotChart}">
-              <StackPanel Spacing="{StaticResource Space3}">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                  <TextBlock Text="Shooting by zone" Classes="section" VerticalAlignment="Center" />
-                  <TextBlock Text="Field-goal percentage by zone, compared with the league from the same spot" Classes="faint tiny" VerticalAlignment="Center" />
-                </StackPanel>
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="{StaticResource Space5}">
-                  <ctl:ShotChart Zones="{Binding ShotChart.Zones}" Width="460" VerticalAlignment="Top"
-                                 AutomationProperties.Name="Shot chart: field-goal percentage by zone against the league. The same figures are in the table beside it." />
-                  <StackPanel Grid.Column="1" Spacing="{StaticResource Space2}">
-                    <ItemsControl ItemsSource="{Binding ShotChart.Zones}">
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ShotZoneCell">
-                          <Grid ColumnDefinitions="*,Auto" Margin="0,4" AutomationProperties.Name="{Binding AccessibleName}">
-                            <StackPanel>
-                              <TextBlock Text="{Binding Name}" Classes="small strong" />
-                              <TextBlock Text="{Binding League, StringFormat='League {0}'}" Classes="faint tiny" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-                              <TextBlock Text="{Binding Shooting}" Classes="num small" HorizontalAlignment="Right" />
-                              <TextBlock Text="{Binding Difference}" Classes="faint tiny" HorizontalAlignment="Right" />
-                            </StackPanel>
-                          </Grid>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space3}" Margin="0,6,0,0">
-                      <StackPanel Orientation="Horizontal" Spacing="4">
-                        <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource ChartCold2Brush}" />
-                        <TextBlock Text="Colder than league" Classes="faint tiny" VerticalAlignment="Center" />
-                      </StackPanel>
-                      <StackPanel Orientation="Horizontal" Spacing="4">
-                        <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource ChartNeutralBrush}" />
-                        <TextBlock Text="{x:Static vm:ShotChartView.LevelLegend}" Classes="faint tiny" VerticalAlignment="Center" />
-                      </StackPanel>
-                      <StackPanel Orientation="Horizontal" Spacing="4">
-                        <Border Width="12" Height="12" CornerRadius="2" Background="{StaticResource ChartHot2Brush}" />
-                        <TextBlock Text="Hotter than league" Classes="faint tiny" VerticalAlignment="Center" />
-                      </StackPanel>
-                    </StackPanel>
-                  </StackPanel>
-                </Grid>
-              </StackPanel>
-            </Border>
-            <TextBlock Text="{Binding StatedSeasonTitle}" Classes="eyebrow" IsVisible="{Binding HasStatedStats}" Margin="0,10,0,0" />
-            <ItemsControl ItemsSource="{Binding StatedGroups}" ItemTemplate="{StaticResource StatGroupTemplate}" />
-            <TextBlock Text="Hover any stat for its definition. Simulated rate stats use the player's share of team minutes, the standard box-score estimate." Classes="faint tiny" TextWrapping="Wrap" />
-          </StackPanel>
-        </TabItem>
-
-        <TabItem Header="Game log">
-          <StackPanel Spacing="8" Margin="0,14,0,0">
-            <TextBlock Text="This season's games" Classes="section" />
-            <TextBlock Text="No games yet. The log fills in after this player's first simulated game this season." Classes="faint small" IsVisible="{Binding !HasGameLog}" />
-            <ScrollViewer Classes="tablewrap" IsVisible="{Binding HasGameLog}">
-              <StackPanel Spacing="4">
-                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameLogHeaderTemplate}" />
-                <ItemsControl Classes="table" ItemsSource="{Binding GameLog}" ItemTemplate="{StaticResource GameRowTemplate}" />
-              </StackPanel>
-            </ScrollViewer>
-          </StackPanel>
-        </TabItem>
-
-        <TabItem Header="Contract">
-          <StackPanel Spacing="16" Margin="0,14,0,0">
-            <TextBlock Text="{Binding ContractSummary}" Classes="h3" />
-            <ItemsControl ItemsSource="{Binding ContractTiles}" IsVisible="{Binding HasContractDetail}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <WrapPanel Orientation="Horizontal" ItemSpacing="12" />
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:StatTile">
-                  <Border Classes="stat accent">
-                    <StackPanel Spacing="2">
-                      <TextBlock Text="{Binding Label}" Classes="eyebrow" />
-                      <TextBlock Text="{Binding Value}" Classes="value" />
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <Border Classes="panel" IsVisible="{Binding HasContractDetail}">
-              <StackPanel Spacing="8">
-                <TextBlock Text="Salary scale" Classes="section" />
-                <Panel Width="360" Height="10" HorizontalAlignment="Left">
-                  <Border Width="360" Height="10" CornerRadius="5" Background="{StaticResource Bg3Brush}" />
-                  <Border Width="{Binding SalaryScaleFill}" Height="10" CornerRadius="5" Background="{DynamicResource AccentBrush}" HorizontalAlignment="Left" />
-                </Panel>
-                <TextBlock Text="{Binding SalaryScaleLine}" Classes="dim small" TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-
-            <StackPanel Spacing="4" IsVisible="{Binding HasContractDetail}">
-              <Grid Classes="thead" ColumnDefinitions="100,140,140,140,*">
-                <TextBlock Text="Season" />
-                <TextBlock Grid.Column="1" Text="Salary" />
-                <TextBlock Grid.Column="2" Text="Guaranteed" />
-                <TextBlock Grid.Column="3" Text="Option" />
-                <TextBlock Grid.Column="4" Text="% of cap" />
-              </Grid>
-              <ItemsControl Classes="table" ItemsSource="{Binding ContractYears}">
+              <TextBlock Text="{Binding Body}" Classes="body secondary wrap" IsVisible="{Binding HasBody}" />
+              <TextBlock Text="POSITIONS" Classes="label-caps" />
+              <ItemsControl ItemsSource="{Binding Positions}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <UniformGrid Columns="5" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:ContractYearRow">
-                    <Grid ColumnDefinitions="100,140,140,140,*" Height="30">
-                      <TextBlock Text="{Binding Season}" Classes="dim" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="1" Text="{Binding Salary}" Classes="num" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="2" Text="{Binding Guaranteed}" Classes="small" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="3" Text="{Binding Option}" Classes="warn small" VerticalAlignment="Center" />
-                      <TextBlock Grid.Column="4" Text="{Binding ShareOfCap}" Classes="num small" VerticalAlignment="Center" />
+                  <DataTemplate x:DataType="vm:PositionChip">
+                    <Border Classes="familiarity" Classes.natural="{Binding IsNatural}" Classes.accomplished="{Binding IsAccomplished}" Classes.competent="{Binding IsCompetent}" Margin="0,0,4,0" Padding="{StaticResource Pad4}" CornerRadius="{StaticResource RadiusChip}" ToolTip.Tip="{Binding AccessibleName}" AutomationProperties.Name="{Binding AccessibleName}">
+                      <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding Position}" Classes="body-strong" HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding Familiarity}" Classes="caption trim" HorizontalAlignment="Center" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="TRAITS" Classes="label-caps" IsVisible="{Binding HasTraits}" />
+              <ItemsControl ItemsSource="{Binding Traits}" IsVisible="{Binding HasTraits}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel ItemSpacing="{StaticResource Space8}" LineSpacing="{StaticResource Space8}" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <ctl:StatusChip Text="{Binding}" Kind="Accent" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Text="Current ability is the overall in the hero, weighted across the Ratings tab." Classes="caption wrap" />
+            </StackPanel>
+          </ctl:Tile>
+        </StackPanel>
+        <ItemsControl Grid.Column="1" ItemsSource="{Binding OverviewGroups}" ItemTemplate="{StaticResource GroupTile}" />
+        <StackPanel Grid.Column="2" Spacing="{StaticResource Space16}">
+          <ctl:Tile Title="Last 10 games">
+            <StackPanel Spacing="{StaticResource Space12}">
+              <TextBlock Text="Form appears once this player has played in a simulated game." Classes="body secondary wrap" IsVisible="{Binding !HasRecentGames}" />
+              <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space12}" IsVisible="{Binding HasRatingTrend}">
+                <ctl:FormSparkline Values="{Binding RatingTrend}" Width="180" />
+                <TextBlock Text="{Binding RatingTrendCaption}" Classes="caption wrap" VerticalAlignment="Center" MaxWidth="160" />
+              </StackPanel>
+              <ctl:WinLossStrip Results="{Binding FormResults}" IsVisible="{Binding HasRecentGames}" />
+            </StackPanel>
+          </ctl:Tile>
+          <ctl:Tile Title="This season">
+            <Panel>
+              <TextBlock Text="No games played this season yet." Classes="body secondary" IsVisible="{Binding !HasSeason}" />
+              <ItemsControl ItemsSource="{Binding SeasonTiles}" IsVisible="{Binding HasSeason}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel ItemSpacing="{StaticResource Space24}" LineSpacing="{StaticResource Space12}" />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:StatTile">
+                    <ctl:StatTile Value="{Binding Value}" Label="{Binding Label}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Panel>
+          </ctl:Tile>
+        </StackPanel>
+      </Grid>
+
+      <!-- Ratings: every attribute group. -->
+      <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource GroupTile}" IsVisible="{Binding IsRatingsTab}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="3" ColumnSpacing="{StaticResource Space16}" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+      </ItemsControl>
+
+      <!-- Stats: the simulated season (basis), against the league, shooting by zone, the stated season. -->
+      <StackPanel Spacing="{StaticResource Space16}" IsVisible="{Binding IsStatsTab}">
+        <ctl:EmptyState IconKey="Icon.Leaders" Headline="No games this season" Message="Stats fill in after this player's first simulated game. Advance the season with Continue." IsVisible="{Binding !HasSimulatedStats}" />
+        <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space16}" IsVisible="{Binding HasSimulatedStats}">
+          <ctl:SegmentedControl ItemsSource="{Binding BasisOptions}" SelectedIndex="{Binding BasisIndex}" AutomationProperties.Name="Stat basis" />
+          <TextBlock Text="{Binding SimulatedSample}" Classes="caption" VerticalAlignment="Center" />
+        </StackPanel>
+        <ItemsControl ItemsSource="{Binding SimulatedGroups}" ItemTemplate="{StaticResource StatGroupTile}" />
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="{StaticResource Space16}" IsVisible="{Binding HasSimulatedStats}">
+          <ctl:Tile Title="Against the league">
+            <StackPanel Spacing="{StaticResource Space8}">
+              <TextBlock Text="Percentile among qualified players this regular season, per game. Higher is better on every row." Classes="caption wrap" />
+              <TextBlock Text="{Binding NotRankedNote}" Classes="body secondary wrap" IsVisible="{Binding !HasPercentiles}" />
+              <ItemsControl ItemsSource="{Binding Percentiles}" IsVisible="{Binding HasPercentiles}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:PercentileRow">
+                    <Grid ColumnDefinitions="64,*,56" ColumnSpacing="{StaticResource Space8}" Height="28" ToolTip.Tip="{Binding Tooltip}" AutomationProperties.Name="{Binding AccessibleName}">
+                      <TextBlock Text="{Binding Stat}" Classes="body-strong" VerticalAlignment="Center" />
+                      <ctl:RatingTrack Grid.Column="1" Value="{Binding Percentile}" Height="12" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="{Binding Text}" Classes="table" HorizontalAlignment="Right" VerticalAlignment="Center" />
                     </Grid>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
             </StackPanel>
-          </StackPanel>
-        </TabItem>
-
-        <TabItem Header="Career">
-          <StackPanel Spacing="4" Margin="0,14,0,0">
-            <TextBlock Text="No career history yet." Classes="faint small" IsVisible="{Binding !HasCareer}" />
-            <StackPanel Spacing="4" IsVisible="{Binding HasCareer}">
-              <ScrollViewer Classes="tablewrap">
-                <StackPanel Spacing="4">
-                  <Grid Classes="thead" ColumnDefinitions="72,*,Auto">
-                    <TextBlock Text="Season" />
-                    <TextBlock Grid.Column="1" Text="Team" MinWidth="{StaticResource TableNameMinWidth}" />
-                    <ItemsControl Grid.Column="2" Classes="statheads" ItemsSource="{Binding CareerHeaders}" />
-                  </Grid>
-                  <ItemsControl Classes="table" ItemsSource="{Binding Career}">
-                    <ItemsControl.ItemTemplate>
-                      <DataTemplate x:DataType="vm:CareerRow">
-                        <Grid ColumnDefinitions="72,*,Auto" Height="28">
-                          <TextBlock Text="{Binding Season}" Classes="small" Classes.accent="{Binding IsCurrent}" VerticalAlignment="Center" />
-                          <TextBlock Grid.Column="1" Text="{Binding Team}" Classes="dim small" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
-                          <ItemsControl Grid.Column="2" Classes="statrow" ItemsSource="{Binding Cells}" />
-                        </Grid>
-                      </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                  </ItemsControl>
-                </StackPanel>
-              </ScrollViewer>
-              <TextBlock Text="{Binding CareerTotalsLine}" Classes="dim small" Margin="10,6,0,0" />
+          </ctl:Tile>
+          <ctl:Tile Grid.Column="1" Title="Shooting by zone" IsVisible="{Binding HasShotChart}">
+            <StackPanel Spacing="{StaticResource Space12}">
+              <TextBlock Text="Field-goal percentage by zone, against the league from the same spot." Classes="caption wrap" />
+              <ctl:ShotChart Zones="{Binding ShotChart.Zones}" MaxWidth="520" HorizontalAlignment="Left" AutomationProperties.Name="Shot chart: field-goal percentage by zone against the league. The same figures are in the list below it." />
+              <ItemsControl ItemsSource="{Binding ShotChart.Zones}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ShotZoneCell">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="{StaticResource Space16}" Height="28" AutomationProperties.Name="{Binding AccessibleName}">
+                      <TextBlock Text="{Binding Name}" Classes="body" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="1" Text="{Binding Shooting}" Classes="table" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                      <TextBlock Grid.Column="2" Text="{Binding Difference}" Classes="caption num" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="120" TextAlignment="Right" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </StackPanel>
+          </ctl:Tile>
+        </Grid>
+        <TextBlock Text="{Binding StatedSeasonTitle}" Classes="label-caps" IsVisible="{Binding HasStatedStats}" />
+        <ItemsControl ItemsSource="{Binding StatedGroups}" ItemTemplate="{StaticResource StatGroupTile}" />
+        <TextBlock Text="Hover any stat for its definition. Simulated rate stats use the player's share of team minutes, the standard box-score estimate." Classes="caption wrap" />
+      </StackPanel>
+
+      <!-- Game log. -->
+      <Panel IsVisible="{Binding IsGameLogTab}">
+        <ctl:DataTable Height="520" Columns="{Binding GameLogColumns}" Rows="{Binding GameLogRows}" EmptyHeadline="No games yet" EmptyMessage="The log fills in after this player's first simulated game this season." />
+      </Panel>
+
+      <!-- Contract. -->
+      <StackPanel Spacing="{StaticResource Space16}" IsVisible="{Binding IsContractTab}">
+        <TextBlock Text="{Binding ContractSummary}" Classes="h3" />
+        <ctl:EmptyState IconKey="Icon.Contracts" Headline="No contract" Message="Free agents appear in Free agency, where an offer starts one." IsVisible="{Binding !HasContractDetail}" />
+        <ItemsControl ItemsSource="{Binding ContractTiles}" IsVisible="{Binding HasContractDetail}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Rows="1" ColumnSpacing="{StaticResource Space16}" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StatTile">
+              <ctl:Tile Classes="compact">
+                <ctl:StatTile Value="{Binding Value}" Label="{Binding Label}" />
+              </ctl:Tile>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ctl:Tile Title="Salary scale" IsVisible="{Binding HasContractDetail}">
+          <StackPanel Spacing="{StaticResource Space8}">
+            <ProgressBar Minimum="0" Maximum="1" Value="{Binding SalaryScalePosition}" Height="8" MaxWidth="480" HorizontalAlignment="Left" AutomationProperties.Name="{Binding SalaryScaleLine}" />
+            <TextBlock Text="{Binding SalaryScaleLine}" Classes="body secondary wrap" />
           </StackPanel>
-        </TabItem>
-      </TabControl>
+        </ctl:Tile>
+        <ctl:DataTable Height="260" Columns="{Binding ContractColumns}" Rows="{Binding ContractRows}" IsVisible="{Binding HasContractDetail}" EmptyHeadline="No contract years" />
+      </StackPanel>
+
+      <!-- Career. -->
+      <StackPanel Spacing="{StaticResource Space12}" IsVisible="{Binding IsCareerTab}">
+        <ctl:DataTable Height="440" Columns="{Binding CareerColumns}" Rows="{Binding CareerRows}" EmptyHeadline="No career history yet" EmptyMessage="Seasons appear here as this player plays them, or as a data pack states them." />
+        <TextBlock Text="{Binding CareerTotalsLine}" Classes="body secondary" IsVisible="{Binding HasCareer}" />
+      </StackPanel>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

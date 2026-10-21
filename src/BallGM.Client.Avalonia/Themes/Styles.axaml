@@ -333,6 +333,23 @@
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
 
+  <!-- Position familiarity chips on the profile: stronger fill for stronger familiarity. -->
+  <Style Selector="Border.familiarity">
+    <Setter Property="Background" Value="{StaticResource Surface2Brush}" />
+  </Style>
+  <Style Selector="Border.familiarity.competent">
+    <Setter Property="Background" Value="{StaticResource Surface3Brush}" />
+  </Style>
+  <Style Selector="Border.familiarity.accomplished">
+    <Setter Property="Background" Value="{DynamicResource AccentSoftBrush}" />
+  </Style>
+  <Style Selector="Border.familiarity.natural">
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+  </Style>
+  <Style Selector="Border.familiarity.natural TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+  </Style>
+
   <!-- Size-only helpers for screens not yet rebuilt (they replaced literal FontSize values). -->
   <Style Selector="TextBlock.size-caption">
     <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}" />

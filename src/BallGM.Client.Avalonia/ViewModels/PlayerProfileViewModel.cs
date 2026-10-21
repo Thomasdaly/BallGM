@@ -182,12 +182,149 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
     /// <summary>The game log's column headers: the same box-score columns a game sheet shows.</summary>
     public IReadOnlyList<StatHeader> GameLogHeaders { get; } = StatColumns.Headers(StatColumns.BoxScore);
 
+    private int _tabIndex;
+
+    /// <summary>The player's team, so the page can take its colours (spec 01 section 4, page scope).</summary>
+    public string? TeamId { get; init; }
+
+    public Application.Leagues.TeamColours? TeamColours { get; init; }
+
+    public string PlayerId => profile.PlayerId;
+
+    public IReadOnlyList<string> Tabs { get; } = ["Overview", "Ratings", "Stats", "Game log", "Contract", "Career"];
+
+    public int TabIndex
+    {
+        get => _tabIndex;
+        set
+        {
+            if (SetProperty(ref _tabIndex, value))
+            {
+                RaisePropertyChanged(nameof(IsOverviewTab));
+                RaisePropertyChanged(nameof(IsRatingsTab));
+                RaisePropertyChanged(nameof(IsStatsTab));
+                RaisePropertyChanged(nameof(IsGameLogTab));
+                RaisePropertyChanged(nameof(IsContractTab));
+                RaisePropertyChanged(nameof(IsCareerTab));
+            }
+        }
+    }
+
+    public IReadOnlyList<string> BasisOptions { get; } = ["Per game", "Per 36", "Totals"];
+
+    /// <summary>0 per game, 1 per 36, 2 totals.</summary>
+    public int BasisIndex
+    {
+        get => Basis.IsPer36 ? 1 : Basis.IsTotals ? 2 : 0;
+        set
+        {
+            if (value == 1)
+            {
+                Basis.IsPer36 = true;
+            }
+            else if (value == 2)
+            {
+                Basis.IsTotals = true;
+            }
+            else
+            {
+                Basis.IsPerGame = true;
+            }
+
+            RaisePropertyChanged(nameof(BasisIndex));
+        }
+    }
+
+    public bool IsOverviewTab => _tabIndex == 0;
+
+    public bool IsRatingsTab => _tabIndex == 1;
+
+    public bool IsStatsTab => _tabIndex == 2;
+
+    public bool IsGameLogTab => _tabIndex == 3;
+
+    public bool IsContractTab => _tabIndex == 4;
+
+    public bool IsCareerTab => _tabIndex == 5;
+
+    /// <summary>The hero's identity line: positions, age, experience, team.</summary>
+    public string HeroLine => string.Create(
+        CultureInfo.InvariantCulture,
+        $"{profile.Position} · AGE {profile.Age} · {Formatting.Fmt.Ordinal(profile.SeasonsOfService + 1).ToUpperInvariant()} SEASON · {(profile.TeamName ?? "Free agent").ToUpperInvariant()}");
+
+    public IReadOnlyList<Controls.StatusItem> StatusChips => profile.IsInjured
+        ? [new(profile.InjuryDescription ?? "Injured", Controls.StatusKind.Negative)]
+        : [new("Healthy", Controls.StatusKind.Positive)];
+
+    /// <summary>Every attribute group with its average, for the Ratings tab and the Overview's top groups.</summary>
+    public IReadOnlyList<AttributeGroupDisplay> Groups => Sheet.Columns
+        .SelectMany(column => column)
+        .Select(group => new AttributeGroupDisplay(group.Title, group.Attributes.Count == 0 ? 0 : (int)Math.Round(group.Attributes.Average(cell => cell.Value)), group.Attributes))
+        .ToList();
+
+    public IReadOnlyList<AttributeGroupDisplay> OverviewGroups => Groups.Take(4).ToList();
+
+    public IReadOnlyList<Controls.FormResult> FormResults => RecentGames.Select(game => new Controls.FormResult(game.Won, $"{game.Opponent} · {game.Result}")).Reverse().ToList();
+
+    public IReadOnlyList<Controls.TableColumn> GameLogColumns =>
+    [
+        new("date", "DATE", 96, IsFrozen: true, CanSort: false),
+        new("opp", "OPPONENT", 200, IsFrozen: true, CanSort: false),
+        new("result", "RESULT", 104, CanSort: false),
+        new("rtg", "RTG", 64, IsNumeric: true, CanSort: false, ToolTip: "Match rating out of ten"),
+        .. GameLogHeaders.Select((header, index) => new Controls.TableColumn("s" + index.ToString(CultureInfo.InvariantCulture), header.Header, Math.Max(56, header.Width), IsNumeric: true, CanSort: false, ToolTip: header.Tooltip)),
+    ];
+
+    public IReadOnlyList<Controls.TableRow> GameLogRows => GameLog
+        .Select((game, index) => new Controls.TableRow(
+            index.ToString(CultureInfo.InvariantCulture),
+            [
+                new Controls.TextCell(game.Date),
+                new Controls.TextCell(game.Opponent, IsStrong: true),
+                new Controls.DeltaCell(game.Result, game.Won, !game.Won),
+                new Controls.TextCell(game.Rating?.Text ?? StatColumns.Missing, IsNumeric: true),
+                .. game.Stats.Select(stat => (Controls.TableCell)new Controls.TextCell(stat.Value, IsNumeric: true)),
+            ]))
+        .ToList();
+
+    public IReadOnlyList<Controls.TableColumn> CareerColumns =>
+    [
+        new("season", "SEASON", 96, IsFrozen: true, CanSort: false),
+        new("team", "TEAM", 220, IsFrozen: true, CanSort: false),
+        .. CareerHeaders.Select((header, index) => new Controls.TableColumn("c" + index.ToString(CultureInfo.InvariantCulture), header.Header, Math.Max(56, header.Width), IsNumeric: true, CanSort: false, ToolTip: header.Tooltip)),
+    ];
+
+    public IReadOnlyList<Controls.TableRow> CareerRows => Career
+        .Select((row, index) => new Controls.TableRow(
+            index.ToString(CultureInfo.InvariantCulture),
+            [new Controls.TextCell(row.Season, IsStrong: row.IsCurrent), new Controls.TextCell(row.Team), .. row.Cells.Select(cell => (Controls.TableCell)new Controls.TextCell(cell.Value, IsNumeric: true))],
+            IsHighlighted: row.IsCurrent))
+        .ToList();
+
+    public IReadOnlyList<Controls.TableColumn> ContractColumns { get; } =
+    [
+        new("season", "SEASON", 104, IsFrozen: true, CanSort: false),
+        new("salary", "SALARY", 120, IsNumeric: true, CanSort: false),
+        new("guaranteed", "GUARANTEED", 140, IsNumeric: true, CanSort: false),
+        new("option", "OPTION", 160, CanSort: false),
+        new("share", "% OF CAP", 104, IsNumeric: true, CanSort: false),
+    ];
+
+    public IReadOnlyList<Controls.TableRow> ContractRows => ContractYears
+        .Select(year => new Controls.TableRow(
+            year.Season,
+            [new Controls.TextCell(year.Season, IsStrong: true), new Controls.TextCell(year.Salary, IsNumeric: true), new Controls.TextCell(year.Guaranteed, IsNumeric: true), new Controls.StatusCell(year.Option == "–" ? string.Empty : year.Option, Controls.StatusKind.Info), new Controls.TextCell(year.ShareOfCap, IsNumeric: true)]))
+        .ToList();
+
     private static string LeagueSeasonLabel(int startYear) =>
         string.Create(CultureInfo.InvariantCulture, $"{startYear}-{(startYear + 1) % 100:00}");
 }
 
 
 public sealed record ContractRow(string Season, string Salary, string Note);
+
+/// <summary>An attribute group as the profile draws it: title, average chip, the bars.</summary>
+public sealed record AttributeGroupDisplay(string Title, int Average, IReadOnlyList<AttributeCell> Attributes);
 
 public sealed record StatTile(string Label, string Value);
 

@@ -26,6 +26,7 @@ public sealed class AssetResolver : IAssetResolver
     private AssetCatalog _catalog;
     private long _hits;
     private long _misses;
+    private int _pending;
 
     public AssetResolver(
         Func<AssetCatalog> catalogSource,
@@ -45,6 +46,9 @@ public sealed class AssetResolver : IAssetResolver
     public event EventHandler? Reloaded;
 
     public AssetCatalog Catalog => _catalog;
+
+    /// <summary>Loads started and not yet finished (lets a capture wait until every image has landed).</summary>
+    public int PendingLoads => Volatile.Read(ref _pending);
 
     public AssetCache Cache => _cache;
 
@@ -100,6 +104,7 @@ public sealed class AssetResolver : IAssetResolver
 
         Interlocked.Increment(ref _misses);
         cancellationToken.ThrowIfCancellationRequested();
+        Interlocked.Increment(ref _pending);
         var load = _inFlight.GetOrAdd((path, bucket), _ => Task.Run(() => LoadAsync(entry, slot.Kind, bucket), CancellationToken.None));
         try
         {
@@ -108,6 +113,7 @@ public sealed class AssetResolver : IAssetResolver
         }
         finally
         {
+            Interlocked.Decrement(ref _pending);
             if (load.IsCompleted)
             {
                 _inFlight.TryRemove(KeyValuePair.Create((path, bucket), load));

@@ -84,6 +84,22 @@ internal sealed class ShellDriver
         {
             Dispatcher.UIThread.RunJobs();
         }
+
+        // Images decode off the UI thread: let every pending load land before a frame is captured.
+        if (Controls.UiServices.Assets is Imaging.AssetResolver resolver)
+        {
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+            while (resolver.PendingLoads > 0 && DateTime.UtcNow < deadline)
+            {
+                Dispatcher.UIThread.RunJobs();
+                Thread.Sleep(5);
+            }
+
+            for (var pass = 0; pass < 3; pass++)
+            {
+                Dispatcher.UIThread.RunJobs();
+            }
+        }
     }
 
     public WriteableBitmap Capture()

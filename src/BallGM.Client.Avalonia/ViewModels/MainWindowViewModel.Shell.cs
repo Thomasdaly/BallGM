@@ -86,12 +86,16 @@ public sealed partial class MainWindowViewModel
 
     public bool CanGoForward => _forward.Count > 0;
 
-    /// <summary>The page title in the page header: the nav label of the section showing.</summary>
-    public string PageTitle => NavLabels.GetValueOrDefault(SelectedSection, SelectedSection);
+    /// <summary>The page title in the page header: the nav label of the section showing, or the page opened from it.</summary>
+    public string PageTitle => CurrentScreen is PlayerProfileViewModel ? "Player profile" : SectionLabel;
+
+    private string SectionLabel => NavLabels.GetValueOrDefault(SelectedSection, SelectedSection);
 
     public IReadOnlyList<BreadcrumbItem> Breadcrumb => SelectedSection.Length == 0
         ? []
-        : [new BreadcrumbItem(UserTeamName ?? "League", NavigateCommand, Sections.FirstOrDefault()), new BreadcrumbItem(PageTitle)];
+        : CurrentScreen is PlayerProfileViewModel profile
+            ? [new BreadcrumbItem(UserTeamName ?? "League", NavigateCommand, Sections.FirstOrDefault()), new BreadcrumbItem(SectionLabel, BackCommand), new BreadcrumbItem(profile.FullName)]
+            : [new BreadcrumbItem(UserTeamName ?? "League", NavigateCommand, Sections.FirstOrDefault()), new BreadcrumbItem(SectionLabel)];
 
     /// <summary>Opens a section by key (rail, shortcut, breadcrumb, a link on another screen).</summary>
     public ICommand NavigateCommand => new ParameterCommand<string>(section => SelectedSection = section);
@@ -388,9 +392,11 @@ public sealed partial class MainWindowViewModel
         }
 
         PushHistory();
-        _profileScreen = new PlayerProfileViewModel(profile.Value, GoBack);
+        var team = Teams.FirstOrDefault(candidate => candidate.Roster.Any(spot => spot.PlayerId == playerId));
+        _profileScreen = new PlayerProfileViewModel(profile.Value, GoBack) { TeamId = team?.TeamId, TeamColours = team?.Colours };
         CurrentScreen = _profileScreen;
         RaisePropertyChanged(nameof(PageTitle));
+        RaisePropertyChanged(nameof(Breadcrumb));
     }
 
     private PlayerProfileViewModel? _profileScreen;

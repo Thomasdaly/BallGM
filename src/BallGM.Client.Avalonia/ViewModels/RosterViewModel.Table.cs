@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Windows.Input;
-using BallGM.Client.Avalonia.Controls;
 using BallGM.Application.Players;
+using BallGM.Client.Avalonia.Controls;
 
 namespace BallGM.Client.Avalonia.ViewModels;
 
