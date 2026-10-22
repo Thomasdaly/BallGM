@@ -84,7 +84,9 @@ public sealed record LeaguePackColoursEnvelope(
 /// One player. <see cref="Team"/> is a team key, or absent for a free agent — the same "on no roster
 /// and under no contract" definition the fixture league uses, so there is no separate pool.
 /// <see cref="Portrait"/> is an optional image path relative to the pack file (png or jpg), and
-/// <see cref="Career"/> an optional list of past seasons.
+/// <see cref="Career"/> an optional list of past seasons. <see cref="Key"/> is the player's optional
+/// stable key — what a cosmetic pack (faces, for one) addresses him by; absent, the loader derives
+/// one from the name and birth date (see <see cref="LeaguePackKeys"/>).
 /// </summary>
 public sealed record LeaguePackPlayerEnvelope(
     string? Name,
@@ -103,7 +105,8 @@ public sealed record LeaguePackPlayerEnvelope(
     IReadOnlyDictionary<string, string>? Positions = null,
     IReadOnlyList<string>? Traits = null,
     IReadOnlyDictionary<string, int?>? Tendencies = null,
-    int? InjuryDays = null);
+    int? InjuryDays = null,
+    string? Key = null);
 
 /// <summary>
 /// A contract as consecutive season salaries starting with the pack's season, in the currency's

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 2,
+  "id": "builtin.ruleset.euro-continental",
+  "name": "European continental club competition (2025–26)",
+  "version": "2025.0.0",
+  "kind": "ruleset",
+  "author": "BallGM",
+  "description": "Twenty clubs, a 38-round double round robin, best-of-five quarter-finals and a single-game final four; no salary cap, no draft, an open market, FIBA game rules.",
+  "fidelity": [
+    {
+      "rule": "40-minute game",
+      "handling": "notModelled",
+      "detail": "This league plays four 10-minute quarters; the match engine plays four 12-minute quarters, so per-game totals run about a fifth high. Rates (per possession, per 36 minutes, percentages) compare fairly."
+    },
+    {
+      "rule": "Play-in for places 7 to 10",
+      "handling": "notModelled",
+      "detail": "The top eight qualify directly for the quarter-finals."
+    },
+    {
+      "rule": "Final Four at a neutral venue",
+      "handling": "approximated",
+      "detail": "Semi-finals and final are single games, but the higher seed is treated as the home side."
+    },
+    {
+      "rule": "Financial stability and fair-play rules",
+      "handling": "notModelled",
+      "detail": "Club spending is not limited; there is no cap of any kind in this preset."
+    },
+    {
+      "rule": "Squad registration and nationality rules",
+      "handling": "notModelled",
+      "detail": "No homegrown or foreign-player quotas."
+    },
+    {
+      "rule": "Domestic league alongside",
+      "handling": "notModelled",
+      "detail": "Clubs play only this competition; the weekend domestic fixtures are not part of the calendar."
+    },
+    {
+      "rule": "Overtime team fouls",
+      "handling": "approximated",
+      "detail": "FIBA carries fourth-quarter team fouls into overtime; here overtime starts a fresh count, with the bonus from the fifth foul."
+    }
+  ]
+}

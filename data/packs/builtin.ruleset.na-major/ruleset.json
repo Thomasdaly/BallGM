@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 17,
+  "name": "North American major league — 2026–27 agreement figures",
+  "regularSeasonGameCount": 82,
+  "minimumRosterPlayers": 14,
+  "maximumRosterPlayers": 15,
+  "payrollFloor": 148465000,
+  "softCap": 164961000,
+  "luxuryTax": 200428000,
+  "firstApron": 209015000,
+  "secondApron": 221686000,
+  "draftRoundCount": 2,
+  "draftLotteryEnabled": true,
+  "draftLotteryWeights": [
+    140,
+    140,
+    140,
+    125,
+    105,
+    90,
+    75,
+    60,
+    45,
+    30,
+    20,
+    15,
+    10,
+    5
+  ],
+  "draftClassSize": 72,
+  "draftClassMinimumRating": 38,
+  "draftClassMaximumRating": 88,
+  "draftClassProspectAgeYears": 19,
+  "tradableFutureDraftHorizon": 7,
+  "retainedRoundNumber": 1,
+  "retainedRoundInterval": 2,
+  "salaryMatchPercent": 125,
+  "salaryMatchAllowance": 250000,
+  "injuredPlayerTradeEligibility": "AllowedWithWarning",
+  "secondApronBlocksSalaryIncrease": true,
+  "maximumContractSeasons": 4,
+  "maximumIncumbentContractSeasons": 5,
+  "maximumAnnualEscalationPercent": 8,
+  "maximumAnnualDeescalationPercent": 8,
+  "compensationCeilingTiers": [
+    {
+      "minimumSeasonsOfService": 0,
+      "percentOfSoftCap": 25
+    },
+    {
+      "minimumSeasonsOfService": 7,
+      "percentOfSoftCap": 30
+    },
+    {
+      "minimumSeasonsOfService": 10,
+      "percentOfSoftCap": 35
+    }
+  ],
+  "compensationFloorScale": [
+    {
+      "minimumSeasonsOfService": 0,
+      "amount": 1357763
+    },
+    {
+      "minimumSeasonsOfService": 1,
+      "amount": 2185116
+    },
+    {
+      "minimumSeasonsOfService": 2,
+      "amount": 2449421
+    },
+    {
+      "minimumSeasonsOfService": 3,
+      "amount": 2537526
+    },
+    {
+      "minimumSeasonsOfService": 4,
+      "amount": 2625627
+    },
+    {
+      "minimumSeasonsOfService": 5,
+      "amount": 2845883
+    },
+    {
+      "minimumSeasonsOfService": 6,
+      "amount": 3066143
+    },
+    {
+      "minimumSeasonsOfService": 7,
+      "amount": 3286399
+    },
+    {
+      "minimumSeasonsOfService": 8,
+      "amount": 3506659
+    },
+    {
+      "minimumSeasonsOfService": 9,
+      "amount": 3524115
+    },
+    {
+      "minimumSeasonsOfService": 10,
+      "amount": 3876529
+    }
+  ],
+  "standardOverCapAllowance": 15044000,
+  "standardOverCapAllowanceUnavailableAbove": "FirstApron",
+  "allowanceMaySplitAcrossPlayers": true,
+  "marketResolution": "ResolutionPoint",
+  "offerExpiryDays": 3,
+  "preseasonDays": 21,
+  "regularSeasonDays": 174,
+  "offseasonDays": 107,
+  "standingsTieBreaks": [
+    "HeadToHeadRecord",
+    "DivisionRecord",
+    "ConferenceRecord",
+    "PointDifferential"
+  ],
+  "postseasonDays": 63,
+  "postseasonQualifyingTeamsPerConference": 8,
+  "postseasonSeriesLengths": [
+    7,
+    7,
+    7,
+    7
+  ],
+  "postseasonHomeCourtSequence": "2-2-1-1-1",
+  "playoffEligibilityCutoffDay": 152,
+  "inSeasonSigningWindowOpensDay": 21,
+  "inSeasonSigningWindowClosesDay": 195,
+  "shortTermContractDays": 10,
+  "awards": [
+    {
+      "code": "SCORING",
+      "name": "Scoring title",
+      "statBasis": "TotalPoints"
+    },
+    {
+      "code": "REBOUNDING",
+      "name": "Rebounding title",
+      "statBasis": "TotalRebounds"
+    },
+    {
+      "code": "ASSISTS",
+      "name": "Assists title",
+      "statBasis": "TotalAssists"
+    }
+  ],
+  "capMechanics": {
+    "taxBracketSize": 6064000,
+    "taxRatesPercent": [
+      100,
+      125,
+      350,
+      475
+    ],
+    "repeaterTaxRatesPercent": [
+      300,
+      325,
+      550,
+      675
+    ],
+    "taxRateIncrementPercent": 50,
+    "salaryMatchingBands": [
+      {
+        "outgoingUpTo": 8846000,
+        "percent": 200,
+        "allowance": 250000
+      },
+      {
+        "outgoingUpTo": 35384000,
+        "percent": 100,
+        "allowance": 9096000
+      },
+      {
+        "percent": 125,
+        "allowance": 250000
+      }
+    ],
+    "aboveFirstApronMatchPercent": 100,
+    "secondApronBlocksAggregation": true,
+    "reducedOverCapAllowance": 6064000,
+    "reducedOverCapAllowanceUnavailableAbove": "SecondApron"
+  },
+  "gameRules": {
+    "personalFoulLimit": 6,
+    "bonusTeamFoulsPerPeriod": 4,
+    "bonusTeamFoulsPerOvertime": 3
+  }
+}

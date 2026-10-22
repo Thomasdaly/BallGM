@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "id": "builtin.ruleset.na-womens",
+  "name": "North American women's league (2026)",
+  "version": "2026.0.0",
+  "kind": "ruleset",
+  "author": "BallGM",
+  "description": "A hard-capped league at the 2026 agreement's figures: a 7,000,000 cap with no exceptions above it, a 1,400,000 maximum, 12-player rosters, 44 games, eight playoff teams seeded league-wide. Figures in US dollars.",
+  "fidelity": [
+    {
+      "rule": "40-minute game",
+      "handling": "notModelled",
+      "detail": "This league plays four 10-minute quarters; the match engine plays four 12-minute quarters, so per-game totals run about a fifth high. Rates (per possession, per 36 minutes, percentages) compare fairly."
+    },
+    {
+      "rule": "Playoff home pattern (1-1-1 in the first round)",
+      "handling": "approximated",
+      "detail": "One home-court pattern serves every round; the preset uses 2-2-1-1-1, so the higher seed hosts games 1 and 2 of the best-of-three rather than 1 and 3."
+    },
+    {
+      "rule": "Minimum salary by service",
+      "handling": "approximated",
+      "detail": "The agreement's minimums run from 270,000 to 300,000 by service; the preset steps once, at three seasons."
+    },
+    {
+      "rule": "Developmental roster spots",
+      "handling": "notModelled",
+      "detail": "Two spots outside the cap and the 12-player roster (Milestone 8 auxiliary slots)."
+    },
+    {
+      "rule": "Lottery odds from two seasons' combined record",
+      "handling": "approximated",
+      "detail": "The four non-playoff teams' odds (44.2%, 27.6%, 17.8%, 10.4%) apply to this season's table alone."
+    },
+    {
+      "rule": "Draft-pick retention",
+      "handling": "approximated",
+      "detail": "This build requires a retained-round rule wherever there is a draft; the preset states the loosest one, a single first-round pick kept across the four tradable drafts."
+    },
+    {
+      "rule": "Conferences",
+      "handling": "approximated",
+      "detail": "Playoff seeding is league-wide, so the fictional league is one flat table; a league pack with two conferences would play conference brackets and a final instead."
+    },
+    {
+      "rule": "Revenue-linked cap growth",
+      "handling": "notModelled",
+      "detail": "The cap grows each season with league revenue; the preset holds the 2026 figure."
+    },
+    {
+      "rule": "Core designation and the in-season cup",
+      "handling": "notModelled",
+      "detail": "No designated-player rights and no in-season cup."
+    },
+    {
+      "rule": "Voted season awards",
+      "handling": "notModelled",
+      "detail": "Most-valuable-player and the other voted awards need AI voters (Milestone 9); the preset hands out statistical titles instead."
+    }
+  ]
+}

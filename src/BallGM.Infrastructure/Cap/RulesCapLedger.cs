@@ -69,8 +69,10 @@ public sealed class RulesCapLedger : ICapLedger
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        // Alignment only shapes a postseason bracket; nothing about cap status depends on it.
-        var rulesetResult = configuration.ToRuleset(leagueIsFlat: false);
+        // Alignment only shapes a postseason bracket; nothing about cap status depends on it, and
+        // no league is to hand here to say which it is. Unknown, not "has conferences": guessing
+        // conferences refused every flat league with a postseason (found by the pack checker).
+        var rulesetResult = configuration.ToRuleset(leagueIsFlat: null);
         return rulesetResult.IsFailure
             ? DomainOperationResult<CapStatus>.Failure(rulesetResult.Errors.ToArray())
             : DomainOperationResult<CapStatus>.Success(CapStatusEvaluator.Evaluate(teamId, payroll, isTaxRepeater, rulesetResult.Value));

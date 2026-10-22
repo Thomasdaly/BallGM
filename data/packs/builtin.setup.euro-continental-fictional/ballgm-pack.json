@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2,
+  "id": "builtin.setup.euro-continental-fictional",
+  "name": "European continental rules, fictional league",
+  "version": "1.0.0",
+  "kind": "setup",
+  "author": "BallGM",
+  "description": "The 2025–26 continental competition format with a generated fictional 20-club league.",
+  "requires": [
+    {
+      "pack": "builtin.ruleset.euro-continental"
+    }
+  ]
+}

@@ -224,6 +224,13 @@ UI: an inbox/news feed surfacing AI-driven trades and signings with their explan
 
 ## Milestone 10 — Mod platform
 
+**First slice built** (`docs/packs.md`): pack manifests (schema 2) with kinds, versions, requires,
+conflicts and targets; pack keys for teams and players; the league-setting catalogue with per-rule
+prose and per-setting overrides; five league presets (`docs/league-presets.md`); league setups; the
+pack checker with a played test season; `ballgm-packs` as the validation CLI; the player guide
+(`docs/modding/PACKS.md`). Still to come from the list below: integrity hashes, draft-class
+playlists, signing bonus amortisation and escalators, and the mod-manager panel (UI spec S30).
+
 - versioned schemas
 - manifests
 - validation CLI

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 2,
+  "id": "builtin.ruleset.australasian",
+  "name": "Australasian league (2026–27)",
+  "version": "2026.0.0",
+  "kind": "ruleset",
+  "author": "BallGM",
+  "description": "Ten clubs, a soft cap of 2,167,359 with a floor of 1,950,643 and tax on any spend above the cap, best-of-three semi-finals and a best-of-five grand final; no draft, FIBA game rules. Figures in Australian dollars.",
+  "fidelity": [
+    {
+      "rule": "40-minute game",
+      "handling": "notModelled",
+      "detail": "This league plays four 10-minute quarters; the match engine plays four 12-minute quarters, so per-game totals run about a fifth high. Rates (per possession, per 36 minutes, percentages) compare fairly."
+    },
+    {
+      "rule": "33-game season",
+      "handling": "approximated",
+      "detail": "Ten teams cannot share 33 games evenly between nine opponents; the preset plays 36 (four against each) so every schedule is balanced."
+    },
+    {
+      "rule": "Play-in for places 3 to 6",
+      "handling": "approximated",
+      "detail": "The top four go straight to the semi-finals; there is no play-in."
+    },
+    {
+      "rule": "Marquee player cap discounts",
+      "handling": "notModelled",
+      "detail": "Up to four marquee players count against the cap at a fixed, discounted hit (267,560 for the first); here every salary counts in full."
+    },
+    {
+      "rule": "Import and marquee limits",
+      "handling": "notModelled",
+      "detail": "No limit on imported players."
+    },
+    {
+      "rule": "Luxury tax rates",
+      "handling": "approximated",
+      "detail": "Spending over the cap is taxed from the first dollar, but the preset states no tax rate, so the bill is reported without being charged."
+    },
+    {
+      "rule": "Development and next-star players",
+      "handling": "notModelled",
+      "detail": "No development contracts or the development-player minimum."
+    }
+  ]
+}

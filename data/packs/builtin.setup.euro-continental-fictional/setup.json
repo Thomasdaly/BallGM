@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "name": "European continental rules, fictional league",
+  "ruleset": {
+    "pack": "builtin.ruleset.euro-continental"
+  },
+  "league": {
+    "generated": {
+      "teams": 20,
+      "conferences": 0,
+      "seed": 2025
+    }
+  }
+}

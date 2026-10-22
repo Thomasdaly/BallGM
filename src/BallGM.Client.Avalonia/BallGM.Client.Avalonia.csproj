@@ -5,6 +5,9 @@
     <!-- Composition root only: Program.cs picks the concrete ILeagueDataSource. Views and view
          models must stay on Application types - enforced by ArchitectureBoundaryTests. -->
     <ProjectReference Include="..\BallGM.Infrastructure\BallGM.Infrastructure.csproj" />
+    <!-- Composition root only, like Infrastructure: a league setup is checked and loaded there, and
+         views see the result as Application types. -->
+    <ProjectReference Include="..\BallGM.Mods\BallGM.Mods.csproj" />
   </ItemGroup>
 
   <ItemGroup>

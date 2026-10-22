@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2,
+  "id": "builtin.setup.na-major-fictional",
+  "name": "North American major league rules, fictional league",
+  "version": "1.0.0",
+  "kind": "setup",
+  "author": "BallGM",
+  "description": "The 2026–27 major-league rules with a generated fictional 30-team league, salaries on the 2026–27 scale.",
+  "requires": [
+    {
+      "pack": "builtin.ruleset.na-major"
+    }
+  ]
+}

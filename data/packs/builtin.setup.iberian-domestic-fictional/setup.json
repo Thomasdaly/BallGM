@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "name": "Iberian domestic rules, fictional league",
+  "ruleset": {
+    "pack": "builtin.ruleset.iberian-domestic"
+  },
+  "league": {
+    "generated": {
+      "teams": 18,
+      "conferences": 0,
+      "seed": 2025
+    }
+  }
+}

@@ -41,10 +41,11 @@ internal static class LeagueConfigurationMapper
     /// <paramref name="leagueIsFlat"/> travels in separately because whether a postseason plays a
     /// final between two conference winners depends on the league's alignment, not on anything the
     /// ruleset itself states — the same file loaded by a flat league and by a two-conference one has
-    /// a different round count.
+    /// a different round count. A caller with no league to hand passes null, and the round count
+    /// goes unchecked rather than checked against a guess.
     /// </para>
     /// </summary>
-    public static DomainOperationResult<LeagueRuleset> ToRuleset(this LeagueConfiguration configuration, bool leagueIsFlat)
+    public static DomainOperationResult<LeagueRuleset> ToRuleset(this LeagueConfiguration configuration, bool? leagueIsFlat)
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
@@ -92,7 +93,7 @@ internal static class LeagueConfigurationMapper
                 postseason.HomeCourtSequence,
                 postseason.PlayoffEligibilityCutoffDay,
                 schedule.PreseasonDays + schedule.RegularSeasonDays,
-                includesFinal: !leagueIsFlat);
+                includesFinal: leagueIsFlat is bool flat ? !flat : null);
 
             if (postseasonResult.IsFailure)
             {

@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 17,
+  "name": "North American women's league — 2026 agreement figures",
+  "regularSeasonGameCount": 44,
+  "minimumRosterPlayers": 12,
+  "maximumRosterPlayers": 12,
+  "softCap": 7000000,
+  "hardCap": 7000000,
+  "draftRoundCount": 3,
+  "draftLotteryEnabled": true,
+  "draftLotteryWeights": [
+    442,
+    276,
+    178,
+    104
+  ],
+  "draftClassSize": 45,
+  "draftClassMinimumRating": 38,
+  "draftClassMaximumRating": 86,
+  "draftClassProspectAgeYears": 22,
+  "tradableFutureDraftHorizon": 4,
+  "retainedRoundNumber": 1,
+  "retainedRoundInterval": 4,
+  "injuredPlayerTradeEligibility": "AllowedWithWarning",
+  "secondApronBlocksSalaryIncrease": false,
+  "maximumContractSeasons": 4,
+  "maximumIncumbentContractSeasons": 4,
+  "compensationCeilingTiers": [
+    {
+      "minimumSeasonsOfService": 0,
+      "percentOfSoftCap": 20
+    }
+  ],
+  "compensationFloorScale": [
+    {
+      "minimumSeasonsOfService": 0,
+      "amount": 270000
+    },
+    {
+      "minimumSeasonsOfService": 3,
+      "amount": 300000
+    }
+  ],
+  "allowanceMaySplitAcrossPlayers": false,
+  "marketResolution": "ResolutionPoint",
+  "offerExpiryDays": 3,
+  "preseasonDays": 18,
+  "regularSeasonDays": 125,
+  "offseasonDays": 190,
+  "standingsTieBreaks": [
+    "HeadToHeadRecord",
+    "PointDifferential"
+  ],
+  "postseasonDays": 32,
+  "postseasonQualifyingTeamsPerConference": 8,
+  "postseasonSeriesLengths": [
+    3,
+    5,
+    7
+  ],
+  "postseasonHomeCourtSequence": "2-2-1-1-1",
+  "inSeasonSigningWindowOpensDay": 18,
+  "inSeasonSigningWindowClosesDay": 143,
+  "shortTermContractDays": 7,
+  "awards": [
+    {
+      "code": "SCORING",
+      "name": "Scoring title",
+      "statBasis": "TotalPoints"
+    },
+    {
+      "code": "REBOUNDING",
+      "name": "Rebounding title",
+      "statBasis": "TotalRebounds"
+    },
+    {
+      "code": "ASSISTS",
+      "name": "Assists title",
+      "statBasis": "TotalAssists"
+    }
+  ],
+  "gameRules": {
+    "personalFoulLimit": 6,
+    "bonusTeamFoulsPerPeriod": 4,
+    "bonusTeamFoulsPerOvertime": 3
+  }
+}

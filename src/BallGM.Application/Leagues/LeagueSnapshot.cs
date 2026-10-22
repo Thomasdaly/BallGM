@@ -86,6 +86,19 @@ public sealed record LeagueArtwork(
     public IReadOnlyDictionary<string, TeamColours> TeamColours { get; init; } = new Dictionary<string, TeamColours>();
 
     public TeamColours? ColoursFor(TeamId teamId) => TeamColours.TryGetValue(teamId.Value, out var colours) ? colours : null;
+
+    /// <summary>
+    /// The pack key each team was loaded from, by <see cref="TeamId"/> value — how a cosmetic pack,
+    /// written against keys because identifiers are minted per load, finds the team it means. Empty
+    /// for a data source with no keys (the fixture, a save).
+    /// </summary>
+    public IReadOnlyDictionary<string, string> TeamKeys { get; init; } = new Dictionary<string, string>();
+
+    /// <summary>The league's own logo, a full file path a cosmetic pack supplied. Absent: the drawn league badge.</summary>
+    public string? LeagueLogo { get; init; }
+
+    /// <summary>The pack key each player was loaded from, by <see cref="PlayerId"/> value. See <see cref="TeamKeys"/>.</summary>
+    public IReadOnlyDictionary<string, string> PlayerKeys { get; init; } = new Dictionary<string, string>();
 }
 
 /// <summary>

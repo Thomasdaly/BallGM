@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2,
+  "id": "builtin.setup.iberian-domestic-fictional",
+  "name": "Iberian domestic rules, fictional league",
+  "version": "1.0.0",
+  "kind": "setup",
+  "author": "BallGM",
+  "description": "The 2025–26 domestic-league format with a generated fictional 18-club league.",
+  "requires": [
+    {
+      "pack": "builtin.ruleset.iberian-domestic"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2,
+  "id": "builtin.setup.na-womens-fictional",
+  "name": "North American women's league rules, fictional league",
+  "version": "1.0.0",
+  "kind": "setup",
+  "author": "BallGM",
+  "description": "The 2026 women's-league rules with a generated fictional 15-team league.",
+  "requires": [
+    {
+      "pack": "builtin.ruleset.na-womens"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "name": "North American women's league rules, fictional league",
+  "ruleset": {
+    "pack": "builtin.ruleset.na-womens"
+  },
+  "league": {
+    "generated": {
+      "teams": 15,
+      "conferences": 0,
+      "seed": 2026
+    }
+  }
+}

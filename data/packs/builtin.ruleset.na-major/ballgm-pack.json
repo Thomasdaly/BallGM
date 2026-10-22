@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 2,
+  "id": "builtin.ruleset.na-major",
+  "name": "North American major league (2026–27)",
+  "version": "2026.0.0",
+  "kind": "ruleset",
+  "author": "BallGM",
+  "description": "Thirty teams, 82 games, a soft cap with a tax, two aprons and their restrictions, two over-cap allowances, a 14-team lottery: the 2023 collective bargaining agreement's structure at its 2026–27 figures. Figures in US dollars.",
+  "fidelity": [
+    {
+      "rule": "Play-in tournament (seeds 7 to 10)",
+      "handling": "notModelled",
+      "detail": "The top eight in each conference qualify directly, so seeds 7 and 8 never have to win their way in and 9 and 10 never get the chance."
+    },
+    {
+      "rule": "Schedule weighting (4 v division, 3 or 4 v conference, 2 v other conference)",
+      "handling": "approximated",
+      "detail": "Opponent weightings are one figure per group, and a 30-team league cannot reach 82 that way (4/3/2 is 76, 4/4/2 is 86). The 82 games are spread as a balanced round robin instead."
+    },
+    {
+      "rule": "Retention rights for a team's own free agents (full, early and non-retention)",
+      "handling": "notModelled",
+      "detail": "A team can extend its own player before he reaches free agency, but cannot re-sign him over the cap once he is a free agent (scheduled for Milestone 9). Cap holds for departing players are not charged either."
+    },
+    {
+      "rule": "Separate raise limits (8% re-signing own player, 5% elsewhere)",
+      "handling": "approximated",
+      "detail": "One raise limit applies to every contract; the preset uses the higher 8%."
+    },
+    {
+      "rule": "Room exception, bi-annual exception, traded-player exceptions",
+      "handling": "notModelled",
+      "detail": "The non-taxpayer allowance (15,044,000, withdrawn above the first apron) and the taxpayer allowance (6,064,000, withdrawn above the second) are modelled; the room exception (9,366,000), bi-annual (5,477,000) and trade exceptions are not."
+    },
+    {
+      "rule": "Apron hard caps triggered by transactions",
+      "handling": "approximated",
+      "detail": "Using an allowance or acquiring a player in some ways hard-caps a team at an apron for the season. The preset withdraws the allowances above the aprons instead and sets no flat hard cap."
+    },
+    {
+      "rule": "Second-apron sanctions on future picks, cash and sign-and-trade",
+      "handling": "notModelled",
+      "detail": "Salary aggregation and taking back extra salary are blocked above the second apron; frozen first-round picks, the cash ban and the sign-and-trade ban are not modelled."
+    },
+    {
+      "rule": "Draft lottery draws the top four picks only",
+      "handling": "approximated",
+      "detail": "The fourteen lottery teams' odds are the real weights (14% down to 0.5%), but every lottery slot is drawn by weight rather than only the top four."
+    },
+    {
+      "rule": "Rookie scale, two-way and exhibit contracts",
+      "handling": "notModelled",
+      "detail": "Draft picks sign at the minimum-salary scale; there are no two-way roster slots (Milestone 8 auxiliary slots)."
+    },
+    {
+      "rule": "Mid-season cup and trade deadline",
+      "handling": "notModelled",
+      "detail": "No in-season tournament is played, and trades are allowed all season."
+    },
+    {
+      "rule": "Tie-breaks beyond conference record",
+      "handling": "approximated",
+      "detail": "Head-to-head, division record, conference record, then point differential; records against playoff teams are not used."
+    },
+    {
+      "rule": "Offer sheets and matching rights for restricted free agents",
+      "handling": "notModelled",
+      "detail": "Every free agent is unrestricted (Milestone 9)."
+    },
+    {
+      "rule": "Voted season awards",
+      "handling": "notModelled",
+      "detail": "Most-valuable-player and the other voted awards need AI voters (Milestone 9); the preset hands out statistical titles instead."
+    }
+  ]
+}

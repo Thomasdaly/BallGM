@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "name": "North American major league rules, fictional league",
+  "ruleset": {
+    "pack": "builtin.ruleset.na-major"
+  },
+  "league": {
+    "generated": {
+      "teams": 30,
+      "conferences": 2,
+      "divisionsPerConference": 3,
+      "seed": 2026
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 17,
+  "name": "Australasian league — 2026–27 figures",
+  "regularSeasonGameCount": 36,
+  "minimumRosterPlayers": 10,
+  "maximumRosterPlayers": 12,
+  "payrollFloor": 1950643,
+  "softCap": 2167359,
+  "luxuryTax": 2167359,
+  "draftLotteryEnabled": false,
+  "injuredPlayerTradeEligibility": "AllowedWithWarning",
+  "secondApronBlocksSalaryIncrease": false,
+  "maximumContractSeasons": 3,
+  "maximumIncumbentContractSeasons": 3,
+  "allowanceMaySplitAcrossPlayers": false,
+  "marketResolution": "Immediate",
+  "preseasonDays": 21,
+  "regularSeasonDays": 120,
+  "offseasonDays": 200,
+  "standingsTieBreaks": [
+    "HeadToHeadRecord",
+    "PointDifferential",
+    "PointsScored"
+  ],
+  "postseasonDays": 24,
+  "postseasonQualifyingTeamsPerConference": 4,
+  "postseasonSeriesLengths": [
+    3,
+    5
+  ],
+  "postseasonHomeCourtSequence": "1-1-1-1-1",
+  "gameRules": {
+    "personalFoulLimit": 5,
+    "bonusTeamFoulsPerPeriod": 4,
+    "bonusTeamFoulsPerOvertime": 4
+  }
+}

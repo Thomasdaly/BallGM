@@ -61,6 +61,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
     private const string InvalidFieldCode = "league_pack.invalid_field";
     private const string UnknownTeamCode = "league_pack.unknown_team";
     private const string DuplicateTeamCode = "league_pack.duplicate_team";
+    private const string DuplicatePlayerKeyCode = "league_pack.duplicate_player_key";
     private const string ContractMismatchCode = "league_pack.contract_mismatch";
     private const string InvalidImageCode = "league_pack.invalid_image_path";
     private const string InvalidPickTradeCode = "league_pack.invalid_pick_trade";
@@ -79,12 +80,25 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
     private static readonly TimeSpan LedgerStep = TimeSpan.FromMinutes(1);
 
     private readonly string _packFilePath;
+    private readonly LeagueRuleset? _rulesetOverride;
     private readonly LeagueRulesetSerializer _rulesetSerializer = new();
 
     public LeaguePackDataSource(string packFilePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(packFilePath);
         _packFilePath = packFilePath;
+    }
+
+    /// <summary>
+    /// The pack's content under a ruleset the caller chose instead of the one the pack names — how a
+    /// league setup plays one roster under different league settings. The pack's own
+    /// <c>rulesetFile</c> is then not read at all.
+    /// </summary>
+    public LeaguePackDataSource(string packFilePath, LeagueRuleset ruleset)
+        : this(packFilePath)
+    {
+        ArgumentNullException.ThrowIfNull(ruleset);
+        _rulesetOverride = ruleset;
     }
 
     public DomainOperationResult<LeagueSnapshot> Load()
@@ -117,6 +131,12 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
                 $"The league pack is schema version {envelope.SchemaVersion}; this build reads versions {OldestSupportedSchemaVersion} to {CurrentSchemaVersion}.");
         }
 
+        var packDirectory = Path.GetDirectoryName(Path.GetFullPath(_packFilePath)) ?? string.Empty;
+        if (_rulesetOverride is not null)
+        {
+            return Build(envelope, _rulesetOverride, packDirectory);
+        }
+
         var rulesetPath = envelope.RulesetFile is null
             ? FixtureLeagueDataSource.DefaultRulesetFilePath
             : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_packFilePath)) ?? string.Empty, envelope.RulesetFile);
@@ -133,7 +153,6 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             return DomainOperationResult<LeagueSnapshot>.Failure(rulesetResult.Errors.ToArray());
         }
 
-        var packDirectory = Path.GetDirectoryName(Path.GetFullPath(_packFilePath)) ?? string.Empty;
         return Build(envelope, rulesetResult.Value, packDirectory);
     }
 
@@ -218,12 +237,14 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             }
         }
 
+        var keyedPlayers = AssignPlayerKeys(parsedPlayers, errors);
+
         if (errors.Count > 0)
         {
             return DomainOperationResult<LeagueSnapshot>.Failure(errors.ToArray());
         }
 
-        return BuildLeague(envelope, ruleset, season, teamPlans, parsedPlayers, logosByKey, coloursByKey);
+        return BuildLeague(envelope, ruleset, season, teamPlans, keyedPlayers, logosByKey, coloursByKey);
     }
 
     private static DomainOperationResult<LeagueSnapshot> BuildLeague(
@@ -242,6 +263,8 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
 
         var players = new List<Player>(parsedPlayers.Count);
         var portraits = new Dictionary<string, string>(StringComparer.Ordinal);
+        var playerKeys = new Dictionary<string, string>(StringComparer.Ordinal);
+        var teamKeys = new Dictionary<string, string>(StringComparer.Ordinal);
         var careers = new Dictionary<string, IReadOnlyList<CareerSeasonLine>>(StringComparer.Ordinal);
         var logos = new Dictionary<string, string>(StringComparer.Ordinal);
         var teamColours = new Dictionary<string, TeamColours>(StringComparer.Ordinal);
@@ -266,6 +289,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             }
 
             players.Add(playerResult.Value);
+            playerKeys[playerResult.Value.Id.Value] = plan.Key!;
             if (plan.PortraitPath is not null)
             {
                 portraits[playerResult.Value.Id.Value] = plan.PortraitPath;
@@ -314,6 +338,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             franchises.Add(franchiseResult.Value);
             teams.Add(teamResult.Value);
             teamIdsByKey[teamPlan.Key!] = teamResult.Value.Id;
+            teamKeys[teamResult.Value.Id.Value] = teamPlan.Key!;
             franchisesByKey[teamPlan.Key!] = franchiseResult.Value;
             if (logosByKey.TryGetValue(teamPlan.Key!, out var logo))
             {
@@ -408,7 +433,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
                 ledger,
                 ruleset.ToConfiguration())
             {
-                Artwork = new LeagueArtwork(logos, portraits) { TeamColours = teamColours },
+                Artwork = new LeagueArtwork(logos, portraits) { TeamColours = teamColours, TeamKeys = teamKeys, PlayerKeys = playerKeys },
                 CareerHistory = careers,
                 TaxRepeaterTeams = repeaters,
             });
@@ -522,6 +547,11 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             ValidateContract(plan.Contract, schemaVersion, season, label, errors);
         }
 
+        if (plan.Key is not null && !LeaguePackKeys.IsValid(plan.Key))
+        {
+            errors.Add(Invalid(label, $"Key '{plan.Key}' is not a valid key: up to {LeaguePackKeys.MaximumLength} letters, digits, '.', '_' or '-', starting with a letter or digit."));
+        }
+
         var portrait = ResolveImage(plan.Portrait, packDirectory, $"{label} portrait", errors);
         var career = ParseCareer(plan.Career, label, errors);
 
@@ -536,7 +566,46 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             return null;
         }
 
-        return new ParsedPlayer(plan.Name!, position, rating, birthDate, service, plan.Team, plan.Injury, plan.Contract, portrait, career, plan.InjuryDays);
+        return new ParsedPlayer(plan.Name!, position, rating, birthDate, service, plan.Team, plan.Injury, plan.Contract, portrait, career, plan.InjuryDays, plan.Key);
+    }
+
+    /// <summary>
+    /// Gives every player his key: the one the pack states, or one derived from his name and birth
+    /// date. Two stated keys that collide are a content mistake; a derived key that collides — two
+    /// players of the same name born the same day, or one whose derived key another player states —
+    /// takes the next free numbered suffix in file order, so the same pack always keys the same way.
+    /// </summary>
+    private static IReadOnlyList<ParsedPlayer> AssignPlayerKeys(IReadOnlyList<ParsedPlayer> players, List<DomainError> errors)
+    {
+        var taken = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var player in players.Where(player => player.Key is not null))
+        {
+            if (!taken.Add(player.Key!))
+            {
+                errors.Add(new DomainError(DuplicatePlayerKeyCode, $"Player key '{player.Key}' is stated by more than one player."));
+            }
+        }
+
+        var keyed = new List<ParsedPlayer>(players.Count);
+        foreach (var player in players)
+        {
+            if (player.Key is not null)
+            {
+                keyed.Add(player);
+                continue;
+            }
+
+            var stem = LeaguePackKeys.Derive(player.Name, player.BirthDate);
+            var key = stem;
+            for (var suffix = 2; !taken.Add(key); suffix++)
+            {
+                key = $"{stem}-{suffix}";
+            }
+
+            keyed.Add(player with { Key = key });
+        }
+
+        return keyed;
     }
 
     private static IReadOnlyList<CareerSeasonLine> ParseCareer(
@@ -1019,5 +1088,6 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
         LeaguePackContractEnvelope? Contract,
         string? PortraitPath,
         IReadOnlyList<CareerSeasonLine> Career,
-        int? InjuryDays = null);
+        int? InjuryDays = null,
+        string? Key = null);
 }

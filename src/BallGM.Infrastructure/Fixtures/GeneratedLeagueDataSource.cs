@@ -5,6 +5,7 @@ using BallGM.Domain.Randomness;
 using BallGM.Infrastructure.LeaguePacks;
 using BallGM.Infrastructure.Players;
 using BallGM.Infrastructure.Rulesets;
+using BallGM.Rules.Configuration;
 using BallGM.Rules.Draft;
 using BallGM.Rules.Players;
 
@@ -88,13 +89,24 @@ public sealed class GeneratedLeagueDataSource : ILeagueDataSource
     }
 
     /// <summary>The league as pack content: deterministic in the seed and the size.</summary>
-    public static LeaguePackEnvelope Envelope(int seed, int teamCount)
+    public static LeaguePackEnvelope Envelope(int seed, int teamCount) =>
+        Envelope(seed, GeneratedLeagueShape.Standard(teamCount), salaryFit: null);
+
+    /// <summary>
+    /// A league of any <paramref name="shape"/> as pack content, deterministic in the seed and the
+    /// shape. With <paramref name="salaryFit"/>, salaries are put on that ruleset's scale — scaled to its
+    /// soft cap (or hard cap) and held inside its floor and ceiling for each player's service — so a
+    /// generated league fits whichever league settings it is generated for. Without it, the salaries
+    /// are the calibration league's, unchanged.
+    /// </summary>
+    public static LeaguePackEnvelope Envelope(int seed, GeneratedLeagueShape shape, LeagueRuleset? salaryFit)
     {
+        ArgumentNullException.ThrowIfNull(shape);
         var random = new SeededRandomSource(SeedMixer.Mix(seed, "generated-league"));
         var teams = new List<LeaguePackTeamEnvelope>();
         var players = new List<LeaguePackPlayerEnvelope>();
 
-        for (var team = 0; team < teamCount; team++)
+        for (var team = 0; team < shape.TeamCount; team++)
         {
             var key = $"G{team:D2}";
             var name = $"{Cities[team]} {Nicknames[team]}";
@@ -102,7 +114,7 @@ public sealed class GeneratedLeagueDataSource : ILeagueDataSource
 
             // Team quality: a triangular draw over ±8, so most teams are middling and a few are not.
             var quality = random.NextInt32(0, 9) + random.NextInt32(0, 9) - 8;
-            for (var slot = 0; slot < RosterSize; slot++)
+            for (var slot = 0; slot < shape.RosterSize; slot++)
             {
                 // The top of a roster varies far more than its middle: one team has two stars, another
                 // none, which is where a league's leaders come from (a triangular draw over ±9 for the
@@ -111,15 +123,19 @@ public sealed class GeneratedLeagueDataSource : ILeagueDataSource
                 var talent = Math.Clamp(SlotTalent[slot] + quality + spread, 35, 99);
                 var age = 20 + random.NextInt32(0, 15);
                 var rating = RatingProfileGenerator.Generate(talent, SlotPosition[slot], age, 30, PlayerRating.MaximumOverall, random);
+                var service = Math.Max(0, age - 20);
+
+                // Argument order is draw order: name, birth month and day, then contract length, exactly
+                // as before shapes existed, so a standard shape still generates the calibration league.
                 players.Add(new LeaguePackPlayerEnvelope(
                     ProspectNameBank.NextName(random),
                     SlotPosition[slot].ToString(),
                     new DateOnly(Season - age, 1 + random.NextInt32(0, 12), 1 + random.NextInt32(0, 28)),
-                    Math.Max(0, age - 20),
+                    service,
                     key,
                     PlayerSheetCodec.VisibleMap(rating),
                     null,
-                    new LeaguePackContractEnvelope(Salaries(rating.Overall, 1 + random.NextInt32(0, 4)), null),
+                    new LeaguePackContractEnvelope(Fit(Salaries(rating.Overall, 1 + random.NextInt32(0, 4)), service, salaryFit), null),
                     Hidden: PlayerSheetCodec.HiddenMap(rating),
                     Potential: rating.PotentialAbility,
                     Body: PlayerSheetCodec.BodyOf(rating),
@@ -127,16 +143,29 @@ public sealed class GeneratedLeagueDataSource : ILeagueDataSource
                     Traits: PlayerSheetCodec.TraitList(rating),
                     Tendencies: PlayerSheetCodec.TendencyMap(rating)));
             }
+
+            if (salaryFit?.CapThresholds.HardCap is { } hardCap)
+            {
+                FitUnderHardCap(players, players.Count - shape.RosterSize, hardCap.SmallestUnits, salaryFit);
+            }
         }
 
-        var conferences = new[] { "East", "West" }
+        var conferenceNames = shape.Conferences switch
+        {
+            0 => [],
+            1 => ["League"],
+            2 => new[] { "East", "West" },
+            _ => Enumerable.Range(1, shape.Conferences).Select(number => $"Group {number}").ToArray(),
+        };
+
+        var perDivision = shape.Conferences == 0 ? 0 : shape.TeamCount / (shape.Conferences * shape.DivisionsPerConference);
+        var conferences = conferenceNames
             .Select((conference, c) => new LeaguePackConferenceEnvelope(
                 $"{conference} Conference",
-                Enumerable.Range(0, 3)
+                Enumerable.Range(0, shape.DivisionsPerConference)
                     .Select(d =>
                     {
-                        var perDivision = teamCount / 6;
-                        var first = ((c * 3) + d) * perDivision;
+                        var first = ((c * shape.DivisionsPerConference) + d) * perDivision;
                         return new LeaguePackDivisionEnvelope(
                             $"{conference} Division {d + 1}",
                             Enumerable.Range(first, perDivision).Select(team => $"G{team:D2}").ToList());
@@ -147,11 +176,117 @@ public sealed class GeneratedLeagueDataSource : ILeagueDataSource
         return new LeaguePackEnvelope(LeaguePackDataSource.CurrentSchemaVersion, "Generated League", Season, null, conferences, teams, players);
     }
 
+    /// <summary>The calibration league's salary scale is anchored to this soft cap.</summary>
+    private const long CalibrationSoftCap = 141_000_000L;
+
+    /// <summary>
+    /// Scales one team's salaries down until its first-season payroll sits inside the hard cap, with
+    /// a little room to sign someone — a generated team that starts over a hard cap could sign nobody,
+    /// which is a league nobody asked for. Minimum salaries stay at the minimum.
+    /// </summary>
+    private static void FitUnderHardCap(List<LeaguePackPlayerEnvelope> players, int first, long hardCap, LeagueRuleset ruleset)
+    {
+        var target = hardCap * 97 / 100;
+
+        // Minimum salaries cannot be scaled, so a pass can land short of the target; a few passes
+        // converge, and a roster of minimums that is still over is a ruleset the checker reports.
+        for (var pass = 0; pass < 8; pass++)
+        {
+            var payroll = players.Skip(first).Sum(player => player.Contract!.Salaries![0]);
+            if (payroll <= target)
+            {
+                return;
+            }
+
+            for (var index = first; index < players.Count; index++)
+            {
+                var player = players[index];
+                var floor = ruleset.NegotiationRules.CompensationFloor.FloorFor(player.SeasonsOfService ?? 0)?.SmallestUnits ?? 0;
+                var salaries = player.Contract!.Salaries!.Select(salary => Math.Max(floor, (long)((decimal)salary * target / payroll))).ToArray();
+                players[index] = player with { Contract = player.Contract with { Salaries = salaries } };
+            }
+        }
+    }
+
+    private static long[] Fit(long[] salaries, int service, LeagueRuleset? ruleset)
+    {
+        if (ruleset is null)
+        {
+            return salaries;
+        }
+
+        var anchor = ruleset.CapThresholds.SoftCap ?? ruleset.CapThresholds.HardCap;
+        var floor = ruleset.NegotiationRules.CompensationFloor.FloorFor(service)?.SmallestUnits;
+        var ceiling = ruleset.NegotiationRules.CompensationCeiling.CeilingFor(service, ruleset.CapThresholds.SoftCap)?.SmallestUnits;
+
+        return salaries
+            .Select(salary =>
+            {
+                var scaled = anchor is null ? salary : (long)((decimal)salary * anchor.SmallestUnits / CalibrationSoftCap);
+                scaled = Math.Max(scaled, floor ?? scaled);
+                return Math.Min(scaled, ceiling ?? scaled);
+            })
+            .ToArray();
+    }
+
     /// <summary>A salary that rises with the square of talent above fifty, so a roster stays under a modern cap.</summary>
     private static long[] Salaries(int overall, int seasons)
     {
         var above = Math.Max(0, overall - 50);
         var salary = 1_150_000L + (above * above * 24_000L);
         return Enumerable.Repeat(salary, seasons).ToArray();
+    }
+}
+
+/// <summary>
+/// The shape of a generated league: how many teams, split into how many conferences of how many
+/// divisions, each carrying how many players. Teams must divide evenly into the divisions; the name
+/// pool caps a league at thirty teams and the talent ladder a roster at fifteen. Zero conferences is
+/// a flat league — one table, and a postseason bracket seeded across the whole league with no final
+/// between conference winners — the usual shape outside North America.
+/// </summary>
+public sealed record GeneratedLeagueShape
+{
+    public const int MaximumTeams = 30;
+    public const int MaximumRosterSize = 15;
+
+    private GeneratedLeagueShape(int teamCount, int conferences, int divisionsPerConference, int rosterSize)
+    {
+        TeamCount = teamCount;
+        Conferences = conferences;
+        DivisionsPerConference = divisionsPerConference;
+        RosterSize = rosterSize;
+    }
+
+    public int TeamCount { get; }
+
+    public int Conferences { get; }
+
+    public int DivisionsPerConference { get; }
+
+    public int RosterSize { get; }
+
+    /// <summary>Two conferences of three divisions, fifteen to a roster: the calibration league's shape.</summary>
+    public static GeneratedLeagueShape Standard(int teamCount) =>
+        Create(teamCount, 2, 3, MaximumRosterSize).Value;
+
+    public static DomainOperationResult<GeneratedLeagueShape> Create(int teamCount, int conferences, int divisionsPerConference, int rosterSize)
+    {
+        var groups = Math.Max(1, conferences * divisionsPerConference);
+        if (conferences < 0 || (conferences > 0 && divisionsPerConference < 1) || teamCount < 2 || teamCount > MaximumTeams || teamCount % groups != 0)
+        {
+            return DomainOperationResult<GeneratedLeagueShape>.Failure(new DomainError(
+                "generated_league.invalid_shape",
+                $"A generated league of {teamCount} teams cannot be split into {ExplanationText.Count(conferences, "conference")} of {ExplanationText.Count(divisionsPerConference, "division")}: it needs between 2 and {MaximumTeams} teams, dividing evenly (or 0 conferences, for one flat table)."));
+        }
+
+        if (rosterSize is < 5 or > MaximumRosterSize)
+        {
+            return DomainOperationResult<GeneratedLeagueShape>.Failure(new DomainError(
+                "generated_league.invalid_roster_size",
+                $"A generated roster carries between 5 and {MaximumRosterSize} players, not {rosterSize}."));
+        }
+
+        return DomainOperationResult<GeneratedLeagueShape>.Success(new GeneratedLeagueShape(teamCount, conferences, divisionsPerConference, rosterSize));
     }
 }

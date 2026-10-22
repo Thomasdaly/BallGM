@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "name": "Australasian rules, fictional league",
+  "ruleset": {
+    "pack": "builtin.ruleset.australasian"
+  },
+  "league": {
+    "generated": {
+      "teams": 10,
+      "conferences": 0,
+      "seed": 2026
+    }
+  }
+}

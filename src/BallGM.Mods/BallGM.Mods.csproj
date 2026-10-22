@@ -1,8 +1,17 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\BallGM.Application\BallGM.Application.csproj" />
     <ProjectReference Include="..\BallGM.Domain\BallGM.Domain.csproj" />
+  </ItemGroup>
+
+  <!-- The built-in packs (league-setting presets and the setups that use them) ship next to the
+       binaries as ordinary packs, so the game reads its own presets through exactly the path a
+       community pack takes. PackFolders.BuiltIn is where they land. -->
+  <ItemGroup>
+    <None Include="..\..\data\packs\**\*" LinkBase="data\packs">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

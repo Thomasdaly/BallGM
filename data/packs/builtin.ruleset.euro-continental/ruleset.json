@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 17,
+  "name": "European continental club competition — 2025–26 format",
+  "regularSeasonGameCount": 38,
+  "minimumRosterPlayers": 12,
+  "maximumRosterPlayers": 15,
+  "draftLotteryEnabled": false,
+  "injuredPlayerTradeEligibility": "Allowed",
+  "secondApronBlocksSalaryIncrease": false,
+  "allowanceMaySplitAcrossPlayers": false,
+  "preseasonDays": 30,
+  "regularSeasonDays": 200,
+  "offseasonDays": 90,
+  "standingsTieBreaks": [
+    "HeadToHeadRecord",
+    "PointDifferential",
+    "PointsScored"
+  ],
+  "postseasonDays": 45,
+  "postseasonQualifyingTeamsPerConference": 8,
+  "postseasonSeriesLengths": [
+    5,
+    1,
+    1
+  ],
+  "postseasonHomeCourtSequence": "2-2-1",
+  "gameRules": {
+    "personalFoulLimit": 5,
+    "bonusTeamFoulsPerPeriod": 4,
+    "bonusTeamFoulsPerOvertime": 4
+  }
+}

@@ -57,6 +57,10 @@ public sealed class ArchitectureBoundaryTests
                 contents.Contains("BallGM.Infrastructure", StringComparison.Ordinal),
                 $"{Path.GetFileName(path)} references BallGM.Infrastructure. The client may only name concrete " +
                 "Infrastructure types in its composition root, not in views or view models.");
+            Assert.False(
+                contents.Contains("BallGM.Mods", StringComparison.Ordinal),
+                $"{Path.GetFileName(path)} references BallGM.Mods. Pack formats and the pack checker are composed " +
+                "in the client's composition root; views and view models see Application types only.");
         }
     }
 

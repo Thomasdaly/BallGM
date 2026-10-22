@@ -77,14 +77,14 @@ BallGM.Rules -> BallGM.Domain
 BallGM.Simulation -> BallGM.Domain, BallGM.Rules
 BallGM.Infrastructure -> BallGM.Application, BallGM.Domain, BallGM.Rules
 BallGM.Mods -> BallGM.Application, BallGM.Domain
-BallGM.Client.Avalonia -> BallGM.Application, BallGM.Infrastructure
-BallGM.DataValidator -> BallGM.Mods
+BallGM.Client.Avalonia -> BallGM.Application, BallGM.Infrastructure, BallGM.Mods
+BallGM.DataValidator -> BallGM.Mods, BallGM.Infrastructure
 ```
 
 The Domain project must not reference the other production projects.
 Only `BallGM.Client.Avalonia` may reference Avalonia packages.
 
-`BallGM.Client.Avalonia` references `BallGM.Infrastructure` because it is the composition root: something has to choose the concrete `ILeagueDataSource` the Application query reads through, and the client process is the only place that decision can be made. The reference is fenced rather than open-ended — `LeagueClientComposition` is the single file allowed to name an Infrastructure type, and `ArchitectureBoundaryTests.AvaloniaViewsAndViewModelsDoNotReachIntoInfrastructure` fails the build if anything under `Views/` or `ViewModels/` mentions `BallGM.Infrastructure`. No cycle is created and no Avalonia dependency reaches the simulation core; the rule that matters — the UI depends on Application read models, never on aggregate internals or on a file format — is unchanged.
+`BallGM.Client.Avalonia` references `BallGM.Infrastructure` because it is the composition root: something has to choose the concrete `ILeagueDataSource` the Application query reads through, and the client process is the only place that decision can be made. The reference is fenced rather than open-ended — `LeagueClientComposition` is the single file allowed to name an Infrastructure type, and `ArchitectureBoundaryTests.AvaloniaViewsAndViewModelsDoNotReachIntoInfrastructure` fails the build if anything under `Views/` or `ViewModels/` mentions `BallGM.Infrastructure`. The same fence holds `BallGM.Mods`: a league setup is checked and loaded in the composition root (`BALLGM_LEAGUE_SETUP`), and the same test fails a view or view model that names it. `BallGM.DataValidator` (the `ballgm-packs` command line) is the second composition root: it names `PackContentProbe` from Infrastructure and hands it to the pack checker in Mods — see `docs/packs.md`. No cycle is created and no Avalonia dependency reaches the simulation core; the rule that matters — the UI depends on Application read models, never on aggregate internals or on a file format — is unchanged.
 
 ## The cap ledger crosses a boundary, on purpose
 
@@ -803,13 +803,26 @@ Both are save-schema and cross-project public-API changes, which `CLAUDE.md` put
 
 The same document's content-neutrality position (`docs/vision.md` → Moddability) has one direct architectural consequence: a league the format cannot express is a code change, and a code change is a failure of the moddability pillar. The uncapped-league and no-draft gaps recorded in `docs/negotiation-mechanisms.md` → "Ruleset genericity" are the first two measured instances of that; both are closed at schema version 4, and `tests/BallGM.Integration.Tests/RulesetConformanceTests.cs` is where the measurement lives — it now asserts the fixed behaviour rather than pinning the broken behaviour.
 
+## Packs, league setups, and the pack checker
+
+The mod platform's first slice: pack manifests and kinds, readable pack keys for teams and players, a
+catalogue of every league setting, five league presets as ruleset packs, league setups that name
+everything a career starts from, and the pack checker that verifies a setup end to end — playing a
+test season — before the game loads it. The design record is `docs/packs.md`; the presets and their
+fidelity to the leagues they mimic are in `docs/league-presets.md`; the guide for pack makers is
+`docs/modding/PACKS.md`. Two decisions worth knowing here: the checker lives in `BallGM.Mods` and asks
+about content through `BallGM.Application.Packs.IPackContentProbe` (implemented by
+`BallGM.Infrastructure.Packs.PackContentProbe`), the cap ledger's port-and-adapter shape again; and
+**nothing cosmetic ever blocks a load** — only what stops the game running, or a pack the setup asks
+for and cannot have.
+
 ## Mod and data-pack trust model
 
 `AGENTS.md`/`CLAUDE.md` both commit to treating imported mod/data-pack content as untrusted input. This is the concrete plan that commitment resolves to, so the mod format doesn't need a breaking change once the mod platform (Milestone 10) is built out:
 
 1. **Never executed.** Data packs are declarative JSON only. No mod ever contains or references executable code, and the loader never evaluates mod content as code.
-2. **Schema-validated on load, in effect now.** `DataPackManifest.SchemaVersion` is checked against `CurrentSchemaVersion` before content is trusted structurally. `BallGM.DataValidator` exists specifically to run this check outside the game process. This is sufficient while data packs are developer-authored fixtures (Milestone 0–8).
-3. **Content-integrity verification, required before Milestone 10 ships.** Once mods are loaded from outside the repository (community-authored packs), schema validity alone doesn't establish the pack is untampered. Before the mod platform milestone ships, `DataPackManifest` gains a content hash (or signature) field, and the loader rejects a pack whose declared hash doesn't match its contents. This is a breaking manifest-schema change, which is exactly why it's called out here rather than left implicit — bump `DataPackManifest.CurrentSchemaVersion` when it lands, and do it deliberately rather than as an afterthought.
+2. **Schema-validated on load, in effect now.** Every pack's `ballgm-pack.json` is read by `PackManifestReader` (manifest schema version 2; unknown fields refused) before anything in the pack is opened, and every path a pack names is resolved by `PackPaths` — no absolute paths, no `..`, no link out of the pack folder — before any file access. `ballgm-packs check` (`tools/BallGM.DataValidator`) runs the whole pack checker outside the game process. See `docs/packs.md`.
+3. **Content-integrity verification, required before Milestone 10 ships.** Once mods are loaded from outside the repository (community-authored packs), schema validity alone doesn't establish the pack is untampered. Before the mod platform milestone ships, `PackManifest` gains a content hash (or signature) field, and the loader rejects a pack whose declared hash doesn't match its contents. This is a breaking manifest-schema change, which is exactly why it's called out here rather than left implicit — bump `PackManifest.CurrentSchemaVersion` when it lands, and do it deliberately rather than as an afterthought.
 4. **Aggregate factories already fail closed on bad content.** Because `Team.Create`/`League.Create` return `DomainOperationResult<T>` instead of throwing for business-rule violations (see `docs/domain-language.md`), a malformed data pack produces a structured, explainable load error rather than crashing the loader — this is the mechanism integrity and schema checks report through.
 
 ## Milestone 0 proofs

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2,
+  "id": "builtin.setup.australasian-fictional",
+  "name": "Australasian rules, fictional league",
+  "version": "1.0.0",
+  "kind": "setup",
+  "author": "BallGM",
+  "description": "The 2026–27 Australasian rules with a generated fictional 10-club league.",
+  "requires": [
+    {
+      "pack": "builtin.ruleset.australasian"
+    }
+  ]
+}

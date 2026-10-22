@@ -1,11 +1,15 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- The pack checker's command line. Like the client, a composition root: it names the concrete
+       content probe from BallGM.Infrastructure and hands it to the checker in BallGM.Mods. -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\BallGM.Mods\BallGM.Mods.csproj" />
+    <ProjectReference Include="..\..\src\BallGM.Infrastructure\BallGM.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <AssemblyName>ballgm-packs</AssemblyName>
   </PropertyGroup>
 
 </Project>

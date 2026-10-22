@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "id": "builtin.ruleset.iberian-domestic",
+  "name": "Iberian domestic league (2025–26)",
+  "version": "2025.0.0",
+  "kind": "ruleset",
+  "author": "BallGM",
+  "description": "Eighteen clubs, a 34-round double round robin, eight-team playoffs (best of three, then best of five); no cap, no draft, an open market, FIBA game rules.",
+  "fidelity": [
+    {
+      "rule": "40-minute game",
+      "handling": "notModelled",
+      "detail": "This league plays four 10-minute quarters; the match engine plays four 12-minute quarters, so per-game totals run about a fifth high. Rates (per possession, per 36 minutes, percentages) compare fairly."
+    },
+    {
+      "rule": "Promotion and relegation",
+      "handling": "notModelled",
+      "detail": "League membership is fixed: the bottom two are not relegated and no club comes up (league membership as an event is a recorded architectural change, not yet built)."
+    },
+    {
+      "rule": "Homegrown-player quota",
+      "handling": "notModelled",
+      "detail": "No minimum of club-trained players on the game sheet."
+    },
+    {
+      "rule": "Playoff home pattern",
+      "handling": "approximated",
+      "detail": "Home advantage alternates game by game (1-1-1-1-1), which gives the higher seed games 1, 3 and 5 rather than 1, 2 and 5 in the five-game rounds."
+    },
+    {
+      "rule": "Domestic cup and super cup",
+      "handling": "notModelled",
+      "detail": "Only the league is played."
+    },
+    {
+      "rule": "Overtime team fouls",
+      "handling": "approximated",
+      "detail": "FIBA carries fourth-quarter team fouls into overtime; here overtime starts a fresh count."
+    }
+  ]
+}
