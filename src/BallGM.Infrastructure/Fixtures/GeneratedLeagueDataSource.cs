@@ -40,6 +40,9 @@ public sealed class GeneratedLeagueDataSource : ILeagueDataSource
     /// <summary>A roster's talent from its star down to its fifteenth man, before team quality and noise.</summary>
     private static readonly int[] SlotTalent = [86, 81, 77, 74, 71, 68, 66, 64, 62, 60, 58, 56, 54, 52, 50];
 
+    /// <summary>How many of a roster's top slots draw their talent from the wide spread.</summary>
+    private const int TopSlots = 3;
+
     /// <summary>Positions down a roster: a starting five, then the bench covering each spot again.</summary>
     private static readonly Position[] SlotPosition =
     [
@@ -101,7 +104,11 @@ public sealed class GeneratedLeagueDataSource : ILeagueDataSource
             var quality = random.NextInt32(0, 9) + random.NextInt32(0, 9) - 8;
             for (var slot = 0; slot < RosterSize; slot++)
             {
-                var talent = Math.Clamp(SlotTalent[slot] + quality + random.NextInt32(-3, 4), 35, 99);
+                // The top of a roster varies far more than its middle: one team has two stars, another
+                // none, which is where a league's leaders come from (a triangular draw over ±9 for the
+                // first three, ±3 below them).
+                var spread = slot < TopSlots ? random.NextInt32(0, 10) + random.NextInt32(0, 10) - 9 : random.NextInt32(-3, 4);
+                var talent = Math.Clamp(SlotTalent[slot] + quality + spread, 35, 99);
                 var age = 20 + random.NextInt32(0, 15);
                 var rating = RatingProfileGenerator.Generate(talent, SlotPosition[slot], age, 30, PlayerRating.MaximumOverall, random);
                 players.Add(new LeaguePackPlayerEnvelope(
@@ -117,7 +124,8 @@ public sealed class GeneratedLeagueDataSource : ILeagueDataSource
                     Potential: rating.PotentialAbility,
                     Body: PlayerSheetCodec.BodyOf(rating),
                     Positions: PlayerSheetCodec.PositionMap(rating),
-                    Traits: PlayerSheetCodec.TraitList(rating)));
+                    Traits: PlayerSheetCodec.TraitList(rating),
+                    Tendencies: PlayerSheetCodec.TendencyMap(rating)));
             }
         }
 

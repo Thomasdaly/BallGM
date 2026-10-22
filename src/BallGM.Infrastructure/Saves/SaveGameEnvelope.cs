@@ -67,6 +67,9 @@ public sealed record SaveGameEnvelope(
     /// potential, body, positions, traits) — and a player's retirement and biography, which every
     /// earlier version silently dropped, began to travel with him.
     /// </para>
+    /// <para>
+    /// Moved 5 → 6 when tendencies (touches, shot, where from, how) joined the sheet.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 5;
+    public const int CurrentSchemaVersion = 6;
 }

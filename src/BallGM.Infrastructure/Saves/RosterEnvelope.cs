@@ -36,7 +36,8 @@ public sealed record PlayerEnvelope(
     int SeasonsOfService,
     string? InjuryDescription,
     bool IsRetired = false,
-    PlayerBiographyEnvelope? Biography = null);
+    PlayerBiographyEnvelope? Biography = null,
+    IReadOnlyDictionary<string, int?>? Tendencies = null);
 
 /// <summary>Where a player came from: birthplace, prior programme and his draft, any of them unknown.</summary>
 public sealed record PlayerBiographyEnvelope(string? Birthplace, string? PriorProgramme, int? DraftSeasonYear, int? DraftRound, int? DraftSelection);

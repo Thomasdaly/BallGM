@@ -122,7 +122,7 @@ public sealed class SaveGameSerializerTests
     {
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
 
-        var result = _serializer.Load(saved.Value.Replace("\"schemaVersion\": 5", "\"schemaVersion\": 4", StringComparison.Ordinal));
+        var result = _serializer.Load(saved.Value.Replace("\"schemaVersion\": 6", "\"schemaVersion\": 4", StringComparison.Ordinal));
 
         Assert.Equal("save_game.unsupported_schema_version", Assert.Single(result.Errors).Code);
     }
@@ -132,14 +132,14 @@ public sealed class SaveGameSerializerTests
     {
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
 
-        Assert.Contains("\"schemaVersion\": 5", saved.Value, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": 6", saved.Value, StringComparison.Ordinal);
     }
 
     [Fact]
     public void SaveFromAFutureSchema_ExplainsItselfInsteadOfLoadingHalfOfIt()
     {
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
-        var mutated = saved.Value.Replace("\"schemaVersion\": 5", "\"schemaVersion\": 99", StringComparison.Ordinal);
+        var mutated = saved.Value.Replace("\"schemaVersion\": 6", "\"schemaVersion\": 99", StringComparison.Ordinal);
 
         var result = _serializer.Load(mutated);
 
@@ -153,7 +153,7 @@ public sealed class SaveGameSerializerTests
         // Version 3's concluded seasons hold USG_PCT as the engine's share of team plays; version 4's
         // hold the minutes-normalised estimate. Loading one would mix the two in one career column.
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
-        var versionThree = saved.Value.Replace("\"schemaVersion\": 5", "\"schemaVersion\": 3", StringComparison.Ordinal);
+        var versionThree = saved.Value.Replace("\"schemaVersion\": 6", "\"schemaVersion\": 3", StringComparison.Ordinal);
 
         var result = _serializer.Load(versionThree);
 

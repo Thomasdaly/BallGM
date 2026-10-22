@@ -285,7 +285,8 @@ public sealed class SaveGameSerializer : ISaveGameStore
                 envelope.Positions,
                 envelope.Traits,
                 position,
-                out var sheetError);
+                out var sheetError,
+                envelope.Tendencies);
             if (rating is null)
             {
                 return Fail<List<Player>>(InvalidFieldCode, $"Player '{envelope.PlayerId}': {sheetError}");
@@ -632,7 +633,8 @@ public sealed class SaveGameSerializer : ISaveGameStore
             player.IsRetired,
             player.Biography == PlayerBiography.Unknown
                 ? null
-                : new PlayerBiographyEnvelope(player.Biography.Birthplace, player.Biography.PriorProgramme, player.Biography.DraftSeasonYear, player.Biography.DraftRound, player.Biography.DraftSelection));
+                : new PlayerBiographyEnvelope(player.Biography.Birthplace, player.Biography.PriorProgramme, player.Biography.DraftSeasonYear, player.Biography.DraftRound, player.Biography.DraftSelection),
+            PlayerSheetCodec.TendencyMap(player.Rating));
 
     private static TransactionLedgerEnvelope ToEnvelope(TransactionLedger ledger) =>
         new(ledger.Entries.Select(ToEnvelope).ToList());

@@ -126,3 +126,11 @@ All 12 rows in the frozen suite now pass. Everything past this point is the audi
 not gated by this file: turnovers/steals/blocks/fouls (no mechanism, nothing here needs them) and
 battery 4's attribute↔stat couplings/usage-stacking slopes (need those plus a match-engine
 multi-attribute wiring pass, deliberately deferred in P-3).
+
+- **Attributes A3–A6 (2026-10-23)** moved the engine (handler/pass/assist, skill-driven shares,
+  role-based minutes) and re-measured every row without changing a band: pace 98.1, ortg 114.6
+  (controlled) / league pts 114, eFG 0.539, FT/FGA 0.232, fg3a/fga 0.379 (controlled) / 0.43 (calibration
+  league), AST/FGM 0.578 (controlled) / 0.62 (league), ORB% 0.264, TOV% 0.128, STL 7.41, BLK 4.75,
+  PF 19.6, foul-outs 13.5/100; fixture 1,000 seasons: sd_team_win_pct 0.157, Noll-Scully 2.78, talent
+  share 0.870, signed margin SD 14.01; row 22: 16.0 ms/season. `TeamStrengthOffsets` nudged to
+  `[13,5,0,-4,-10,-17]` because role-based minutes concentrate talent (talent share had reached 0.880).

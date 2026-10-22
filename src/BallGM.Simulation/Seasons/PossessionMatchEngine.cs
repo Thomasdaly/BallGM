@@ -229,11 +229,17 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// </summary>
     private static void PlayPossession(Side offence, Side defence, (int Fg2Percent, int Fg3Percent) shooting, int bonusAfter, IRandomSource random)
     {
-        var handler = offence.PickOnFloor(offence.UsageFactors, random);
+        // The ball handler is whoever runs the offence most (see HandlerFactors): the creator, not
+        // necessarily the scorer.
+        var handler = offence.PickOnFloor(offence.HandlerFactors, random);
 
         if (random.NextBasisPoint() < TurnoverRate(offence, defence, handler))
         {
-            offence.TurnoversBy[handler]++;
+            // Mostly the handler's; otherwise whoever he was getting it to (picked by usage).
+            var loser = random.NextBasisPoint() < MatchModelBounds.HandlerTurnoverShare
+                ? handler
+                : offence.PickOnFloor(offence.UsageFactors, random);
+            offence.TurnoversBy[loser]++;
 
             if (random.NextBasisPoint() < MatchModelBounds.StealShareOfTurnovers)
             {
@@ -241,7 +247,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
             }
             else if (random.NextBasisPoint() < MatchModelBounds.OffensiveFoulShareOfLostBalls)
             {
-                offence.ChargeFoul(handler);
+                offence.ChargeFoul(loser);
             }
 
             return;
@@ -262,12 +268,35 @@ public sealed class PossessionMatchEngine : IMatchEngine
             firstShooter = -1;
         }
 
-        // The ball handler takes the first shot; a second chance after an offensive rebound goes to
-        // whoever the usage factors pick then.
+        // The handler either shoots it himself or passes it to a team-mate usage picks — and a make off
+        // his pass may be his assist. A second chance after an offensive rebound is a put-back by the
+        // rebounder, or a reset to whoever usage picks then.
         for (var shot = 0; shot < MatchModelBounds.MaximumShotsPerPossession; shot++)
         {
-            var shooter = shot == 0 && firstShooter >= 0 ? firstShooter : offence.PickOnFloor(offence.UsageFactors, random);
-            if (!TakeShot(offence, defence, shooter, shooting, random))
+            int shooter;
+            var passer = -1;
+            if (shot == 0 && firstShooter >= 0)
+            {
+                if (random.NextBasisPoint() < offence.SelfShotShares[handler])
+                {
+                    shooter = handler;
+                }
+                else
+                {
+                    shooter = offence.PickTeammateOnFloor(offence.UsageFactors, handler, random);
+                    passer = shooter == handler ? -1 : handler;
+                }
+            }
+            else if (offence.LastRebounder >= 0 && random.NextBasisPoint() < MatchModelBounds.PutBackChance)
+            {
+                shooter = offence.LastRebounder;
+            }
+            else
+            {
+                shooter = offence.PickOnFloor(offence.UsageFactors, random);
+            }
+
+            if (!TakeShot(offence, defence, shooter, passer, shooting, random))
             {
                 return;
             }
@@ -303,26 +332,34 @@ public sealed class PossessionMatchEngine : IMatchEngine
     /// ever account for.
     /// </para>
     /// </summary>
-    private static bool TakeShot(Side offence, Side defence, int shooter, (int Fg2Percent, int Fg3Percent) shooting, IRandomSource random)
+    private static bool TakeShot(Side offence, Side defence, int shooter, int passer, (int Fg2Percent, int Fg3Percent) shooting, IRandomSource random)
     {
-        // Where he shoots from: his own diet, which his height shape moves.
-        var zone = offence.ZoneFor(shooter, random.NextBasisPoint());
+        // Where he shoots from: his own diet, which his shot-location tendencies shape; how well, the
+        // period's percentage moved by his height and by his skill from that zone.
+        var zone = offence.ZoneFor(shooter, passer >= 0, random.NextBasisPoint());
         var isThree = ShotZones.IsThree(zone);
         var made = random.NextBasisPoint() <
-            MakePercentage(ZonePercentage(zone, shooting, offence.HeightShape[shooter]), offence, defence);
+            MakePercentage(ZonePercentage(zone, shooting, offence.HeightShape[shooter]) + offence.ShootingSkill[(int)zone][shooter], offence, defence);
 
         if (made)
         {
             ChargeAttempt(offence, shooter, zone);
             AwardMake(offence, defence, shooter, zone);
 
-            if (random.NextBasisPoint() < MatchModelBounds.AssistChance)
+            if (passer >= 0)
+            {
+                if (random.NextBasisPoint() < offence.PassAssistChances[passer])
+                {
+                    offence.AssistsBy[passer]++;
+                }
+            }
+            else if (random.NextBasisPoint() < MatchModelBounds.AssistChanceOnOwnShot)
             {
                 offence.AssistsBy[offence.PickTeammateOnFloor(offence.AssistFactors, shooter, random)]++;
             }
 
             // An and-one: a make that also draws a single free throw. Missed, it is a live ball.
-            if (random.NextBasisPoint() >= MatchModelBounds.AndOneChanceOnMake)
+            if (random.NextBasisPoint() >= offence.AndOneChances[(int)zone][shooter])
             {
                 return false;
             }
@@ -331,7 +368,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
             return ResolveFreeThrowTrip(offence, defence, shooter, shots: 1, random) && Rebound(offence, defence, random);
         }
 
-        if (random.NextBasisPoint() < MatchModelBounds.ShootingFoulChanceOnMiss)
+        if (random.NextBasisPoint() < offence.ShootingFoulChances[(int)zone][shooter])
         {
             defence.DefensiveFoul(random);
             return ResolveFreeThrowTrip(offence, defence, shooter, isThree ? 3 : 2, random) && Rebound(offence, defence, random);
@@ -419,6 +456,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
         const int defensiveTeam = (MatchModelBounds.ProbabilityScale - MatchModelBounds.OffensiveReboundRate) * MatchModelBounds.TeamReboundShare / MatchModelBounds.ProbabilityScale;
 
         var roll = random.NextBasisPoint();
+        offence.LastRebounder = -1;
 
         if (roll < offensiveTeam)
         {
@@ -428,7 +466,9 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         if (roll < MatchModelBounds.OffensiveReboundRate)
         {
-            offence.OffensiveReboundsBy[offence.PickOnFloor(offence.ReboundFactors, random)]++;
+            var rebounder = offence.PickOnFloor(offence.OffensiveReboundFactors, random);
+            offence.OffensiveReboundsBy[rebounder]++;
+            offence.LastRebounder = rebounder;
             return true;
         }
 
@@ -438,7 +478,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
             return false;
         }
 
-        defence.DefensiveReboundsBy[defence.PickOnFloor(defence.ReboundFactors, random)]++;
+        defence.DefensiveReboundsBy[defence.PickOnFloor(defence.DefensiveReboundFactors, random)]++;
         return false;
     }
 
@@ -523,7 +563,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
         for (var shot = 0; shot < shots; shot++)
         {
             side.FreeThrowsAttempted[shooter]++;
-            madeLastShot = random.NextBasisPoint() < MatchModelBounds.FreeThrowPercentage;
+            madeLastShot = random.NextBasisPoint() < side.FreeThrowPercentages[shooter];
 
             if (madeLastShot)
             {
@@ -551,7 +591,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
         for (var index = 0; index < side.Players.Count; index++)
         {
             var chance = MatchModelBounds.InjuryChancePerFullGame * side.Minutes[index] /
-                MinutesAllocationBounds.MaximumMinutesPerPlayer;
+                MinutesAllocationBounds.MaximumMinutesPerPlayer * side.InjuryFactors[index] / 100;
 
             if (random.NextBasisPoint() >= chance)
             {
@@ -575,7 +615,26 @@ public sealed class PossessionMatchEngine : IMatchEngine
         return injuries;
     }
 
-    private static DomainOperationResult<Side> BuildSide(MatchTeam team, int personalFoulLimit)
+    /// <summary>
+    /// The side profile for this team's rotation: reused while the same depth chart plays with the same
+    /// fit players (a season builds a chart once and plays it until someone is hurt or returns), built
+    /// afresh otherwise. Keyed weakly on the chart, so a chart nobody holds any more is let go.
+    /// </summary>
+    private SideProfile ProfileFor(MatchTeam team)
+    {
+        if (_profiles.TryGetValue(team.Rotation, out var cached) && ReferenceEquals(cached.Available, team.Available))
+        {
+            return cached;
+        }
+
+        var profile = new SideProfile(team);
+        _profiles.AddOrUpdate(team.Rotation, profile);
+        return profile;
+    }
+
+    private readonly System.Runtime.CompilerServices.ConditionalWeakTable<DepthChart, SideProfile> _profiles = new();
+
+    private DomainOperationResult<Side> BuildSide(MatchTeam team, int personalFoulLimit)
     {
         ArgumentNullException.ThrowIfNull(team);
 
@@ -586,38 +645,30 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 $"Team '{team.TeamId.Value}' has nobody available, so it cannot be put on the floor for this game."));
         }
 
-        return DomainOperationResult<Side>.Success(new Side(team, personalFoulLimit));
+        return DomainOperationResult<Side>.Success(new Side(team, ProfileFor(team), personalFoulLimit));
     }
 
     /// <summary>
-    /// One team as the game is played against it: the rotation flattened into arrays, the factors
-    /// each draw uses, and the running totals. Mutable and private, because a game is a loop over a
-    /// scoreboard and threading an immutable record through two hundred possessions would allocate
-    /// two hundred of them for no gain in clarity.
+    /// Everything about a side that follows from its rotation and its players' sheets alone — every
+    /// pick weight, shot diet, rate and the stint plan for a given number of possessions — worked out
+    /// once per depth chart and reused for every game the chart plays (see <see cref="ProfileFor"/>). A
+    /// pure function of its inputs, so reuse cannot change a result; it only stops a season rebuilding
+    /// the same arrays two hundred times.
     /// </summary>
-    private sealed class Side
+    private sealed class SideProfile
     {
         /// <summary>The sheet of a player the team cannot rate: nobody, at zero. One instance, not one per game.</summary>
         private static readonly PlayerRating NoOne = new(0);
 
-        public Side(MatchTeam team, int personalFoulLimit)
+        private readonly Dictionary<int, int[][]> _plans = [];
+
+        public SideProfile(MatchTeam team)
         {
-            TeamId = team.TeamId;
-            _foulLimit = personalFoulLimit;
-            RestDays = team.RestDays;
             Players = team.Rotation.Slots;
+            Available = team.Available;
 
             var count = Players.Count;
             PlannedMinutes = Players.Select(slot => slot.Minutes).ToArray();
-            Minutes = new int[count];
-            PlusMinusBy = new int[count];
-            StealsBy = new int[count];
-            TurnoversBy = new int[count];
-            BlocksBy = new int[count];
-            PersonalFoulsBy = new int[count];
-            _regulationOn = new int[count];
-            _overtimeOn = new int[count];
-            OnFloor = [];
             Overalls = new int[count];
             PassingShape = new int[count];
             QuicknessShape = new int[count];
@@ -625,18 +676,32 @@ public sealed class PossessionMatchEngine : IMatchEngine
             StealFactors = new int[count];
             BlockFactors = new int[count];
             FoulFactors = new int[count];
+            var touches = new int[count];
+            var shotClose = new int[count];
+            var shotMid = new int[count];
+            var shotThree = new int[count];
+
+            var ratings = new PlayerRating[count];
+            for (var index = 0; index < count; index++)
+            {
+                ratings[index] = team.RatingOf(Players[index].PlayerId) ?? NoOne;
+            }
 
             // Shape, not level: each attribute measured against the player's own Overall, so these
             // terms redistribute what happens without adding to how good a side is. A player missing
             // from the available list rates zero everywhere.
             for (var index = 0; index < count; index++)
             {
-                var rating = team.RatingOf(Players[index].PlayerId) ?? NoOne;
+                var rating = ratings[index];
                 var overall = rating.Overall;
                 Overalls[index] = overall;
                 PassingShape[index] = rating.Playmaking - overall;
                 QuicknessShape[index] = rating.Quickness - overall;
                 HeightShape[index] = MatchModelBounds.HeightShapeFor(rating.Body);
+                touches[index] = Math.Max(1, rating.Tendency(PlayerTendency.Touches));
+                shotClose[index] = rating.Tendency(PlayerTendency.ShotClose);
+                shotMid[index] = rating.Tendency(PlayerTendency.ShotMid);
+                shotThree[index] = rating.Tendency(PlayerTendency.ShotThree);
                 StealFactors[index] = ShapeWeight(
                     QuicknessShape[index], MatchModelBounds.StealWeightPerQuicknessPoint, MatchModelBounds.MinimumStealWeight, MatchModelBounds.MaximumStealWeight);
 
@@ -651,44 +716,40 @@ public sealed class PossessionMatchEngine : IMatchEngine
                     -QuicknessShape[index], MatchModelBounds.FoulWeightPerQuicknessPoint, MatchModelBounds.MinimumFoulWeight, MatchModelBounds.MaximumFoulWeight) / 100;
             }
 
-            _foulWeights = (int[])FoulFactors.Clone();
 
-            ZoneAttempts = ShotZones.All.Select(_ => new int[count]).ToArray();
-            ZoneMade = ShotZones.All.Select(_ => new int[count]).ToArray();
-
-            // Each player's shot diet as cumulative basis points over the five zones: the neutral
-            // shares, with his height shape moving attempts between above-the-break threes and the rim.
-            _zoneDiet = new int[count][];
-            for (var index = 0; index < count; index++)
+            // Each player's shot diet as cumulative weights over the five zones: the neutral shares,
+            // each kind scaled by his shot-location tendency against the league's middle (close: rim and
+            // paint; mid; three: corner and above the break), within the named diet caps — and then by
+            // how the shot came: one he made for himself leans to the rim and the pull-up, one he caught
+            // off a pass to the spot-up three (see MatchModelBounds.CatchThreeMultiplier).
+            ZoneDiet = new int[2][][];
+            for (var kind = 0; kind < 2; kind++)
             {
-                var shift = Swing(HeightShape[index], MatchModelBounds.ZoneMixPerHeightPoint, MatchModelBounds.MaximumZoneMixShift);
-                int[] shares =
-                [
-                    MatchModelBounds.RimShare + shift,
-                    MatchModelBounds.PaintShare,
-                    MatchModelBounds.MidRangeShare,
-                    MatchModelBounds.Corner3Share,
-                    MatchModelBounds.AboveBreak3Share - shift,
-                ];
-
-                for (var zone = 1; zone < shares.Length; zone++)
+                var caught = kind == CaughtShot;
+                ZoneDiet[kind] = new int[count][];
+                for (var index = 0; index < count; index++)
                 {
-                    shares[zone] += shares[zone - 1];
-                }
+                    var close = MatchModelBounds.DietMultiplierFor(shotClose[index]) * (caught ? MatchModelBounds.CatchCloseMultiplier : MatchModelBounds.OwnCloseMultiplier) / 100;
+                    var mid = MatchModelBounds.DietMultiplierFor(shotMid[index]) * (caught ? MatchModelBounds.CatchMidMultiplier : MatchModelBounds.OwnMidMultiplier) / 100;
+                    var three = MatchModelBounds.DietMultiplierFor(shotThree[index]) * (caught ? MatchModelBounds.CatchThreeMultiplier : MatchModelBounds.OwnThreeMultiplier) / 100;
+                    int[] shares =
+                    [
+                        MatchModelBounds.RimShare * close / 100,
+                        MatchModelBounds.PaintShare * close / 100,
+                        MatchModelBounds.MidRangeShare * mid / 100,
+                        MatchModelBounds.Corner3Share * three / 100,
+                        MatchModelBounds.AboveBreak3Share * three / 100,
+                    ];
 
-                _zoneDiet[index] = shares;
+                    for (var zone = 1; zone < shares.Length; zone++)
+                    {
+                        shares[zone] += shares[zone - 1];
+                    }
+
+                    ZoneDiet[kind][index] = shares;
+                }
             }
 
-            PointsBy = new int[count];
-            OffensiveReboundsBy = new int[count];
-            DefensiveReboundsBy = new int[count];
-            AssistsBy = new int[count];
-            FieldGoalsAttempted = new int[count];
-            FieldGoalsMade = new int[count];
-            ThreePointsAttempted = new int[count];
-            ThreePointsMade = new int[count];
-            FreeThrowsAttempted = new int[count];
-            FreeThrowsMade = new int[count];
 
             var playedMinutes = PlannedMinutes.Sum();
 
@@ -702,6 +763,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
                     PlayerRating.MaximumOverall);
 
             var meanOverall = Math.Max(1, Overalls.Length == 0 ? 1 : Overalls.Sum() / Overalls.Length);
+            var meanTouches = Math.Max(1, touches.Length == 0 ? 1 : touches.Sum() / touches.Length);
 
             // Usage concentrates faster than talent does. A player twenty per cent better than his
             // team's average takes rather more than twenty per cent more of its shots, so the
@@ -709,25 +771,276 @@ public sealed class PossessionMatchEngine : IMatchEngine
             // where the bound earns its keep: an outlier is a first option, not the whole offence.
             // Per player, not per minute: a pick is only ever among the five on the floor, so how
             // long someone plays already decides how often they can be picked.
+            // Then by his touch tendency against his team-mates', cubed: how often the ball finds him is
+            // a choice the offence makes, and it concentrates on the players who want it. A team of
+            // neutral tendencies (a flat test fixture) uses rating alone, as before.
             UsageFactors = Enumerable.Range(0, count)
-                .Select(index => Math.Clamp(
-                    Overalls[index] * Overalls[index] * 100 / (meanOverall * meanOverall),
+                .Select(index => (int)Math.Clamp(
+                    (long)MatchModelBounds.RelativeWeight(Overalls[index], meanOverall, MatchModelBounds.UsageRatingDoublingPoints)
+                        * MatchModelBounds.RelativeWeight(touches[index], meanTouches, MatchModelBounds.UsageTouchesDoublingPoints) / 100,
                     MatchModelBounds.MinimumUsageFactor,
                     MatchModelBounds.MaximumUsageFactor))
                 .ToArray();
 
-            ReboundFactors = Players.Select(slot => MatchModelBounds.ReboundWeightFor(slot.Position)).ToArray();
             AssistFactors = Players.Select(slot => MatchModelBounds.AssistWeightFor(slot.Position)).ToArray();
 
-            _rotation = Players
+            // The couplings that read the rest of the sheet (attributes A3–A6): who brings the ball up
+            // and whether he looks to shoot, who rebounds, how well each shoots from each zone and from
+            // the line, and who draws contact.
+            int Mean(Func<PlayerRating, int> pick) => Math.Max(1, count == 0 ? 1 : ratings.Sum(pick) / count);
+            var meanPlaymaking = Mean(rating => rating.Playmaking);
+            var meanOffensiveRebounding = Mean(rating => rating[PlayerAttribute.OffensiveRebounding]);
+            var meanDefensiveRebounding = Mean(rating => rating[PlayerAttribute.DefensiveRebounding] + rating[PlayerAttribute.BoxingOut]);
+            var meanBlocking = Mean(rating => rating[PlayerAttribute.Blocking]);
+            var meanDiscipline = Mean(rating => rating[PlayerAttribute.DefensiveDiscipline]);
+            var attacks = ratings.Select(rating => Math.Max(rating.Tendency(PlayerTendency.Drive), rating.Tendency(PlayerTendency.PostUp))).ToArray();
+            var meanAttack = count == 0 ? 0 : attacks.Sum() / count;
+
+            HandlerFactors = new int[count];
+            SelfShotShares = new int[count];
+            PassAssistChances = new int[count];
+            OffensiveReboundFactors = new int[count];
+            DefensiveReboundFactors = new int[count];
+            FreeThrowPercentages = new int[count];
+            FoulDrawFactors = new int[count];
+            ShootingSkill = ShotZones.All.Select(_ => new int[count]).ToArray();
+            for (var index = 0; index < count; index++)
+            {
+                var rating = ratings[index];
+                var level = rating.Overall;
+                var position = Players[index].Position;
+
+                HandlerFactors[index] = MatchModelBounds.AssistWeightFor(position) * Math.Clamp(
+                    MatchModelBounds.RelativeWeight(rating.Playmaking, meanPlaymaking, MatchModelBounds.HandlerDoublingPoints) * MatchModelBounds.RelativeWeight(touches[index], meanTouches, MatchModelBounds.UsageTouchesDoublingPoints) / 100,
+                    MatchModelBounds.MinimumHandlerFactor,
+                    MatchModelBounds.MaximumHandlerFactor) / 100;
+
+                SelfShotShares[index] = Math.Clamp(
+                    MatchModelBounds.BaseSelfShotShare
+                        + ((rating.Tendency(PlayerTendency.Shot) - PlayerRating.NeutralTendency) * MatchModelBounds.SelfShotPerShotTendencyPoint)
+                        - ((rating.Tendency(PlayerTendency.Pass) - PlayerRating.NeutralTendency) * MatchModelBounds.SelfShotPerPassTendencyPoint),
+                    MatchModelBounds.MinimumSelfShotShare,
+                    MatchModelBounds.MaximumSelfShotShare);
+
+                PassAssistChances[index] = MatchModelBounds.AssistChanceOnPass +
+                    Swing(PassingShape[index], MatchModelBounds.AssistPerPassingPoint, MatchModelBounds.MaximumAssistPassingSwing);
+
+                OffensiveReboundFactors[index] = MatchModelBounds.ReboundWeightFor(position) * Math.Clamp(
+                    MatchModelBounds.RelativeWeight(rating[PlayerAttribute.OffensiveRebounding], meanOffensiveRebounding, MatchModelBounds.OffensiveReboundDoublingPoints),
+                    MatchModelBounds.MinimumReboundSkillFactor,
+                    MatchModelBounds.MaximumReboundSkillFactor) / 100;
+
+                DefensiveReboundFactors[index] = MatchModelBounds.ReboundWeightFor(position) * Math.Clamp(
+                    MatchModelBounds.RelativeWeight(rating[PlayerAttribute.DefensiveRebounding] + rating[PlayerAttribute.BoxingOut], meanDefensiveRebounding, MatchModelBounds.ReboundDoublingPoints),
+                    MatchModelBounds.MinimumReboundSkillFactor,
+                    MatchModelBounds.MaximumReboundSkillFactor) / 100;
+
+                FreeThrowPercentages[index] = Math.Clamp(
+                    MatchModelBounds.FreeThrowPercentage + ((rating[PlayerAttribute.FreeThrow] - level) * MatchModelBounds.FreeThrowPerPoint),
+                    MatchModelBounds.MinimumFreeThrowPercentage,
+                    MatchModelBounds.MaximumFreeThrowPercentage);
+
+                // Attackers draw contact, and so do the best players: the defence fouls the man it
+                // cannot stay in front of.
+                FoulDrawFactors[index] = Math.Clamp(
+                    (100 + ((attacks[index] - meanAttack) * MatchModelBounds.FoulDrawPerTendencyPoint))
+                        * MatchModelBounds.RelativeWeight(level, meanOverall, MatchModelBounds.FoulDrawRatingDoublingPoints) / 100,
+                    MatchModelBounds.MinimumFoulDrawFactor,
+                    MatchModelBounds.MaximumFoulDrawFactor);
+
+                BlockFactors[index] = BlockFactors[index] * Math.Clamp(
+                    MatchModelBounds.RelativeWeight(rating[PlayerAttribute.Blocking], meanBlocking, MatchModelBounds.BlockDoublingPoints),
+                    MatchModelBounds.MinimumBlockSkillFactor,
+                    MatchModelBounds.MaximumBlockSkillFactor) / 100;
+
+                // Undisciplined defenders foul more a minute, and the end of a bench is less disciplined
+                // than the starters it backs up.
+                FoulFactors[index] = FoulFactors[index] * Math.Clamp(
+                    MatchModelBounds.RelativeWeight(meanDiscipline, Math.Max(1, rating[PlayerAttribute.DefensiveDiscipline]), MatchModelBounds.FoulDisciplineDoublingPoints),
+                    MatchModelBounds.MinimumFoulDisciplineFactor,
+                    MatchModelBounds.MaximumFoulDisciplineFactor) / 100;
+
+                int Skill(PlayerAttribute attribute) => Swing(rating[attribute] - level, MatchModelBounds.ShootingSkillPerPoint, MatchModelBounds.MaximumShootingSkillSwing);
+                ShootingSkill[(int)ShotZone.Rim][index] = Skill(PlayerAttribute.Finishing);
+                ShootingSkill[(int)ShotZone.Paint][index] = Skill(PlayerAttribute.CloseRange);
+                ShootingSkill[(int)ShotZone.MidRange][index] = Skill(PlayerAttribute.MidRange);
+                ShootingSkill[(int)ShotZone.Corner3][index] = Skill(PlayerAttribute.ThreePoint);
+                ShootingSkill[(int)ShotZone.AboveBreak3][index] = Skill(PlayerAttribute.ThreePoint);
+            }
+
+
+            // Each player's chance of drawing a shooting foul on a miss, and an and-one on a make, from
+            // each zone: the base rates moved by the zone and by how much contact he draws.
+            ShootingFoulChances = ShotZones.All.Select(zone => FoulDrawFactors
+                .Select(factor => (int)((long)MatchModelBounds.ShootingFoulChanceOnMiss * MatchModelBounds.FoulDrawWeightFor(zone) * factor / 10_000))
+                .ToArray()).ToArray();
+            AndOneChances = ShotZones.All.Select(zone => FoulDrawFactors
+                .Select(factor => (int)((long)MatchModelBounds.AndOneChanceOnMake * MatchModelBounds.FoulDrawWeightFor(zone) * factor / 10_000))
+                .ToArray()).ToArray();
+            InjuryFactors = ratings
+                .Select(rating => Math.Clamp(
+                    100 + ((rating.Hidden(HiddenAttribute.InjuryProneness) - PlayerRating.NeutralHidden) * MatchModelBounds.InjuryPronenessPerPoint),
+                    MatchModelBounds.MinimumInjuryPronenessFactor,
+                    MatchModelBounds.MaximumInjuryPronenessFactor))
+                .ToArray();
+
+            Rotation = Players
                 .Select(slot => new RotationPlayer(slot.PlayerId.Value, slot.Minutes, slot.IsStarter, slot.DepthRank))
                 .ToArray();
         }
 
+        /// <summary>The fit players the profile was built from, so a cached profile is only reused for the same ones.</summary>
+        public IReadOnlyList<AvailablePlayer> Available { get; }
+
+        public IReadOnlyList<DepthChartSlot> Players { get; }
+
+        public RotationPlayer[] Rotation { get; }
+
+        /// <summary>The diet index of a shot caught off a pass; 0 is one the shooter made for himself.</summary>
+        public const int CaughtShot = 1;
+
+        public int[][][] ZoneDiet { get; }
+
+        public int Strength { get; }
+
+        public int[] PlannedMinutes { get; }
+
+        public int[] Overalls { get; }
+
+        public int[] PassingShape { get; }
+
+        public int[] QuicknessShape { get; }
+
+        public int[] HeightShape { get; }
+
+        public int[] StealFactors { get; }
+
+        public int[] BlockFactors { get; }
+
+        public int[] FoulFactors { get; }
+
+        public int[] UsageFactors { get; }
+
+        public int[] AssistFactors { get; }
+
+        public int[] HandlerFactors { get; }
+
+        public int[] SelfShotShares { get; }
+
+        public int[] PassAssistChances { get; }
+
+        public int[] OffensiveReboundFactors { get; }
+
+        public int[] DefensiveReboundFactors { get; }
+
+        public int[] FreeThrowPercentages { get; }
+
+        public int[] FoulDrawFactors { get; }
+
+        public int[] InjuryFactors { get; }
+
+        public int[][] ShootingSkill { get; }
+
+        public int[][] ShootingFoulChances { get; }
+
+        public int[][] AndOneChances { get; }
+
+        /// <summary>
+        /// Regulation's lineups for this many possessions (see <see cref="StintPlanner"/>), planned once
+        /// and handed out as a fresh outer array each time — a foul-out re-plans by replacing entries, never
+        /// by writing into a lineup — so one game's re-plan never leaks into the next.
+        /// </summary>
+        public int[][] PlanFor(int possessions)
+        {
+            if (!_plans.TryGetValue(possessions, out var plan))
+            {
+                plan = StintPlanner.Plan(Rotation, possessions);
+                _plans[possessions] = plan;
+            }
+
+            return (int[][])plan.Clone();
+        }
+    }
+
+    /// <summary>
+    /// One team as the game is played against it: the rotation flattened into arrays, the factors
+    /// each draw uses, and the running totals. Mutable and private, because a game is a loop over a
+    /// scoreboard and threading an immutable record through two hundred possessions would allocate
+    /// two hundred of them for no gain in clarity.
+    /// </summary>
+    private sealed class Side
+    {
+        public Side(MatchTeam team, SideProfile profile, int personalFoulLimit)
+        {
+            TeamId = team.TeamId;
+            _foulLimit = personalFoulLimit;
+            RestDays = team.RestDays;
+            _profile = profile;
+            Players = profile.Players;
+
+            var count = Players.Count;
+            PlannedMinutes = profile.PlannedMinutes;
+            Overalls = profile.Overalls;
+            PassingShape = profile.PassingShape;
+            QuicknessShape = profile.QuicknessShape;
+            HeightShape = profile.HeightShape;
+            StealFactors = profile.StealFactors;
+            BlockFactors = profile.BlockFactors;
+            FoulFactors = profile.FoulFactors;
+            UsageFactors = profile.UsageFactors;
+            AssistFactors = profile.AssistFactors;
+            HandlerFactors = profile.HandlerFactors;
+            SelfShotShares = profile.SelfShotShares;
+            PassAssistChances = profile.PassAssistChances;
+            OffensiveReboundFactors = profile.OffensiveReboundFactors;
+            DefensiveReboundFactors = profile.DefensiveReboundFactors;
+            FreeThrowPercentages = profile.FreeThrowPercentages;
+            FoulDrawFactors = profile.FoulDrawFactors;
+            InjuryFactors = profile.InjuryFactors;
+            ShootingSkill = profile.ShootingSkill;
+            ShootingFoulChances = profile.ShootingFoulChances;
+            AndOneChances = profile.AndOneChances;
+            Strength = profile.Strength;
+            _rotation = profile.Rotation;
+            _zoneDiet = profile.ZoneDiet;
+            _foulWeights = (int[])profile.FoulFactors.Clone();
+
+            Minutes = new int[count];
+            PlusMinusBy = new int[count];
+            StealsBy = new int[count];
+            TurnoversBy = new int[count];
+            BlocksBy = new int[count];
+            PersonalFoulsBy = new int[count];
+            _regulationOn = new int[count];
+            _overtimeOn = new int[count];
+            OnFloor = [];
+            ZoneAttempts = new int[ShotZones.All.Count][];
+            ZoneMade = new int[ShotZones.All.Count][];
+            for (var zone = 0; zone < ZoneAttempts.Length; zone++)
+            {
+                ZoneAttempts[zone] = new int[count];
+                ZoneMade[zone] = new int[count];
+            }
+
+            PointsBy = new int[count];
+            OffensiveReboundsBy = new int[count];
+            DefensiveReboundsBy = new int[count];
+            AssistsBy = new int[count];
+            FieldGoalsAttempted = new int[count];
+            FieldGoalsMade = new int[count];
+            ThreePointsAttempted = new int[count];
+            ThreePointsMade = new int[count];
+            FreeThrowsAttempted = new int[count];
+            FreeThrowsMade = new int[count];
+        }
+
+        private readonly SideProfile _profile;
         private readonly RotationPlayer[] _rotation;
         private readonly int _foulLimit;
         private readonly int[] _foulWeights;
-        private readonly int[][] _zoneDiet;
+        private const int CaughtShot = SideProfile.CaughtShot;
+
+        private readonly int[][][] _zoneDiet;
         private int _possession;
         private readonly int[] _regulationOn;
         private readonly int[] _overtimeOn;
@@ -738,7 +1051,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
         public int[] OnFloor { get; private set; }
 
         /// <summary>Plans regulation's lineups, possession by possession (see <see cref="StintPlanner"/>).</summary>
-        public void PlanRegulation(int possessions) => _plan = StintPlanner.Plan(_rotation, possessions);
+        public void PlanRegulation(int possessions) => _plan = _profile.PlanFor(possessions);
 
         /// <summary>
         /// Overtime belongs to the five the depth chart plays most, ties broken by player identifier:
@@ -936,9 +1249,12 @@ public sealed class PossessionMatchEngine : IMatchEngine
         public int[][] ZoneMade { get; }
 
         /// <summary>Where this shooter shoots from, given a draw in basis points: his own diet.</summary>
-        public ShotZone ZoneFor(int shooter, int roll)
+        public ShotZone ZoneFor(int shooter, bool caught, int roll)
         {
-            var diet = _zoneDiet[shooter];
+            // The roll is a basis point; a scaled diet need not total exactly that scale, so the roll is
+            // stretched to the diet's own total (a neutral diet totals the scale and is read as is).
+            var diet = _zoneDiet[caught ? CaughtShot : 0][shooter];
+            roll = (int)((long)roll * diet[^1] / MatchModelBounds.ProbabilityScale);
             var zone = 0;
             while (zone < diet.Length - 1 && roll >= diet[zone])
             {
@@ -983,7 +1299,38 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
         public int[] UsageFactors { get; }
 
-        public int[] ReboundFactors { get; }
+        /// <summary>Who brings the ball up: playmaking against the rotation's, by position and touches.</summary>
+        public int[] HandlerFactors { get; }
+
+        /// <summary>The chance, in basis points, each player shoots it himself when he has brought the ball up.</summary>
+        public int[] SelfShotShares { get; }
+
+        /// <summary>The chance, in basis points, a make off each player's pass is his assist.</summary>
+        public int[] PassAssistChances { get; }
+
+        public int[] OffensiveReboundFactors { get; }
+
+        public int[] DefensiveReboundFactors { get; }
+
+        public int[] FreeThrowPercentages { get; }
+
+        /// <summary>Each player's injury chance as a percentage of the base, from his proneness.</summary>
+        public int[] InjuryFactors { get; }
+
+        /// <summary>How often each player draws a shooting foul, as a percentage of the base rate.</summary>
+        public int[] FoulDrawFactors { get; }
+
+        /// <summary>Each player's chance, in basis points, of a shooting foul on a miss from each zone, indexed by <see cref="ShotZone"/> then player.</summary>
+        public int[][] ShootingFoulChances { get; }
+
+        /// <summary>Each player's chance, in basis points, of an and-one on a make from each zone, indexed like <see cref="ShootingFoulChances"/>.</summary>
+        public int[][] AndOneChances { get; }
+
+        /// <summary>Each player's make-percentage swing from each zone, indexed by <see cref="ShotZone"/> then player.</summary>
+        public int[][] ShootingSkill { get; }
+
+        /// <summary>The player who grabbed the last offensive rebound, or −1 if the team did: a put-back candidate.</summary>
+        public int LastRebounder { get; set; } = -1;
 
         public int[] AssistFactors { get; }
 

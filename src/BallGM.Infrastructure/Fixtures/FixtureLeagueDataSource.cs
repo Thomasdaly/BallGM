@@ -89,7 +89,7 @@ public sealed class FixtureLeagueDataSource : ILeagueDataSource
     /// plausible-looking scale factor is not the same as a measured one.
     /// </para>
     /// </summary>
-    private static readonly int[] TeamStrengthOffsets = [14, 5, 0, -4, -11, -18];
+    private static readonly int[] TeamStrengthOffsets = [13, 5, 0, -4, -10, -17];
 
     private static readonly string[] GivenNames =
     [

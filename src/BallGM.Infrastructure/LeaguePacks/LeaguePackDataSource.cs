@@ -561,12 +561,12 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
         var rating = schemaVersion < 3
             ? PlayerSheetCodec.ReadLegacy(
                 plan.Ratings,
-                plan.Hidden is not null || plan.Potential is not null || plan.Body is not null || plan.Positions is not null || plan.Traits is not null,
+                plan.Hidden is not null || plan.Potential is not null || plan.Body is not null || plan.Positions is not null || plan.Traits is not null || plan.Tendencies is not null,
                 position,
                 age,
                 $"{plan.Name ?? label}|{plan.BirthDate:yyyy-MM-dd}|{position}",
                 out error)
-            : PlayerSheetCodec.Read(plan.Ratings, plan.Hidden, plan.Potential, plan.Body, plan.Positions, plan.Traits, position, out error);
+            : PlayerSheetCodec.Read(plan.Ratings, plan.Hidden, plan.Potential, plan.Body, plan.Positions, plan.Traits, position, out error, plan.Tendencies);
 
         if (error is not null)
         {

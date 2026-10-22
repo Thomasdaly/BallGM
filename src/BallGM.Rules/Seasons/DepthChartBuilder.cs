@@ -2,6 +2,7 @@ using BallGM.Domain.Common;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
+using BallGM.Rules.Players;
 
 namespace BallGM.Rules.Seasons;
 
@@ -88,32 +89,21 @@ public sealed class DepthChartBuilder
         var used = new HashSet<string>(StringComparer.Ordinal);
         var assignments = new List<(AvailablePlayer Player, Position UsedAt)>();
 
-        // Cover the five positions first. A team that has no natural centre still has to put someone
-        // at centre, and that is a fact worth reporting rather than a hole to leave in the chart.
-        foreach (var position in Enum.GetValues<Position>())
+        // Cover the five positions first, with the five who are best at them together (see
+        // StartingFive). A team that has no natural centre still has to put someone at centre, and that
+        // is a fact worth reporting rather than a hole to leave in the chart.
+        foreach (var (starter, position) in StartingFive(pool))
         {
-            var natural = pool.FirstOrDefault(player => player.Position == position && !used.Contains(player.PlayerId.Value));
+            used.Add(starter.PlayerId.Value);
+            assignments.Add((starter, position));
 
-            if (natural is not null)
+            if (starter.Position != position && pool.All(player => player.Position != position))
             {
-                used.Add(natural.PlayerId.Value);
-                assignments.Add((natural, position));
-                continue;
+                notes.Add(new RuleFinding(
+                    OutOfPositionCode,
+                    $"Team '{teamId.Value}' has nobody who plays {position}, so {starter.PlayerId.Value} covers it out of position.",
+                    teamId));
             }
-
-            var substitute = pool.FirstOrDefault(player => !used.Contains(player.PlayerId.Value));
-            if (substitute is null)
-            {
-                continue;
-            }
-
-            used.Add(substitute.PlayerId.Value);
-            assignments.Add((substitute, position));
-
-            notes.Add(new RuleFinding(
-                OutOfPositionCode,
-                $"Team '{teamId.Value}' has nobody who plays {position}, so {substitute.PlayerId.Value} covers it out of position.",
-                teamId));
         }
 
         // Then fill the bench with the best of what is left, at their own positions.
@@ -141,8 +131,124 @@ public sealed class DepthChartBuilder
     }
 
     /// <summary>
-    /// Divides the game's minutes across the rotation in proportion to rating, inside the stated
-    /// bounds, and hands any rounding remainder to the best player who still has room for it.
+    /// The starting five and where each plays: of the best players by Current Ability (the
+    /// <see cref="MinutesAllocationBounds.StarterCandidates"/> best, plus the best natural at each
+    /// position so a position someone plays is never left to somebody who does not), the five and the
+    /// positions that together rate highest by <see cref="PositionRatings"/>. A coach starts his best
+    /// players, but at the spots they can actually play: two fine point guards may both start, one of
+    /// them at the two, while a third guard sits behind a worse natural centre.
+    /// <para>
+    /// Exact and deterministic: candidates are taken in the pool's order (rating, then identifier), a
+    /// small dynamic programme over which of them are already placed finds the best five and
+    /// arrangement together, and only a strictly better score replaces one held, so a tie always falls
+    /// the same way.
+    /// </para>
+    /// </summary>
+    private static List<(AvailablePlayer Player, Position UsedAt)> StartingFive(IReadOnlyList<AvailablePlayer> pool)
+    {
+        var positions = Enum.GetValues<Position>();
+        var candidates = pool.Take(MinutesAllocationBounds.StarterCandidates).ToList();
+        foreach (var position in positions)
+        {
+            var natural = pool.FirstOrDefault(player => player.Position == position);
+            if (natural is not null && !candidates.Contains(natural))
+            {
+                candidates.Add(natural);
+            }
+        }
+
+        var count = candidates.Count;
+        var fit = new int[count, positions.Length];
+        for (var index = 0; index < count; index++)
+        {
+            for (var slot = 0; slot < positions.Length; slot++)
+            {
+                fit[index, slot] = FitAt(candidates[index], positions[slot]);
+            }
+        }
+
+        var size = Math.Min(positions.Length, count);
+
+        // An exact search over which candidates fill the first `size` positions, in position order:
+        // score[mask] is the best total for placing exactly the candidates in `mask` at the first
+        // popcount(mask) positions. Masks are walked in ascending order and only a strictly better total
+        // replaces one held, so a tie always resolves the same way.
+        var states = 1 << count;
+        var score = new int[states];
+        var last = new int[states];
+        Array.Fill(score, int.MinValue);
+        score[0] = 0;
+        var bestMask = -1;
+        for (var mask = 0; mask < states; mask++)
+        {
+            if (score[mask] == int.MinValue)
+            {
+                continue;
+            }
+
+            var slot = System.Numerics.BitOperations.PopCount((uint)mask);
+            if (slot == size)
+            {
+                if (bestMask < 0 || score[mask] > score[bestMask])
+                {
+                    bestMask = mask;
+                }
+
+                continue;
+            }
+
+            for (var candidate = 0; candidate < count; candidate++)
+            {
+                if ((mask & (1 << candidate)) != 0)
+                {
+                    continue;
+                }
+
+                var next = mask | (1 << candidate);
+                var total = score[mask] + fit[candidate, slot];
+                if (total > score[next])
+                {
+                    score[next] = total;
+                    last[next] = candidate;
+                }
+            }
+        }
+
+        var best = new int[size];
+        for (int slot = size - 1, mask = bestMask; slot >= 0; slot--)
+        {
+            best[slot] = last[mask];
+            mask &= ~(1 << last[mask]);
+        }
+
+        return Enumerable.Range(0, size).Select(slot => (candidates[best[slot]], positions[slot])).ToList();
+    }
+
+    /// <summary>
+    /// How well a player fits a position: his position rating there, less his familiarity penalty. A
+    /// position his sheet calls awkward — or, on a sheet that assesses no familiarity at all (a flat or
+    /// legacy sheet), any position but his own — is a last resort, scored so far down that he is put
+    /// there only when the roster leaves no other way to cover it.
+    /// </summary>
+    private static int FitAt(AvailablePlayer player, Position position)
+    {
+        var rating = PositionRatings.For(player.Rating, position);
+        var playable = player.Rating.Positions.TryGetValue(position, out var familiarity)
+            ? familiarity > PositionFamiliarity.Awkward
+            : player.Position == position;
+        return playable ? rating : rating - LastResortPenalty;
+    }
+
+    /// <summary>What putting a player somewhere he cannot really play costs a starting five's score.</summary>
+    private const int LastResortPenalty = 1_000;
+
+    /// <summary>
+    /// Divides the game's minutes across the rotation the way a coach does: by role first — the
+    /// starters' share by how they rank among the starters, the bench's by its order — then moved by
+    /// how much better or worse each player is than the rotation's average and by how far his stamina
+    /// stands out from his level, inside the stated bounds. Any rounding remainder goes to the best
+    /// player who still has room for it. A star on a thin team plays well into the late thirties; a
+    /// deep team spreads its minutes.
     /// </summary>
     private static int[] AllocateMinutes(
         TeamId teamId,
@@ -173,26 +279,55 @@ public sealed class DepthChartBuilder
             return minutes;
         }
 
-        var weights = assignments.Select(assignment => (long)Math.Max(1, assignment.Player.Overall)).ToArray();
-        var totalWeight = weights.Sum();
+        // Role: the starters ranked among themselves by rating, then the bench in the order it was
+        // picked (best first). The template is for a full rotation; a shorter one shares out the
+        // missing places' minutes in proportion, so it still sums to the game.
+        var starters = Math.Min(MinutesAllocationBounds.PlayersOnFloor, count);
+        var starterOrder = Enumerable.Range(0, starters)
+            .OrderByDescending(index => assignments[index].Player.Overall)
+            .ThenBy(index => assignments[index].Player.PlayerId.Value, StringComparer.Ordinal)
+            .ToArray();
+        var role = new int[count];
+        for (var rank = 0; rank < starters; rank++)
+        {
+            role[starterOrder[rank]] = MinutesAllocationBounds.RoleMinutes(rank);
+        }
+
+        for (var index = starters; index < count; index++)
+        {
+            role[index] = MinutesAllocationBounds.RoleMinutes(index);
+        }
+
+        var roleTotal = role.Sum();
+        var meanOverall = assignments.Sum(assignment => assignment.Player.Overall) / count;
         var allocated = 0;
 
         for (var index = 0; index < count; index++)
         {
-            var share = (int)(weights[index] * MinutesAllocationBounds.TeamMinutesPerGame / totalWeight);
+            var rating = assignments[index].Player.Rating;
+            var tenths = (role[index] * MinutesAllocationBounds.TeamMinutesPerGame * 10 / roleTotal)
+                + ((rating.Overall - meanOverall) * MinutesAllocationBounds.TenthsPerRatingPoint)
+                + Math.Clamp(
+                    (rating[PlayerAttribute.Stamina] - rating.Overall) * MinutesAllocationBounds.TenthsPerStaminaPoint,
+                    -MinutesAllocationBounds.MaximumStaminaTenths,
+                    MinutesAllocationBounds.MaximumStaminaTenths);
 
             minutes[index] = Math.Clamp(
-                share,
+                (tenths + 5) / 10,
                 MinutesAllocationBounds.MinimumRotationMinutes,
-                MinutesAllocationBounds.MaximumMinutesPerPlayer);
+                MinutesAllocationBounds.MaximumPlannedMinutes);
 
             allocated += minutes[index];
         }
 
-        // Clamping and integer division both leave the total off the game's minutes. The difference
-        // is settled by walking the rotation best-first, which is deterministic and keeps the
-        // adjustment where a coach would put it.
+        // Clamping and rounding both leave the total off the game's minutes. The difference is settled
+        // a minute a player at a time, walking the rotation from the biggest role down to add and from
+        // the smallest up to take away: deterministic, and spread rather than dumped on one player.
         var difference = MinutesAllocationBounds.TeamMinutesPerGame - allocated;
+        var order = Enumerable.Range(0, count)
+            .OrderByDescending(index => minutes[index])
+            .ThenBy(index => assignments[index].Player.PlayerId.Value, StringComparer.Ordinal)
+            .ToArray();
 
         while (difference != 0)
         {
@@ -200,9 +335,9 @@ public sealed class DepthChartBuilder
 
             for (var index = 0; index < count && difference != 0; index++)
             {
-                var target = difference > 0 ? index : count - 1 - index;
+                var target = difference > 0 ? order[index] : order[count - 1 - index];
 
-                if (difference > 0 && minutes[target] < MinutesAllocationBounds.MaximumMinutesPerPlayer)
+                if (difference > 0 && minutes[target] < MinutesAllocationBounds.MaximumPlannedMinutes)
                 {
                     minutes[target]++;
                     difference--;

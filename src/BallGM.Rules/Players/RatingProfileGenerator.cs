@@ -32,6 +32,9 @@ public static class RatingProfileGenerator
     /// <summary>Per-attribute noise, in points either side of zero.</summary>
     public const int AttributeNoise = 6;
 
+    /// <summary>Per-tendency noise around what the sheet implies: two players with one game still choose a little differently.</summary>
+    public const int TendencyNoise = 8;
+
     private enum Factor
     {
         Shooting,
@@ -85,7 +88,11 @@ public static class RatingProfileGenerator
         var positions = Familiarity(position, hidden[(int)HiddenAttribute.Versatility]);
         var traits = Traits(visible, currentAbility, random);
 
-        return new PlayerRating(visible, hidden, potential, body, positions, traits);
+        var sheet = new PlayerRating(visible, hidden, potential, body, positions, traits);
+        var tendencies = TendencyModel.Derive(sheet)
+            .Select(value => Math.Clamp(value + Triangular(TendencyNoise, random), TendencyModel.Minimum, TendencyModel.Maximum))
+            .ToArray();
+        return sheet.WithTendencies(tendencies);
     }
 
     /// <summary>
@@ -118,7 +125,8 @@ public static class RatingProfileGenerator
             : null;
         var headroom = generated.PotentialAbility - generated.Overall;
         var potential = Math.Min(PlayerRating.MaximumOverall, PlayerAttributes.CurrentAbility(visible) + headroom);
-        return new PlayerRating(visible, generated.HiddenValues, potential, body, generated.Positions, generated.Traits);
+        var expanded = new PlayerRating(visible, generated.HiddenValues, potential, body, generated.Positions, generated.Traits);
+        return expanded.WithTendencies(TendencyModel.Derive(expanded));
     }
 
     /// <summary>Which factor an attribute loads on, and how strongly (percent of the factor's draw).</summary>

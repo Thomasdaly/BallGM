@@ -138,9 +138,9 @@ public sealed class MatchModelCalibrationTests
             .OrderBy(points => points)
             .ToArray();
 
-        // A team's leading scorer. Lower than a real league's because a player here carries one
-        // overall rating and nothing that says how much of the offence runs through them — usage is
-        // inferred from rating and minutes, so it concentrates less than a real first option does.
+        // A team's leading scorer in one game, on flat-sheet squads: usage still concentrates on the
+        // better player (see MatchModelBounds.UsageRatingDoublingPoints). The league-wide tails (a
+        // thirty-point season scorer) are locked on the calibration league, in LeagueShapeCalibrationTests.
         Assert.InRange(leaders.Average(), 17, 30);
         Assert.True(leaders[^1] >= 30, $"Nobody scored 30 in 800 games; the best was {leaders[^1]}.");
     }

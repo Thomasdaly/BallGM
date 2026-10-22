@@ -211,7 +211,7 @@ public static class MatchModelBounds
     /// per point the defender is <em>slower</em> than his level, clamped to
     /// <see cref="MinimumFoulWeight"/>–<see cref="MaximumFoulWeight"/>, on top of position.
     /// </summary>
-    public const int FoulWeightPerQuicknessPoint = 5;
+    public const int FoulWeightPerQuicknessPoint = 2;
 
     /// <summary>
     /// A defender within this many fouls of the limit is in foul trouble and defends more carefully:
@@ -224,29 +224,29 @@ public static class MatchModelBounds
     public const int FoulTroubleWeightPercent = 40;
 
     /// <summary>The floor and ceiling on a defender's quickness weight for fouls (100 is neutral).</summary>
-    public const int MinimumFoulWeight = 40;
+    public const int MinimumFoulWeight = 60;
 
     /// <inheritdoc cref="MinimumFoulWeight"/>
-    public const int MaximumFoulWeight = 250;
+    public const int MaximumFoulWeight = 180;
 
     /// <summary>
     /// Where a neutral shooter's attempts come from, in <see cref="ProbabilityScale"/> units, summing
     /// to the whole: the two three-point zones together are exactly <see cref="ThreePointAttemptShare"/>,
     /// so the zones redistribute the two-and-three split rather than change it.
     /// </summary>
-    public const int RimShare = 2_800;
+    public const int RimShare = 2_900;
 
     /// <inheritdoc cref="RimShare"/>
-    public const int PaintShare = 1_700;
+    public const int PaintShare = 1_800;
 
     /// <inheritdoc cref="RimShare"/>
-    public const int MidRangeShare = 1_500;
+    public const int MidRangeShare = 1_600;
 
     /// <inheritdoc cref="RimShare"/>
-    public const int Corner3Share = 1_000;
+    public const int Corner3Share = 925;
 
     /// <inheritdoc cref="RimShare"/>
-    public const int AboveBreak3Share = 3_000;
+    public const int AboveBreak3Share = 2_775;
 
     /// <summary>
     /// How far a zone's make percentage sits from the period's two- or three-point percentage, in
@@ -259,7 +259,7 @@ public static class MatchModelBounds
     public const int RimPercentageOffset = 1_300;
 
     /// <inheritdoc cref="RimPercentageOffset"/>
-    public const int PaintPercentageOffset = -994;
+    public const int PaintPercentageOffset = -939;
 
     /// <inheritdoc cref="RimPercentageOffset"/>
     public const int MidRangePercentageOffset = -1_300;
@@ -283,13 +283,19 @@ public static class MatchModelBounds
         : Math.Clamp(body.HeightShape, -MaximumHeightShape, MaximumHeightShape);
 
     /// <summary>
-    /// How a shooter's height shape (<see cref="HeightShapeFor"/>) moves his shot diet: this many basis points a
-    /// point from above-the-break threes to the rim (or back, for a short player), capped either way.
+    /// The floor and ceiling on how far a shot-location tendency scales its zones' share of a player's
+    /// attempts, as a percentage of the neutral share (100 at the league's middle tendency of 50; a
+    /// tendency of 25 halves it, 75 makes it half again). A big who never shoots threes still takes the
+    /// odd one; a shooter still gets to the rim.
     /// </summary>
-    public const int ZoneMixPerHeightPoint = 60;
+    public const int MinimumDietMultiplier = 20;
 
-    /// <inheritdoc cref="ZoneMixPerHeightPoint"/>
-    public const int MaximumZoneMixShift = 1_200;
+    /// <inheritdoc cref="MinimumDietMultiplier"/>
+    public const int MaximumDietMultiplier = 160;
+
+    /// <summary>A shot-location tendency's multiplier on its zones' neutral share, capped by the two bounds above.</summary>
+    public static int DietMultiplierFor(int tendency) =>
+        Math.Clamp(tendency * 100 / PlayerRating.NeutralTendency, MinimumDietMultiplier, MaximumDietMultiplier);
 
     /// <summary>
     /// How a shooter's height shape moves his make percentage: up at the rim, down from three, this
@@ -303,7 +309,7 @@ public static class MatchModelBounds
     /// <summary>
     /// What share of a neutral shooter's attempts are three-pointers, in <see cref="ProbabilityScale"/>
     /// units: the two three-point zones of his diet. A league's actual <c>fg3a_per_fga</c> also moves
-    /// with its high-usage players' height shapes (<see cref="ZoneMixPerHeightPoint"/>), so it is
+    /// with its high-usage players' shot-location tendencies (<see cref="DietMultiplierFor"/>), so it is
     /// this figure only for a league of neutral shooters — tune the zone shares, not this sum.
     /// </summary>
     public const int ThreePointAttemptShare = Corner3Share + AboveBreak3Share;
@@ -314,7 +320,7 @@ public static class MatchModelBounds
     /// by <see cref="FieldGoalPercentSwingAtMaximumStrength"/> the same way the old scoring rate used
     /// to move with efficiency — a better team, not a team that shoots more often.
     /// </summary>
-    public const int BaseTwoPointPercentage = 4_720;
+    public const int BaseTwoPointPercentage = 4_800;
 
     /// <summary>
     /// League-average three-point percentage at a neutral efficiency. Lower than
@@ -322,7 +328,7 @@ public static class MatchModelBounds
     /// than closes — a team having a good night gets better at both shots together, not selectively
     /// better from three.
     /// </summary>
-    public const int BaseThreePointPercentage = 3_360;
+    public const int BaseThreePointPercentage = 3_420;
 
     /// <summary>
     /// How many percentage points a field-goal percentage may move, at the maximum possible strength
@@ -344,10 +350,10 @@ public static class MatchModelBounds
     /// throw line for two (a two-point attempt) or three (a three-point attempt) shots rather than
     /// leaving the shot a clean miss.
     /// </summary>
-    public const int ShootingFoulChanceOnMiss = 1_200;
+    public const int ShootingFoulChanceOnMiss = 850;
 
     /// <summary>Chance a made field goal draws an additional single free throw — an "and-one."</summary>
-    public const int AndOneChanceOnMake = 500;
+    public const int AndOneChanceOnMake = 250;
 
     /// <summary>
     /// Chance any single free throw is made. Not adjusted by efficiency: a team's shooting touch at
@@ -407,13 +413,6 @@ public static class MatchModelBounds
     public const int MaximumShotsPerPossession = 8;
 
     /// <summary>
-    /// Chance a made field goal was assisted, in <see cref="ProbabilityScale"/> units — decided per
-    /// make, with the assist credited to a teammate on the floor, never the shooter. Drawn per make
-    /// rather than dealt out of a total afterwards, so assists vary game to game the way they do.
-    /// </summary>
-    public const int AssistChance = 6_100;
-
-    /// <summary>
     /// The floor and ceiling on how far a player's share of their team's scoring may sit from an
     /// even split, as a percentage where 100 is the team's average. Bounded for the §7 reason again:
     /// uncapped, one star on a weak roster takes every possession on the floor.
@@ -428,7 +427,21 @@ public static class MatchModelBounds
     /// probability units. Scaled down by the minutes they actually played, so the risk sits with the
     /// people carrying the load.
     /// </summary>
-    public const int InjuryChancePerFullGame = 120;
+    public const int InjuryChancePerFullGame = 180;
+
+    /// <summary>
+    /// How far a player's injury proneness (hidden, 50 the league's middle) moves his injury chance:
+    /// percentage points per point from the middle, within
+    /// <see cref="MinimumInjuryPronenessFactor"/>–<see cref="MaximumInjuryPronenessFactor"/> per cent.
+    /// The fragile miss a month a season; the iron men play every night.
+    /// </summary>
+    public const int InjuryPronenessPerPoint = 3;
+
+    /// <inheritdoc cref="InjuryPronenessPerPoint"/>
+    public const int MinimumInjuryPronenessFactor = 40;
+
+    /// <inheritdoc cref="InjuryPronenessPerPoint"/>
+    public const int MaximumInjuryPronenessFactor = 220;
 
     /// <summary>The shortest spell an injury can cost.</summary>
     public const int MinimumInjuryDays = 2;
@@ -440,6 +453,222 @@ public static class MatchModelBounds
     /// </summary>
     public const int MaximumInjuryDays = 28;
 
+    // Player couplings (attributes A3–A6). Each reads a player's sheet against his team-mates' (a
+    // difference from the rotation's mean, through RelativeWeight, so a pack on its own scale still plays
+    // basketball) or against his own level (a shape), and each is capped on its own. A "doubling points"
+    // constant is how many points above the rotation's mean double a weight.
+
+    /// <summary>
+    /// Doubling points for a player's playmaking (handle, passing, vision) against his rotation's
+    /// mean in his weight to bring the ball up (with his touch tendency and position): the best creator
+    /// on a team runs most of its possessions, not merely a few more of them.
+    /// </summary>
+    public const int HandlerDoublingPoints = 18;
+
+    /// <summary>The floor and ceiling on a player's handler weight, as a percentage of an even split.</summary>
+    public const int MinimumHandlerFactor = 20;
+
+    /// <inheritdoc cref="MinimumHandlerFactor"/>
+    public const int MaximumHandlerFactor = 450;
+
+    /// <summary>
+    /// The chance the ball handler takes the possession's first shot himself rather than passing it to
+    /// a team-mate (picked by usage), for a player of neutral shot and pass tendencies — moved by
+    /// <see cref="SelfShotPerShotTendencyPoint"/> and <see cref="SelfShotPerPassTendencyPoint"/>, within
+    /// <see cref="MinimumSelfShotShare"/>–<see cref="MaximumSelfShotShare"/>.
+    /// </summary>
+    public const int BaseSelfShotShare = 3_600;
+
+    /// <inheritdoc cref="BaseSelfShotShare"/>
+    public const int SelfShotPerShotTendencyPoint = 50;
+
+    /// <inheritdoc cref="BaseSelfShotShare"/>
+    public const int SelfShotPerPassTendencyPoint = 40;
+
+    /// <inheritdoc cref="BaseSelfShotShare"/>
+    public const int MinimumSelfShotShare = 1_200;
+
+    /// <inheritdoc cref="BaseSelfShotShare"/>
+    public const int MaximumSelfShotShare = 7_000;
+
+    /// <summary>
+    /// Chance a make off the handler's pass is credited to him as an assist, moved by his passing shape
+    /// (<see cref="AssistPerPassingPoint"/>, capped at <see cref="MaximumAssistPassingSwing"/>): a
+    /// pass that leads straight to a basket is an assist; one the shooter still had to beat a man with
+    /// is not.
+    /// </summary>
+    public const int AssistChanceOnPass = 7_400;
+
+    /// <summary>
+    /// Chance a make the handler created for himself (or a second-chance shot) was still assisted —
+    /// a hand-off, a cut, an outlet — credited to a team-mate by assist weight.
+    /// </summary>
+    public const int AssistChanceOnOwnShot = 3_900;
+
+    /// <inheritdoc cref="AssistChanceOnPass"/>
+    public const int AssistPerPassingPoint = 30;
+
+    /// <inheritdoc cref="AssistChanceOnPass"/>
+    public const int MaximumAssistPassingSwing = 900;
+
+    /// <summary>
+    /// Doubling points for a player's Current Ability and for his touch tendency, each against his
+    /// rotation's mean, in his usage weight: the best player takes far more than his share of the shots,
+    /// and a player who wants the ball gets it a little more often than one who does not.
+    /// </summary>
+    public const int UsageRatingDoublingPoints = 10;
+
+    /// <inheritdoc cref="UsageRatingDoublingPoints"/>
+    public const int UsageTouchesDoublingPoints = 17;
+
+    /// <summary>
+    /// Doubling points for how far a player's defensive discipline falls short of his rotation's mean
+    /// in his foul weight, within <see cref="MinimumFoulDisciplineFactor"/>–<see cref="MaximumFoulDisciplineFactor"/> per cent.
+    /// </summary>
+    public const int FoulDisciplineDoublingPoints = 14;
+
+    /// <inheritdoc cref="FoulDisciplineDoublingPoints"/>
+    public const int MinimumFoulDisciplineFactor = 70;
+
+    /// <inheritdoc cref="FoulDisciplineDoublingPoints"/>
+    public const int MaximumFoulDisciplineFactor = 150;
+
+    /// <summary>
+    /// Share of turnovers charged to the ball handler; the rest go to the team-mate he was getting it to
+    /// (picked by usage) — the bad catch, the travel, the offensive foul off the ball.
+    /// </summary>
+    public const int HandlerTurnoverShare = 4_000;
+
+    /// <summary>
+    /// Doubling points for a player's shot-blocking against his rotation's mean in his positional
+    /// block weight, within
+    /// <see cref="MinimumBlockSkillFactor"/>–<see cref="MaximumBlockSkillFactor"/> per cent.
+    /// </summary>
+    public const int BlockDoublingPoints = 5;
+
+    /// <inheritdoc cref="BlockDoublingPoints"/>
+    public const int MinimumBlockSkillFactor = 60;
+
+    /// <inheritdoc cref="BlockDoublingPoints"/>
+    public const int MaximumBlockSkillFactor = 900;
+
+    /// <summary>
+    /// How the way a shot came moves a shooter's diet, as percentages of his own shares: one he made
+    /// for himself (off the dribble, a put-back, a reset) leans to the rim and the pull-up two; one he
+    /// caught off a pass leans to the spot-up three. This is what keeps a league's three-point makers
+    /// spread across its role players rather than piled on its first options.
+    /// </summary>
+    public const int OwnCloseMultiplier = 110;
+
+    /// <inheritdoc cref="OwnCloseMultiplier"/>
+    public const int OwnMidMultiplier = 120;
+
+    /// <inheritdoc cref="OwnCloseMultiplier"/>
+    public const int OwnThreeMultiplier = 80;
+
+    /// <inheritdoc cref="OwnCloseMultiplier"/>
+    public const int CatchCloseMultiplier = 95;
+
+    /// <inheritdoc cref="OwnCloseMultiplier"/>
+    public const int CatchMidMultiplier = 85;
+
+    /// <inheritdoc cref="OwnCloseMultiplier"/>
+    public const int CatchThreeMultiplier = 112;
+
+    /// <summary>
+    /// Chance the player who grabbed an offensive rebound takes the second-chance shot himself — a
+    /// put-back — rather than the offence resetting to whoever usage picks.
+    /// </summary>
+    public const int PutBackChance = 3_500;
+
+    /// <summary>
+    /// Doubling points for a player's defensive rebounding plus boxing out against his rotation's
+    /// mean in his positional rebound weight:
+    /// the best rebounder on the floor gets far more than his share, which is how a league has a
+    /// thirteen-rebound leader.
+    /// </summary>
+    public const int ReboundDoublingPoints = 60;
+
+    /// <summary>
+    /// Doubling points for offensive rebounding: steeper than at the defensive end, where position and
+    /// boxing out spread the boards; on the offensive glass a few players who crash it get most of them.
+    /// </summary>
+    public const int OffensiveReboundDoublingPoints = 14;
+
+    /// <summary>The floor and ceiling on how far rebounding moves a positional rebound weight, as a percentage.</summary>
+    public const int MinimumReboundSkillFactor = 30;
+
+    /// <inheritdoc cref="MinimumReboundSkillFactor"/>
+    public const int MaximumReboundSkillFactor = 400;
+
+    /// <summary>
+    /// Basis points a point of shooting shape (the zone's skill less the shooter's own level —
+    /// finishing at the rim, close range in the paint, mid-range, three-point) adds to his make
+    /// percentage from that zone, capped either way at <see cref="MaximumShootingSkillSwing"/>.
+    /// Shape rather than level, so it redistributes makes among players without making a side better.
+    /// </summary>
+    public const int ShootingSkillPerPoint = 20;
+
+    /// <inheritdoc cref="ShootingSkillPerPoint"/>
+    public const int MaximumShootingSkillSwing = 600;
+
+    /// <summary>
+    /// Basis points a point of free-throw shape (free throw less level) moves a player's free-throw
+    /// percentage from <see cref="FreeThrowPercentage"/>, inside
+    /// <see cref="MinimumFreeThrowPercentage"/>–<see cref="MaximumFreeThrowPercentage"/>.
+    /// </summary>
+    public const int FreeThrowPerPoint = 70;
+
+    /// <inheritdoc cref="FreeThrowPerPoint"/>
+    public const int MinimumFreeThrowPercentage = 4_000;
+
+    /// <inheritdoc cref="FreeThrowPerPoint"/>
+    public const int MaximumFreeThrowPercentage = 9_400;
+
+    /// <summary>
+    /// How much more often a shot from each zone draws a shooting foul or an and-one than the stated
+    /// base rates, as a percentage: attacking the rim draws contact, a jump shot rarely does.
+    /// </summary>
+    public static int FoulDrawWeightFor(ShotZone zone) => zone switch
+    {
+        ShotZone.Rim => 300,
+        ShotZone.Paint => 160,
+        ShotZone.MidRange => 55,
+        _ => 25,
+    };
+
+    /// <summary>
+    /// How much a player's attacking tendency (the larger of drive and post-up) moves his chance of
+    /// drawing a shooting foul, as percentage points per tendency point from the middle, inside
+    /// <see cref="MinimumFoulDrawFactor"/>–<see cref="MaximumFoulDrawFactor"/>.
+    /// </summary>
+    public const int FoulDrawPerTendencyPoint = 8;
+
+    /// <summary>Doubling points for a player's Current Ability against his rotation's mean in his foul-draw factor.</summary>
+    public const int FoulDrawRatingDoublingPoints = 21;
+
+    /// <inheritdoc cref="FoulDrawPerTendencyPoint"/>
+    public const int MinimumFoulDrawFactor = 35;
+
+    /// <inheritdoc cref="FoulDrawPerTendencyPoint"/>
+    public const int MaximumFoulDrawFactor = 420;
+
+    /// <summary>
+    /// A weight from how far a value stands above (or below) its rotation's mean: 100 at the mean,
+    /// doubling every <paramref name="doublingPoints"/> above it and halving every as many below.
+    /// A difference rather than a ratio, so a pack rated twenty points higher across the board plays
+    /// exactly the same game (<c>RunningTheSameRatingsAtADifferentScaleDoesNotChangeTheSport</c>).
+    /// Integer throughout: whole doublings are shifts, the fraction between them is interpolated.
+    /// </summary>
+    public static int RelativeWeight(int value, int mean, int doublingPoints)
+    {
+        var steps = (long)(value - mean) * 1_000 / Math.Max(1, doublingPoints);
+        var whole = (int)Math.Clamp(steps >= 0 ? steps / 1_000 : -((-steps + 999) / 1_000), -20, 20);
+        var fraction = steps - (whole * 1_000L);
+        var weight = whole >= 0 ? 100_000L << whole : 100_000L >> -whole;
+        return (int)Math.Min(int.MaxValue, weight * (1_000 + Math.Clamp(fraction, 0, 1_000)) / 1_000 / 1_000);
+    }
+
     // Positional pick weights: who is on hand for a board, a pass or a block. Named here with every
     // other term so a bounds test can read them.
 
@@ -450,21 +679,21 @@ public static class MatchModelBounds
     /// </summary>
     public static int ReboundWeightFor(Position position) => position switch
     {
-        Position.Center => 130,
-        Position.PowerForward => 120,
-        Position.SmallForward => 95,
-        Position.ShootingGuard => 80,
-        _ => 75,
+        Position.Center => 145,
+        Position.PowerForward => 105,
+        Position.SmallForward => 85,
+        Position.ShootingGuard => 75,
+        _ => 70,
     };
 
     /// <summary>Who is at the rim to block a shot: far more positional than rebounding.</summary>
     public static int BlockWeightFor(Position position) => position switch
     {
-        Position.Center => 200,
-        Position.PowerForward => 140,
-        Position.SmallForward => 85,
-        Position.ShootingGuard => 50,
-        _ => 35,
+        Position.Center => 130,
+        Position.PowerForward => 115,
+        Position.SmallForward => 100,
+        Position.ShootingGuard => 85,
+        _ => 75,
     };
 
     public static int AssistWeightFor(Position position) => position switch
@@ -479,10 +708,10 @@ public static class MatchModelBounds
     /// <summary>Who commits a foul: the big men at the rim more than the guards on the perimeter.</summary>
     public static int FoulWeightFor(Position position) => position switch
     {
-        Position.Center => 140,
-        Position.PowerForward => 125,
+        Position.Center => 125,
+        Position.PowerForward => 115,
         Position.SmallForward => 100,
-        Position.ShootingGuard => 90,
-        _ => 85,
+        Position.ShootingGuard => 92,
+        _ => 88,
     };
 }

@@ -70,8 +70,9 @@ skill), and no hustle events at all.
 | A0 | Battery 8 targets, the calibration league, the `shape` harness, this baseline. |
 | A1 | Attribute model (0–100): scoring, playmaking, defence, rebounding, mental, physical groups; body measurements; hidden attributes and personality; CA/PA; position ratings and familiarity; traits as data; latent-factor generator with a talent tail; pack schema 3 (v2 expanded), save schema 5; `IsRetired`/`Biography` saved. Engine reads the old shapes mapped from the new attributes, so calibration does not move. |
 | A2 | FM-style attributes tab: grouped columns, figure always printed, sequential tint; CA/PA as coach's stars; personality; position familiarity; traits; season-on-season arrows. |
-| A3 | Rotation and minutes by position rating and stamina; play types and usage concentration → minutes, usage and scoring tails. |
-| A4 | Matchups; shooting by attribute against the defender; contests; defended FGA/FGM; free throws and fouls drawn. |
+| A3a | Tendencies on the sheet (2K-style, 0–100: touches, shot, drive, post-up, shot close/mid/three, pull-up, pass, crash the glass, gamble, block shot, foul), derived from attributes when a pack does not state them; usage from touches and the shot diet from the location tendencies; automatic rotation by position rating with NBA-like minutes and stamina → minutes, usage and scoring tails. |
+| A3b | Rotation editor: the user sets starters and minutes per player (a Rules validator: 240 a game, per-player bounds, five starters at least covering the floor); saved with the league; the season engine plays it; AI teams keep the automatic rotation. |
+| A4 | Matchups; shooting by attribute against the defender; contests; defended FGA/FGM; free throws and fouls drawn; the shot tendency (shoot or move the ball). |
 | A5 | Rebounding and box-outs from attributes. |
 | A6 | Assists, potential assists, screen assists. |
 | A7 | Deflections, steals, blocks, charges drawn, loose balls. |
@@ -111,3 +112,54 @@ Attributes tab (three columns of grouped attributes in tier badges, with descrip
 on the Overview (stars, personality, body, positions, traits), POT on the roster. Change arrows wait
 for A9. The real-league pack still shows sheets expanded from five attributes — several 100s for its stars —
 until its sheets are derived from real per-player data alongside the engine slices.
+
+## Amendment (user request, 2026-10-10): tendencies and a rotation editor
+
+Added to A3 at the user's request: NBA-2K-style touch and shot tendencies, and setting minutes for the
+lineup. Tendencies are the engine's per-player choice inputs (how often he touches the ball, how often
+he shoots it, where from, how he gets there); attributes stay the skill that decides how well. They
+are part of the sheet, so they ride the same pack and save shape (save schema 6). The rotation editor
+makes minutes a decision the GM owns instead of a formula.
+
+## A3a–A6 (engine half): the tails, as built
+
+Built together, because each one moves the others' distributions and calibrating them one at a time
+re-tuned the same constants four times. The rotation editor (A3b) and the off-ball stats (A7) are still
+to come.
+
+- **Rotation (A3a).** `DepthChartBuilder` picks the starting five by position fit — the best five and
+  arrangement among the top seven by Current Ability plus each position's best natural, scored by
+  `PositionRatings` less familiarity, an awkward fit (or any off-position spot on a flat sheet) a last
+  resort — and gives minutes by role (`MinutesAllocationBounds.RoleMinutes`: 33/31/30/28/27 for the
+  starters, 25/22/18/14/12 off the bench), then ±0.2 a point of Current Ability against the rotation
+  and a capped stamina shape, inside a 38-minute planned ceiling.
+- **Usage and the ball (A3a/A6).** A possession has a handler (playmaking against the rotation, by
+  position and touch tendency) who either shoots it himself (his shot and pass tendencies) or passes to
+  a team-mate picked by usage; a make off his pass is usually his assist, a make he made himself rarely
+  anyone's. Usage is Current Ability and the touch tendency as differences from the rotation's mean
+  (`MatchModelBounds.RelativeWeight`, a weight that doubles every N points — a difference, so a pack on
+  its own scale plays the same game). Turnovers split between the handler and the receiver.
+- **Shooting (A4, first half).** Make percentage moves with the zone's skill shape (finishing, close
+  range, mid-range, three) and free-throw percentage with the free-throw shape. A self-created shot
+  leans to the rim and the pull-up, a caught one to the spot-up three. Shooting fouls and and-ones are
+  drawn by zone (the rim draws contact) and by an attack tendency and Current Ability, so the stars live
+  at the line. Contests, matchups and defended shots are the second half of A4.
+- **Rebounds (A5) and blocks.** Positional weights now multiplied by rebounding, boxing out, offensive
+  rebounding and blocking against the rotation; an offensive rebounder may put it back himself.
+- **Availability (part of A8).** Injury chance moves with injury proneness; the base rate rose from
+  1.2% to 1.8% a full game (bounded under 2%) so a season has the missed games a real one does.
+- **The calibration league** gives its top three roster slots a wide triangular spread, so one team has
+  two stars and another none — which is where a league's leaders come from.
+
+Measured (10 seasons of the calibration league, battery 8): scoring leader 31.7 (real 32.7),
+rebounds 14.7 (13.5), assists 10.9 (10.9), minutes 38.2 (37.8), free-throw attempts 11.4 (11.1),
+threes made 5.0 (4.6), turnovers 4.4 (4.3), fouls 3.8 (3.6) — every leader row in band except blocks
+(2.4 against 3.3). Team rates all in band (ortg, pace, eFG, FT/FGA 0.23, 3PA/FGA 0.43, AST/FGM 0.62,
+fouls, steals, blocks); fixture league 1,000 seasons: win SD 0.157, Noll-Scully 2.78, talent share
+0.870, margin SD 14.0; season sim time 16.0 ms (budget 16.9) after caching each depth chart's derived
+side profile and stint plans. Locked by `LeagueShapeCalibrationTests` (six seeded seasons).
+
+Still out of band, and why: the percentile and count rows (p90 scorers, 8+ rebounders, 3+ threes) run
+high because a team's season minutes still go to ten players — the real league spreads them over
+twelve (rest, minor knocks, garbage time). That is the rest of A8, with the blocks leader (an elite
+rim protector should also raise his team's block rate, not only take a bigger share of it).

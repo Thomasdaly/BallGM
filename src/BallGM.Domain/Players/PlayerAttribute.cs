@@ -86,6 +86,28 @@ public enum HiddenAttribute
     Adaptability,
 }
 
+/// <summary>
+/// What a player chooses to do, 0–100 with 50 the league's middle, as an NBA-2K-style tendency: how
+/// often the ball finds him, how often he shoots it, where from and how he gets there. Attributes say
+/// how well; tendencies say how often. The engine reads them as weights against his team-mates'.
+/// </summary>
+public enum PlayerTendency
+{
+    Touches,
+    Shot,
+    Drive,
+    PostUp,
+    ShotClose,
+    ShotMid,
+    ShotThree,
+    PullUp,
+    Pass,
+    CrashGlass,
+    Gamble,
+    BlockShot,
+    Foul,
+}
+
 /// <summary>How at home a player is at a position, best last, so a higher value is a better fit.</summary>
 public enum PositionFamiliarity
 {
@@ -117,6 +139,10 @@ public static class PlayerAttributes
     public static IReadOnlyList<PlayerAttribute> All { get; } = Enum.GetValues<PlayerAttribute>();
 
     public static IReadOnlyList<HiddenAttribute> AllHidden { get; } = Enum.GetValues<HiddenAttribute>();
+
+    public static IReadOnlyList<PlayerTendency> AllTendencies { get; } = Enum.GetValues<PlayerTendency>();
+
+    public static int TendencyCount => AllTendencies.Count;
 
     public static int Count => All.Count;
 

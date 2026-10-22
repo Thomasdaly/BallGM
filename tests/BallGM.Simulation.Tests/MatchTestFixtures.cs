@@ -40,6 +40,12 @@ internal static class MatchTestFixtures
     public static MatchSetup Setup(int seed, PlayerRating homeEveryone, PlayerRating awayEveryone) =>
         new(FixtureFor(seed), Squad(Home, _ => homeEveryone), Squad(Away, _ => awayEveryone), seed, GameRules.Default);
 
+    /// <summary>Squads of ten whose home players' sheets are chosen by position in the squad, against a uniform away side.</summary>
+    public static MatchSetup Setup(int seed, Func<int, PlayerRating> homeAt, PlayerRating awayEveryone) =>
+        new(FixtureFor(seed), Squad(Home, homeAt), Squad(Away, _ => awayEveryone), seed, GameRules.Default);
+
+    public static TeamId HomeTeam => Home;
+
     private static readonly TeamId Home = new("TEAM-HOME");
 
     private static readonly TeamId Away = new("TEAM-AWAY");

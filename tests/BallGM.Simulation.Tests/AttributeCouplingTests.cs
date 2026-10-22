@@ -55,7 +55,7 @@ public sealed class AttributeCouplingTests
     }
 
     [Fact]
-    public void TallerShootersForTheirLevelTakeMoreShotsAtTheRimAndFewerThrees()
+    public void ShootersWhoLikeItInsideTakeMoreShotsAtTheRimAndFewerThrees()
     {
         (double Rim, double Three) Diet(PlayerRating rating)
         {
@@ -67,11 +67,25 @@ public sealed class AttributeCouplingTests
             return ((double)zones.RimAttempts / zones.TotalAttempts, (double)zones.ThreeAttempts / zones.TotalAttempts);
         }
 
-        var tall = Diet(Rating(heightCm: 206));
+        var inside = Diet(Rating().With(PlayerTendency.ShotClose, 80).With(PlayerTendency.ShotThree, 25));
         var neutral = Diet(Rating());
 
-        Assert.True(tall.Rim > neutral.Rim + 0.05, $"rim {tall.Rim:F3} vs {neutral.Rim:F3}");
-        Assert.True(tall.Three < neutral.Three - 0.05, $"three {tall.Three:F3} vs {neutral.Three:F3}");
+        Assert.True(inside.Rim > neutral.Rim + 0.05, $"rim {inside.Rim:F3} vs {neutral.Rim:F3}");
+        Assert.True(inside.Three < neutral.Three - 0.05, $"three {inside.Three:F3} vs {neutral.Three:F3}");
+    }
+
+    [Fact]
+    public void APlayerWhoWantsTheBallGetsMoreOfItsShotsAtTheSameLevel()
+    {
+        // Ten players of Overall 70; the first wants the ball (touches 85), the rest are neutral.
+        var share = Enumerable.Range(0, 300)
+            .Select(seed => MatchTestFixtures.Setup(seed, index => index == 0 ? Rating().With(PlayerTendency.Touches, 85) : Rating(), Rating()))
+            .Select(setup => Engine.Play(setup).Value.Result.BoxScore!.LinesFor(MatchTestFixtures.HomeTeam).ToList())
+            .Select(lines => (double)lines.Single(line => line.PlayerId.Value.EndsWith("P00", StringComparison.Ordinal)).FieldGoalsAttempted / lines.Sum(line => line.FieldGoalsAttempted))
+            .Average();
+
+        // Even shares at equal minutes would be about a tenth; he plays a starter's minutes and wants the ball.
+        Assert.True(share > 0.20, $"share {share:F3}");
     }
 
     /// <summary>The away side's personal fouls against a neutral home side: fouls fall on the defence's players.</summary>

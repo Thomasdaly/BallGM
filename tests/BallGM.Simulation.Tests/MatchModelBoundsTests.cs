@@ -1,3 +1,4 @@
+using BallGM.Domain.Seasons;
 using BallGM.Simulation.Seasons;
 
 namespace BallGM.Simulation.Tests;
@@ -96,8 +97,62 @@ public sealed class MatchModelBoundsTests
         // past anything the rebound rate makes plausible (each extra shot needs another offensive board).
         Assert.InRange(MatchModelBounds.MaximumShotsPerPossession, 4, 20);
 
-        Assert.InRange(MatchModelBounds.AssistChance, 1, MatchModelBounds.ProbabilityScale);
         Assert.InRange(MatchModelBounds.ThreePointAttemptShare, 1, MatchModelBounds.ProbabilityScale);
+    }
+
+    [Fact]
+    public void AssistsGoMostlyToThePasserAndNeverPastCertainty()
+    {
+        // A make off the handler's pass is usually his assist and one he made himself rarely anyone's;
+        // the passing swing can move the first but never past certainty or below the second.
+        Assert.True(MatchModelBounds.AssistChanceOnOwnShot < MatchModelBounds.AssistChanceOnPass);
+        Assert.InRange(MatchModelBounds.AssistChanceOnPass + MatchModelBounds.MaximumAssistPassingSwing, 1, MatchModelBounds.ProbabilityScale);
+        Assert.True(MatchModelBounds.AssistChanceOnPass - MatchModelBounds.MaximumAssistPassingSwing > MatchModelBounds.AssistChanceOnOwnShot);
+
+        // The handler sometimes shoots and sometimes passes, whatever his tendencies, and a neutral
+        // handler's share sits between the caps.
+        Assert.InRange(MatchModelBounds.MinimumSelfShotShare, 1, MatchModelBounds.BaseSelfShotShare - 1);
+        Assert.InRange(MatchModelBounds.MaximumSelfShotShare, MatchModelBounds.BaseSelfShotShare + 1, MatchModelBounds.ProbabilityScale - 1);
+        Assert.InRange(MatchModelBounds.HandlerTurnoverShare, 1, MatchModelBounds.ProbabilityScale);
+        Assert.InRange(MatchModelBounds.PutBackChance, 1, MatchModelBounds.ProbabilityScale / 2);
+    }
+
+    [Fact]
+    public void RelativeWeightsDependOnDifferencesNotOnTheRatingScale()
+    {
+        // 100 at the mean, double a doubling above it, half a doubling below, and the same at any scale.
+        Assert.Equal(100, MatchModelBounds.RelativeWeight(60, 60, 10));
+        Assert.Equal(200, MatchModelBounds.RelativeWeight(70, 60, 10));
+        Assert.Equal(50, MatchModelBounds.RelativeWeight(50, 60, 10));
+        Assert.Equal(MatchModelBounds.RelativeWeight(47, 40, 10), MatchModelBounds.RelativeWeight(97, 90, 10));
+
+        // Monotone, so a better player is never weighted below a worse one.
+        for (var value = 0; value < 100; value++)
+        {
+            Assert.True(MatchModelBounds.RelativeWeight(value + 1, 50, 7) >= MatchModelBounds.RelativeWeight(value, 50, 7));
+        }
+    }
+
+    [Fact]
+    public void HowAShotCameMovesItsDietWithoutEmptyingAZone()
+    {
+        // A self-created shot leans away from the three and a caught one towards it; neither zeroes a zone.
+        Assert.True(MatchModelBounds.OwnThreeMultiplier < 100 && MatchModelBounds.CatchThreeMultiplier > 100);
+        Assert.True(MatchModelBounds.OwnMidMultiplier > 100 && MatchModelBounds.CatchMidMultiplier < 100);
+        foreach (var multiplier in new[]
+        {
+            MatchModelBounds.OwnCloseMultiplier, MatchModelBounds.OwnMidMultiplier, MatchModelBounds.OwnThreeMultiplier,
+            MatchModelBounds.CatchCloseMultiplier, MatchModelBounds.CatchMidMultiplier, MatchModelBounds.CatchThreeMultiplier,
+        })
+        {
+            Assert.InRange(multiplier, 50, 200);
+        }
+
+        // Attacking the rim draws more contact than a jump shot, from every zone a little.
+        Assert.True(MatchModelBounds.FoulDrawWeightFor(ShotZone.Rim) > MatchModelBounds.FoulDrawWeightFor(ShotZone.MidRange));
+        Assert.True(MatchModelBounds.FoulDrawWeightFor(ShotZone.AboveBreak3) > 0);
+        Assert.InRange(MatchModelBounds.MinimumFreeThrowPercentage, 1, MatchModelBounds.FreeThrowPercentage - 1);
+        Assert.InRange(MatchModelBounds.MaximumFreeThrowPercentage, MatchModelBounds.FreeThrowPercentage + 1, MatchModelBounds.ProbabilityScale - 1);
     }
 
     [Fact]
@@ -215,10 +270,11 @@ public sealed class MatchModelBoundsTests
         Assert.Equal(BallGM.Domain.Players.Position.Center, positions.MaxBy(MatchModelBounds.ReboundWeightFor));
         Assert.Equal(BallGM.Domain.Players.Position.PointGuard, positions.MaxBy(MatchModelBounds.AssistWeightFor));
 
-        // Blocks are more positional than rebounds: the spread between the extremes is wider.
-        Assert.True(
-            positions.Max(MatchModelBounds.BlockWeightFor) * positions.Min(MatchModelBounds.ReboundWeightFor) >
-            positions.Max(MatchModelBounds.ReboundWeightFor) * positions.Min(MatchModelBounds.BlockWeightFor));
+        // Since attributes A3–A6 skill, not position, does most of the separating: blocking concentrates
+        // on the specialists faster than rebounding does (fewer points of skill double a weight), and
+        // offensive rebounding faster than defensive, where boxing out spreads the boards.
+        Assert.True(MatchModelBounds.BlockDoublingPoints < MatchModelBounds.OffensiveReboundDoublingPoints);
+        Assert.True(MatchModelBounds.OffensiveReboundDoublingPoints < MatchModelBounds.ReboundDoublingPoints);
     }
 
     [Fact]
@@ -266,9 +322,13 @@ public sealed class MatchModelBoundsTests
         Assert.Equal(0, threes);
 
         // The height shift never empties a zone, and a specialist reaches both caps.
-        Assert.True(MatchModelBounds.MaximumZoneMixShift < Math.Min(MatchModelBounds.RimShare, MatchModelBounds.AboveBreak3Share));
+        // A tendency moves a zone's share within the diet caps: the league's middle is neutral, and the
+        // caps are reachable by a real specialist without zeroing any zone.
+        Assert.Equal(100, MatchModelBounds.DietMultiplierFor(BallGM.Domain.Players.PlayerRating.NeutralTendency));
+        Assert.True(MatchModelBounds.MinimumDietMultiplier > 0);
         const int SpecialistShape = 20;
-        Assert.True(SpecialistShape * MatchModelBounds.ZoneMixPerHeightPoint >= MatchModelBounds.MaximumZoneMixShift);
+        Assert.Equal(MatchModelBounds.MaximumDietMultiplier, MatchModelBounds.DietMultiplierFor(98));
+        Assert.Equal(MatchModelBounds.MinimumDietMultiplier, MatchModelBounds.DietMultiplierFor(5));
         Assert.True(SpecialistShape * MatchModelBounds.ZonePercentagePerHeightPoint >= MatchModelBounds.MaximumZonePercentageSwing);
     }
 }

@@ -35,6 +35,54 @@ public static class MinutesAllocationBounds
     public const int MaximumMinutesPerPlayer = 42;
 
     /// <summary>
+    /// The most minutes the rotation plans for anyone, short-handed games aside: a star on a thin team
+    /// plays deep into his thirties, but a coach still rests him. The game's own fatigue and fouls take
+    /// it down from here, never up.
+    /// </summary>
+    public const int MaximumPlannedMinutes = 38;
+
+    /// <summary>
+    /// How many of the best players by Current Ability are considered for the starting five (with the
+    /// best natural player at each position added when not among them).
+    /// </summary>
+    public const int StarterCandidates = 7;
+
+    /// <summary>
+    /// The minutes a role is worth before quality and stamina move them, by place in the rotation: the
+    /// five starters ranked among themselves by rating, then the bench in order. Sums to the game for a
+    /// full rotation, which is the shape a real team's minutes take — a starter's thirty-odd, a sixth
+    /// man's mid-twenties, the end of the bench in single figures.
+    /// </summary>
+    public static int RoleMinutes(int rank) => rank switch
+    {
+        0 => 33,
+        1 => 31,
+        2 => 30,
+        3 => 28,
+        4 => 27,
+        5 => 25,
+        6 => 22,
+        7 => 18,
+        8 => 14,
+        _ => 12,
+    };
+
+    /// <summary>
+    /// Tenths of a minute a point of Current Ability above (or below) the rotation's average adds (or
+    /// takes away): the better player plays more than his role alone would give him.
+    /// </summary>
+    public const int TenthsPerRatingPoint = 2;
+
+    /// <summary>
+    /// Tenths of a minute a point of stamina above (or below) the player's own level adds (or takes
+    /// away), capped either way at <see cref="MaximumStaminaTenths"/>.
+    /// </summary>
+    public const int TenthsPerStaminaPoint = 1;
+
+    /// <inheritdoc cref="TenthsPerStaminaPoint"/>
+    public const int MaximumStaminaTenths = 25;
+
+    /// <summary>
     /// The fewest minutes a player kept in the rotation is given. A player worth playing at all is
     /// worth more than a token appearance, and a floor stops the allocation from producing a
     /// rotation of ten in which four of them play two minutes each.

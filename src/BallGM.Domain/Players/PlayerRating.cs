@@ -23,8 +23,12 @@ public sealed record PlayerRating
     /// <summary>A hidden attribute nobody has measured: the league's middle.</summary>
     public const int NeutralHidden = 50;
 
+    /// <summary>A tendency nobody has stated: the league's middle.</summary>
+    public const int NeutralTendency = 50;
+
     private readonly int[] _visible;
     private readonly int[] _hidden;
+    private readonly int[] _tendencies;
 
     public PlayerRating(
         IReadOnlyList<int> visible,
@@ -32,7 +36,8 @@ public sealed record PlayerRating
         int potentialAbility,
         PlayerBody? body = null,
         IReadOnlyDictionary<Position, PositionFamiliarity>? positions = null,
-        IReadOnlyCollection<PlayerTrait>? traits = null)
+        IReadOnlyCollection<PlayerTrait>? traits = null,
+        IReadOnlyList<int>? tendencies = null)
     {
         ArgumentNullException.ThrowIfNull(visible);
         ArgumentNullException.ThrowIfNull(hidden);
@@ -48,6 +53,14 @@ public sealed record PlayerRating
 
         _visible = visible.Select(value => Validated(value, nameof(visible))).ToArray();
         _hidden = hidden.Select(value => Validated(value, nameof(hidden))).ToArray();
+        if (tendencies is not null && tendencies.Count != PlayerAttributes.TendencyCount)
+        {
+            throw new ArgumentException($"A sheet states all {PlayerAttributes.TendencyCount} tendencies, or none.", nameof(tendencies));
+        }
+
+        _tendencies = tendencies is null
+            ? Enumerable.Repeat(NeutralTendency, PlayerAttributes.TendencyCount).ToArray()
+            : tendencies.Select(value => Validated(value, nameof(tendencies))).ToArray();
         Overall = PlayerAttributes.CurrentAbility(_visible);
         PotentialAbility = Validated(potentialAbility, nameof(potentialAbility));
         Body = body;
@@ -56,10 +69,11 @@ public sealed record PlayerRating
     }
 
     /// <summary>A copy sharing an already-valid sheet's parts, with new visible or hidden values the caller has validated.</summary>
-    private PlayerRating(PlayerRating source, int[] visible, int[] hidden, PlayerBody? body)
+    private PlayerRating(PlayerRating source, int[] visible, int[] hidden, PlayerBody? body, int[]? tendencies = null)
     {
         _visible = visible;
         _hidden = hidden;
+        _tendencies = tendencies ?? source._tendencies;
         Overall = PlayerAttributes.CurrentAbility(visible);
         PotentialAbility = source.PotentialAbility;
         Body = body;
@@ -76,6 +90,11 @@ public sealed record PlayerRating
     public int this[PlayerAttribute attribute] => _visible[(int)attribute];
 
     public int Hidden(HiddenAttribute attribute) => _hidden[(int)attribute];
+
+    public int Tendency(PlayerTendency tendency) => _tendencies[(int)tendency];
+
+    /// <summary>Every tendency in declaration order.</summary>
+    public IReadOnlyList<int> Tendencies => _tendencies;
 
     /// <summary>Every visible attribute in sheet order.</summary>
     public IReadOnlyList<int> Visible => _visible;
@@ -121,6 +140,26 @@ public sealed record PlayerRating
         return new PlayerRating(this, _visible, hidden, Body);
     }
 
+    /// <summary>The same sheet with one tendency changed.</summary>
+    public PlayerRating With(PlayerTendency tendency, int value)
+    {
+        var tendencies = _tendencies.ToArray();
+        tendencies[(int)tendency] = Validated(value, nameof(value));
+        return new PlayerRating(this, _visible, _hidden, Body, tendencies);
+    }
+
+    /// <summary>The same sheet with every tendency replaced.</summary>
+    public PlayerRating WithTendencies(IReadOnlyList<int> tendencies)
+    {
+        ArgumentNullException.ThrowIfNull(tendencies);
+        if (tendencies.Count != PlayerAttributes.TendencyCount)
+        {
+            throw new ArgumentException($"A sheet states all {PlayerAttributes.TendencyCount} tendencies.", nameof(tendencies));
+        }
+
+        return new PlayerRating(this, _visible, _hidden, Body, tendencies.Select(value => Validated(value, nameof(tendencies))).ToArray());
+    }
+
     /// <summary>The same sheet with measurements.</summary>
     public PlayerRating WithBody(PlayerBody? body) => new(this, _visible, _hidden, body);
 
@@ -136,6 +175,7 @@ public sealed record PlayerRating
         other is not null &&
         _visible.AsSpan().SequenceEqual(other._visible) &&
         _hidden.AsSpan().SequenceEqual(other._hidden) &&
+        _tendencies.AsSpan().SequenceEqual(other._tendencies) &&
         PotentialAbility == other.PotentialAbility &&
         Body == other.Body &&
         Positions.Count == other.Positions.Count &&

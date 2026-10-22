@@ -514,6 +514,24 @@ validated exactly as authored content is. Thirty teams under `data/rulesets/cali
 (82 games) is the yardstick for sim-audit battery 8, the real league's per-player distribution. The
 baseline and the plan are in `docs/attributes-plan.md`.
 
+### Rotations by role, the ball handler, and skill-driven shares (attributes A3–A6)
+
+Who starts is the best five *at their positions* (`DepthChartBuilder.StartingFive`, an exact search
+over which of the top candidates fill which spot, scored by `PositionRatings`); minutes are a role
+template moved by quality and stamina (`MinutesAllocationBounds`). A possession now has a handler, who
+shoots or passes; a make off his pass is usually his assist — which is what gives a league an
+eleven-assist point guard and a thirty-point wing on the same team instead of two 20-and-5 players.
+Every share (usage, handling, rebounding, blocking, fouls, foul drawing) is a weight from a
+*difference* against the rotation's mean (`MatchModelBounds.RelativeWeight`), never a ratio, so a pack
+rated on another scale still plays the same game; shooting and free-throw skill are shapes (attribute
+less the player's own level), so they redistribute makes without making a side better.
+
+Everything a side derives from its rotation is a pure function of it, so `PossessionMatchEngine`
+builds a `SideProfile` once per depth chart (weakly keyed, checked against the fit players it was
+built from) and reuses it, stint plans included, for every game the chart plays. Reuse cannot change a
+result — the same seed replays the same game — and it is what keeps a season inside its time budget.
+See `docs/attributes-plan.md` → "A3a–A6 (engine half)" for the numbers.
+
 ### The playoff eligibility cutoff is applied at the signing
 
 `PostseasonRules.PlayoffEligibilityCutoffDay` is the last season day a player may be added and still appear in the postseason. It is enforced in `SigningValidator`, with the day travelling in from `LeagueSession`'s season through `ISigningEngine` onto `SigningContext`.

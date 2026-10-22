@@ -26,6 +26,10 @@ public static class PlayerSheetCodec
 
     private static readonly FrozenSet<string> HiddenKeySet = HiddenKeys.ToFrozenSet(StringComparer.Ordinal);
 
+    private static readonly string[] TendencyKeys = PlayerAttributes.AllTendencies.Select(tendency => CamelCase(tendency.ToString())).ToArray();
+
+    private static readonly FrozenSet<string> TendencyKeySet = TendencyKeys.ToFrozenSet(StringComparer.Ordinal);
+
     public static string Key(PlayerAttribute attribute) => VisibleKeys[(int)attribute];
 
     public static string Key(HiddenAttribute attribute) => HiddenKeys[(int)attribute];
@@ -35,6 +39,11 @@ public static class PlayerSheetCodec
 
     public static Dictionary<string, int?> HiddenMap(PlayerRating rating) =>
         PlayerAttributes.AllHidden.ToDictionary(Key, attribute => (int?)rating.Hidden(attribute));
+
+    public static string Key(PlayerTendency tendency) => TendencyKeys[(int)tendency];
+
+    public static Dictionary<string, int?> TendencyMap(PlayerRating rating) =>
+        PlayerAttributes.AllTendencies.ToDictionary(Key, tendency => (int?)rating.Tendency(tendency));
 
     public static Dictionary<string, string> PositionMap(PlayerRating rating) =>
         rating.Positions.OrderBy(entry => entry.Key).ToDictionary(entry => entry.Key.ToString(), entry => entry.Value.ToString());
@@ -72,7 +81,8 @@ public static class PlayerSheetCodec
     /// <summary>
     /// A full sheet as stated. Every visible attribute is required; hidden attributes default to the
     /// middle, potential to Current Ability, an absent position map to <paramref name="natural"/>
-    /// alone, traits to none.
+    /// alone, traits to none, and absent tendencies to what the sheet implies (<c>TendencyModel</c>);
+    /// stated tendencies must all be stated.
     /// </summary>
     public static PlayerRating? Read(
         IReadOnlyDictionary<string, int?>? ratings,
@@ -82,7 +92,8 @@ public static class PlayerSheetCodec
         IReadOnlyDictionary<string, string>? positions,
         IReadOnlyList<string>? traits,
         Position natural,
-        out string? error)
+        out string? error,
+        IReadOnlyDictionary<string, int?>? tendencies = null)
     {
         error = null;
         if (ratings is null)
@@ -174,7 +185,31 @@ public static class PlayerSheetCodec
             return null;
         }
 
-        return new PlayerRating(visible, hiddenValues, potentialValue, measured, familiarity, traitValues);
+        var sheet = new PlayerRating(visible, hiddenValues, potentialValue, measured, familiarity, traitValues);
+        if (tendencies is null)
+        {
+            return sheet.WithTendencies(TendencyModel.Derive(sheet));
+        }
+
+        if (tendencies.Keys.FirstOrDefault(key => !TendencyKeySet.Contains(key)) is { } strayTendency)
+        {
+            error = $"Tendency '{strayTendency}' is not one this build knows.";
+            return null;
+        }
+
+        var tendencyValues = new int[PlayerAttributes.TendencyCount];
+        for (var index = 0; index < tendencyValues.Length; index++)
+        {
+            if (tendencies.GetValueOrDefault(TendencyKeys[index]) is not int value || !InRange(value))
+            {
+                error = $"Tendency '{TendencyKeys[index]}' must be stated, between {PlayerRating.MinimumOverall} and {PlayerRating.MaximumOverall}, when any tendency is.";
+                return null;
+            }
+
+            tendencyValues[index] = value;
+        }
+
+        return sheet.WithTendencies(tendencyValues);
     }
 
     private static string CamelCase(string name) => JsonNamingPolicy.CamelCase.ConvertName(name);
