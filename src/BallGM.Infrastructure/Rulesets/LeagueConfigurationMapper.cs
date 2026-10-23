@@ -254,14 +254,14 @@ internal static class LeagueConfigurationMapper
             var parsedAwards = new List<Rules.Configuration.AwardDefinition>(awards.Count);
             foreach (var award in awards)
             {
-                if (!Enum.TryParse<AwardStatBasis>(award.StatBasis, out var statBasis))
+                var parsed = LeagueRulesetSerializer.ParseAward(
+                    award.Code, award.Name, award.StatBasis, award.Kind, award.MinimumGamesPercent, award.MinimumMinutesPerGame, award.Teams);
+                if (parsed.IsFailure)
                 {
-                    return DomainOperationResult<LeagueRuleset>.Failure(new DomainError(
-                        UnknownAwardStatBasisCode,
-                        $"Award '{award.Code}' names stat basis '{award.StatBasis}', which this build does not know."));
+                    return Relabel<LeagueRuleset>(parsed.Errors, UnknownAwardStatBasisCode);
                 }
 
-                parsedAwards.Add(new Rules.Configuration.AwardDefinition(award.Code, award.Name, statBasis));
+                parsedAwards.Add(parsed.Value);
             }
 
             var awardRulesResult = AwardRules.Create(parsedAwards);
@@ -402,7 +402,8 @@ internal static class LeagueConfigurationMapper
                 : null,
             ruleset.AwardRules.IsConfigured
                 ? ruleset.AwardRules.Awards
-                    .Select(award => new Application.Leagues.AwardDefinition(award.Code, award.Name, award.StatBasis.ToString()))
+                    .Select(award => new Application.Leagues.AwardDefinition(
+                        award.Code, award.Name, award.StatBasis?.ToString(), award.Kind.ToString(), award.MinimumGamesPercent, award.MinimumMinutesPerGame, award.Teams))
                     .ToList()
                 : null,
             ruleset.CapMechanics.IsConfigured

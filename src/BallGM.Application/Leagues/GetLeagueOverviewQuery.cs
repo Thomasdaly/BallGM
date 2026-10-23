@@ -169,7 +169,7 @@ public sealed class GetLeagueOverviewQuery(
         var negotiation = snapshot.Configuration.Negotiation;
 
         var players = snapshot.Players
-            .Where(player => !rosteredPlayerIds.Contains(player.Id) && !contractedPlayerIds.Contains(player.Id))
+            .Where(player => !player.IsRetired && !rosteredPlayerIds.Contains(player.Id) && !contractedPlayerIds.Contains(player.Id))
             .Select(player =>
             {
                 var limits = _signingEngine.LimitsFor(snapshot, player.SeasonsOfService);

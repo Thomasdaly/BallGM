@@ -23,6 +23,15 @@ public sealed record SeasonDraftOutcome(
     IReadOnlyList<RuleFinding> Notes);
 
 /// <summary>
+/// What a season boundary's ageing pass did: how many players' sheets moved, who retired, and the
+/// findings behind each retirement.
+/// </summary>
+public sealed record PlayerDevelopmentOutcome(
+    int PlayersDeveloped,
+    IReadOnlyList<PlayerId> Retired,
+    IReadOnlyList<RuleFinding> Notes);
+
+/// <summary>
 /// What concluding a finished season changed, in the shape the Application port hands back. Mirrors
 /// <c>BallGM.Rules.Seasons.ConcludedSeason</c> field for field — Application does not reference Rules,
 /// so the port's own type carries the same information rather than exposing the Rules-layer one.
@@ -241,7 +250,37 @@ public sealed record SeasonConclusionSummary(
     int PlayersAutoSigned,
     int AiTradesExecuted,
     int AiSigningsExecuted,
-    IReadOnlyList<SeasonFindingLine> Notes);
+    IReadOnlyList<SeasonFindingLine> Notes)
+{
+    /// <summary>The season's awards, in the order the league lists them.</summary>
+    public IReadOnlyList<SeasonAwardLine> Awards { get; init; } = [];
+
+    /// <summary>How many players' sheets the ageing pass moved.</summary>
+    public int PlayersDeveloped { get; init; }
+
+    /// <summary>The players who retired at this boundary, by name.</summary>
+    public IReadOnlyList<string> PlayersRetired { get; init; } = [];
+}
+
+/// <summary>
+/// One award selection as a screen shows it: the award, the selection (the team number of an
+/// all-league award, else 1), the player and the team he finished with, and why he won.
+/// </summary>
+public sealed record SeasonAwardLine(
+    string AwardCode,
+    string AwardName,
+    int Selection,
+    string PlayerId,
+    string PlayerName,
+    string? TeamName,
+    string Explanation);
+
+/// <summary>One concluded season as the league's history reads: its champion and its awards.</summary>
+public sealed record SeasonHistorySummary(
+    int SeasonYear,
+    string SeasonLabel,
+    string? ChampionTeamName,
+    IReadOnlyList<SeasonAwardLine> Awards);
 
 /// <summary>
 /// One player's totals for one phase of the season in progress — every counting stat. Totals only,

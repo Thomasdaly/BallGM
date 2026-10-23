@@ -405,4 +405,16 @@ public sealed record ScoutingInvestmentBandEnvelope(long MinimumInvestedPoints, 
 public sealed record AgeCurveBandEnvelope(long MinimumAge, long Value);
 
 /// <summary>One award: its code, its display name, and the stat basis name it is decided by.</summary>
-public sealed record AwardEnvelope(string Code, string Name, string StatBasis);
+/// <summary>
+/// One award as a ruleset states it. <see cref="StatBasis"/> alone (the schema-9 shape) is a stat-leader
+/// award; <see cref="Kind"/> names any other (schema 13), with its eligibility floor and, for an
+/// all-league award, how many teams it names.
+/// </summary>
+public sealed record AwardEnvelope(
+    string Code,
+    string Name,
+    string? StatBasis = null,
+    string? Kind = null,
+    int? MinimumGamesPercent = null,
+    int? MinimumMinutesPerGame = null,
+    int? Teams = null);

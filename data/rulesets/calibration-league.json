@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "name": "Calibration League — 30 teams, 82 games",
   "regularSeasonGameCount": 82,
   "minimumRosterPlayers": 12,
@@ -18,9 +18,9 @@
     140,
     125
   ],
-  "draftClassSize": 16,
-  "draftClassMinimumRating": 40,
-  "draftClassMaximumRating": 90,
+  "draftClassSize": 70,
+  "draftClassMinimumRating": 38,
+  "draftClassMaximumRating": 72,
   "draftClassProspectAgeYears": 19,
   "tradableFutureDraftHorizon": 5,
   "retainedRoundNumber": 1,
@@ -88,5 +88,153 @@
   "playoffEligibilityCutoffDay": 170,
   "inSeasonSigningWindowOpensDay": 14,
   "inSeasonSigningWindowClosesDay": 170,
-  "shortTermContractDays": 10
+  "shortTermContractDays": 10,
+  "developmentPeakAgeStart": 26,
+  "developmentPeakAgeEnd": 29,
+  "developmentGrowthCurve": [
+    {
+      "minimumAge": 0,
+      "value": 5
+    },
+    {
+      "minimumAge": 20,
+      "value": 4
+    },
+    {
+      "minimumAge": 22,
+      "value": 3
+    },
+    {
+      "minimumAge": 23,
+      "value": 2
+    },
+    {
+      "minimumAge": 25,
+      "value": 1
+    }
+  ],
+  "developmentDeclineCurve": [
+    {
+      "minimumAge": 0,
+      "value": 0
+    },
+    {
+      "minimumAge": 30,
+      "value": 1
+    },
+    {
+      "minimumAge": 31,
+      "value": 2
+    },
+    {
+      "minimumAge": 33,
+      "value": 3
+    },
+    {
+      "minimumAge": 35,
+      "value": 4
+    },
+    {
+      "minimumAge": 36,
+      "value": 5
+    },
+    {
+      "minimumAge": 38,
+      "value": 6
+    }
+  ],
+  "developmentVarianceRange": 2,
+  "retirementMinimumVoluntaryAge": 30,
+  "retirementMandatoryAge": 45,
+  "retirementVoluntaryOddsByAge": [
+    {
+      "minimumAge": 0,
+      "value": 0
+    },
+    {
+      "minimumAge": 30,
+      "value": 300
+    },
+    {
+      "minimumAge": 32,
+      "value": 800
+    },
+    {
+      "minimumAge": 34,
+      "value": 1800
+    },
+    {
+      "minimumAge": 35,
+      "value": 2800
+    },
+    {
+      "minimumAge": 36,
+      "value": 4000
+    },
+    {
+      "minimumAge": 37,
+      "value": 5500
+    },
+    {
+      "minimumAge": 38,
+      "value": 7000
+    },
+    {
+      "minimumAge": 40,
+      "value": 9000
+    }
+  ],
+  "awards": [
+    {
+      "code": "most-valuable",
+      "name": "Most Valuable Player",
+      "kind": "MostValuable",
+      "minimumGamesPercent": 79,
+      "minimumMinutesPerGame": 20
+    },
+    {
+      "code": "defensive",
+      "name": "Defensive Player of the Year",
+      "kind": "Defensive",
+      "minimumGamesPercent": 79,
+      "minimumMinutesPerGame": 20
+    },
+    {
+      "code": "rookie",
+      "name": "Rookie of the Year",
+      "kind": "Rookie",
+      "minimumGamesPercent": 79,
+      "minimumMinutesPerGame": 20
+    },
+    {
+      "code": "sixth-man",
+      "name": "Sixth Man of the Year",
+      "kind": "Bench",
+      "minimumGamesPercent": 79,
+      "minimumMinutesPerGame": 20
+    },
+    {
+      "code": "most-improved",
+      "name": "Most Improved Player",
+      "kind": "MostImproved",
+      "minimumGamesPercent": 79,
+      "minimumMinutesPerGame": 20
+    },
+    {
+      "code": "all-league",
+      "name": "All-League",
+      "kind": "AllLeague",
+      "minimumGamesPercent": 79,
+      "minimumMinutesPerGame": 20,
+      "teams": 3
+    },
+    {
+      "code": "all-defensive",
+      "name": "All-Defensive",
+      "kind": "AllDefensive",
+      "minimumGamesPercent": 79,
+      "minimumMinutesPerGame": 20,
+      "teams": 2
+    }
+  ]
 }

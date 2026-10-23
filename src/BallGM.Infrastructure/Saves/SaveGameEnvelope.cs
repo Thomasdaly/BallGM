@@ -70,6 +70,9 @@ public sealed record SaveGameEnvelope(
     /// <para>
     /// Moved 5 → 6 when tendencies (touches, shot, where from, how) joined the sheet.
     /// </para>
+    /// <para>
+    /// Moved 6 → 7 when a concluded season began to archive its awards beside its champion and table.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 6;
+    public const int CurrentSchemaVersion = 7;
 }

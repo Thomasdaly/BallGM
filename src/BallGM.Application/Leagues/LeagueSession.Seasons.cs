@@ -144,6 +144,12 @@ public sealed partial class LeagueSession
         ClearExtensionRefusals();
         _seasonRun = null;
 
+        // Everyone a year older before the draft: the class arrives into a league that has already aged.
+        var development = _seasonEngine.DevelopPlayers(_snapshot, AgeDate, seasonSeed.For("development"));
+        var developmentNotes = development.IsSuccess
+            ? development.Value.Notes
+            : development.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList();
+
         var (drafted, unrostered, draftNotes) = RunDraft(outcome.Entry.FinalStandings, seasonSeed.For("draft"));
         var (aiTradesExecuted, aiSigningsExecuted, aiTurnNotes) = RunAiFrontOfficeTurnAtSeasonBoundary();
         var autoSigned = AutoResignToRosterFloor();
@@ -163,7 +169,49 @@ public sealed partial class LeagueSession
             autoSigned,
             aiTradesExecuted,
             aiSigningsExecuted,
-            outcome.Notes.Concat(draftNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList()));
+            outcome.Notes.Concat(developmentNotes).Concat(draftNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList())
+        {
+            Awards = AwardLines(outcome.Entry.Awards, teamNames),
+            PlayersDeveloped = development.IsSuccess ? development.Value.PlayersDeveloped : 0,
+            PlayersRetired = development.IsSuccess
+                ? development.Value.Retired.Select(id => _snapshot.Players.FirstOrDefault(player => player.Id == id)?.FullName ?? id.Value).ToList()
+                : [],
+        });
+    }
+
+    /// <summary>Every concluded season, oldest first: its champion and its awards.</summary>
+    public DomainOperationResult<IReadOnlyList<SeasonHistorySummary>> SeasonHistory()
+    {
+        if (_snapshot is null)
+        {
+            return NotLoaded<IReadOnlyList<SeasonHistorySummary>>();
+        }
+
+        var teamNames = TeamNames(_snapshot);
+        return DomainOperationResult<IReadOnlyList<SeasonHistorySummary>>.Success(_snapshot.League.History
+            .OrderBy(entry => entry.Season.Year)
+            .Select(entry => new SeasonHistorySummary(
+                entry.Season.Year,
+                SeasonLabel(entry.Season.Year),
+                entry.ChampionTeamId is null ? null : teamNames.GetValueOrDefault(entry.ChampionTeamId, entry.ChampionTeamId.Value),
+                AwardLines(entry.Awards, teamNames)))
+            .ToList());
+    }
+
+    private IReadOnlyList<SeasonAwardLine> AwardLines(IReadOnlyList<SeasonAward> awards, IReadOnlyDictionary<TeamId, string> teamNames)
+    {
+        var names = _snapshot?.Players.ToDictionary(player => player.Id.Value, player => player.FullName, StringComparer.Ordinal)
+            ?? new Dictionary<string, string>(StringComparer.Ordinal);
+        return awards
+            .Select(award => new SeasonAwardLine(
+                award.AwardCode,
+                award.AwardName,
+                award.Selection,
+                award.PlayerId.Value,
+                names.GetValueOrDefault(award.PlayerId.Value, award.PlayerId.Value),
+                award.TeamId is null ? null : teamNames.GetValueOrDefault(award.TeamId, award.TeamId.Value),
+                award.Explanation))
+            .ToList();
     }
 
     /// <summary>

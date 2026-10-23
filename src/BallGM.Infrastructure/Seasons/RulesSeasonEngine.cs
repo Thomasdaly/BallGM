@@ -9,6 +9,7 @@ using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.Configuration;
+using BallGM.Rules.Development;
 using BallGM.Rules.Draft;
 using BallGM.Rules.Seasons;
 using BallGM.Simulation.Seasons;
@@ -143,7 +144,9 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
             snapshot.Contracts,
             run,
             rulesetResult.Value.StandingsRules,
-            rulesetResult.Value.PostseasonRules);
+            rulesetResult.Value.PostseasonRules,
+            rulesetResult.Value.AwardRules,
+            PriorSeasons(snapshot, run.Season.Year - 1));
 
         return concluded.IsFailure
             ? DomainOperationResult<SeasonConclusionOutcome>.Failure(concluded.Errors.ToArray())
@@ -152,6 +155,84 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
                 concluded.Value.PlayersReleasedToFreeAgency,
                 concluded.Value.PlayersCreditedService,
                 concluded.Value.Notes));
+    }
+
+    public DomainOperationResult<PlayerDevelopmentOutcome> DevelopPlayers(LeagueSnapshot snapshot, DateOnly asOf, int seed)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        var rulesetResult = snapshot.Configuration.ToRuleset(snapshot.League.Alignment.IsFlat);
+        if (rulesetResult.IsFailure)
+        {
+            return DomainOperationResult<PlayerDevelopmentOutcome>.Failure(rulesetResult.Errors.ToArray());
+        }
+
+        var ruleset = rulesetResult.Value;
+        var active = snapshot.Players.Where(player => !player.IsRetired).OrderBy(player => player.Id.Value, StringComparer.Ordinal).ToList();
+        var rostered = snapshot.Teams.SelectMany(team => team.PlayerIds).Select(id => id.Value).ToHashSet(StringComparer.Ordinal);
+        var underContract = snapshot.Contracts
+            .Where(contract => !contract.IsTerminated && contract.TermFor(snapshot.CurrentSeason) is not null)
+            .Select(contract => contract.PlayerId.Value)
+            .ToHashSet(StringComparer.Ordinal);
+
+        // Quality against the league, read before anyone moves: the percentile each player's Current
+        // Ability stands at, which the retirement decision weighs.
+        var byAbility = active.OrderBy(player => player.Rating.Overall).ThenBy(player => player.Id.Value, StringComparer.Ordinal).ToList();
+        var percentile = byAbility
+            .Select((player, rank) => (player.Id.Value, Percent: byAbility.Count <= 1 ? 50 : rank * 100 / (byAbility.Count - 1)))
+            .ToDictionary(entry => entry.Value, entry => entry.Percent, StringComparer.Ordinal);
+
+        var developed = 0;
+        var retired = new List<PlayerId>();
+        var notes = new List<RuleFinding>();
+        foreach (var player in active)
+        {
+            // One stream per player, mixed from the boundary's seed and his identifier, so his season
+            // does not depend on how many players were listed before him.
+            var random = new SeededRandomSource(SeedMixer.Mix(seed, player.Id.Value));
+            var age = player.AgeOn(asOf);
+
+            if (ruleset.DevelopmentRules.IsConfigured)
+            {
+                player.Develop(AttributeDevelopmentModel.Develop(player.Rating, age, ruleset.DevelopmentRules, random));
+                developed++;
+            }
+
+            var signed = rostered.Contains(player.Id.Value) || underContract.Contains(player.Id.Value);
+            if (!ruleset.RetirementRules.IsConfigured || signed)
+            {
+                continue;
+            }
+
+            var verdict = RetirementModel.Assess(age, percentile.GetValueOrDefault(player.Id.Value, 50), underContract: false, ruleset.RetirementRules, random);
+            if (verdict.Retires && player.Retire().IsSuccess)
+            {
+                retired.Add(player.Id);
+                notes.Add(new RuleFinding(verdict.Finding.RuleCode, $"{player.FullName} retires. {verdict.Finding.Explanation}"));
+            }
+        }
+
+        return DomainOperationResult<PlayerDevelopmentOutcome>.Success(new PlayerDevelopmentOutcome(developed, retired, notes));
+    }
+
+    /// <summary>
+    /// Each player's regular season the year before, from the league's career history: what the
+    /// most-improved award measures this season against.
+    /// </summary>
+    private static Dictionary<PlayerId, PriorSeasonProduction> PriorSeasons(LeagueSnapshot snapshot, int year)
+    {
+        var label = LeagueSession.SeasonLabel(year);
+        var prior = new Dictionary<PlayerId, PriorSeasonProduction>();
+        foreach (var (playerId, seasons) in snapshot.CareerHistory)
+        {
+            var line = seasons.LastOrDefault(season => !season.IsPostseason && season.Season == label);
+            if (line is not null && line.GamesPlayed > 0)
+            {
+                prior[new PlayerId(playerId)] = new PriorSeasonProduction(line.GamesPlayed, line.Points, line.Rebounds, line.Assists);
+            }
+        }
+
+        return prior;
     }
 
     public DomainOperationResult<SeasonDraftOutcome> RunDraft(

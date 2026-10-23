@@ -72,10 +72,42 @@ default league behaves like a modern one.
 | Slice | Content | State |
 |---|---|---|
 | F1 | Engine tails: role minutes, ball handler, skill-driven shares, shooting and free-throw skill, foul drawing, injury proneness (attributes A3a–A6) | Done |
-| F2 | The season boundary for a long save: development, ageing and retirement wired every season; awards with eligibility rules (games and minutes floors, bench award, rookie, most improved, defensive, all-league teams) archived with the season | Next |
-| F3 | Contract structure: rookie scale with team options, option decisions, qualifying offers and restricted free agency with matching, incumbent rights over the cap, room allowance | |
+| F2 | The season boundary for a long save: development, ageing and retirement wired every season; awards with eligibility rules (games and minutes floors, bench award, rookie, most improved, defensive, all-league teams) archived with the season | Done (§4) |
+| F3 | Next — contract structure: rookie scale with team options, option decisions, qualifying offers and restricted free agency with matching, incumbent rights over the cap, room allowance | |
 | F4 | Exits: waivers and claim order, buyouts with consent and guardrails, stretch provision, the post-cutoff rule, the re-sign wait, apron restrictions | |
 | F5 | Trades: multi-asset with picks, trade restrictions on new signings, acceptance margins, direction-aware valuation | |
 | F6 | Franchise direction that persists (contend / retool / rebuild) with hysteresis, owner expectations if modelled, and AI behaviour that follows it | |
 | F7 | A multi-season audit: twenty chained seasons reporting scoring leaders, award winners and their roles, star movement per season, buyouts, retirements by age, rating drift and title concentration, with seeded tests on the headline rows | |
 | F8 | Surfaces: awards and history screens, transaction feed, contract options and restricted free agency in the client | |
+
+## 4. F2 as built
+
+- **Awards** (`SeasonAwardCalculator`, ruleset schema 13): each award states a kind and an eligibility
+  floor (`minimumGamesPercent` of the season's games at `minimumMinutesPerGame`+ minutes). Most
+  valuable: game score a game, a little less for missed games, plus 15 game-score hundredths per point
+  of win percentage above .500. Defensive: steals, blocks and a third of a defensive board a game,
+  scaled by minutes, plus team points allowed against the league. Bench: game score, **only for players
+  who came off the bench in more games than they started**. Rookie: first season of service. Most
+  improved: points + rebounds + assists a game against the previous season (25%+ of a season played).
+  All-league and all-defensive: position-less teams of five. Every winner carries the figures that
+  decided him and the eligibility count. Decided in `SeasonConclusion` before service is credited,
+  archived on `SeasonHistoryEntry.Awards`, saved (save schema 7), read through
+  `LeagueSession.SeasonHistory()` and `SeasonConclusionSummary.Awards`. The shipped rulesets state the
+  real agreement's shape: 65 of 82 games (79%) at 20+ minutes for every award.
+- **Development** (`AttributeDevelopmentModel`): the league's curve says how many points of Current
+  Ability a typical player gains or loses at each age; a young player's gain scales with his drive
+  (professionalism, work rate, ambition) and with his headroom to Potential Ability (12 points of
+  headroom is the typical rate, up to 2.2× for a high-ceiling prospect), and never passes his potential;
+  an old player's loss is softened by drive. The change is spread by career phase — legs first after
+  the peak, the jump shot last, understanding still growing — and normalised so Current Ability moves
+  by the decided amount. Injury proneness rises after thirty.
+- **Retirement** (`RetirementModel.Assess` with context): the age odds scaled by contract status
+  (unsigned ×2) and by how good he still is (top of the league half the odds of the fringe). Only free
+  agents retire at the boundary; a player under contract plays it out.
+- **Order at the boundary**: conclude (archive, awards, service, expiries) → career history → age and
+  retire → draft → AI turn → floor fill.
+
+Multi-season baseline (calibration league, before F3): scoring leaders 30–36 a season, sensible award
+winners (the bench award to 0–30-start bench scorers), but ~330 players reach free agency every
+summer and refill on one-year minimum deals, so rosters churn and 6–19 of the top 30 players change
+teams a year. That is F3's problem.

@@ -177,6 +177,35 @@ public sealed class LeagueRulesetSerializerTests
     }
 
     [Fact]
+    public void TheShippedAwardsReadWithTheirKindsAndEligibility_AndRoundTrip()
+    {
+        var serializer = new LeagueRulesetSerializer();
+        var shipped = serializer.Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "rulesets", "default-league.json")));
+        Assert.True(shipped.IsSuccess, string.Join("; ", shipped.Errors.Select(error => error.Message)));
+
+        var bench = Assert.Single(shipped.Value.AwardRules.Awards, award => award.Kind == AwardKind.Bench);
+        Assert.Equal((79, 20), (bench.MinimumGamesPercent, bench.MinimumMinutesPerGame));
+        Assert.Equal(3, Assert.Single(shipped.Value.AwardRules.Awards, award => award.Kind == AwardKind.AllLeague).Teams);
+
+        var again = serializer.Deserialize(serializer.Serialize(shipped.Value));
+        Assert.Equal(shipped.Value.AwardRules.Awards, again.Value.AwardRules.Awards);
+    }
+
+    [Fact]
+    public void DeserializeReturnsStructuredFailureForAnInvalidAgeTableInsteadOfThrowing()
+    {
+        // Regression: an age table whose first band did not start at zero threw on reading the scale's
+        // value, so a malformed pack crashed the loader instead of being refused.
+        var shipped = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "rulesets", "default-league.json"));
+        var broken = shipped.Replace("\"developmentDeclineCurve\": [\n    {\n      \"minimumAge\": 0,", "\"developmentDeclineCurve\": [\n    {\n      \"minimumAge\": 5,", StringComparison.Ordinal);
+        Assert.NotEqual(shipped, broken);
+
+        var result = new LeagueRulesetSerializer().Deserialize(broken);
+
+        Assert.True(result.IsFailure);
+    }
+
+    [Fact]
     public void AMissingCapMechanicsSectionMeansNoneOfIt()
     {
         var read = new LeagueRulesetSerializer().Deserialize(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "data", "rulesets", "default-league.json")));

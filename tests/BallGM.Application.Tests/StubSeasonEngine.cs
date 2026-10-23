@@ -109,6 +109,9 @@ internal sealed class StubSeasonEngine : ISeasonEngine
         int seed) =>
         DomainOperationResult<SeasonDraftOutcome>.Success(new SeasonDraftOutcome(draftSeason.Year, [], []));
 
+    public DomainOperationResult<PlayerDevelopmentOutcome> DevelopPlayers(LeagueSnapshot snapshot, DateOnly asOf, int seed) =>
+        DomainOperationResult<PlayerDevelopmentOutcome>.Success(new PlayerDevelopmentOutcome(0, [], []));
+
     private SeasonAdvanceOutcome Outcome(SeasonRun run, int days) =>
         new(
             run.CurrentDay.Index,

@@ -22,7 +22,18 @@ public sealed record SeasonHistoryTeamRecordEnvelope(
 public sealed record SeasonHistoryEntryEnvelope(
     int SeasonYear,
     string? ChampionTeamId,
-    IReadOnlyList<SeasonHistoryTeamRecordEnvelope> FinalStandings);
+    IReadOnlyList<SeasonHistoryTeamRecordEnvelope> FinalStandings,
+    IReadOnlyList<SeasonAwardEnvelope> Awards);
+
+/// <summary>One archived award selection: the award, the selection (team number for an all-league award), the player, his team, the deciding score and its explanation.</summary>
+public sealed record SeasonAwardEnvelope(
+    string AwardCode,
+    string AwardName,
+    int Selection,
+    string PlayerId,
+    string? TeamId,
+    int ScoreHundredths,
+    string Explanation);
 
 /// <summary>
 /// Serialization shape for the <c>League</c> aggregate: identity, how its teams are grouped, and

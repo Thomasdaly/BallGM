@@ -1,4 +1,5 @@
 using BallGM.Domain.Leagues;
+using BallGM.Domain.Players;
 using BallGM.Domain.Teams;
 
 namespace BallGM.Domain.Seasons;
@@ -25,4 +26,26 @@ public sealed record SeasonHistoryTeamRecord(
 public sealed record SeasonHistoryEntry(
     Season Season,
     TeamId? ChampionTeamId,
-    IReadOnlyList<SeasonHistoryTeamRecord> FinalStandings);
+    IReadOnlyList<SeasonHistoryTeamRecord> FinalStandings)
+{
+    /// <summary>
+    /// The awards this season handed out, in the order the league's rules list them (an all-league
+    /// award's selections in team order). Empty for a league that hands out none, and for any season
+    /// archived before awards were decided at the season boundary.
+    /// </summary>
+    public IReadOnlyList<SeasonAward> Awards { get; init; } = [];
+}
+
+/// <summary>
+/// One award selection in a concluded season: the award, which selection this is (1 for a single
+/// award; for an all-league award, the team it names — first, second, third), the player and the
+/// team he finished the season with, the score that decided it, and the explanation a reader is shown.
+/// </summary>
+public sealed record SeasonAward(
+    string AwardCode,
+    string AwardName,
+    int Selection,
+    PlayerId PlayerId,
+    TeamId? TeamId,
+    int ScoreHundredths,
+    string Explanation);

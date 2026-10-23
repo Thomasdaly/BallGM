@@ -21,7 +21,31 @@ public static class RetirementModel
     private const string VoluntaryDrawnCode = "retirement.voluntary_drawn";
     private const string ContinuesPlayingCode = "retirement.continues_playing";
 
-    public static RetirementAssessment Assess(int age, RetirementRules rules, IRandomSource random)
+    /// <summary>
+    /// The age-only verdict, moved by what else a real decision weighs: a player still under contract
+    /// for next season rarely walks away from the money (<see cref="UnderContractPercent"/> of the odds),
+    /// a free agent nobody has signed is likelier to call it a career (<see cref="UnsignedPercent"/>),
+    /// and the better he still is against the league (<paramref name="qualityPercentile"/>, 0–100), the
+    /// longer he plays — a star at the top of the league keeps half the odds of a fringe player.
+    /// </summary>
+    public static RetirementAssessment Assess(int age, int qualityPercentile, bool underContract, RetirementRules rules, IRandomSource random)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+        ArgumentNullException.ThrowIfNull(random);
+
+        var context = (underContract ? UnderContractPercent : UnsignedPercent) * (150 - Math.Clamp(qualityPercentile, 0, 100)) / 100;
+        return Assess(age, rules, random, context);
+    }
+
+    /// <summary>Per cent of the age odds a player under contract for next season keeps.</summary>
+    public const int UnderContractPercent = 25;
+
+    /// <summary>Per cent of the age odds an unsigned free agent carries.</summary>
+    public const int UnsignedPercent = 200;
+
+    public static RetirementAssessment Assess(int age, RetirementRules rules, IRandomSource random) => Assess(age, rules, random, 100);
+
+    private static RetirementAssessment Assess(int age, RetirementRules rules, IRandomSource random, int oddsPercent)
     {
         ArgumentNullException.ThrowIfNull(rules);
         ArgumentNullException.ThrowIfNull(random);
@@ -44,7 +68,7 @@ public static class RetirementModel
                 false, new RuleFinding(BelowMinimumAgeCode, $"At age {age}, this player is younger than this league's minimum voluntary retirement age of {rules.MinimumVoluntaryAge}."));
         }
 
-        var odds = rules.VoluntaryOddsByAge.ValueFor(age) ?? 0;
+        var odds = Math.Min(10_000, (rules.VoluntaryOddsByAge.ValueFor(age) ?? 0) * oddsPercent / 100);
         var roll = random.NextInt32(0, 10_000);
         var retires = roll < odds;
 

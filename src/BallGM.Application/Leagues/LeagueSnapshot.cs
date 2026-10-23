@@ -183,7 +183,7 @@ public sealed record LeagueConfiguration(
 /// name, and the counting stat it is decided by, named rather than an opaque number so a screen can
 /// render it without knowing the rules layer's enum.
 /// </summary>
-public sealed record AwardDefinition(string Code, string Name, string StatBasis);
+public sealed record AwardDefinition(string Code, string Name, string? StatBasis, string Kind = "StatLeader", int MinimumGamesPercent = 0, int MinimumMinutesPerGame = 0, int Teams = 1);
 
 /// <summary>
 /// How a player's rating moves with age, one season at a time, in the shape the Application layer

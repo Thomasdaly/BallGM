@@ -106,7 +106,7 @@ public sealed class LeagueRulesetSerializer
             ruleset.RetirementRules.IsConfigured ? ruleset.RetirementRules.MandatoryRetirementAge : null,
             ruleset.RetirementRules.IsConfigured ? ToAgeCurveBands(ruleset.RetirementRules.VoluntaryOddsByAge) : null,
             ruleset.AwardRules.IsConfigured
-                ? ruleset.AwardRules.Awards.Select(award => new AwardEnvelope(award.Code, award.Name, award.StatBasis.ToString())).ToList()
+                ? ruleset.AwardRules.Awards.Select(ToEnvelope).ToList()
                 : null,
             ToEnvelope(ruleset.CapMechanics),
             ToEnvelope(ruleset.GameRules),
@@ -477,11 +477,18 @@ public sealed class LeagueRulesetSerializer
             return DomainOperationResult<DevelopmentRules>.Success(DevelopmentRules.None);
         }
 
+        var growth = ToAgeCurveScale(envelope.DevelopmentGrowthCurve);
+        var decline = ToAgeCurveScale(envelope.DevelopmentDeclineCurve);
+        if (growth.IsFailure || decline.IsFailure)
+        {
+            return DomainOperationResult<DevelopmentRules>.Failure(growth.Errors.Concat(decline.Errors).ToArray());
+        }
+
         return DevelopmentRules.Create(
             envelope.DevelopmentPeakAgeStart ?? 0,
             envelope.DevelopmentPeakAgeEnd ?? 0,
-            ToAgeCurveScale(envelope.DevelopmentGrowthCurve),
-            ToAgeCurveScale(envelope.DevelopmentDeclineCurve),
+            growth.Value,
+            decline.Value,
             envelope.DevelopmentVarianceRange ?? 0);
     }
 
@@ -498,10 +505,16 @@ public sealed class LeagueRulesetSerializer
             return DomainOperationResult<RetirementRules>.Success(RetirementRules.None);
         }
 
+        var odds = ToAgeCurveScale(envelope.RetirementVoluntaryOddsByAge);
+        if (odds.IsFailure)
+        {
+            return DomainOperationResult<RetirementRules>.Failure(odds.Errors.ToArray());
+        }
+
         return RetirementRules.Create(
             envelope.RetirementMinimumVoluntaryAge ?? 0,
             envelope.RetirementMandatoryAge ?? 0,
-            ToAgeCurveScale(envelope.RetirementVoluntaryOddsByAge));
+            odds.Value);
     }
 
     /// <summary>Maps the award section, absent in full for a league that hands out no awards.</summary>
@@ -581,21 +594,71 @@ public sealed class LeagueRulesetSerializer
         var awards = new List<AwardDefinition>(envelope.Awards.Count);
         foreach (var award in envelope.Awards)
         {
-            if (!Enum.TryParse<AwardStatBasis>(award.StatBasis, out var statBasis))
+            var parsed = ParseAward(award.Code, award.Name, award.StatBasis, award.Kind, award.MinimumGamesPercent, award.MinimumMinutesPerGame, award.Teams);
+            if (parsed.IsFailure)
             {
-                return DomainOperationResult<AwardRules>.Failure(new DomainError(
-                    InvalidFieldCode,
-                    $"Award '{award.Code}' names stat basis '{award.StatBasis}', which this build does not know."));
+                return DomainOperationResult<AwardRules>.Failure(parsed.Errors.ToArray());
             }
 
-            awards.Add(new AwardDefinition(award.Code, award.Name, statBasis));
+            awards.Add(parsed.Value);
         }
 
         return AwardRules.Create(awards);
     }
 
-    private static BandedScale ToAgeCurveScale(IReadOnlyList<AgeCurveBandEnvelope>? bands) =>
-        BandedScale.Create(bands?.Select(band => new ScaleBand(band.MinimumAge, band.Value))).Value;
+    /// <summary>
+    /// One stated award as a rule: its kind (absent means a stat-leader award, the schema-9 shape), the
+    /// stat it leads in where it has one, and its eligibility. Shared with the configuration mapper so
+    /// a ruleset file and a league's own configuration read awards the same way.
+    /// </summary>
+    internal static DomainOperationResult<AwardDefinition> ParseAward(
+        string code, string name, string? statBasis, string? kind, int? minimumGamesPercent, int? minimumMinutesPerGame, int? teams)
+    {
+        AwardStatBasis? basis = null;
+        if (statBasis is not null)
+        {
+            if (!Enum.TryParse<AwardStatBasis>(statBasis, out var parsedBasis))
+            {
+                return DomainOperationResult<AwardDefinition>.Failure(new DomainError(
+                    InvalidFieldCode,
+                    $"Award '{code}' names stat basis '{statBasis}', which this build does not know."));
+            }
+
+            basis = parsedBasis;
+        }
+
+        var awardKind = AwardKind.StatLeader;
+        if (kind is not null && !Enum.TryParse(kind, out awardKind))
+        {
+            return DomainOperationResult<AwardDefinition>.Failure(new DomainError(
+                InvalidFieldCode,
+                $"Award '{code}' is of kind '{kind}', which this build does not know."));
+        }
+
+        return DomainOperationResult<AwardDefinition>.Success(new AwardDefinition(code, name, basis)
+        {
+            Kind = awardKind,
+            MinimumGamesPercent = minimumGamesPercent ?? 0,
+            MinimumMinutesPerGame = minimumMinutesPerGame ?? 0,
+            Teams = teams ?? 1,
+        });
+    }
+
+    private static AwardEnvelope ToEnvelope(AwardDefinition award) => new(
+        award.Code,
+        award.Name,
+        award.StatBasis?.ToString(),
+        award.Kind == AwardKind.StatLeader ? null : award.Kind.ToString(),
+        award.MinimumGamesPercent == 0 ? null : award.MinimumGamesPercent,
+        award.MinimumMinutesPerGame == 0 ? null : award.MinimumMinutesPerGame,
+        award.Teams == 1 ? null : award.Teams);
+
+    /// <summary>
+    /// An age table as a banded scale, refused with the scale's own findings (a first band not starting
+    /// at zero, a repeated age, a negative value) rather than thrown: a ruleset is untrusted content.
+    /// </summary>
+    private static DomainOperationResult<BandedScale> ToAgeCurveScale(IReadOnlyList<AgeCurveBandEnvelope>? bands) =>
+        BandedScale.Create(bands?.Select(band => new ScaleBand(band.MinimumAge, band.Value)));
 
     private static IReadOnlyList<AgeCurveBandEnvelope>? ToAgeCurveBands(BandedScale scale) =>
         scale.IsEmpty ? null : scale.Bands.Select(band => new AgeCurveBandEnvelope(band.MinimumKey, band.Value)).ToList();

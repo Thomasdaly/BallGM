@@ -82,6 +82,15 @@ public interface ISeasonEngine
     DomainOperationResult<SeasonConclusionOutcome> ConcludeSeason(SeasonRun run, LeagueSnapshot snapshot);
 
     /// <summary>
+    /// Ages every active player by one season — each sheet developed by the league's development rules,
+    /// measured on <paramref name="asOf"/> — and retires, by the league's retirement rules, those free
+    /// agents whose careers end. A player under contract for the coming season plays it out. Mutates the
+    /// snapshot's players in place, as concluding a season does; deterministic in <paramref name="seed"/>
+    /// whatever order the players are listed in.
+    /// </summary>
+    DomainOperationResult<PlayerDevelopmentOutcome> DevelopPlayers(LeagueSnapshot snapshot, DateOnly asOf, int seed);
+
+    /// <summary>
     /// Runs this league's draft for <paramref name="draftSeason"/>: generates a class from this
     /// league's own configured generator, draws the lottery over <paramref name="finalStandings"/>,
     /// and turns each selection into a new player assigned to whichever team currently controls that

@@ -78,7 +78,14 @@ public sealed record LeagueRuleset
     /// a version 8 reader handed a version 9 file would ignore a stated award list and run a league
     /// with none, in a league that had described one.
     /// </remarks>
-    public const int CurrentSchemaVersion = 12;
+    /// <remarks>
+    /// Version 13 lets an award state what it recognises (most valuable, defensive, bench, rookie,
+    /// most improved, all-league and all-defensive teams) and who is eligible (a games-played floor at
+    /// a minutes threshold). A version-9 award naming only a stat basis still reads as a stat-leader
+    /// award. The version moved because a version 12 reader handed a version 13 file would refuse an
+    /// award kind it has never heard of, or worse, crown a bench award by total points.
+    /// </remarks>
+    public const int CurrentSchemaVersion = 13;
 
     public LeagueRuleset(
         int schemaVersion,

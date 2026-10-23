@@ -374,7 +374,19 @@ public sealed class SaveGameSerializer : ISaveGameStore
                         new TeamRecord(row.Wins, row.Losses),
                         row.PointsFor,
                         row.PointsAgainst))
-                    .ToList());
+                    .ToList())
+            {
+                Awards = historyEnvelope.Awards
+                    .Select(award => new SeasonAward(
+                        award.AwardCode,
+                        award.AwardName,
+                        award.Selection,
+                        new PlayerId(award.PlayerId),
+                        award.TeamId is null ? null : new TeamId(award.TeamId),
+                        award.ScoreHundredths,
+                        award.Explanation))
+                    .ToList(),
+            };
 
             var recordResult = league.RecordSeason(entry);
             if (recordResult.IsFailure)
@@ -604,6 +616,16 @@ public sealed class SaveGameSerializer : ISaveGameStore
                             row.Record.Losses,
                             row.PointsFor,
                             row.PointsAgainst))
+                        .ToList(),
+                    entry.Awards
+                        .Select(award => new SeasonAwardEnvelope(
+                            award.AwardCode,
+                            award.AwardName,
+                            award.Selection,
+                            award.PlayerId.Value,
+                            award.TeamId?.Value,
+                            award.ScoreHundredths,
+                            award.Explanation))
                         .ToList()))
                 .ToList());
 

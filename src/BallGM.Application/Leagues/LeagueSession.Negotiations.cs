@@ -470,6 +470,7 @@ public sealed partial class LeagueSession
     }
 
     private static bool IsFreeAgent(Player player, LeagueSnapshot snapshot) =>
+        !player.IsRetired &&
         !snapshot.Teams.Any(team => team.PlayerIds.Contains(player.Id)) &&
         !snapshot.Contracts.Any(contract =>
             !contract.IsTerminated &&

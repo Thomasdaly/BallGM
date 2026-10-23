@@ -55,7 +55,9 @@ public sealed class SeasonConclusion
         IReadOnlyCollection<Contract> contracts,
         SeasonRun run,
         StandingsRules standingsRules,
-        PostseasonRules postseasonRules)
+        PostseasonRules postseasonRules,
+        AwardRules? awardRules = null,
+        IReadOnlyDictionary<PlayerId, PriorSeasonProduction>? priorSeasons = null)
     {
         ArgumentNullException.ThrowIfNull(league);
         ArgumentNullException.ThrowIfNull(teamNames);
@@ -88,7 +90,8 @@ public sealed class SeasonConclusion
             .Select((row, index) => new SeasonHistoryTeamRecord(row.TeamId, index + 1, row.Overall, row.PointsFor, row.PointsAgainst))
             .ToList();
 
-        var entry = new SeasonHistoryEntry(run.Season, championId, finalStandings);
+        var awards = Awards(awardRules ?? AwardRules.None, run, standings, players, priorSeasons);
+        var entry = new SeasonHistoryEntry(run.Season, championId, finalStandings) { Awards = awards };
 
         // Read-only work is over. Everything below mutates, and nothing below can fail: every step
         // acts on state this method just proved was valid a moment ago, and nothing else could have
@@ -138,6 +141,39 @@ public sealed class SeasonConclusion
 
         return DomainOperationResult<ConcludedSeason>.Success(new ConcludedSeason(
             entry, released, rosteredPlayerIds.Count, notes));
+    }
+
+    /// <summary>
+    /// Decides the season's awards (see <see cref="SeasonAwardCalculator"/>) from the regular season's
+    /// box scores, the final table and each player's service before this season — read before this
+    /// method credits the season just played, so a rookie is still a rookie for the rookie award.
+    /// </summary>
+    private static IReadOnlyList<SeasonAward> Awards(
+        AwardRules rules,
+        SeasonRun run,
+        Standings standings,
+        IReadOnlyCollection<Player> players,
+        IReadOnlyDictionary<PlayerId, PriorSeasonProduction>? priorSeasons)
+    {
+        if (!rules.IsConfigured)
+        {
+            return [];
+        }
+
+        var regularSeason = run.ResultsInPlayOrder.Where(result => result.Phase == SeasonPhase.RegularSeason).ToList();
+        var seasonGames = standings.Rows.Count == 0 ? 0 : standings.Rows.Max(row => row.Overall.Wins + row.Overall.Losses);
+        var season = new AwardSeason(
+            regularSeason,
+            seasonGames,
+            standings.Rows.ToDictionary(row => row.TeamId, row => row.Overall),
+            players.ToDictionary(player => player.Id, player => player.SeasonsOfService),
+            priorSeasons ?? new Dictionary<PlayerId, PriorSeasonProduction>());
+
+        return SeasonAwardCalculator.Calculate(season, rules)
+            .Where(result => result.WinnerId is not null)
+            .Select(result => new SeasonAward(
+                result.AwardCode, result.AwardName, result.Selection, result.WinnerId!, result.TeamId, result.ScoreHundredths, result.Finding.Explanation))
+            .ToList();
     }
 
     /// <summary>
