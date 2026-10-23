@@ -48,7 +48,45 @@
   <ScrollViewer Name="CalendarScroll" HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsSheetOpen}">
     <StackPanel Spacing="{StaticResource Space16}">
 
-      <ctl:EmptyState IconKey="Icon.Calendar" Headline="No season under way" Message="{Binding PhaseLine}" ActionText="Start season" ActionCommand="{Binding StartSeasonCommand}" IsVisible="{Binding HasNoSeason}" />
+      <!-- The season just concluded: champion, awards, and what the summer did, until the next season starts. -->
+      <ctl:Tile IsVisible="{Binding HasReview}">
+        <StackPanel Spacing="{StaticResource Space12}" DataContext="{Binding Review}" x:DataType="vm:SeasonReview">
+          <TextBlock Classes="h3" Text="{Binding Title, Converter={x:Static conv:UpperCaseConverter.Instance}}" />
+          <TextBlock Classes="body-strong" Text="{Binding ChampionLine}" />
+          <ItemsControl ItemsSource="{Binding Awards}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Spacing="{StaticResource Space8}" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SeasonReviewAward">
+                <StackPanel Spacing="2">
+                  <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                    <TextBlock Text="{Binding AwardName}" Classes="label-caps" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding PlayerName}" Classes="body-strong" />
+                    <TextBlock Text="{Binding TeamName}" Classes="body secondary" />
+                  </StackPanel>
+                  <TextBlock Text="{Binding Explanation}" Classes="caption wrap" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="THE SUMMER" Classes="label-caps" />
+          <TextBlock Text="{Binding Summer}" Classes="body wrap" />
+          <ItemsControl ItemsSource="{Binding Headlines}" IsVisible="{Binding HasHeadlines}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding}" Classes="caption wrap" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Text="{Binding Retired}" Classes="caption wrap" IsVisible="{Binding HasRetired}" />
+          <TextBlock Text="{Binding NextSeason}" Classes="body secondary" />
+        </StackPanel>
+      </ctl:Tile>
+
+      <ctl:EmptyState IconKey="Icon.Calendar" Headline="No season under way" Message="{Binding PhaseLine}" ActionText="Start season" ActionCommand="{Binding StartSeasonCommand}" IsVisible="{Binding ShowNoSeason}" />
 
       <ctl:Banner Text="{Binding Message}" Kind="Info" IsVisible="{Binding HasMessage}" />
 
@@ -62,7 +100,8 @@
           <TextBlock Text="DAYS" Classes="label-caps" VerticalAlignment="Center" />
           <ComboBox ItemsSource="{Binding AdvanceOptions}" SelectedItem="{Binding AdvanceDays}" MinWidth="88" AutomationProperties.Name="Days to advance" />
           <Button Classes="secondary" Content="Advance" Command="{Binding AdvanceCommand}" />
-          <Button Classes="ghost" Content="To end of season" Command="{Binding AdvanceToEndCommand}" />
+          <Button Classes="ghost" Content="To end of season" Command="{Binding AdvanceToEndCommand}" IsVisible="{Binding !IsSeasonComplete}" />
+          <Button Classes="primary" Content="Conclude season" Command="{Binding ConcludeSeasonCommand}" IsVisible="{Binding IsSeasonComplete}" />
         </StackPanel>
       </Grid>
 

@@ -42,6 +42,7 @@ public sealed partial class SeasonViewModel : ViewModelBase
     private IReadOnlyDictionary<string, TeamArt> _teamArt = new Dictionary<string, TeamArt>();
     private DateOnly _displayedMonth;
     private SeasonAdvanceSummary? _lastAdvance;
+    private SeasonReview? _review;
     private GameSheet? _sheet;
     private FixtureRow? _selectedFixture;
     private int _advanceDays = 1;
@@ -54,6 +55,7 @@ public sealed partial class SeasonViewModel : ViewModelBase
         _onLeagueChanged = onLeagueChanged ?? throw new ArgumentNullException(nameof(onLeagueChanged));
 
         StartSeasonCommand = new RelayCommand(StartSeason);
+        ConcludeSeasonCommand = new RelayCommand(ConcludeSeason);
         AdvanceCommand = new RelayCommand(Advance);
         AdvanceToEndCommand = new RelayCommand(AdvanceToEnd);
         PreviousMonthCommand = new RelayCommand(() => ShowMonth(_displayedMonth.AddMonths(-1)));
@@ -67,6 +69,20 @@ public sealed partial class SeasonViewModel : ViewModelBase
     public string Title => "Calendar";
 
     public ICommand StartSeasonCommand { get; }
+
+    /// <summary>Concludes a finished season: awards, the summer's moves and the draft, then the review.</summary>
+    public ICommand ConcludeSeasonCommand { get; }
+
+    /// <summary>Whether the season has played its last day and is waiting to be concluded.</summary>
+    public bool IsSeasonComplete => _season?.Calendar.IsComplete == true;
+
+    /// <summary>The last concluded season's review, shown until the next season starts.</summary>
+    public SeasonReview? Review => _review;
+
+    public bool HasReview => _review is not null && _season is null;
+
+    /// <summary>The "no season" empty state, shown only when there is no review to read instead.</summary>
+    public bool ShowNoSeason => _season is null && _review is null;
 
     public ICommand AdvanceCommand { get; }
 
@@ -320,6 +336,30 @@ public sealed partial class SeasonViewModel : ViewModelBase
 
     public bool HasWarnings => Warnings.Count > 0;
 
+    private void ConcludeSeason()
+    {
+        if (!IsSeasonComplete)
+        {
+            return;
+        }
+
+        var result = _session.ConcludeSeason();
+        if (result.IsFailure)
+        {
+            Report(result.Errors.Select(error => error.Message), isError: true);
+            return;
+        }
+
+        _review = SeasonReview.From(result.Value);
+        _lastAdvance = null;
+        Refresh();
+        Report([$"Season concluded. {result.Value.ChampionTeamName ?? "No team"} won it; the summer is done."], isError: false);
+        if (_session.Overview() is { IsSuccess: true } overview)
+        {
+            _onLeagueChanged(overview.Value);
+        }
+    }
+
     private void StartSeason()
     {
         var result = _session.StartSeason();
@@ -541,6 +581,10 @@ public sealed partial class SeasonViewModel : ViewModelBase
 
     private void RaiseAll()
     {
+        RaisePropertyChanged(nameof(IsSeasonComplete));
+        RaisePropertyChanged(nameof(Review));
+        RaisePropertyChanged(nameof(HasReview));
+        RaisePropertyChanged(nameof(ShowNoSeason));
         RaisePropertyChanged(nameof(HasSeason));
         RaisePropertyChanged(nameof(HasNoSeason));
         RaisePropertyChanged(nameof(Headline));

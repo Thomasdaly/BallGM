@@ -175,6 +175,7 @@ public sealed partial class MainWindowViewModel
         ContinueState.Simulating => "SIMULATING",
         ContinueState.GameDay => "GO TO GAME",
         _ when Season?.HasNoSeason == true => "START SEASON",
+        _ when Season?.IsSeasonComplete == true => "CONCLUDE SEASON",
         _ => "CONTINUE",
     };
 
@@ -191,6 +192,11 @@ public sealed partial class MainWindowViewModel
             if (Season?.HasNoSeason == true)
             {
                 return "Build the calendar and fixture list";
+            }
+
+            if (Season?.IsSeasonComplete == true)
+            {
+                return "Awards, re-signings, the draft and free agency";
             }
 
             if (NextUserGame() is not { } next)
@@ -220,6 +226,14 @@ public sealed partial class MainWindowViewModel
             return;
         }
 
+        if (Season.IsSeasonComplete)
+        {
+            SelectedSection = Season.Title;
+            Season.ConcludeSeasonCommand.Execute(null);
+            RaiseShellChanged();
+            return;
+        }
+
         // Game day: go to the game first (its pre-game, where it is simulated); there already, play it.
         if (ContinueState == ContinueState.GameDay && NextUserGame() is { } today
             && !(CurrentScreen is SeasonViewModel { Sheet: { } open } && open.GameId == today.GameId))
@@ -235,7 +249,7 @@ public sealed partial class MainWindowViewModel
     });
 
     /// <summary>The sim-to options the calendar already supports.</summary>
-    public IReadOnlyList<ContinueOption> ContinueOptions => Season is null || Season.HasNoSeason
+    public IReadOnlyList<ContinueOption> ContinueOptions => Season is null || Season.HasNoSeason || Season.IsSeasonComplete
         ? []
         :
         [

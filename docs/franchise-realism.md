@@ -78,7 +78,7 @@ default league behaves like a modern one.
 | F5 | Trades: multi-asset with picks, trade restrictions on new signings, acceptance margins, direction-aware valuation | Summer market done (§8): one trade a team, nobody flipped, both sides must gain; picks and in-season trades to come |
 | F6 | Franchise direction that persists (contend / retool / rebuild) with hysteresis, owner expectations if modelled, and AI behaviour that follows it | Two-season memory, ring-chasing veterans and star-weighted strength done (§9); owner expectations not modelled |
 | F7 | A multi-season audit: twenty chained seasons reporting scoring leaders, award winners and their roles, star movement per season, buyouts, retirements by age, rating drift and title concentration, with seeded tests on the headline rows | Done (§9): `LongSaveRealismTests`, `scratch/calib chain` |
-| F8 | Surfaces: awards and history screens, transaction feed, contract options and restricted free agency in the client | |
+| F8 | Surfaces: awards and history screens, transaction feed, contract options and restricted free agency in the client | Season-end flow and review done (§10); history screen next |
 
 ## 4. F2 as built
 
@@ -228,3 +228,14 @@ age of 24–28.
 ~0.15: the worst teams win 21–30 games, because nothing makes a rebuilding team deliberately worse),
 the blocks leader, waivers and the stretch provision, restricted free agency, picks as trade assets and
 in-season (deadline) moves, and the screens that show all of this.
+
+## 10. F8 (first step): a season can end in the client
+
+Before this, the client could start a season and play it to its last day, and then nothing: there was
+no way to conclude it, so a multi-season save was impossible in the game itself. Now, when the season's
+last day is played, Continue reads CONCLUDE SEASON (and the calendar shows a Conclude season button);
+concluding runs the whole boundary and the calendar shows a season review — the champion, every award
+with the figures behind it, the first all-league and all-defensive teams, what the summer did
+(re-signings, options, buyouts, picks signed, free-agent signings, trades, retirements) and its headlines
+— until Continue starts the next season. Locked by `MultiSeasonFlowTests` (headless) and
+`SeasonReviewTests` (renders at the three sizes, no binding errors).
