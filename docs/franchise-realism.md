@@ -76,8 +76,8 @@ default league behaves like a modern one.
 | F3 | Re-signing, the market (§5), the rookie scale and option decisions (§7) done; restricted free agency next — contract structure: rookie scale with team options, option decisions, qualifying offers and restricted free agency with matching, incumbent rights over the cap, room allowance | |
 | F4 | Exits: waivers and claim order, buyouts with consent and guardrails, stretch provision, the post-cutoff rule, the re-sign wait, apron restrictions | Buyouts and their guardrails done (§6); waivers and stretch to come |
 | F5 | Trades: multi-asset with picks, trade restrictions on new signings, acceptance margins, direction-aware valuation | Summer market done (§8): one trade a team, nobody flipped, both sides must gain; picks and in-season trades to come |
-| F6 | Franchise direction that persists (contend / retool / rebuild) with hysteresis, owner expectations if modelled, and AI behaviour that follows it | |
-| F7 | A multi-season audit: twenty chained seasons reporting scoring leaders, award winners and their roles, star movement per season, buyouts, retirements by age, rating drift and title concentration, with seeded tests on the headline rows | |
+| F6 | Franchise direction that persists (contend / retool / rebuild) with hysteresis, owner expectations if modelled, and AI behaviour that follows it | Two-season memory, ring-chasing veterans and star-weighted strength done (§9); owner expectations not modelled |
+| F7 | A multi-season audit: twenty chained seasons reporting scoring leaders, award winners and their roles, star movement per season, buyouts, retirements by age, rating drift and title concentration, with seeded tests on the headline rows | Done (§9): `LongSaveRealismTests`, `scratch/calib chain` |
 | F8 | Surfaces: awards and history screens, transaction feed, contract options and restricted free agency in the client | |
 
 ## 4. F2 as built
@@ -197,3 +197,34 @@ player flipped two or three times. Now the boundary's AI turn is a summer market
 Calibration league: 3–4 trades a summer, every one between two different teams, no player flipped
 (`SummerTradeMarketTests`). Picks as assets, multi-player trades and the in-season deadline market are
 the next steps; the "Run AI turn" button outside a summer keeps its old one-trade-or-one-signing shape.
+
+## 9. F6 and F7: direction with memory, stars that carry teams, and the long save audited
+
+- **Direction with memory** (`OffseasonModel.DirectionFor` over two seasons): a contender is a team that
+  won 55% last season or over the last two together, or 62% last season alone. One bad (injury-hit)
+  season does not turn a contender into a seller; one lucky one does not make a builder spend like a
+  contender. Every offseason decision — re-signing, the market, buyouts, trades — reads the same direction.
+- **Ring-chasing veterans** (`OffseasonModel.Choose`, 30+): winning weighs three times as much in a
+  veteran's choice (a .700 team's offer counts about a quarter more than a .300 team's), so contenders
+  fill benches with good veterans for less.
+- **Stars carry teams** (`MatchModelBounds.StarStrengthWeightPercent`, `StarConvexityDivisor`): team
+  strength weights each player's level by his share of the offence too, and points above the rotation's
+  own average count extra (gap² / 12, capped at 30) — a uniform shift between teams plays exactly as
+  before (the fixture league's win spread is unchanged at 0.159), but a 95 on a 70 team now carries him.
+- **Prospect ceilings skewed low** (`RatingProfileGenerator.Headroom`): one draw, squared over the room —
+  most prospects' ceilings sit a few points above where they are and only a few have the whole room.
+  Busts are common, stars rare; this stopped the league's median player drifting upward.
+
+**The long save, measured** (`scratch/calib chain 20`, calibration league, unattended): twenty seasons
+in nine seconds; rosters 12–15; payrolls 65–103% of the cap on average with a handful of tax teams;
+0–1 of the top 30 players changing teams a summer; 3–7 trades and 0–4 buyouts a summer; scoring leaders
+29–37; median player stable after the first decade (64 → 67–68); best records 57–66 wins, a few repeat
+champions. `LongSaveRealismTests` locks twelve seasons of it: scoring leaders averaging 30+ (no season
+under 27), the bench award never to a player who started half his games, at most three of the top 30
+moving in a summer, rosters in bounds, the median within six points of where it started and an average
+age of 24–28.
+
+**Still open** — competitive spread in an evolved league (win SD about 0.10 against a real league's
+~0.15: the worst teams win 21–30 games, because nothing makes a rebuilding team deliberately worse),
+the blocks leader, waivers and the stretch provision, restricted free agency, picks as trade assets and
+in-season (deadline) moves, and the screens that show all of this.

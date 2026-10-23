@@ -755,12 +755,6 @@ public sealed class PossessionMatchEngine : IMatchEngine
 
             // Minutes-weighted, because the rotation already decided who matters. A mean over the
             // roster would rate a team by its twelfth man as much as by its best player.
-            Strength = playedMinutes == 0
-                ? 0
-                : Math.Clamp(
-                    Enumerable.Range(0, count).Sum(index => Overalls[index] * PlannedMinutes[index]) / playedMinutes,
-                    PlayerRating.MinimumOverall,
-                    PlayerRating.MaximumOverall);
 
             var meanOverall = Math.Max(1, Overalls.Length == 0 ? 1 : Overalls.Sum() / Overalls.Length);
             var meanTouches = Math.Max(1, touches.Length == 0 ? 1 : touches.Sum() / touches.Length);
@@ -783,6 +777,30 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 .ToArray();
 
             AssistFactors = Players.Select(slot => MatchModelBounds.AssistWeightFor(slot.Position)).ToArray();
+
+            // Minutes-weighted, because the rotation already decided who matters — and weighted again by
+            // how much of the offence runs through each player (see MatchModelBounds.StarStrengthWeightPercent):
+            // a star's level shapes his team's results more than a role player's, which is how one great
+            // player turns a team into a contender. A mean over the roster would rate a team by its twelfth
+            // man as much as by its best player.
+            // Then convex: points above the rotation's own average count extra (see
+            // MatchModelBounds.StarConvexityDivisor), so a great player lifts a team more than the same
+            // points spread across several — and a league whose teams differ only by a uniform shift
+            // plays exactly as before.
+            long weightedLevel = 0;
+            long weights = 0;
+            var rotationMean = playedMinutes == 0 ? 0 : Enumerable.Range(0, count).Sum(index => Overalls[index] * PlannedMinutes[index]) / playedMinutes;
+            for (var index = 0; index < count; index++)
+            {
+                var weight = (long)PlannedMinutes[index] * (100 + ((UsageFactors[index] - 100) * MatchModelBounds.StarStrengthWeightPercent / 100));
+                var above = Math.Max(0, Overalls[index] - rotationMean);
+                weightedLevel += (Overalls[index] + Math.Min(MatchModelBounds.MaximumStarBonus, above * above / MatchModelBounds.StarConvexityDivisor)) * weight;
+                weights += weight;
+            }
+
+            Strength = playedMinutes == 0 || weights <= 0
+                ? 0
+                : Math.Clamp((int)(weightedLevel / weights), PlayerRating.MinimumOverall, PlayerRating.MaximumOverall);
 
             // The couplings that read the rest of the sheet (attributes A3–A6): who brings the ball up
             // and whether he looks to shoot, who rebounds, how well each shoots from each zone and from

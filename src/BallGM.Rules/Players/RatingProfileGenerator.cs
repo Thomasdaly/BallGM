@@ -212,7 +212,7 @@ public static class RatingProfileGenerator
             Math.Clamp(weight, PlayerBody.MinimumWeightKg, PlayerBody.MaximumWeightKg));
     }
 
-    /// <summary>How far above today a player can still grow: wide at nineteen, nothing past twenty-six; professionalism adds a little.</summary>
+    /// <summary>How far above today a player can still grow: up to wide at nineteen, nothing past twenty-six, mostly modest; professionalism adds a little.</summary>
     private static int Headroom(int age, int professionalism, IRandomSource random)
     {
         var room = age switch
@@ -227,7 +227,16 @@ public static class RatingProfileGenerator
             _ => 0,
         };
 
-        return room == 0 ? 0 : random.NextInt32(0, room + 1) + ((professionalism - PlayerRating.NeutralHidden) * room / 200);
+        if (room == 0)
+        {
+            return 0;
+        }
+
+        // Skewed low: one draw, squared over the room, so most prospects' ceilings sit a few points above
+        // where they are and only a few have the whole room — busts are common, stars are rare. The same
+        // single draw as before, so nothing else a generator produces moves.
+        var draw = random.NextInt32(0, room + 1);
+        return (draw * draw / room) + ((professionalism - PlayerRating.NeutralHidden) * room / 200);
     }
 
     private static Dictionary<Position, PositionFamiliarity> Familiarity(Position natural, int versatility)

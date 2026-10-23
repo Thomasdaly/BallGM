@@ -534,6 +534,24 @@ public static class MatchModelBounds
     public const int MaximumFoulDisciplineFactor = 150;
 
     /// <summary>
+    /// How much a player's usage weight (as a percentage of an even share) also weights his level in his
+    /// team's strength, in per cent of its distance from even: at 50, a first option taking twice an even
+    /// share counts one and a half times a role player's minutes. Bounded below 100 so strength stays a
+    /// weighted mean of the rotation, never one player's rating.
+    /// </summary>
+    public const int StarStrengthWeightPercent = 50;
+
+    /// <summary>
+    /// How a player's level above his rotation's average counts toward team strength beyond its face
+    /// value: the square of the gap over this divisor, capped at <see cref="MaximumStarBonus"/>. A star
+    /// twenty-five points above his team-mates adds twenty-five more; a solid starter five above, one.
+    /// </summary>
+    public const int StarConvexityDivisor = 12;
+
+    /// <inheritdoc cref="StarConvexityDivisor"/>
+    public const int MaximumStarBonus = 30;
+
+    /// <summary>
     /// Share of turnovers charged to the ball handler; the rest go to the team-mate he was getting it to
     /// (picked by usage) — the bad catch, the travel, the offensive foul off the ball.
     /// </summary>

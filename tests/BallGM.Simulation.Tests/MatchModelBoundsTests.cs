@@ -118,6 +118,19 @@ public sealed class MatchModelBoundsTests
     }
 
     [Fact]
+    public void AStarCountsForMoreThanHisFaceValueButStrengthStaysAMeanOfTheRotation()
+    {
+        // Usage weighting is a partial weight, never the whole: strength stays a weighted mean.
+        Assert.InRange(MatchModelBounds.StarStrengthWeightPercent, 1, 99);
+
+        // The convex bonus is reachable by a real star (twenty points above his team-mates) and capped.
+        const int StarGap = 20;
+        Assert.True(StarGap * StarGap / MatchModelBounds.StarConvexityDivisor >= MatchModelBounds.MaximumStarBonus);
+        Assert.True(5 * 5 / MatchModelBounds.StarConvexityDivisor <= 2, "A solid starter five points above his team should barely move it.");
+        Assert.True(MatchModelBounds.MaximumStarBonus < MatchModelBounds.MaximumStrengthEfficiencySwing / MatchModelBounds.EfficiencyPerRatingPoint * 2);
+    }
+
+    [Fact]
     public void RelativeWeightsDependOnDifferencesNotOnTheRatingScale()
     {
         // 100 at the mean, double a doubling above it, half a doubling below, and the same at any scale.

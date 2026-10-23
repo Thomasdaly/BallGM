@@ -134,3 +134,8 @@ multi-attribute wiring pass, deliberately deferred in P-3).
   PF 19.6, foul-outs 13.5/100; fixture 1,000 seasons: sd_team_win_pct 0.157, Noll-Scully 2.78, talent
   share 0.870, signed margin SD 14.01; row 22: 16.0 ms/season. `TeamStrengthOffsets` nudged to
   `[13,5,0,-4,-10,-17]` because role-based minutes concentrate talent (talent share had reached 0.880).
+
+- **Franchise F6 (2026-10-23)** added star-weighted team strength (usage weight 50%, convex bonus
+  gap²/12 capped at 30 above the rotation's own mean). Fixture league re-measured at 600 seasons:
+  sd_team_win_pct 0.159, Noll-Scully 2.81, talent share 0.874, margin SD 14.05 — all in band; row 22
+  15.96 ms/season.

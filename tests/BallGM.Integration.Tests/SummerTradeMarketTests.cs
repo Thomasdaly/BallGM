@@ -32,20 +32,19 @@ public sealed partial class SummerTradeMarketTests
             var trades = conclusion.Value.Notes.Where(note => note.RuleCode == "ai_turn.trade_executed").ToList();
             Assert.True(trades.Count <= 15, $"{trades.Count} trades in one summer across thirty teams.");
 
+            // Every team in at most one trade also proves nobody was flipped: moving a player twice in a
+            // summer would need the team that got him to trade again. (Players are not compared by name —
+            // generated names repeat.)
             var teams = new List<string>();
-            var players = new List<string>();
             foreach (var trade in trades)
             {
                 var match = TradeLine().Match(trade.Explanation);
                 Assert.True(match.Success, trade.Explanation);
                 teams.Add(match.Groups["from"].Value);
                 teams.Add(match.Groups["to"].Value);
-                players.Add(match.Groups["out"].Value);
-                players.Add(match.Groups["in"].Value);
             }
 
             Assert.Equal(teams.Count, teams.Distinct().Count());
-            Assert.Equal(players.Count, players.Distinct().Count());
         }
     }
 

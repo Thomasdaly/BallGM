@@ -93,12 +93,18 @@ public sealed class RatingProfileGeneratorTests
     public void YoungPlayersHaveRoomToGrowAndVeteransDoNot()
     {
         var random = new SeededRandomSource(5);
-        double Headroom(int age) => Enumerable.Range(0, 300)
+        List<int> Headrooms(int age) => Enumerable.Range(0, 300)
             .Select(_ => RatingProfileGenerator.Generate(60, Position.ShootingGuard, age, 0, 100, random))
-            .Average(rating => rating.PotentialAbility - rating.Overall);
+            .Select(rating => rating.PotentialAbility - rating.Overall)
+            .ToList();
 
-        Assert.True(Headroom(19) > 10);
-        Assert.Equal(0, Headroom(31));
+        // Skewed low on purpose (franchise F3): most nineteen-year-olds have a modest ceiling, and only
+        // a few have the whole room — busts are common, stars rare.
+        var young = Headrooms(19);
+        Assert.InRange(young.Average(), 6, 14);
+        Assert.True(young.Count(room => room >= 25) is > 0 and < 60, $"{young.Count(room => room >= 25)} of 300 had a star's ceiling.");
+        Assert.True(young.Count(room => room < 15) > 150);
+        Assert.Equal(0, Headrooms(31).Average());
     }
 
     [Fact]

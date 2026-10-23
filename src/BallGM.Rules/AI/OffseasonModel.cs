@@ -45,6 +45,12 @@ public static class OffseasonModel
     /// <summary>Win percentage, as a whole number, at or above which a team reads as a contender (the classifier's own line).</summary>
     public const int ContendingWinPercent = 55;
 
+    /// <summary>The age from which a free agent chases a title: winning weighs far more in his choice.</summary>
+    public const int RingChasingAge = 30;
+
+    /// <summary>A season this good makes a team a contender on its own, whatever the season before.</summary>
+    public const int BreakoutWinPercent = 62;
+
     /// <summary>How many of a team's best players its rotation is: a free agent must beat the last of them to be worth a real offer.</summary>
     public const int RotationSize = 8;
 
@@ -58,10 +64,26 @@ public static class OffseasonModel
     /// A team's direction from last season's record and the age of its roster: a winning team contends;
     /// a losing one with a young core retools; an old losing one rebuilds.
     /// </summary>
-    public static CompetitiveDirection DirectionFor(TeamRecord? lastSeason, IReadOnlyList<Player> roster, DateOnly asOf, int peakAgeStart)
+    public static CompetitiveDirection DirectionFor(TeamRecord? lastSeason, IReadOnlyList<Player> roster, DateOnly asOf, int peakAgeStart) =>
+        DirectionFor(lastSeason, seasonBefore: null, roster, asOf, peakAgeStart);
+
+    /// <summary>
+    /// A team's direction with memory: a contender is a team that won <see cref="ContendingWinPercent"/>
+    /// per cent last season, or over the last two seasons together — so one bad year (an injury-hit
+    /// season) does not turn a contender into a seller, and one lucky year does not make a builder spend
+    /// like a contender unless it was a clear one (<see cref="BreakoutWinPercent"/>+).
+    /// </summary>
+    public static CompetitiveDirection DirectionFor(TeamRecord? lastSeason, TeamRecord? seasonBefore, IReadOnlyList<Player> roster, DateOnly asOf, int peakAgeStart)
     {
         ArgumentNullException.ThrowIfNull(roster);
-        if (lastSeason is { Games: > 0 } record && record.Wins * 100 >= ContendingWinPercent * record.Games)
+        var last = lastSeason ?? TeamRecord.None;
+        var before = seasonBefore ?? TeamRecord.None;
+        var wins = last.Wins + before.Wins;
+        var games = last.Games + before.Games;
+        var contendedLast = last.Games > 0 && last.Wins * 100 >= ContendingWinPercent * last.Games;
+        var contendedOverTwo = before.Games > 0 && wins * 100 >= ContendingWinPercent * games;
+        var breakout = last.Games > 0 && last.Wins * 100 >= BreakoutWinPercent * last.Games;
+        if (seasonBefore is null ? contendedLast : contendedOverTwo || breakout)
         {
             return CompetitiveDirection.Contending;
         }
@@ -330,7 +352,15 @@ public static class OffseasonModel
     /// team (a .700 team's offer counts eight per cent more than a .300 team's), then the longer
     /// deal, then the team identifier — so the same offers always produce the same choice.
     /// </summary>
-    public static (Offer Offer, RuleFinding Finding) Choose(IReadOnlyList<Offer> offers, IReadOnlyDictionary<TeamId, TeamRecord> lastSeason, string playerName)
+    public static (Offer Offer, RuleFinding Finding) Choose(IReadOnlyList<Offer> offers, IReadOnlyDictionary<TeamId, TeamRecord> lastSeason, string playerName) =>
+        Choose(offers, lastSeason, playerName, ringChaser: false);
+
+    /// <summary>
+    /// The same choice for a veteran chasing a title (<paramref name="ringChaser"/>): winning weighs three
+    /// times as much — a .700 team's offer counts about a quarter more than a .300 team's — which is how a
+    /// contender fills its bench with good veterans for less than a losing team would pay them.
+    /// </summary>
+    public static (Offer Offer, RuleFinding Finding) Choose(IReadOnlyList<Offer> offers, IReadOnlyDictionary<TeamId, TeamRecord> lastSeason, string playerName, bool ringChaser)
     {
         ArgumentNullException.ThrowIfNull(offers);
         ArgumentNullException.ThrowIfNull(lastSeason);
@@ -343,7 +373,9 @@ public static class OffseasonModel
         {
             var record = lastSeason.GetValueOrDefault(offer.TeamId);
             var winPercent = record.Games == 0 ? 50 : record.Wins * 100 / record.Games;
-            return offer.FirstSeasonCompensation.SmallestUnits * (96 + (winPercent / 5)) / 100;
+            return ringChaser
+                ? offer.FirstSeasonCompensation.SmallestUnits * (88 + (winPercent * 3 / 5)) / 100
+                : offer.FirstSeasonCompensation.SmallestUnits * (96 + (winPercent / 5)) / 100;
         }
 
         var chosen = offers
@@ -367,7 +399,8 @@ public static class OffseasonModel
     public static IReadOnlyList<(MarketOffer Bid, RuleFinding Choice)> ResolveRound(
         IReadOnlyList<MarketOffer> offers,
         IReadOnlyDictionary<PlayerId, Player> players,
-        IReadOnlyDictionary<TeamId, TeamRecord> lastSeason)
+        IReadOnlyDictionary<TeamId, TeamRecord> lastSeason,
+        DateOnly asOf = default)
     {
         ArgumentNullException.ThrowIfNull(offers);
         ArgumentNullException.ThrowIfNull(players);
@@ -389,7 +422,8 @@ public static class OffseasonModel
                 continue;
             }
 
-            var (chosen, finding) = Choose(open.Select(offer => offer.Offer).ToList(), lastSeason, player.FullName);
+            var ringChaser = player.AgeOn(asOf) >= RingChasingAge;
+            var (chosen, finding) = Choose(open.Select(offer => offer.Offer).ToList(), lastSeason, player.FullName, ringChaser);
             signedThisRound.Add(chosen.TeamId);
             accepted.Add((open.First(offer => offer.Offer == chosen), finding));
         }

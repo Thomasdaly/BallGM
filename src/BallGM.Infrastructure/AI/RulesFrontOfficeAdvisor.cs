@@ -139,11 +139,7 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             var playersById = snapshot.Players.ToDictionary(player => player.Id);
             var directions = snapshot.Teams.ToDictionary(
                 team => team.Id,
-                team => OffseasonModel.DirectionFor(
-                    records.TryGetValue(team.Id, out var record) ? record : null,
-                    team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList(),
-                    asOf,
-                    PeakAgeStart(ruleset)));
+                team => DirectionOf(snapshot, team, playersById, snapshot.CurrentSeason.Year, asOf, ruleset));
             options = new TradeTargetingOptions(excludedTeams ?? new HashSet<TeamId>(), excludedPlayers ?? new HashSet<PlayerId>(), directions, asOf);
         }
 
@@ -268,7 +264,7 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         foreach (var team in snapshot.Teams.OrderBy(team => team.Id.Value, StringComparer.Ordinal))
         {
             var roster = team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
-            var direction = OffseasonModel.DirectionFor(records.TryGetValue(team.Id, out var record) ? record : null, roster, asOf, PeakAgeStart(ruleset));
+            var direction = DirectionOf(snapshot, team, playersById, snapshot.CurrentSeason.Year + 1, asOf, ruleset, records);
             plans.AddRange(OffseasonModel
                 .ReSignings(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.NegotiationRules, ruleset.CapThresholds, direction, asOf)
                 .Select(decision => new ReSigningPlan(decision.TeamId, decision.PlayerId, decision.Seasons, decision.FirstSeasonSalary.SmallestUnits, decision.Rationale)));
@@ -320,12 +316,12 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         foreach (var team in snapshot.Teams.OrderBy(team => team.Id.Value, StringComparer.Ordinal))
         {
             var roster = context.RosterOf(team);
-            var direction = OffseasonModel.DirectionFor(records.TryGetValue(team.Id, out var record) ? record : null, roster, asOf, PeakAgeStart(ruleset));
+            var direction = DirectionOf(snapshot, team, playersById, snapshot.CurrentSeason.Year, asOf, ruleset);
             offers.AddRange(OffseasonModel.MarketOffers(team, freeAgents, context, direction, asOf, round, MarketOffersPerTeam));
         }
 
         return DomainOperationResult<IReadOnlyList<MarketSigningPlan>>.Success(OffseasonModel
-            .ResolveRound(offers, playersById, records)
+            .ResolveRound(offers, playersById, records, asOf)
             .Select(accepted => new MarketSigningPlan(accepted.Bid.Offer, accepted.Bid.Rationale, accepted.Choice))
             .ToList());
     }
@@ -371,7 +367,7 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         foreach (var team in snapshot.Teams.OrderBy(team => team.Id.Value, StringComparer.Ordinal))
         {
             var roster = team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
-            var direction = OffseasonModel.DirectionFor(records.TryGetValue(team.Id, out var record) ? record : null, roster, asOf, PeakAgeStart(ruleset));
+            var direction = DirectionOf(snapshot, team, playersById, snapshot.CurrentSeason.Year, asOf, ruleset);
             var decision = BuyoutModel.Decide(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.NegotiationRules, ruleset.CapThresholds, ruleset.BuyoutRules, direction, asOf);
             if (decision is not null)
             {
@@ -386,6 +382,20 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
     private const int MarketOffersPerTeam = 3;
 
     private static int PeakAgeStart(LeagueRuleset ruleset) => ruleset.DevelopmentRules.IsConfigured ? ruleset.DevelopmentRules.PeakAgeStart : 26;
+
+    /// <summary>A team's direction from the two seasons before <paramref name="nextSeasonYear"/>.</summary>
+    private static CompetitiveDirection DirectionOf(LeagueSnapshot snapshot, Team team, IReadOnlyDictionary<PlayerId, Player> playersById, int nextSeasonYear, DateOnly asOf, LeagueRuleset ruleset, IReadOnlyDictionary<TeamId, TeamRecord>? lastSeasonOverride = null)
+    {
+        var last = lastSeasonOverride ?? ThisSeasonRecords(snapshot, nextSeasonYear - 1);
+        var before = ThisSeasonRecords(snapshot, nextSeasonYear - 2);
+        var roster = team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
+        return OffseasonModel.DirectionFor(
+            last.TryGetValue(team.Id, out var lastRecord) ? lastRecord : null,
+            before.TryGetValue(team.Id, out var beforeRecord) ? beforeRecord : null,
+            roster,
+            asOf,
+            PeakAgeStart(ruleset));
+    }
 
     /// <summary>Each team's record in a concluded season, from the league's history (empty before any is archived).</summary>
     private static Dictionary<TeamId, TeamRecord> ThisSeasonRecords(LeagueSnapshot snapshot, int year) =>
