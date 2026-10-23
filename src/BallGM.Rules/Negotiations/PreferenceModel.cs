@@ -81,7 +81,7 @@ public sealed class PreferenceModel
     public Money? AskingPrice(MarketContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        return AskingPriceFor(context.Player, context.NegotiationRules, context.CapThresholds);
+        return AskingPriceFor(context.Player, context.NegotiationRules, context.CapThresholds, context.SalaryScale);
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ public sealed class PreferenceModel
     /// at all, whoever is asking. Shared with <c>ContractExtension</c>, so a player asks his own team
     /// for exactly what he would ask the open market for.
     /// </summary>
-    public static Money? AskingPriceFor(Player player, NegotiationRules rules, CapThresholds thresholds)
+    public static Money? AskingPriceFor(Player player, NegotiationRules rules, CapThresholds thresholds, SalaryScale? scale = null)
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(rules);
@@ -107,11 +107,11 @@ public sealed class PreferenceModel
             // the only figure the league states.
             (not null, null) => floor,
 
-            (null, not null) => new Money(ceiling.SmallestUnits * QualityShare(player) / 100),
+            (null, not null) => new Money(ceiling.SmallestUnits * Share(player, scale) / 100),
 
             _ => new Money(
                 floor.SmallestUnits +
-                ((ceiling.SmallestUnits - floor.SmallestUnits) * QualityShare(player) / 100)),
+                ((ceiling.SmallestUnits - floor.SmallestUnits) * Share(player, scale) / 100)),
         };
     }
 
@@ -123,6 +123,10 @@ public sealed class PreferenceModel
     /// table so it is exact and identical on every platform; the knots follow the same shape the
     /// data-pack salary estimate uses (league minimum below 55, the maximum at 92 and above).
     /// </summary>
+    private static int Share(Player player, SalaryScale? scale) =>
+        scale is { Count: > 0 } ? scale.ShareFor(player.Rating.Overall) : QualityShare(player);
+
+    /// <remarks>The fallback when no league is in hand to rank against; <see cref="SalaryScale"/> otherwise.</remarks>
     internal static int QualityShare(Player player)
     {
         ReadOnlySpan<(int Overall, int Share)> knots = [(55, 0), (62, 4), (68, 12), (74, 28), (80, 50), (86, 76), (92, 100)];

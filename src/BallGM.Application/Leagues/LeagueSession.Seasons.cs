@@ -133,6 +133,7 @@ public sealed partial class LeagueSession
         // player past the expiry the conclusion below would otherwise release him at.
         var (optionsDecided, optionNotes) = RunOptionDecisions();
         var (reSigned, reSigningNotes) = RunReSigningWindow();
+        var (tendered, tenderNotes) = RunQualifyingOffers();
 
         var concludedResult = _seasonEngine.ConcludeSeason(_seasonRun, _snapshot);
         if (concludedResult.IsFailure)
@@ -157,7 +158,8 @@ public sealed partial class LeagueSession
 
         var (drafted, unrostered, draftNotes) = RunDraft(outcome.Entry.FinalStandings, seasonSeed.For("draft"));
         var (boughtOut, buyoutNotes) = RunBuyouts();
-        var (marketSigned, marketNotes) = RunFreeAgencyMarket();
+        var (marketSigned, marketNotes) = RunFreeAgencyMarket(tendered.ToDictionary(plan => plan.PlayerId, plan => plan.TeamId));
+        var (qualifyingSigned, qualifyingNotes) = SignQualifyingOffers(tendered);
         var (aiTradesExecuted, aiSigningsExecuted, aiTurnNotes) = RunAiFrontOfficeTurnAtSeasonBoundary();
         var autoSigned = AutoResignToRosterFloor();
 
@@ -176,11 +178,12 @@ public sealed partial class LeagueSession
             autoSigned,
             aiTradesExecuted,
             aiSigningsExecuted,
-            optionNotes.Concat(reSigningNotes).Concat(outcome.Notes).Concat(developmentNotes).Concat(draftNotes).Concat(buyoutNotes).Concat(marketNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList())
+            optionNotes.Concat(reSigningNotes).Concat(tenderNotes).Concat(outcome.Notes).Concat(developmentNotes).Concat(draftNotes).Concat(buyoutNotes).Concat(marketNotes).Concat(qualifyingNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList())
         {
             PlayersReSigned = reSigned,
             OptionsDecided = optionsDecided,
-            MarketSignings = marketSigned,
+            MarketSignings = marketSigned + qualifyingSigned,
+            QualifyingOffersTendered = tendered.Count,
             PlayersBoughtOut = boughtOut.Count,
             Buyouts = boughtOut,
             Awards = AwardLines(outcome.Entry.Awards, teamNames),

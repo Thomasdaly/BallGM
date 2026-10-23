@@ -138,7 +138,8 @@ public sealed record LeagueConfiguration(
     GameRulesConfiguration? GameRules = null,
     LeaderQualifiersConfiguration? LeaderQualifiers = null,
     BuyoutConfiguration? Buyouts = null,
-    RookieScaleConfiguration? RookieScale = null)
+    RookieScaleConfiguration? RookieScale = null,
+    IncumbentRightsConfiguration? IncumbentRights = null)
 {
     /// <summary>Whether this league configures any threshold at all.</summary>
     public bool IsUncapped =>
@@ -338,6 +339,9 @@ public sealed record BuyoutConfiguration(int MaximumGiveBackPercent, int Releasi
 
 /// <summary>The rookie scale as the Application layer carries it: (from selection, basis points of the cap) bands and the terms; null means none.</summary>
 public sealed record RookieScaleConfiguration(IReadOnlyList<(long FromSelection, long BasisPoints)> FirstRoundShare, int Seasons, int TeamOptionSeasons, int SecondRoundSeasons);
+
+/// <summary>Incumbent rights and restricted free agency as the Application layer carries them; null means none.</summary>
+public sealed record IncumbentRightsConfiguration(int MinimumSeasonsWithTeam, int RestrictedServiceSeasons, int QualifyingOfferPercent);
 
 public sealed record GameRulesConfiguration(int PersonalFoulLimit, int BonusTeamFoulsPerPeriod, int BonusTeamFoulsPerOvertime);
 

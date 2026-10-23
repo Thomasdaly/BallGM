@@ -45,6 +45,22 @@ public static class OffseasonModel
     /// <summary>Win percentage, as a whole number, at or above which a team reads as a contender (the classifier's own line).</summary>
     public const int ContendingWinPercent = 55;
 
+    /// <summary>
+    /// Roster spots a team keeps open below the maximum when it signs depth: a full complement less one,
+    /// the flexibility real teams keep for a trade or an in-season signing.
+    /// </summary>
+    public const int DepthSpotsKeptOpen = 1;
+
+    /// <summary>
+    /// How far above a free agent's asking price a contending team bids, in per cent (a retooling team,
+    /// <see cref="RetoolingPremiumPercent"/>): a team trying to win now pays to win the player, which is
+    /// how good teams end up paying the tax and how talent concentrates on contenders.
+    /// </summary>
+    public const int ContenderPremiumPercent = 20;
+
+    /// <inheritdoc cref="ContenderPremiumPercent"/>
+    public const int RetoolingPremiumPercent = 5;
+
     /// <summary>The age from which a free agent chases a title: winning weighs far more in his choice.</summary>
     public const int RingChasingAge = 30;
 
@@ -156,7 +172,8 @@ public static class OffseasonModel
         NegotiationRules rules,
         CapThresholds thresholds,
         CompetitiveDirection direction,
-        DateOnly asOf)
+        DateOnly asOf,
+        SalaryScale? scale = null)
     {
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(roster);
@@ -207,7 +224,7 @@ public static class OffseasonModel
                 break;
             }
 
-            var ask = PreferenceModel.AskingPriceFor(player, rules, thresholds);
+            var ask = PreferenceModel.AskingPriceFor(player, rules, thresholds, scale);
             if (ask is null)
             {
                 continue;
@@ -264,6 +281,8 @@ public static class OffseasonModel
         var ranked = roster.Select(player => player.Rating.Overall).OrderDescending().ToList();
         var replacement = ranked.Count >= RotationSize ? ranked[RotationSize - 1] : 0;
         var shortOfMinimum = team.RosterCount < team.RosterLimits.MinimumPlayers;
+        var shortOfDepth = team.RosterCount < team.RosterLimits.MaximumPlayers - DepthSpotsKeptOpen;
+        var weakest = ranked.Count > 0 ? ranked[^1] : 0;
         var byPosition = roster.GroupBy(player => player.Position).ToDictionary(group => group.Key, group => group.Count());
         var payroll = PayrollFor(team.Id, context.Contracts, context.CurrentSeason).SmallestUnits;
         var budget = BudgetFor(direction, context.CapThresholds)?.SmallestUnits;
@@ -282,6 +301,19 @@ public static class OffseasonModel
             {
                 value = Math.Max(value, player.Rating.Overall - 40);
             }
+            else if (shortOfDepth && player.Rating.Overall > weakest)
+            {
+                // Depth: a roster short of its full complement takes anyone better than its weakest
+                // player — a contender preferring the veteran who has done it before, a rebuilding team
+                // the young player it can develop. This is where the league's veterans find work.
+                var depth = 1 + ((player.Rating.Overall - weakest) / 3) + direction switch
+                {
+                    CompetitiveDirection.Contending => age >= 28 ? 2 : 0,
+                    CompetitiveDirection.Rebuilding => age <= 24 ? 2 : 0,
+                    _ => 0,
+                };
+                value = Math.Max(value, depth);
+            }
 
             if (value > 0)
             {
@@ -297,13 +329,19 @@ public static class OffseasonModel
                 break;
             }
 
-            var ask = PreferenceModel.AskingPriceFor(player, context.NegotiationRules, context.CapThresholds)?.SmallestUnits;
+            var ask = PreferenceModel.AskingPriceFor(player, context.NegotiationRules, context.CapThresholds, context.SalaryScale)?.SmallestUnits;
             if (ask is null)
             {
                 continue;
             }
 
-            var price = RoundToTenThousand(Math.Max(minimumSalary, ask.Value * Math.Max(0, 100 - (PriceDropPercentPerRound * round)) / 100));
+            var premium = direction switch
+            {
+                CompetitiveDirection.Contending => ContenderPremiumPercent,
+                CompetitiveDirection.Retooling => RetoolingPremiumPercent,
+                _ => 0,
+            };
+            var price = RoundToTenThousand(Math.Max(minimumSalary, ask.Value * Math.Max(0, 100 + premium - (PriceDropPercentPerRound * round)) / 100));
             var seasons = TermFor(player.AgeOn(asOf), star: false, context.NegotiationRules.MaximumSeasonsFor(isIncumbentTeam: false));
             var allowance = context.NegotiationRules.StandardOverCapAllowance?.SmallestUnits;
             var candidates = new List<long> { price };
@@ -338,7 +376,7 @@ public static class OffseasonModel
                 }
 
                 offers.Add(new MarketOffer(offer, value, new RuleFinding(BidCode,
-                    $"{team.Name} ({direction}) bids {ExplanationText.Money(salary)} a season for {ExplanationText.Count(offer.Terms.Count, "season")} on {player.FullName} ({player.Rating.Overall}), who would {(shortOfMinimum ? "fill a roster short of the minimum" : $"improve on its eighth man ({replacement})")}.",
+                    $"{team.Name} ({direction}) bids {ExplanationText.Money(salary)} a season for {ExplanationText.Count(offer.Terms.Count, "season")} on {player.FullName} ({player.Rating.Overall}), who would {(shortOfMinimum ? "fill a roster short of the minimum" : player.Rating.Overall > replacement ? $"improve on its eighth man ({replacement})" : $"add depth over its weakest player ({weakest})")}.",
                     team.Id)));
                 break;
             }
@@ -444,7 +482,8 @@ public static class OffseasonModel
         Season currentSeason,
         NegotiationRules rules,
         CapThresholds thresholds,
-        DateOnly asOf)
+        DateOnly asOf,
+        SalaryScale? scale = null)
     {
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(roster);
@@ -474,7 +513,7 @@ public static class OffseasonModel
             }
             else
             {
-                var ask = PreferenceModel.AskingPriceFor(player, rules, thresholds)?.SmallestUnits ?? 0;
+                var ask = PreferenceModel.AskingPriceFor(player, rules, thresholds, scale)?.SmallestUnits ?? 0;
                 var stay = term.Compensation.SmallestUnits >= ask;
                 decisions.Add((contract.Id, next, stay, new RuleFinding(stay ? "ai_option.player_exercises" : "ai_option.player_declines",
                     stay
@@ -485,6 +524,85 @@ public static class OffseasonModel
         }
 
         return decisions;
+    }
+
+    /// <summary>
+    /// The qualifying offers a team tenders (restricted free agency, <see cref="IncumbentRightsRules"/>): to
+    /// each player in the final season of a contract that started within the league's restricted window
+    /// (a rookie deal) whom it has not re-signed but still wants — a rotation player, or a young one whose
+    /// ceiling beats its fifth-best — a one-season offer at the stated share of his last salary. Tendered,
+    /// he is restricted: the team may match any offer he takes elsewhere.
+    /// </summary>
+    public static IReadOnlyList<(PlayerId PlayerId, Money Salary, RuleFinding Rationale)> QualifyingOffers(
+        Team team,
+        IReadOnlyList<Player> roster,
+        IReadOnlyCollection<Contract> contracts,
+        Season currentSeason,
+        IncumbentRightsRules rights,
+        DateOnly asOf)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(roster);
+        ArgumentNullException.ThrowIfNull(contracts);
+        ArgumentNullException.ThrowIfNull(rights);
+        if (!rights.HasRestrictedFreeAgency)
+        {
+            return [];
+        }
+
+        var ranked = roster.OrderByDescending(player => player.Rating.Overall).ThenBy(player => player.Id.Value, StringComparer.Ordinal).ToList();
+        var rotationFloor = ranked.Count >= RotationSize ? ranked[RotationSize - 1].Rating.Overall : 0;
+        var fifthBest = ranked.Count >= 5 ? ranked[4].Rating.Overall : 0;
+        var tenders = new List<(PlayerId, Money, RuleFinding)>();
+        foreach (var player in ranked)
+        {
+            var live = contracts.Where(contract => contract.PlayerId == player.Id && contract.TeamId == team.Id && !contract.IsTerminated).ToList();
+            var expiring = live.FirstOrDefault(contract => contract.LastSeason == currentSeason);
+            if (expiring is null || live.Any(contract => contract.FirstSeason.Year > currentSeason.Year))
+            {
+                continue;
+            }
+
+            var serviceAtStart = player.SeasonsOfService - (currentSeason.Year - expiring.FirstSeason.Year);
+            var wanted = player.Rating.Overall >= rotationFloor || (player.AgeOn(asOf) <= 24 && player.Rating.PotentialAbility > fifthBest);
+            if (serviceAtStart >= rights.RestrictedServiceSeasons || !wanted)
+            {
+                continue;
+            }
+
+            var last = expiring.TermFor(currentSeason)!.Compensation.SmallestUnits;
+            var salary = new Money(RoundToTenThousand(last * rights.QualifyingOfferPercent / 100));
+            tenders.Add((player.Id, salary, new RuleFinding("ai_offseason.qualifying_offer",
+                $"{team.Name} tenders {player.FullName} a qualifying offer of {ExplanationText.Money(salary.SmallestUnits)}: he is a restricted free agent, and {team.Name} may match any offer he takes.",
+                team.Id)));
+        }
+
+        return tenders;
+    }
+
+    /// <summary>
+    /// Whether a team matches the offer its restricted free agent accepted elsewhere: when he is still a
+    /// player it wants (in its rotation, or young with a ceiling above its fifth-best) and the offer keeps
+    /// its payroll within the second apron — a team will stretch to keep a young player it drafted.
+    /// </summary>
+    public static bool MatchesOfferSheet(Team incumbent, IReadOnlyList<Player> roster, Player player, Offer offer, IReadOnlyCollection<Contract> contracts, Season season, CapThresholds thresholds, DateOnly asOf)
+    {
+        ArgumentNullException.ThrowIfNull(incumbent);
+        ArgumentNullException.ThrowIfNull(roster);
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(offer);
+        ArgumentNullException.ThrowIfNull(thresholds);
+        if (incumbent.RosterCount >= incumbent.RosterLimits.MaximumPlayers)
+        {
+            return false;
+        }
+
+        var ranked = roster.Select(member => member.Rating.Overall).OrderDescending().ToList();
+        var rotationFloor = ranked.Count >= RotationSize ? ranked[RotationSize - 1] : 0;
+        var fifthBest = ranked.Count >= 5 ? ranked[4] : 0;
+        var wanted = player.Rating.Overall >= rotationFloor || (player.AgeOn(asOf) <= 24 && player.Rating.PotentialAbility > fifthBest);
+        var line = thresholds.SecondApron ?? thresholds.FirstApron ?? thresholds.LuxuryTax;
+        return wanted && (line is null || PayrollFor(incumbent.Id, contracts, season).SmallestUnits + offer.FirstSeasonCompensation.SmallestUnits <= line.SmallestUnits);
     }
 
     /// <summary>

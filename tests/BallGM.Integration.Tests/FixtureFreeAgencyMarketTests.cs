@@ -42,6 +42,12 @@ public sealed class FixtureFreeAgencyMarketTests
     private const string AffordableFreeAgent = "Casimir Vandeleur";
 
     /// <summary>
+    /// A free agent good enough to ask more than the minimum: asks rank against the league
+    /// (<c>SalaryScale</c>), and the released fringe player above asks the minimum, as he should.
+    /// </summary>
+    private const string RotationFreeAgent = "Teodoro Ashgrove";
+
+    /// <summary>
     /// The uncapped conformance league carries a roster maximum of fourteen and nothing else, so the
     /// only rule left for a market there to run into is roster space. These two have some.
     /// </summary>
@@ -97,7 +103,7 @@ public sealed class FixtureFreeAgencyMarketTests
     public void CompetingOffersAreResolvedTogetherAndEachLoserIsToldWhichKindOfLoserItIs()
     {
         var session = NewSession(out var overview);
-        var target = FreeAgentNamed(overview, AffordableFreeAgent);
+        var target = FreeAgentNamed(overview, RotationFreeAgent);
 
         var withRoom = TeamNamed(overview, TeamWithRoom);
         var pastTheApron = TeamNamed(overview, TeamPastTheApron);

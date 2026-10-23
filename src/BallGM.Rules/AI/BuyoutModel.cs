@@ -52,7 +52,8 @@ public static class BuyoutModel
         CapThresholds thresholds,
         BuyoutRules buyouts,
         CompetitiveDirection direction,
-        DateOnly asOf)
+        DateOnly asOf,
+        SalaryScale? scale = null)
     {
         ArgumentNullException.ThrowIfNull(team);
         ArgumentNullException.ThrowIfNull(roster);
@@ -86,7 +87,7 @@ public static class BuyoutModel
             var contract = contracts.FirstOrDefault(candidate =>
                 candidate.PlayerId == player.Id && candidate.TeamId == team.Id && !candidate.IsTerminated && candidate.TermFor(currentSeason) is not null);
             var salary = contract?.TermFor(currentSeason)?.Compensation.SmallestUnits ?? 0;
-            var ask = PreferenceModel.AskingPriceFor(player, rules, thresholds)?.SmallestUnits ?? 0;
+            var ask = PreferenceModel.AskingPriceFor(player, rules, thresholds, scale)?.SmallestUnits ?? 0;
             if (contract is null || salary == 0 || ask * 100 >= salary * OverpaidPercent)
             {
                 continue;

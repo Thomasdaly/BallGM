@@ -31,6 +31,9 @@ public static class SigningRouteTable
     public const string PermittedMinimumCode = "signing.permitted_minimum_salary";
     public const string PermittedAllowanceCode = "signing.permitted_standard_allowance";
     public const string PermittedReducedAllowanceCode = "signing.permitted_reduced_allowance";
+    public const string PermittedIncumbentRightsCode = "signing.permitted_incumbent_rights";
+    public const string NoIncumbentRightsCode = "signing.no_incumbent_rights";
+    public const string NoIncumbentRightsRouteCode = "signing.no_incumbent_rights_configured";
     public const string ReducedAllowanceNotNeededCode = "signing.reduced_allowance_standard_available";
     public const string ReducedAllowanceWithdrawnCode = "signing.reduced_allowance_unavailable_above_threshold";
     public const string InsufficientReducedAllowanceCode = "signing.insufficient_reduced_allowance";
@@ -70,7 +73,8 @@ public static class SigningRouteTable
         Money allowanceAlreadyCommitted,
         int allowanceSigningsAlreadyMade,
         CapMechanics? mechanics = null,
-        Money? reducedAllowanceAlreadyCommitted = null)
+        Money? reducedAllowanceAlreadyCommitted = null,
+        bool? holdsIncumbentRights = null)
     {
         ArgumentNullException.ThrowIfNull(offer);
         ArgumentNullException.ThrowIfNull(rules);
@@ -84,6 +88,7 @@ public static class SigningRouteTable
             Unrestricted(offer, thresholds),
             MinimumSalary(offer, rules, seasonsOfService),
             CapRoom(offer, thresholds, payrollBeforeSigning, holdReleasedBySigning),
+            IncumbentRights(holdsIncumbentRights),
             StandardAllowance(offer, rules, thresholds, payrollBeforeSigning, allowanceAlreadyCommitted, allowanceSigningsAlreadyMade),
             ReducedAllowance(offer, rules, thresholds, mechanics ?? CapMechanics.None, payrollBeforeSigning, reducedAllowanceAlreadyCommitted ?? Money.Zero),
         ];
@@ -115,6 +120,24 @@ public static class SigningRouteTable
             PermittedUnrestrictedCode,
             "This league configures no soft cap, so there is no limit on what a team may commit to a player. Roster space is the only constraint on this signing.");
     }
+
+    /// <summary>
+    /// His own team re-signing him over the cap: permitted whenever it holds incumbent rights (the
+    /// compensation ceiling, checked with every offer's legality, is the only limit), refused with the
+    /// reason where it does not, and not a rule in a league without incumbent rights.
+    /// </summary>
+    private static SigningRouteEvaluation IncumbentRights(bool? holds) => holds switch
+    {
+        null => new SigningRouteEvaluation(
+            SigningRouteKind.IncumbentRights, Applicable: false, Permits: false, MaximumFirstSeasonCompensation: null,
+            NoIncumbentRightsRouteCode, "This league has no incumbent rights: a team signs its own free agent the way anyone else would."),
+        true => new SigningRouteEvaluation(
+            SigningRouteKind.IncumbentRights, Applicable: true, Permits: true, MaximumFirstSeasonCompensation: null,
+            PermittedIncumbentRightsCode, "this team held him long enough to re-sign him over the cap, up to the league's ceiling"),
+        false => new SigningRouteEvaluation(
+            SigningRouteKind.IncumbentRights, Applicable: true, Permits: false, MaximumFirstSeasonCompensation: null,
+            NoIncumbentRightsCode, "This team did not hold him long enough (or released him) to re-sign him over the cap."),
+    };
 
     private static SigningRouteEvaluation MinimumSalary(Offer offer, NegotiationRules rules, int seasonsOfService)
     {

@@ -305,6 +305,12 @@ internal static class LeagueConfigurationMapper
             return DomainOperationResult<LeagueRuleset>.Failure(rookieScaleResult.Errors.ToArray());
         }
 
+        var incumbentResult = configuration.ToIncumbentRights();
+        if (incumbentResult.IsFailure)
+        {
+            return DomainOperationResult<LeagueRuleset>.Failure(incumbentResult.Errors.ToArray());
+        }
+
         return DomainOperationResult<LeagueRuleset>.Success(new LeagueRuleset(
             LeagueRuleset.CurrentSchemaVersion,
             configuration.RulesetName,
@@ -327,7 +333,8 @@ internal static class LeagueConfigurationMapper
             gameRulesResult.Value,
             leadersResult.Value,
             buyoutsResult.Value,
-            rookieScaleResult.Value));
+            rookieScaleResult.Value,
+            incumbentResult.Value));
     }
 
     /// <summary>
@@ -443,7 +450,19 @@ internal static class LeagueConfigurationMapper
                     ruleset.RookieScaleRules.Seasons,
                     ruleset.RookieScaleRules.TeamOptionSeasons,
                     ruleset.RookieScaleRules.SecondRoundSeasons)
+                : null,
+            ruleset.IncumbentRightsRules.IsConfigured
+                ? new IncumbentRightsConfiguration(ruleset.IncumbentRightsRules.MinimumSeasonsWithTeam, ruleset.IncumbentRightsRules.RestrictedServiceSeasons, ruleset.IncumbentRightsRules.QualifyingOfferPercent)
                 : null);
+    }
+
+    /// <summary>The incumbent rights a configuration states, or none.</summary>
+    public static DomainOperationResult<IncumbentRightsRules> ToIncumbentRights(this LeagueConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return configuration.IncumbentRights is { } rights
+            ? IncumbentRightsRules.Create(rights.MinimumSeasonsWithTeam, rights.RestrictedServiceSeasons, rights.QualifyingOfferPercent)
+            : DomainOperationResult<IncumbentRightsRules>.Success(IncumbentRightsRules.None);
     }
 
     /// <summary>The rookie scale a configuration states, or none.</summary>

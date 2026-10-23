@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 15,
+  "schemaVersion": 16,
   "name": "Continental Basketball Association — Standard Rules",
   "regularSeasonGameCount": 78,
   "minimumRosterPlayers": 12,
@@ -301,5 +301,10 @@
     "seasons": 4,
     "teamOptionSeasons": 2,
     "secondRoundSeasons": 2
+  },
+  "incumbentRights": {
+    "minimumSeasonsWithTeam": 2,
+    "restrictedServiceSeasons": 1,
+    "qualifyingOfferPercent": 125
   }
 }

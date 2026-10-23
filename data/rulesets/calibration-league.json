@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 15,
+  "schemaVersion": 16,
   "name": "Calibration League — 30 teams, 82 games",
   "regularSeasonGameCount": 82,
   "minimumRosterPlayers": 12,
@@ -300,5 +300,10 @@
     "seasons": 4,
     "teamOptionSeasons": 2,
     "secondRoundSeasons": 2
+  },
+  "incumbentRights": {
+    "minimumSeasonsWithTeam": 2,
+    "restrictedServiceSeasons": 1,
+    "qualifyingOfferPercent": 125
   }
 }

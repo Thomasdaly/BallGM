@@ -43,7 +43,7 @@ internal sealed class StubFrontOfficeAdvisor : IFrontOfficeAdvisor
     public DomainOperationResult<IReadOnlyList<ReSigningPlan>> PlanReSignings(LeagueSnapshot snapshot, IReadOnlyDictionary<TeamId, Domain.Seasons.TeamRecord> records) =>
         DomainOperationResult<IReadOnlyList<ReSigningPlan>>.Success([]);
 
-    public DomainOperationResult<IReadOnlyList<MarketSigningPlan>> PlanMarketRound(LeagueSnapshot snapshot, IReadOnlyCollection<Player> freeAgents, int round) =>
+    public DomainOperationResult<IReadOnlyList<MarketSigningPlan>> PlanMarketRound(LeagueSnapshot snapshot, IReadOnlyCollection<Player> freeAgents, int round, IReadOnlyDictionary<Domain.Players.PlayerId, TeamId>? restricted = null) =>
         DomainOperationResult<IReadOnlyList<MarketSigningPlan>>.Success([]);
 
     public DomainOperationResult<IReadOnlyList<BuyoutPlan>> PlanBuyouts(LeagueSnapshot snapshot) =>
@@ -51,4 +51,7 @@ internal sealed class StubFrontOfficeAdvisor : IFrontOfficeAdvisor
 
     public DomainOperationResult<IReadOnlyList<OptionPlan>> PlanOptionDecisions(LeagueSnapshot snapshot) =>
         DomainOperationResult<IReadOnlyList<OptionPlan>>.Success([]);
+
+    public DomainOperationResult<IReadOnlyList<QualifyingOfferPlan>> PlanQualifyingOffers(LeagueSnapshot snapshot) =>
+        DomainOperationResult<IReadOnlyList<QualifyingOfferPlan>>.Success([]);
 }

@@ -47,7 +47,8 @@ public static class ContractExtension
         IReadOnlyCollection<Contract> contracts,
         Season currentSeason,
         NegotiationRules rules,
-        CapThresholds thresholds)
+        CapThresholds thresholds,
+        SalaryScale? scale = null)
     {
         ArgumentNullException.ThrowIfNull(offer);
         ArgumentNullException.ThrowIfNull(team);
@@ -89,7 +90,7 @@ public static class ContractExtension
 
         OfferLegality.Check(offer, rules, thresholds, player.SeasonsOfService, isIncumbentTeam: true, violations, notes);
 
-        var ask = PreferenceModel.AskingPriceFor(player, rules, thresholds);
+        var ask = PreferenceModel.AskingPriceFor(player, rules, thresholds, scale);
         if (violations.Count > 0)
         {
             return new ExtensionAssessment(false, false, ask, NotConsideredCode,

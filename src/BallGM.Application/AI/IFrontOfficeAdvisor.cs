@@ -99,11 +99,22 @@ public interface IFrontOfficeAdvisor
     /// </summary>
     DomainOperationResult<IReadOnlyList<BuyoutPlan>> PlanBuyouts(LeagueSnapshot snapshot);
 
+    /// <param name="restricted">This summer's restricted free agents and the team that may match for each.</param>
     DomainOperationResult<IReadOnlyList<MarketSigningPlan>> PlanMarketRound(
         LeagueSnapshot snapshot,
         IReadOnlyCollection<Player> freeAgents,
-        int round);
+        int round,
+        IReadOnlyDictionary<PlayerId, TeamId>? restricted = null);
+
+    /// <summary>
+    /// The qualifying offers every team tenders to its expiring restricted players it did not re-sign
+    /// (decided after the re-signing window, before the season is concluded). Read-only.
+    /// </summary>
+    DomainOperationResult<IReadOnlyList<QualifyingOfferPlan>> PlanQualifyingOffers(LeagueSnapshot snapshot);
 }
+
+/// <summary>A qualifying offer tendered: the player, his team, the one-season salary, and why.</summary>
+public sealed record QualifyingOfferPlan(PlayerId PlayerId, TeamId TeamId, long Salary, RuleFinding Rationale);
 
 /// <summary>One option decided: the contract, the season, whether it is taken up, and why.</summary>
 public sealed record OptionPlan(Domain.Contracts.ContractId ContractId, Season Season, bool Exercise, RuleFinding Rationale);

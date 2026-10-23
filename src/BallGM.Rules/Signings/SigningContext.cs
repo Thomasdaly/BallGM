@@ -31,8 +31,37 @@ public sealed record SigningContext(
     PostseasonRules? PostseasonRules = null,
     SeasonDay? SigningDay = null,
     CapMechanics? CapMechanics = null,
-    BuyoutRules? Buyouts = null)
+    BuyoutRules? Buyouts = null,
+    IncumbentRightsRules? IncumbentRights = null)
 {
+    /// <summary>
+    /// How many consecutive seasons, ending with the one before <see cref="CurrentSeason"/>, this team
+    /// held the player on contracts that ran their course (a release forfeits the run): what earns
+    /// incumbent rights.
+    /// </summary>
+    public int SeasonsWithTeam
+    {
+        get
+        {
+            var years = Contracts
+                .Where(contract => contract.PlayerId == Player.Id && contract.TeamId == Team.Id && !contract.IsTerminated)
+                .SelectMany(contract => contract.Terms.Where(term => contract.TermFor(term.Season) is not null).Select(term => term.Season.Year))
+                .ToHashSet();
+            var count = 0;
+            for (var year = CurrentSeason.Year - 1; years.Contains(year); year--)
+            {
+                count++;
+            }
+
+            return count;
+        }
+    }
+
+    /// <summary>Whether this team holds incumbent rights to this free agent, or null in a league without them.</summary>
+    public bool? HoldsIncumbentRights => IncumbentRights is { IsConfigured: true } rights
+        ? IsFreeAgent && SeasonsWithTeam >= rights.MinimumSeasonsWithTeam
+        : null;
+
     /// <summary>
     /// Whether this is the player's current team. It changes the term limit where a league lets an
     /// incumbent offer more years, and it is the hook every deferred retention route hangs off.

@@ -73,7 +73,7 @@ default league behaves like a modern one.
 |---|---|---|
 | F1 | Engine tails: role minutes, ball handler, skill-driven shares, shooting and free-throw skill, foul drawing, injury proneness (attributes A3a–A6) | Done |
 | F2 | The season boundary for a long save: development, ageing and retirement wired every season; awards with eligibility rules (games and minutes floors, bench award, rookie, most improved, defensive, all-league teams) archived with the season | Done (§4) |
-| F3 | Re-signing, the market (§5), the rookie scale and option decisions (§7) done; restricted free agency next — contract structure: rookie scale with team options, option decisions, qualifying offers and restricted free agency with matching, incumbent rights over the cap, room allowance | |
+| F3 | Re-signing, the market (§5), the rookie scale and option decisions (§7), incumbent rights, restricted free agency and rank-based asking prices (§11) done — contract structure: rookie scale with team options, option decisions, qualifying offers and restricted free agency with matching, incumbent rights over the cap, room allowance | |
 | F4 | Exits: waivers and claim order, buyouts with consent and guardrails, stretch provision, the post-cutoff rule, the re-sign wait, apron restrictions | Buyouts and their guardrails done (§6); waivers and stretch to come |
 | F5 | Trades: multi-asset with picks, trade restrictions on new signings, acceptance margins, direction-aware valuation | Summer market done (§8): one trade a team, nobody flipped, both sides must gain; picks and in-season trades to come |
 | F6 | Franchise direction that persists (contend / retool / rebuild) with hysteresis, owner expectations if modelled, and AI behaviour that follows it | Two-season memory, ring-chasing veterans and star-weighted strength done (§9); owner expectations not modelled |
@@ -227,7 +227,7 @@ age of 24–28.
 
 **Still open** — competitive spread in an evolved league (win SD about 0.10 against a real league's
 ~0.15: the worst teams win 21–30 games, because nothing makes a rebuilding team deliberately worse),
-the blocks leader, waivers and the stretch provision, restricted free agency, picks as trade assets and
+the blocks leader, waivers and the stretch provision, picks as trade assets (salary dumps, §12) and
 in-season (deadline) moves, and the screens that show all of this.
 
 ## 10. F8 (first step): a season can end in the client
@@ -245,3 +245,33 @@ The **History** screen (League → History, S27) lists every concluded season wi
 for the selected season, every award with the figures behind it and the all-league and all-defensive
 teams by team. The player profile's Ratings tab now also shows the 2K-style **tendencies** the engine
 plays (touches, shot, drive, post-up, shot location, pass, crash the glass, gamble, block, foul).
+
+## 11. F3 (third part): incumbent rights, restricted free agency, salaries by rank, a real age shape
+
+**Incumbent rights (ruleset v16, `incumbentRights`).** A team that held a player for
+`minimumSeasonsWithTeam` consecutive seasons on contracts that ran their course may re-sign him over the
+cap, up to the ceiling — the generic veteran re-signing exception. A release forfeits the run. It is a
+signing route (`SigningRouteKind.IncumbentRights`) reported like every other: permits, refused with the
+reason, or not a rule in this league.
+
+**Restricted free agency.** A player whose expiring contract started within `restrictedServiceSeasons`
+of service (a rookie deal), whom his team did not re-sign but still wants, is tendered a qualifying offer
+of `qualifyingOfferPercent` of his last salary. In the market, if he accepts another team's offer, his team
+matches when he is still wanted and the match keeps its payroll within the second apron; if nobody bids,
+he signs the qualifying offer for one season. Shipped content: two seasons, the first contract, 125%.
+
+**Asking prices by rank (`SalaryScale`).** An ask was a fixed curve on absolute Overall, tuned for one
+pack's scale; on the generated league it under-priced everyone and league payroll sank from ~100% of the
+cap to ~77% over a long save, leaving room everywhere. Asks now rank against every rostered player: the
+top 2% ask the maximum for their service, the top 6% four fifths, the top 12% three fifths, a top-quarter
+player about a third, the bottom 40% the minimum. Scale-invariant (a pack on its own scale gets the same
+salary shape). With contenders bidding 20% (retooling 5%) over the ask, payroll holds at 91–103% of the
+cap over twelve seasons with several teams in the tax.
+
+**Depth.** A team short of a full complement (the maximum less one) signs anyone better than its weakest
+player — contenders preferring veterans, rebuilding teams youth. Rosters settle at ~400–420 players.
+
+**Draft ages.** Every prospect entered at exactly the youngest age, so the league skewed young (40% aged
+19–22, average 24.7). Prospects are now drawn up to four years older (30/25/20/15/10%), and an older one
+carries two rating points of polish per year with a ceiling nearer to it. Rostered ages after twelve
+seasons: 22/35/26/13/2% in 19–22/23–26/27–30/31–34/35+ (real ~18/35/28/15/4), average ~26.

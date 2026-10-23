@@ -1,6 +1,9 @@
 using BallGM.Application.Seasons;
 using BallGM.Domain.Common;
+using BallGM.Domain.Contracts;
+using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
+using BallGM.Domain.Teams;
 
 namespace BallGM.Application.Leagues;
 
@@ -57,7 +60,63 @@ public sealed partial class LeagueSession
     /// the market clears or <see cref="MarketRounds"/> have run. Every accepted offer is executed
     /// through the signing engine, which re-validates it against the league as it then stands.
     /// </summary>
-    private (int Signed, IReadOnlyList<RuleFinding> Notes) RunFreeAgencyMarket()
+    /// <summary>
+    /// The qualifying offers tendered after the re-signing window: each restricted player (his own team
+    /// did not re-sign him but wants him) and the one-season salary his team will sign him to if nobody
+    /// else bids.
+    /// </summary>
+    private (IReadOnlyList<AI.QualifyingOfferPlan> Tendered, IReadOnlyList<RuleFinding> Notes) RunQualifyingOffers()
+    {
+        if (_snapshot is null)
+        {
+            return ([], []);
+        }
+
+        var plans = _frontOfficeAdvisor.PlanQualifyingOffers(_snapshot);
+        return plans.IsFailure
+            ? ([], plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList())
+            : (plans.Value, plans.Value.Select(plan => plan.Rationale).ToList());
+    }
+
+    /// <summary>
+    /// Restricted players nobody signed in the market sign their qualifying offers with their own teams —
+    /// one season, through the incumbent-rights route — where the team still has a roster spot.
+    /// </summary>
+    private (int Signed, IReadOnlyList<RuleFinding> Notes) SignQualifyingOffers(IReadOnlyList<AI.QualifyingOfferPlan> tendered)
+    {
+        if (_snapshot is null || tendered.Count == 0)
+        {
+            return (0, []);
+        }
+
+        var pool = FreeAgentPool(_snapshot).Select(player => player.Id).ToHashSet();
+        var signed = 0;
+        var notes = new List<RuleFinding>();
+        foreach (var plan in tendered.Where(plan => pool.Contains(plan.PlayerId)))
+        {
+            var offer = Offer.Create(
+                new OfferId(SortableId.NewId()),
+                plan.TeamId,
+                plan.PlayerId,
+                [new ContractSeasonTerm(_snapshot.CurrentSeason, new Money(plan.Salary), new Money(plan.Salary))]);
+            if (offer.IsFailure)
+            {
+                continue;
+            }
+
+            var execution = _signingEngine.Execute(offer.Value, _snapshot, plan.TeamId, plan.PlayerId);
+            if (execution.IsSuccess)
+            {
+                _snapshot = _snapshot with { Contracts = [.. _snapshot.Contracts, execution.Value.Contract] };
+                signed++;
+                notes.Add(new RuleFinding("ai_offseason.qualifying_offer_signed", $"Unclaimed in free agency, he signs his qualifying offer of {Domain.Common.ExplanationText.Money(plan.Salary)} for one season.", plan.TeamId));
+            }
+        }
+
+        return (signed, notes);
+    }
+
+    private (int Signed, IReadOnlyList<RuleFinding> Notes) RunFreeAgencyMarket(IReadOnlyDictionary<PlayerId, TeamId>? restricted = null)
     {
         if (_snapshot is null)
         {
@@ -74,7 +133,7 @@ public sealed partial class LeagueSession
                 break;
             }
 
-            var plans = _frontOfficeAdvisor.PlanMarketRound(_snapshot, pool, round);
+            var plans = _frontOfficeAdvisor.PlanMarketRound(_snapshot, pool, round, restricted);
             if (plans.IsFailure)
             {
                 notes.AddRange(plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)));

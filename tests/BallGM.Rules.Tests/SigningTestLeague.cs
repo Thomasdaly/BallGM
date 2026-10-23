@@ -171,6 +171,19 @@ internal sealed class SigningTestLeague
         _contracts.Add(contract);
     }
 
+    /// <summary>
+    /// Gives the free agent a contract with a team that ran its course: the <paramref name="seasons"/>
+    /// seasons before the current one, ending last season — the history incumbent rights read.
+    /// </summary>
+    public void PlayedFor(TeamId teamId, int seasons, long salary = 5_000_000)
+    {
+        _contracts.Add(Contract.Create(
+            new ContractId($"EXPIRED-{teamId.Value}"),
+            teamId,
+            FreeAgent.Id,
+            Enumerable.Range(CurrentSeason.Year - seasons, seasons).Select(year => new ContractSeasonTerm(new Season(year), new Money(salary), new Money(salary)))).Value);
+    }
+
     private static Team BuildTeam(Franchise franchise, RosterSizeLimits limits, int rosterSize, List<PlayerId> playerIds)
     {
         for (var index = 0; index < rosterSize; index++)

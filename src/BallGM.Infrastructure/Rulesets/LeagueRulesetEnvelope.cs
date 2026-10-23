@@ -81,7 +81,8 @@ public sealed record LeagueRulesetEnvelope
         GameRulesEnvelope? gameRules = null,
         StatLeadersEnvelope? statLeaders = null,
         BuyoutRulesEnvelope? buyouts = null,
-        RookieScaleEnvelope? rookieScale = null)
+        RookieScaleEnvelope? rookieScale = null,
+        IncumbentRightsEnvelope? incumbentRights = null)
     {
         SchemaVersion = schemaVersion;
         Name = name;
@@ -150,6 +151,7 @@ public sealed record LeagueRulesetEnvelope
         GameRules = gameRules;
         Buyouts = buyouts;
         RookieScale = rookieScale;
+        IncumbentRights = incumbentRights;
         StatLeaders = statLeaders;
     }
 
@@ -357,6 +359,9 @@ public sealed record LeagueRulesetEnvelope
     /// <summary>The optional rookie scale (schema 15).</summary>
     public RookieScaleEnvelope? RookieScale { get; }
 
+    /// <summary>The optional incumbent-rights section (schema 16).</summary>
+    public IncumbentRightsEnvelope? IncumbentRights { get; }
+
     /// <summary>Who qualifies for the leaderboards (schema v12). Absent means 70% of games and the usual makes.</summary>
     public StatLeadersEnvelope? StatLeaders { get; }
 }
@@ -378,6 +383,9 @@ public sealed record RookieScaleEnvelope(IReadOnlyList<PickShareBandEnvelope> Fi
 
 /// <summary>From this selection on (0 for the first pick's band), this many basis points of the soft cap.</summary>
 public sealed record PickShareBandEnvelope(long FromSelection, long BasisPoints);
+
+/// <summary>Incumbent rights as a ruleset states them: seasons with the team, the restricted window, and the qualifying offer.</summary>
+public sealed record IncumbentRightsEnvelope(int MinimumSeasonsWithTeam, int? RestrictedServiceSeasons = null, int? QualifyingOfferPercent = null);
 
 public sealed record GameRulesEnvelope(int? PersonalFoulLimit = null, int? BonusTeamFoulsPerPeriod = null, int? BonusTeamFoulsPerOvertime = null);
 

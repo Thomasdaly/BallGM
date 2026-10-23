@@ -10,6 +10,7 @@ using BallGM.Domain.Players;
 using BallGM.Domain.Randomness;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
+using BallGM.Infrastructure.Negotiations;
 using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.AI;
 using BallGM.Rules.Configuration;
@@ -185,7 +186,9 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             new SeededRandomSource(AskingPriceSeed),
             ruleset.PostseasonRules,
             ruleset.CapMechanics,
-            ruleset.BuyoutRules);
+            ruleset.BuyoutRules,
+            ruleset.IncumbentRightsRules,
+            LeagueSalaryScale.For(snapshot));
 
         var candidates = FreeAgentTargetingModel.FindCandidates(teamId, freeAgents, context);
         return DomainOperationResult<IReadOnlyList<FreeAgentTargetCandidate>>.Success(candidates);
@@ -266,17 +269,42 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             var roster = team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
             var direction = DirectionOf(snapshot, team, playersById, snapshot.CurrentSeason.Year + 1, asOf, ruleset, records);
             plans.AddRange(OffseasonModel
-                .ReSignings(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.NegotiationRules, ruleset.CapThresholds, direction, asOf)
+                .ReSignings(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.NegotiationRules, ruleset.CapThresholds, direction, asOf, LeagueSalaryScale.For(snapshot))
                 .Select(decision => new ReSigningPlan(decision.TeamId, decision.PlayerId, decision.Seasons, decision.FirstSeasonSalary.SmallestUnits, decision.Rationale)));
         }
 
         return DomainOperationResult<IReadOnlyList<ReSigningPlan>>.Success(plans);
     }
 
+    public DomainOperationResult<IReadOnlyList<QualifyingOfferPlan>> PlanQualifyingOffers(LeagueSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var rulesetResult = BuildRuleset(snapshot);
+        if (rulesetResult.IsFailure)
+        {
+            return DomainOperationResult<IReadOnlyList<QualifyingOfferPlan>>.Failure(rulesetResult.Errors.ToArray());
+        }
+
+        var ruleset = rulesetResult.Value;
+        var asOf = new DateOnly(snapshot.CurrentSeason.Year + 1, 7, 1);
+        var playersById = snapshot.Players.ToDictionary(player => player.Id);
+        var plans = new List<QualifyingOfferPlan>();
+        foreach (var team in snapshot.Teams.OrderBy(team => team.Id.Value, StringComparer.Ordinal))
+        {
+            var roster = team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
+            plans.AddRange(OffseasonModel
+                .QualifyingOffers(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.IncumbentRightsRules, asOf)
+                .Select(tender => new QualifyingOfferPlan(tender.PlayerId, team.Id, tender.Salary.SmallestUnits, tender.Rationale)));
+        }
+
+        return DomainOperationResult<IReadOnlyList<QualifyingOfferPlan>>.Success(plans);
+    }
+
     public DomainOperationResult<IReadOnlyList<MarketSigningPlan>> PlanMarketRound(
         LeagueSnapshot snapshot,
         IReadOnlyCollection<Player> freeAgents,
-        int round)
+        int round,
+        IReadOnlyDictionary<PlayerId, TeamId>? restricted = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(freeAgents);
@@ -307,7 +335,9 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             new SeededRandomSource(AskingPriceSeed),
             ruleset.PostseasonRules,
             ruleset.CapMechanics,
-            ruleset.BuyoutRules);
+            ruleset.BuyoutRules,
+            ruleset.IncumbentRightsRules,
+            LeagueSalaryScale.For(snapshot));
 
         // Last season's table: the offseason follows the season it concluded.
         var records = ThisSeasonRecords(snapshot, snapshot.CurrentSeason.Year - 1);
@@ -320,10 +350,25 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             offers.AddRange(OffseasonModel.MarketOffers(team, freeAgents, context, direction, asOf, round, MarketOffersPerTeam));
         }
 
-        return DomainOperationResult<IReadOnlyList<MarketSigningPlan>>.Success(OffseasonModel
-            .ResolveRound(offers, playersById, records, asOf)
-            .Select(accepted => new MarketSigningPlan(accepted.Bid.Offer, accepted.Bid.Rationale, accepted.Choice))
-            .ToList());
+        var plans = new List<MarketSigningPlan>();
+        foreach (var (bid, choice) in OffseasonModel.ResolveRound(offers, playersById, records, asOf))
+        {
+            // A restricted free agent's own team may match the offer he took elsewhere.
+            var player = playersById[bid.Offer.PlayerId];
+            if (restricted is not null && restricted.TryGetValue(player.Id, out var incumbentId) && incumbentId != bid.Offer.TeamId &&
+                snapshot.Teams.FirstOrDefault(team => team.Id == incumbentId) is { } incumbent &&
+                OffseasonModel.MatchesOfferSheet(incumbent, context.RosterOf(incumbent), player, bid.Offer, snapshot.Contracts, snapshot.CurrentSeason, ruleset.CapThresholds, asOf) &&
+                Offer.Create(new OfferId($"MATCH-{round}-{incumbentId.Value}-{player.Id.Value}"), incumbentId, player.Id, bid.Offer.Terms) is { IsSuccess: true } matched)
+            {
+                plans.Add(new MarketSigningPlan(matched.Value, bid.Rationale, new RuleFinding("ai_offseason.offer_sheet_matched",
+                    $"{incumbent.Name} matches the offer {player.FullName} accepted from another team and keeps its restricted free agent.", incumbentId)));
+                continue;
+            }
+
+            plans.Add(new MarketSigningPlan(bid.Offer, bid.Rationale, choice));
+        }
+
+        return DomainOperationResult<IReadOnlyList<MarketSigningPlan>>.Success(plans);
     }
 
     public DomainOperationResult<IReadOnlyList<OptionPlan>> PlanOptionDecisions(LeagueSnapshot snapshot)
@@ -343,7 +388,7 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         {
             var roster = team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
             plans.AddRange(OffseasonModel
-                .OptionDecisions(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.NegotiationRules, ruleset.CapThresholds, asOf)
+                .OptionDecisions(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.NegotiationRules, ruleset.CapThresholds, asOf, LeagueSalaryScale.For(snapshot))
                 .Select(decision => new OptionPlan(decision.ContractId, decision.Season, decision.Exercise, decision.Rationale)));
         }
 
@@ -368,7 +413,7 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         {
             var roster = team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
             var direction = DirectionOf(snapshot, team, playersById, snapshot.CurrentSeason.Year, asOf, ruleset);
-            var decision = BuyoutModel.Decide(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.NegotiationRules, ruleset.CapThresholds, ruleset.BuyoutRules, direction, asOf);
+            var decision = BuyoutModel.Decide(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.NegotiationRules, ruleset.CapThresholds, ruleset.BuyoutRules, direction, asOf, LeagueSalaryScale.For(snapshot));
             if (decision is not null)
             {
                 plans.Add(new BuyoutPlan(decision.TeamId, decision.PlayerId, decision.ContractId, decision.RetainedPercent, decision.Rationale));

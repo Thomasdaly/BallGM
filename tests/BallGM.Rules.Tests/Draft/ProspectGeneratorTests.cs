@@ -24,8 +24,12 @@ public sealed class ProspectGeneratorTests
         Assert.All(result.Value.Prospects, prospect =>
         {
             Assert.InRange(prospect.TrueRating.Overall, 30, 85);
-            Assert.Equal(2030 - 19, prospect.BirthDate.Year);
+
+            // The configured age is the youngest a prospect enters at; a class spans up to four years older.
+            Assert.InRange(2030 - prospect.BirthDate.Year, 19, 23);
         });
+        Assert.Contains(result.Value.Prospects, prospect => prospect.BirthDate.Year == 2030 - 19);
+        Assert.Contains(result.Value.Prospects, prospect => prospect.BirthDate.Year < 2030 - 20);
     }
 
     [Fact]

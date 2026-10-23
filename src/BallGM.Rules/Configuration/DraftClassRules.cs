@@ -42,7 +42,7 @@ public sealed record DraftClassRules
     /// <summary>The highest true <see cref="PlayerRating.Overall"/> a generated prospect may carry.</summary>
     public int MaximumRating { get; }
 
-    /// <summary>The age, in completed years, every generated prospect enters the draft at.</summary>
+    /// <summary>The youngest age, in completed years, a generated prospect enters the draft at; each is drawn up to four years older.</summary>
     public int ProspectAgeYears { get; }
 
     public static DomainOperationResult<DraftClassRules> Create(

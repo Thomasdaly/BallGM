@@ -94,7 +94,11 @@ public sealed record LeagueRuleset
     /// Version 15 added the optional rookie scale: a first-round pick's salary as a share of the cap by
     /// selection, the seasons it covers and how many are team options, and a second-round pick's term.
     /// </remarks>
-    public const int CurrentSchemaVersion = 15;
+    /// <remarks>
+    /// Version 16 added the optional incumbent-rights section: the seasons with a team that let it sign its
+    /// own free agent over the cap, and restricted free agency (who is restricted, and the qualifying offer).
+    /// </remarks>
+    public const int CurrentSchemaVersion = 16;
 
     public LeagueRuleset(
         int schemaVersion,
@@ -118,7 +122,8 @@ public sealed record LeagueRuleset
         GameRules? gameRules = null,
         LeaderQualifiers? leaderQualifiers = null,
         BuyoutRules? buyoutRules = null,
-        RookieScaleRules? rookieScaleRules = null)
+        RookieScaleRules? rookieScaleRules = null,
+        IncumbentRightsRules? incumbentRightsRules = null)
     {
         if (schemaVersion <= 0)
         {
@@ -163,6 +168,7 @@ public sealed record LeagueRuleset
         LeaderQualifiers = leaderQualifiers ?? LeaderQualifiers.Default;
         BuyoutRules = buyoutRules ?? BuyoutRules.None;
         RookieScaleRules = rookieScaleRules ?? RookieScaleRules.None;
+        IncumbentRightsRules = incumbentRightsRules ?? IncumbentRightsRules.None;
     }
 
     public int SchemaVersion { get; }
@@ -234,4 +240,7 @@ public sealed record LeagueRuleset
 
     /// <summary>How a drafted player's first contract is written (schema v15), or <see cref="Configuration.RookieScaleRules.None"/>.</summary>
     public RookieScaleRules RookieScaleRules { get; }
+
+    /// <summary>Incumbent rights and restricted free agency (schema v16), or <see cref="Configuration.IncumbentRightsRules.None"/>.</summary>
+    public IncumbentRightsRules IncumbentRightsRules { get; }
 }

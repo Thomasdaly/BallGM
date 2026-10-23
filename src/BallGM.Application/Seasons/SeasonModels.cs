@@ -265,6 +265,9 @@ public sealed record SeasonConclusionSummary(
     /// <summary>How many expiring players their own teams re-signed before the season was concluded.</summary>
     public int PlayersReSigned { get; init; }
 
+    /// <summary>How many restricted players were tendered qualifying offers.</summary>
+    public int QualifyingOffersTendered { get; init; }
+
     /// <summary>How many players their teams bought out this summer.</summary>
     public int PlayersBoughtOut { get; init; }
 

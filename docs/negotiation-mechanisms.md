@@ -90,7 +90,7 @@ three and names the rest.
 | **Minimum-salary signing** | Always available regardless of payroll, at the compensation floor | **Built (M6a)** | `SigningRouteTable` |
 | **Standard over-cap allowance** | One generically named fixed-size allowance usable above the soft cap; may be split across players; unavailable above a configured threshold | **Built (M6a)** | `NegotiationRules` + `SigningRouteTable` |
 | **Contract extension** | A team re-signs its own player in the final season of his contract, starting when the current deal ends; he accepts at or above the reservation he would apply in free agency, and a refusal is surfaced as an alert | **Built** | `ContractExtension` (Rules) + `ISigningEngine.AssessExtension`/`ExecuteExtension` + `LeagueSession.OfferExtension` |
-| **Incumbent retention allowance** | Re-sign your own player above the cap, up to the compensation ceiling, if they have accrued enough continuous service with you | M9 | Ruleset field + Rules service |
+| **Incumbent retention allowance** | Re-sign your own player above the cap, up to the compensation ceiling, if they have accrued enough continuous service with you | **Built (ruleset v16)** | `IncumbentRightsRules.MinimumSeasonsWithTeam` + `SigningRouteKind.IncumbentRights`; `SigningContext.SeasonsWithTeam` counts consecutive seasons ending last season on contracts that ran their course (a release forfeits the run) |
 | **Retention tiers** | Partial versions of the above for shorter service — typically a percentage of the ceiling, or a multiple of prior salary | M9 | Ruleset field (tier table) |
 | **Reduced over-cap allowance** | A smaller allowance a team keeps once its payroll passes the standard allowance's cut-off, up to a cut-off of its own (a real league's taxpayer-level allowance) | **Built (ruleset v10)** | `CapMechanics.ReducedOverCapAllowance` + `SigningRouteKind.ReducedOverCapAllowance` |
 | **Post-room allowance** | Smaller allowance available to a team that has already spent its cap room | M9 | Ruleset field |
@@ -137,9 +137,9 @@ the top the way real markets do. The free-agency market and extensions share it.
 | **Roster-slot hold** | A placeholder charge for an unfilled roster spot, so a team cannot count phantom room | **Built (M6a)** | `CapChargeKind.RosterSlotHold` + `RosterSlotHoldProjection` (Rules) |
 | **Pending-departure hold** | A charge for your own expiring player while you still hold retention rights over them | M9 | Domain — with retention allowance |
 | **Releasing a hold** | Giving up retention rights to clear the hold and gain room | M9 | Rules service |
-| **Retention offer** | A standing offer to your own expiring player that makes them contestable rather than free | M9 | Domain — `Negotiation` variant |
-| **Matching right** | Incumbent's right to match a rival's signed offer and keep the player | M9 | Rules service + `Negotiation` state |
-| **Competing offer sheet** | The rival offer a matching right is exercised against | M9 | Domain |
+| **Retention offer** | A standing offer to your own expiring player that makes them contestable rather than free | **Built (ruleset v16)** as the qualifying offer: a player whose expiring contract started within `RestrictedServiceSeasons` of service is tendered `QualifyingOfferPercent` of his last salary (`OffseasonModel.QualifyingOffers`), and signs it if no one else does | `IncumbentRightsRules` + `LeagueSession.Offseason` |
+| **Matching right** | Incumbent's right to match a rival's signed offer and keep the player | **Built (AI market, ruleset v16)** — the human team's matching decision in the client is not built yet | `OffseasonModel.MatchesOfferSheet` + `RulesFrontOfficeAdvisor.PlanMarketRound` |
+| **Competing offer sheet** | The rival offer a matching right is exercised against | **Built (AI market)** — the offer the restricted player accepted in a market round is the sheet; matching signs the same terms with his own team | `RulesFrontOfficeAdvisor.PlanMarketRound` |
 | **Agreement moratorium** | A window where terms are agreed but not signable, so the market resolves as a batch | **Built (M6b)** — configured in 6a, consumed in 6b | `NegotiationRules.MarketResolution` + `FreeAgencyMarketResolver` |
 | **Prior-salary arbitrage rules** | Adjustments preventing a just-signed contract being used as matching salary | Declined | — |
 

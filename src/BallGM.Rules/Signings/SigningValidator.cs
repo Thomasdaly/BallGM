@@ -162,7 +162,8 @@ public sealed class SigningValidator
             allowanceUsed.Committed,
             allowanceUsed.Signings,
             context.CapMechanics,
-            reducedUsed.Committed);
+            reducedUsed.Committed,
+            context.HoldsIncumbentRights);
 
         if (!routes.Any(route => route.Permits))
         {
@@ -327,6 +328,7 @@ public sealed class SigningValidator
         SigningRouteKind.CapRoom => "Cap room",
         SigningRouteKind.MinimumSalary => "Minimum salary",
         SigningRouteKind.StandardOverCapAllowance => "The standard over-cap allowance",
+        SigningRouteKind.IncumbentRights => "Incumbent rights",
         _ => kind.ToString(),
     };
 

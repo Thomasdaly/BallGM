@@ -10,8 +10,8 @@ namespace BallGM.Rules.Draft;
 
 /// <summary>
 /// Builds one season's <see cref="DraftClass"/> from <see cref="DraftClassRules"/> rather than from
-/// hardcoded content — the size of the class, the spread of true rating it draws from, and the age
-/// every prospect enters at are all ruleset data, the same pattern <c>ScheduleGenerator</c> already
+/// hardcoded content — the size of the class, the spread of true rating it draws from, and the youngest
+/// age a prospect enters at (each is drawn up to four years older) are all ruleset data, the same pattern <c>ScheduleGenerator</c> already
 /// follows for the regular season. Deterministic: the same rules and the same <see cref="IRandomSource"/>
 /// state produce the same class, on every platform and every run.
 /// <para>
@@ -49,15 +49,17 @@ public static class ProspectGenerator
                 "This league's ruleset does not configure draft class generation, so no class can be generated."));
         }
 
-        var birthDate = new DateOnly(draftSeason.Year - rules.ProspectAgeYears, 7, 1);
         var prospects = new List<Prospect>(rules.ClassSize);
         var positions = Enum.GetValues<Position>();
 
         for (var index = 0; index < rules.ClassSize; index++)
         {
             var position = positions[index % positions.Length];
-            var talent = GenerateTalent(rules, random);
-            var rating = RatingProfileGenerator.Generate(talent, position, rules.ProspectAgeYears, rules.MinimumRating, rules.MaximumRating, random);
+            var offset = AgeOffset(random);
+            var talent = Math.Min(rules.MaximumRating, GenerateTalent(rules, random) + (offset * PolishPerYearOlder));
+            var age = rules.ProspectAgeYears + offset;
+            var birthDate = new DateOnly(draftSeason.Year - age, 7, 1);
+            var rating = RatingProfileGenerator.Generate(talent, position, age, rules.MinimumRating, rules.MaximumRating, random);
             var name = ProspectNameBank.NextName(random);
 
             var prospectResult = Prospect.Create(
@@ -76,6 +78,31 @@ public static class ProspectGenerator
         }
 
         return DraftClass.Create(id, draftSeason, prospects);
+    }
+
+    /// <summary>
+    /// Years older than the youngest entry age, drawn: a real class is not all teenagers — roughly three
+    /// in ten enter at the youngest age, a quarter a year later, then a fifth, a seventh, and one in ten
+    /// four years older (the four-year college player). An older prospect is generated at his own age,
+    /// so his ceiling sits closer to what he already is: more ready, less upside.
+    /// </summary>
+    /// <summary>
+    /// Rating points of polish an older prospect carries per year over the youngest: four years of college
+    /// basketball make a more finished player now, while his age keeps his ceiling nearer to it.
+    /// </summary>
+    private const int PolishPerYearOlder = 2;
+
+    private static int AgeOffset(IRandomSource random)
+    {
+        var draw = random.NextInt32(0, 100);
+        return draw switch
+        {
+            < 30 => 0,
+            < 55 => 1,
+            < 75 => 2,
+            < 90 => 3,
+            _ => 4,
+        };
     }
 
     private static int GenerateTalent(DraftClassRules rules, IRandomSource random)

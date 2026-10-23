@@ -73,7 +73,7 @@ public sealed class RulesSigningEngine : ISigningEngine
 
         var context = contextResult.Value;
         return DomainOperationResult<ExtensionAssessment>.Success(ContractExtension.Assess(
-            offer, context.Team, context.Player, context.Contracts, context.CurrentSeason, context.NegotiationRules, context.CapThresholds));
+            offer, context.Team, context.Player, context.Contracts, context.CurrentSeason, context.NegotiationRules, context.CapThresholds, LeagueSalaryScale.For(snapshot)));
     }
 
     public DomainOperationResult<ExtensionResult> ExecuteExtension(Offer offer, LeagueSnapshot snapshot)
@@ -279,7 +279,8 @@ public sealed class RulesSigningEngine : ISigningEngine
             postseasonResult.Value,
             day,
             capMechanicsResult.Value,
-            buyoutsResult.Value));
+            buyoutsResult.Value,
+            configuration.ToIncumbentRights().IsSuccess ? configuration.ToIncumbentRights().Value : null));
     }
 
     /// <summary>

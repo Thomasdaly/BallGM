@@ -112,7 +112,8 @@ public sealed class LeagueRulesetSerializer
             ToEnvelope(ruleset.GameRules),
             ToEnvelope(ruleset.LeaderQualifiers),
             ToEnvelope(ruleset.BuyoutRules),
-            ToEnvelope(ruleset.RookieScaleRules));
+            ToEnvelope(ruleset.RookieScaleRules),
+            ToEnvelope(ruleset.IncumbentRightsRules));
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -321,6 +322,12 @@ public sealed class LeagueRulesetSerializer
                 return DomainOperationResult<LeagueRuleset>.Failure(rookieScaleResult.Errors.ToArray());
             }
 
+            var incumbentResult = BuildIncumbentRights(envelope.IncumbentRights);
+            if (incumbentResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(incumbentResult.Errors.ToArray());
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
@@ -343,7 +350,8 @@ public sealed class LeagueRulesetSerializer
                 gameRulesResult.Value,
                 leadersResult.Value,
                 buyoutsResult.Value,
-                rookieScaleResult.Value);
+                rookieScaleResult.Value,
+                incumbentResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
@@ -575,6 +583,17 @@ public sealed class LeagueRulesetSerializer
         rules == GameRules.Default ? null : new GameRulesEnvelope(rules.PersonalFoulLimit, rules.BonusTeamFoulsPerPeriod, rules.BonusTeamFoulsPerOvertime);
 
     /// <summary>The leaderboard qualifiers a file states; an absent section, or an absent figure, is the default.</summary>
+    /// <summary>Incumbent rights, absent for a league where an expiring player is simply a free agent.</summary>
+    internal static DomainOperationResult<IncumbentRightsRules> BuildIncumbentRights(IncumbentRightsEnvelope? envelope) =>
+        envelope is null
+            ? DomainOperationResult<IncumbentRightsRules>.Success(IncumbentRightsRules.None)
+            : IncumbentRightsRules.Create(envelope.MinimumSeasonsWithTeam, envelope.RestrictedServiceSeasons ?? 0, envelope.QualifyingOfferPercent ?? 0);
+
+    internal static IncumbentRightsEnvelope? ToEnvelope(IncumbentRightsRules rules) =>
+        rules.IsConfigured
+            ? new IncumbentRightsEnvelope(rules.MinimumSeasonsWithTeam, rules.RestrictedServiceSeasons, rules.QualifyingOfferPercent)
+            : null;
+
     /// <summary>The rookie scale, absent for a league whose draftees sign one-season minimum deals.</summary>
     internal static DomainOperationResult<RookieScaleRules> BuildRookieScale(RookieScaleEnvelope? envelope)
     {

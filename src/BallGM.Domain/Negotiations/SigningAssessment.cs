@@ -39,6 +39,9 @@ public enum SigningRouteKind
 
     /// <summary>A drafted player's first contract, on the league's rookie scale: the slot sets the pay, not the cap.</summary>
     RookieScale = 5,
+
+    /// <summary>His own team re-signing a free agent it held long enough, over the cap up to the ceiling.</summary>
+    IncumbentRights = 6,
 }
 
 /// <summary>
