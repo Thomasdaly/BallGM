@@ -110,6 +110,9 @@
                     <DataTemplate DataType="vm:LeadersViewModel">
                       <views:LeadersView />
                     </DataTemplate>
+                    <DataTemplate DataType="vm:HistoryViewModel">
+                      <views:HistoryView />
+                    </DataTemplate>
                     <DataTemplate DataType="vm:ContractsViewModel">
                       <views:ContractsView />
                     </DataTemplate>

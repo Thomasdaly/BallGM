@@ -50,14 +50,15 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         Season = new SeasonViewModel(session, ApplyLeagueChange);
         FrontOffice = new FrontOfficeViewModel(session, ApplyLeagueChange);
         Leaders = new LeadersViewModel(() => session.LeagueStats(SeasonPhase.RegularSeason), session.PlayerProfile);
+        History = new HistoryViewModel(session.SeasonHistory);
         Contracts = new ContractsViewModel(session, () => ApplyLeagueChange(session.Overview() is { IsSuccess: true } refreshed ? refreshed.Value : overview));
 
-        Sections = [_roster.Title, _capSheet.Title, Contracts.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, Season.Title, Leaders.Title, FrontOffice.Title];
+        Sections = [_roster.Title, _capSheet.Title, Contracts.Title, _pickBoard.Title, Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, Season.Title, Leaders.Title, History.Title, FrontOffice.Title];
         NavGroups =
         [
             new NavGroup("Squad", [_roster.Title, _capSheet.Title, Contracts.Title], () => SelectedSection, section => SelectedSection = section),
             new NavGroup("Market", [Trade.Title, FreeAgency.Title, FreeAgencyBoard.Title, _pickBoard.Title], () => SelectedSection, section => SelectedSection = section),
-            new NavGroup("League", [Season.Title, Leaders.Title, FrontOffice.Title], () => SelectedSection, section => SelectedSection = section),
+            new NavGroup("League", [Season.Title, Leaders.Title, History.Title, FrontOffice.Title], () => SelectedSection, section => SelectedSection = section),
         ];
         Season.PropertyChanged += (_, args) =>
         {
@@ -159,6 +160,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>The league's leaderboards and player table. Re-read whenever it is opened.</summary>
     public LeadersViewModel? Leaders { get; }
+
+    public HistoryViewModel? History { get; }
 
     /// <summary>Payroll outlook, upcoming free agents, and re-signing. Held for the run: refusals are session state.</summary>
     public ContractsViewModel? Contracts { get; }
@@ -287,6 +290,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
                 _ when Season is not null && value == Season.Title => Season,
                 _ when FrontOffice is not null && value == FrontOffice.Title => FrontOffice,
                 _ when Leaders is not null && value == Leaders.Title => Leaders,
+                _ when History is not null && value == History.Title => History,
                 _ when Contracts is not null && value == Contracts.Title => Contracts,
                 _ => _roster,
             };
@@ -310,6 +314,11 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             if (CurrentScreen is LeadersViewModel leaders)
             {
                 leaders.Refresh();
+            }
+
+            if (CurrentScreen is HistoryViewModel history)
+            {
+                history.Refresh();
             }
 
             RaisePropertyChanged(nameof(AlertLine));

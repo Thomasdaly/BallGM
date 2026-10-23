@@ -78,14 +78,15 @@ default league behaves like a modern one.
 | F5 | Trades: multi-asset with picks, trade restrictions on new signings, acceptance margins, direction-aware valuation | Summer market done (§8): one trade a team, nobody flipped, both sides must gain; picks and in-season trades to come |
 | F6 | Franchise direction that persists (contend / retool / rebuild) with hysteresis, owner expectations if modelled, and AI behaviour that follows it | Two-season memory, ring-chasing veterans and star-weighted strength done (§9); owner expectations not modelled |
 | F7 | A multi-season audit: twenty chained seasons reporting scoring leaders, award winners and their roles, star movement per season, buyouts, retirements by age, rating drift and title concentration, with seeded tests on the headline rows | Done (§9): `LongSaveRealismTests`, `scratch/calib chain` |
-| F8 | Surfaces: awards and history screens, transaction feed, contract options and restricted free agency in the client | Season-end flow and review done (§10); history screen next |
+| F8 | Surfaces: awards and history screens, transaction feed, contract options and restricted free agency in the client | Season-end flow, review, History screen (S27) and tendencies on the profile done (§10) |
 
 ## 4. F2 as built
 
 - **Awards** (`SeasonAwardCalculator`, ruleset schema 13): each award states a kind and an eligibility
   floor (`minimumGamesPercent` of the season's games at `minimumMinutesPerGame`+ minutes). Most
-  valuable: game score a game, a little less for missed games, plus 15 game-score hundredths per point
-  of win percentage above .500. Defensive: steals, blocks and a third of a defensive board a game,
+  valuable: game score a game, a little less for missed games, plus 30 game-score hundredths per point
+  of win percentage above .500 (a .700 team's best player gains six points of game score: MVPs come
+  from winning teams). Defensive: steals, blocks and a third of a defensive board a game,
   scaled by minutes, plus team points allowed against the league. Bench: game score, **only for players
   who came off the bench in more games than they started**. Rookie: first season of service. Most
   improved: points + rebounds + assists a game against the previous season (25%+ of a season played).
@@ -239,3 +240,8 @@ with the figures behind it, the first all-league and all-defensive teams, what t
 (re-signings, options, buyouts, picks signed, free-agent signings, trades, retirements) and its headlines
 — until Continue starts the next season. Locked by `MultiSeasonFlowTests` (headless) and
 `SeasonReviewTests` (renders at the three sizes, no binding errors).
+
+The **History** screen (League → History, S27) lists every concluded season with its champion and,
+for the selected season, every award with the figures behind it and the all-league and all-defensive
+teams by team. The player profile's Ratings tab now also shows the 2K-style **tendencies** the engine
+plays (touches, shot, drive, post-up, shot location, pass, crash the glass, gamble, block, foul).

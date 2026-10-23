@@ -68,7 +68,7 @@ public static class SeasonAwardCalculator
     private const string WinnerCode = "award.winner";
 
     /// <summary>Game-score points (in hundredths) a team's win percentage above .500 is worth, per percentage point.</summary>
-    public const int TeamSuccessWeight = 15;
+    public const int TeamSuccessWeight = 30;
 
     /// <summary>The share of a most-valuable score kept regardless of games missed, in per cent; the rest scales with games played.</summary>
     public const int AvailabilityFloorPercent = 85;

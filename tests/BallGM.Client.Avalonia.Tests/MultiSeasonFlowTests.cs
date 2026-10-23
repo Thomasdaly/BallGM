@@ -31,6 +31,13 @@ public sealed class MultiSeasonFlowTests
         Assert.Contains("re-signed", review.Summer, StringComparison.Ordinal);
         Assert.Equal("START SEASON", shell.ContinueLabel);
 
+        shell.SelectedSection = "History";
+        var history = Assert.IsType<HistoryViewModel>(shell.CurrentScreen);
+        var concluded = Assert.Single(history.Seasons);
+        Assert.Equal(concluded, history.Selected);
+        Assert.Contains(history.Awards, award => award.AwardName == "Most Valuable Player");
+        Assert.Contains(history.Teams, line => line.StartsWith("All-League first team: ", StringComparison.Ordinal));
+
         shell.ContinueCommand.Execute(null);
 
         Assert.True(season.HasSeason);

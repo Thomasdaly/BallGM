@@ -1,0 +1,62 @@
+<UserControl
+  x:Class="BallGM.Client.Avalonia.Views.HistoryView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="clr-namespace:BallGM.Client.Avalonia.ViewModels"
+  xmlns:conv="clr-namespace:BallGM.Client.Avalonia.Converters"
+  xmlns:ctl="clr-namespace:BallGM.Client.Avalonia.Controls"
+  x:DataType="vm:HistoryViewModel">
+  <!-- S27 Awards and history, template T4 (list-detail): concluded seasons on the left, the selected season's awards on the right. -->
+  <Panel>
+    <ctl:EmptyState IconKey="Icon.History" Headline="No history yet" Message="Seasons appear here as they are concluded: play one to its end and conclude it from Continue." IsVisible="{Binding !HasSeasons}" />
+    <Grid ColumnDefinitions="280,*" ColumnSpacing="{StaticResource Space16}" IsVisible="{Binding HasSeasons}">
+      <ctl:Tile>
+        <ListBox ItemsSource="{Binding Seasons}" SelectedItem="{Binding Selected}" AutomationProperties.Name="Concluded seasons">
+          <ListBox.ItemTemplate>
+            <DataTemplate x:DataType="vm:HistorySeasonRow">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding Season}" Classes="body-strong" />
+                <TextBlock Text="{Binding Champion}" Classes="caption" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+      </ctl:Tile>
+      <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+        <ctl:Tile>
+          <StackPanel Spacing="{StaticResource Space12}">
+            <TextBlock Classes="h3" Text="{Binding SelectedTitle, Converter={x:Static conv:UpperCaseConverter.Instance}}" />
+            <TextBlock Classes="body-strong" Text="{Binding SelectedChampion}" />
+            <TextBlock Text="No awards were handed out this season." Classes="body secondary" IsVisible="{Binding !HasAwards}" />
+            <ItemsControl ItemsSource="{Binding Awards}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Spacing="{StaticResource Space8}" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:SeasonReviewAward">
+                  <StackPanel Spacing="2">
+                    <StackPanel Orientation="Horizontal" Spacing="{StaticResource Space8}">
+                      <TextBlock Text="{Binding AwardName}" Classes="label-caps" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding PlayerName}" Classes="body-strong" />
+                      <TextBlock Text="{Binding TeamName}" Classes="body secondary" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Explanation}" Classes="caption wrap" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <ItemsControl ItemsSource="{Binding Teams}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <TextBlock Text="{Binding}" Classes="body wrap" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ctl:Tile>
+      </ScrollViewer>
+    </Grid>
+  </Panel>
+</UserControl>

@@ -31,6 +31,19 @@ public sealed class SeasonReviewTests
         }
 
         Assert.Empty(sink.Messages);
+
+        // Leaving the calendar raises its known unload warnings (FOLLOWUPS, the S18 render-matrix
+        // entries); only the history screen's own render is checked here.
+        shell.Navigate("History");
+        ShellDriver.Settle();
+        sink.Clear();
+        foreach (var (width, height) in ScreenCapture.BaselineSizes)
+        {
+            shell.Resize(width, height);
+            ScreenCapture.Save(shell, RepoPaths.Screens("after"), ScreenCapture.FileName("S27", "history", width, height, 100));
+        }
+
+        Assert.Empty(sink.Messages);
         shell.Close();
     }
 }
