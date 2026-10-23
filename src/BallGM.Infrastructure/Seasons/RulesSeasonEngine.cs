@@ -346,6 +346,11 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
 
         var playersById = snapshot.Players.ToDictionary(player => player.Id, player => player);
 
+        // A team that tanked last season plays its young players this one (DevelopmentMinutesPolicy).
+        var lastSeason = snapshot.League.History.FirstOrDefault(entry => entry.Season.Year == snapshot.CurrentSeason.Year - 1)?.FinalStandings
+            .ToDictionary(row => row.TeamId, row => row.Record);
+        var openingDay = new DateOnly(snapshot.CurrentSeason.Year, 10, 1);
+
         var teams = snapshot.Teams
             .Select(team => new SeasonTeam(
                 team.Id,
@@ -354,7 +359,11 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
                 team.PlayerIds
                     .Select(playerId => playersById.GetValueOrDefault(playerId))
                     .Where(player => player is not null && !player.IsInjured)
-                    .Select(player => new AvailablePlayer(player!.Id, player.Position, player.Rating))
+                    .Select(player => new AvailablePlayer(
+                        player!.Id,
+                        player.Position,
+                        player.Rating,
+                        DevelopmentMinutesPolicy.PriorityFor(lastSeason?.GetValueOrDefault(team.Id), player.AgeOn(openingDay))))
                     .ToList()))
             .ToList();
 

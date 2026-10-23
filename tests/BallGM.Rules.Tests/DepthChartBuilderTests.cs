@@ -162,6 +162,23 @@ public sealed class DepthChartBuilderTests
         Assert.True(centre[0].IsStarter);
     }
 
+    [Fact]
+    public void Rotation_ATankingTeamStartsItsYoungPlayerOverASlightlyBetterVeteran()
+    {
+        var fillers = Enum.GetValues<Position>()
+            .Where(position => position != Position.Center)
+            .Select(position => new AvailablePlayer(new PlayerId($"FILLER-{position}"), position, new PlayerRating(60)))
+            .ToList();
+        var veteran = new AvailablePlayer(new PlayerId("VETERAN"), Position.Center, new PlayerRating(70));
+        var youngster = new AvailablePlayer(new PlayerId("YOUNGSTER"), Position.Center, new PlayerRating(66));
+
+        var winning = Build([.. fillers, veteran, youngster], rosterCount: 6);
+        var tanking = Build([.. fillers, veteran with { MinutesPriority = -6 }, youngster with { MinutesPriority = 8 }], rosterCount: 6);
+
+        Assert.Equal("VETERAN", winning.Chart.At(Position.Center)[0].PlayerId.Value);
+        Assert.Equal("YOUNGSTER", tanking.Chart.At(Position.Center)[0].PlayerId.Value);
+    }
+
     private DepthChartBuild Build(IReadOnlyList<AvailablePlayer> players, int rosterCount)
     {
         var result = _builder.Build(Team, players, Limits, rosterCount);

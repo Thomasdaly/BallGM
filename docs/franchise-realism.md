@@ -322,8 +322,15 @@ quietly capped at one a summer. The session now executes one plan and plans agai
 
 Measured on the calibration league: 2–8 veteran sales a summer (real leagues make several such trades
 between the draft and the deadline), top-30 movement 0–3 a summer, and win spread up from ~0.10 to
-0.09–0.125 — better, still short of the real league's ~0.15. The rest of the gap is tanking itself:
-a rebuilding team still plays its best players their full minutes. That is the next lever.
+0.09–0.125 — better, still short of the real league's ~0.15.
+
+**Tanking (`DevelopmentMinutesPolicy`).** A team that won under 40% last season plays for the future:
+its players 23 and under carry eight rating points of rotation priority, its 30-and-overs six fewer
+(`AvailablePlayer.MinutesPriority`, read by `DepthChartBuilder` for who starts and the bench order — never
+for how well anyone plays). No record, no change, so a league's first season and every frozen
+calibration (single seasons from a fresh league) are untouched. Win spread over twelve seasons now
+averages ~0.115 (0.09–0.136), worst teams 15–28 wins. The remaining gap to ~0.15 is talent concentration:
+the market still spreads good players evenly; recorded as open.
 
 The season boundary order is now: options → re-signing window → qualifying offers → conclude → career
 history → age and retire → draft (rookie scale, the pick window rolls forward) → buyouts → salary dumps →

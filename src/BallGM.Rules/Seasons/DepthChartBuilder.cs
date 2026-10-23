@@ -11,7 +11,13 @@ namespace BallGM.Rules.Seasons;
 /// rating, because the match engine reads a player's shape (passing, quickness, size) as well as
 /// their level. The rotation itself is still built from <see cref="Overall"/>.
 /// </summary>
-public sealed record AvailablePlayer(PlayerId PlayerId, Position Position, PlayerRating Rating)
+/// <param name="MinutesPriority">
+/// Rating points a coach adds (or takes away) when choosing who plays — zero for a team playing to win;
+/// a tanking team's young players carry a positive one and its veterans a negative one
+/// (<c>BallGM.Rules.AI.DevelopmentMinutesPolicy</c>). It moves who starts and in what order the bench
+/// plays; it never changes how well anyone plays.
+/// </param>
+public sealed record AvailablePlayer(PlayerId PlayerId, Position Position, PlayerRating Rating, int MinutesPriority = 0)
 {
     public int Overall => Rating.Overall;
 }
@@ -63,7 +69,7 @@ public sealed class DepthChartBuilder
         // round. Without it the rotation would depend on enumeration order and two runs of a season
         // could field different fives.
         var pool = available
-            .OrderByDescending(player => player.Overall)
+            .OrderByDescending(player => player.Overall + player.MinutesPriority)
             .ThenBy(player => player.PlayerId.Value, StringComparer.Ordinal)
             .ToList();
 
@@ -232,7 +238,7 @@ public sealed class DepthChartBuilder
     /// </summary>
     private static int FitAt(AvailablePlayer player, Position position)
     {
-        var rating = PositionRatings.For(player.Rating, position);
+        var rating = PositionRatings.For(player.Rating, position) + player.MinutesPriority;
         var playable = player.Rating.Positions.TryGetValue(position, out var familiarity)
             ? familiarity > PositionFamiliarity.Awkward
             : player.Position == position;
