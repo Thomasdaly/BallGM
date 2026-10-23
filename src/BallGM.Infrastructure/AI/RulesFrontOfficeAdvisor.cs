@@ -276,6 +276,40 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         return DomainOperationResult<IReadOnlyList<ReSigningPlan>>.Success(plans);
     }
 
+    public DomainOperationResult<IReadOnlyList<VeteranSalePlan>> PlanVeteranSales(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool starAlreadySold = false)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var rulesetResult = BuildRuleset(snapshot);
+        if (rulesetResult.IsFailure)
+        {
+            return DomainOperationResult<IReadOnlyList<VeteranSalePlan>>.Failure(rulesetResult.Errors.ToArray());
+        }
+
+        var ruleset = rulesetResult.Value;
+        var context = new TradeContext(
+            snapshot.CurrentSeason,
+            snapshot.Teams,
+            snapshot.Players,
+            snapshot.Contracts,
+            snapshot.DraftAssets,
+            snapshot.Ledger,
+            ruleset.RosterLimits,
+            ruleset.CapThresholds,
+            ruleset.TradeRules,
+            ruleset.DraftRules,
+            ruleset.CapMechanics);
+        var asOf = new DateOnly(snapshot.CurrentSeason.Year, 7, 1);
+        var playersById = snapshot.Players.ToDictionary(player => player.Id);
+        var directions = snapshot.Teams.ToDictionary(
+            team => team.Id,
+            team => DirectionOf(snapshot, team, playersById, snapshot.CurrentSeason.Year, asOf, ruleset));
+
+        return DomainOperationResult<IReadOnlyList<VeteranSalePlan>>.Success(VeteranSaleModel
+            .Find(context, directions, ThisSeasonRecords(snapshot, snapshot.CurrentSeason.Year - 1), asOf, excludedTeams, starAlreadySold)
+            .Select(sale => new VeteranSalePlan(sale.Proposal, sale.SellerTeamId, sale.BuyerTeamId, sale.VeteranId, sale.IsStar, sale.Rationale))
+            .ToList());
+    }
+
     public DomainOperationResult<IReadOnlyList<SalaryDumpPlan>> PlanSalaryDumps(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);

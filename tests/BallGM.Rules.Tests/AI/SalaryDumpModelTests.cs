@@ -36,6 +36,17 @@ public sealed class SalaryDumpModelTests
     }
 
     [Fact]
+    public void AContractSignedThisSummerIsNotDumpedTheSameSummer()
+    {
+        var league = TradeTestLeague.Build(minimumRoster: 2, maximumRoster: 8)
+            .WithTeam("TAX", 30_000_000, 30_000_000, 20_000_000, 15_000_000, 10_000_000, 25_000_000)
+            .WithTeam("REB", 5_000_000, 5_000_000)
+            .WithTeam("CON", 5_000_000, 5_000_000);
+
+        Assert.Empty(SalaryDumpModel.Find(league.Context(), Directions(), SigningTestLeague.StandardRules(league.CapThresholds), scale: null));
+    }
+
+    [Fact]
     public void WithoutARebuildingTeam_NobodyTakesTheContract()
     {
         var league = League([30_000_000, 30_000_000, 20_000_000, 15_000_000, 10_000_000, 25_000_000]);
@@ -47,6 +58,7 @@ public sealed class SalaryDumpModelTests
 
     private static TradeTestLeague League(long[] taxpayer) => TradeTestLeague.Build(minimumRoster: 2, maximumRoster: 8)
         .WithTeam("TAX", taxpayer)
+        .WithContractsSignedEarlier("TAX", 1)
         .WithTeam("REB", 5_000_000, 5_000_000)
         .WithTeam("CON", 5_000_000, 5_000_000);
 

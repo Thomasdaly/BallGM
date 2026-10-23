@@ -301,3 +301,30 @@ twelve seasons.
 
 The season review lists qualifying offers and salary dumps in its summer line and promotes dumps and
 matched offer sheets to its headlines.
+
+## 13. F6 (second step): losing teams sell their veterans
+
+**Veteran sales (`VeteranSaleModel`).** A team that won under 45% last season and is not contending sends a
+veteran (28+) to a contender — one for whom he would be among its six best — for draft picks and the
+salary the buyer needs to send back (players outside its top five, biggest contracts first, at most three).
+The price is set by where the veteran ranks in the league: the top 5% two firsts, the top 12% a first and a
+second, the top 25% a first, the top 40% two seconds; below that a contender's picks are not spent on him.
+Guards against the carousel the competitor is known for: the league's 45 best players and each seller's
+own best are franchise players, sold only at 32 or older; at most one of the league's stars is sold a
+summer; and nobody signed this summer (a re-signing, an extension starting now, a free agent) is traded
+the same summer — a team does not keep a player only to move him, and real leagues bar it. The same
+just-signed rule now applies to salary dumps. Every sale is re-validated by the trade engine.
+
+**A bug this exposed.** Every planned trade carries the league state it was drawn against, so when a
+batch of plans was executed in turn, the second and later were refused as stale: dumps and sales were
+quietly capped at one a summer. The session now executes one plan and plans again
+(`ExecuteTradesOneAtATime`), with each pass's teams excluded from the next.
+
+Measured on the calibration league: 2–8 veteran sales a summer (real leagues make several such trades
+between the draft and the deadline), top-30 movement 0–3 a summer, and win spread up from ~0.10 to
+0.09–0.125 — better, still short of the real league's ~0.15. The rest of the gap is tanking itself:
+a rebuilding team still plays its best players their full minutes. That is the next lever.
+
+The season boundary order is now: options → re-signing window → qualifying offers → conclude → career
+history → age and retire → draft (rookie scale, the pick window rolls forward) → buyouts → salary dumps →
+market → qualifying offers signed → salary dumps (second pass) → veteran sales → summer trades → floor fill.

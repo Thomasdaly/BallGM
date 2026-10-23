@@ -118,7 +118,18 @@ public interface IFrontOfficeAdvisor
     /// </summary>
     /// <param name="excludedTeams">Teams already part of a dump this summer, on either side.</param>
     DomainOperationResult<IReadOnlyList<SalaryDumpPlan>> PlanSalaryDumps(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null);
+
+    /// <summary>
+    /// The veteran sales of a summer: losing teams out of contention sending good veterans to contenders
+    /// for picks and matching salary. Read-only; each plan is a trade the engine re-validates.
+    /// </summary>
+    /// <param name="excludedTeams">Teams already part of a sale this summer, on either side.</param>
+    /// <param name="starAlreadySold">Whether one of the league's stars has already been sold this summer (one a summer).</param>
+    DomainOperationResult<IReadOnlyList<VeteranSalePlan>> PlanVeteranSales(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool starAlreadySold = false);
 }
+
+/// <summary>A veteran sale: the trade, the seller and buyer, the veteran, and why.</summary>
+public sealed record VeteranSalePlan(BallGM.Domain.Trades.TradeProposal Proposal, TeamId SellerTeamId, TeamId BuyerTeamId, PlayerId VeteranId, bool IsStar, RuleFinding Rationale);
 
 /// <summary>A salary dump: the trade, the two teams, the player moved and why.</summary>
 public sealed record SalaryDumpPlan(BallGM.Domain.Trades.TradeProposal Proposal, TeamId FromTeamId, TeamId ToTeamId, PlayerId PlayerId, int PicksAttached, RuleFinding Rationale);

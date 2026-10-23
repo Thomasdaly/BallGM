@@ -151,6 +151,35 @@ internal sealed class TradeTestLeague
     }
 
     /// <summary>Marks one of a team's players as injured, so eligibility rules have a case to fire on.</summary>
+    /// <summary>Replaces one player's rating and birth date, keeping his identifier and contract.</summary>
+    public TradeTestLeague WithPlayer(string teamKey, int playerIndex, int overall, DateOnly birthDate)
+    {
+        var id = PlayerOf(teamKey, playerIndex);
+        var index = _players.FindIndex(player => player.Id == id);
+        _players[index] = Player.Create(id, _players[index].FullName, _players[index].Position, new PlayerRating(overall), birthDate, seasonsOfService: 8).Value;
+        return this;
+    }
+
+    /// <summary>Re-dates every contract of a team to have started <paramref name="seasonsAgo"/> seasons ago, at the same salary.</summary>
+    public TradeTestLeague WithContractsSignedEarlier(string teamKey, int seasonsAgo)
+    {
+        var teamId = _teams[teamKey].Id;
+        for (var index = 0; index < _contracts.Count; index++)
+        {
+            var contract = _contracts[index];
+            if (contract.TeamId != teamId)
+            {
+                continue;
+            }
+
+            var salary = contract.TermFor(CurrentSeason)!.Compensation;
+            _contracts[index] = Contract.Create(contract.Id, contract.TeamId, contract.PlayerId,
+                Enumerable.Range(CurrentSeason.Year - seasonsAgo, seasonsAgo + 1).Select(year => new ContractSeasonTerm(new Season(year), salary, salary))).Value;
+        }
+
+        return this;
+    }
+
     public TradeTestLeague WithInjury(string teamKey, int playerIndex, string description = "Sprained ankle")
     {
         var playerId = new PlayerId($"PLAYER-{teamKey}-{playerIndex}");

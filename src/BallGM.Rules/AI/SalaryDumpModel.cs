@@ -115,7 +115,7 @@ public static class SalaryDumpModel
             {
                 var contract = context.Contracts.FirstOrDefault(candidate =>
                     candidate.PlayerId == player.Id && candidate.TeamId == dumper.Id && !candidate.IsTerminated && candidate.TermFor(season) is not null);
-                if (contract is null)
+                if (contract is null || contract.FirstSeason.Year == season.Year)
                 {
                     continue;
                 }
@@ -259,7 +259,7 @@ public static class SalaryDumpModel
     /// apart — so a league that makes a franchise keep its pick in a round every so many drafts is
     /// never offered a set it would refuse.
     /// </summary>
-    private static IEnumerable<DraftPick> SpacedPicks(IEnumerable<DraftPick> latestFirst, int count, int interval)
+    internal static IEnumerable<DraftPick> SpacedPicks(IEnumerable<DraftPick> latestFirst, int count, int interval)
     {
         var chosen = new List<DraftPick>();
         foreach (var pick in latestFirst)

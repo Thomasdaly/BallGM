@@ -265,6 +265,9 @@ public sealed record SeasonConclusionSummary(
     /// <summary>How many expiring players their own teams re-signed before the season was concluded.</summary>
     public int PlayersReSigned { get; init; }
 
+    /// <summary>How many veterans losing teams sold to contenders for picks.</summary>
+    public int VeteranSales { get; init; }
+
     /// <summary>How many salary dumps (an overpaid contract and picks to a rebuilding team's room) went through.</summary>
     public int SalaryDumps { get; init; }
 

@@ -79,6 +79,84 @@ public sealed partial class LeagueSession
     }
 
     /// <summary>
+    /// The summer's veteran sales, after free agency: losing teams send good veterans to contenders for
+    /// picks and matching salary. Executed through the trade engine like any trade.
+    /// </summary>
+    private (int Executed, IReadOnlyList<RuleFinding> Notes) RunVeteranSales()
+    {
+        var soldTeams = new HashSet<TeamId>();
+        var starSold = false;
+        return ExecuteTradesOneAtATime(
+            () =>
+            {
+                var plans = _frontOfficeAdvisor.PlanVeteranSales(_snapshot!, soldTeams, starSold);
+                // The first plan is the one executed next; once a star's sale is planned first, the cap
+                // is spent whether or not it goes through, so no second star is ever planned behind it.
+                starSold |= plans.IsSuccess && plans.Value.Count > 0 && plans.Value[0].IsStar;
+                return Trades(plans, plan => (plan.Proposal, plan.SellerTeamId, plan.BuyerTeamId, plan.Rationale));
+            },
+            soldTeams,
+            "ai_trade.veteran_sale_failed",
+            "A planned veteran sale did not go through");
+    }
+
+    private static DomainOperationResult<List<(Domain.Trades.TradeProposal Proposal, TeamId First, TeamId Second, RuleFinding Rationale)>> Trades<TPlan>(
+        DomainOperationResult<IReadOnlyList<TPlan>> plans,
+        Func<TPlan, (Domain.Trades.TradeProposal, TeamId, TeamId, RuleFinding)> select) =>
+        plans.IsFailure
+            ? DomainOperationResult<List<(Domain.Trades.TradeProposal Proposal, TeamId First, TeamId Second, RuleFinding Rationale)>>.Failure(plans.Errors.ToArray())
+            : DomainOperationResult<List<(Domain.Trades.TradeProposal Proposal, TeamId First, TeamId Second, RuleFinding Rationale)>>.Success(plans.Value.Select(select).ToList());
+
+    /// <summary>
+    /// Executes the first planned trade, then plans again — every plan carries the league state it was
+    /// drawn against, so a second plan from the same batch would be refused as stale once the first has
+    /// changed the ledger. Stops when nothing is planned, or the first plan fails (noted).
+    /// </summary>
+    private (int Executed, IReadOnlyList<RuleFinding> Notes) ExecuteTradesOneAtATime(
+        Func<DomainOperationResult<List<(Domain.Trades.TradeProposal Proposal, TeamId First, TeamId Second, RuleFinding Rationale)>>> plan,
+        HashSet<TeamId> involved,
+        string failureCode,
+        string failureText)
+    {
+        if (_snapshot is null)
+        {
+            return (0, []);
+        }
+
+        var executed = 0;
+        var notes = new List<RuleFinding>();
+        while (true)
+        {
+            var plans = plan();
+            if (plans.IsFailure)
+            {
+                notes.AddRange(plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)));
+                break;
+            }
+
+            if (plans.Value.Count == 0)
+            {
+                break;
+            }
+
+            var (proposal, first, second, rationale) = plans.Value[0];
+            var result = _tradeEngine.Execute(proposal, _snapshot);
+            involved.Add(first);
+            involved.Add(second);
+            if (result.IsFailure)
+            {
+                notes.Add(new RuleFinding(failureCode, $"{failureText}: {string.Join("; ", result.Errors.Select(error => error.Message))}", first));
+                continue;
+            }
+
+            executed++;
+            notes.Add(rationale);
+        }
+
+        return (executed, notes);
+    }
+
+    /// <summary>
     /// The summer's salary dumps, before free agency: a taxpayer clears an overpaid contract into a
     /// rebuilding team's room, paying in picks. Each is executed through the trade engine (which
     /// re-validates it); one that no longer passes is skipped and noted. Run twice a summer — before the
@@ -86,39 +164,12 @@ public sealed partial class LeagueSession
     /// that sending a player out does not leave a team short — with <paramref name="dumpedTeams"/>
     /// keeping it to one dump a team.
     /// </summary>
-    private (int Executed, IReadOnlyList<RuleFinding> Notes) RunSalaryDumps(HashSet<TeamId> dumpedTeams)
-    {
-        if (_snapshot is null)
-        {
-            return (0, []);
-        }
-
-        var plans = _frontOfficeAdvisor.PlanSalaryDumps(_snapshot, dumpedTeams);
-        if (plans.IsFailure)
-        {
-            return (0, plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList());
-        }
-
-        var executed = 0;
-        var notes = new List<RuleFinding>();
-        foreach (var plan in plans.Value)
-        {
-            var result = _tradeEngine.Execute(plan.Proposal, _snapshot);
-            if (result.IsSuccess)
-            {
-                executed++;
-                dumpedTeams.Add(plan.FromTeamId);
-                dumpedTeams.Add(plan.ToTeamId);
-                notes.Add(plan.Rationale);
-            }
-            else
-            {
-                notes.Add(new RuleFinding("ai_trade.salary_dump_failed", $"A planned salary dump did not go through: {string.Join("; ", result.Errors.Select(error => error.Message))}", plan.FromTeamId));
-            }
-        }
-
-        return (executed, notes);
-    }
+    private (int Executed, IReadOnlyList<RuleFinding> Notes) RunSalaryDumps(HashSet<TeamId> dumpedTeams) =>
+        ExecuteTradesOneAtATime(
+            () => Trades(_frontOfficeAdvisor.PlanSalaryDumps(_snapshot!, dumpedTeams), plan => (plan.Proposal, plan.FromTeamId, plan.ToTeamId, plan.Rationale)),
+            dumpedTeams,
+            "ai_trade.salary_dump_failed",
+            "A planned salary dump did not go through");
 
     /// <summary>
     /// Restricted players nobody signed in the market sign their qualifying offers with their own teams —
