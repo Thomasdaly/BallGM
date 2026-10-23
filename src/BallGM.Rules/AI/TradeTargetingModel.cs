@@ -25,8 +25,24 @@ namespace BallGM.Rules.AI;
 /// weighting, and any ranking between two candidates.
 /// </para>
 /// </summary>
+/// <summary>
+/// What a summer's trade market adds to one search (<c>docs/franchise-realism.md</c> → F5): teams and
+/// players already part of a trade this summer are off the table, and each side has a direction, which
+/// sets what it counts as getting better.
+/// </summary>
+public sealed record TradeTargetingOptions(
+    IReadOnlySet<TeamId> ExcludedTeams,
+    IReadOnlySet<PlayerId> ExcludedPlayers,
+    IReadOnlyDictionary<TeamId, CompetitiveDirection> Directions,
+    DateOnly AsOf);
+
 public static class TradeTargetingModel
 {
+    private const string MutualGainCode = "ai_trade_target.both_sides_gain";
+
+    /// <summary>The years younger a rebuilding team needs the player it gets back to be, for a swap that does not help it now.</summary>
+    public const int RebuildingYouthYears = 3;
+
     private const string NeedsMatchCode = "ai_trade_target.needs_match";
     private const string ValueParityCode = "ai_trade_target.value_parity";
 
@@ -37,7 +53,8 @@ public static class TradeTargetingModel
         TeamId shoppingTeamId,
         TradeContext context,
         DevelopmentRules developmentRules,
-        NegotiationRules negotiationRules)
+        NegotiationRules negotiationRules,
+        TradeTargetingOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(shoppingTeamId);
         ArgumentNullException.ThrowIfNull(context);
@@ -77,7 +94,7 @@ public static class TradeTargetingModel
         var validator = new TradeValidator();
         var seenPairs = new HashSet<(PlayerId, PlayerId)>();
 
-        foreach (var counterpartyTeam in context.Teams.Where(team => team.Id != shoppingTeamId))
+        foreach (var counterpartyTeam in context.Teams.Where(team => team.Id != shoppingTeamId && options?.ExcludedTeams.Contains(team.Id) != true))
         {
             var counterpartyChart = DepthChartSupport.BuildChart(counterpartyTeam, playersById, context.RosterLimits);
             if (counterpartyChart is null)
@@ -104,6 +121,13 @@ public static class TradeTargetingModel
                         continue;
                     }
 
+                    if (options is not null &&
+                        (options.ExcludedPlayers.Contains(incomingSlot.PlayerId) || options.ExcludedPlayers.Contains(outgoingSlot.PlayerId) ||
+                         !BothSidesGain(shoppingTeam, counterpartyTeam, playersById[outgoingSlot.PlayerId], playersById[incomingSlot.PlayerId], playersById, options)))
+                    {
+                        continue;
+                    }
+
                     var candidate = TryBuildCandidate(
                         shoppingTeamId,
                         counterpartyTeam.Id,
@@ -126,7 +150,81 @@ public static class TradeTargetingModel
             }
         }
 
-        return candidates;
+        if (options is null)
+        {
+            return candidates;
+        }
+
+        // Best for both first: the trade a summer market makes is the one that helps the two teams most.
+        return candidates
+            .OrderByDescending(candidate => Gain(shoppingTeam, candidate, playersById) + Gain(teamsById[candidate.CounterpartyTeamId], candidate, playersById))
+            .ThenBy(candidate => candidate.Proposal.Id.Value, StringComparer.Ordinal)
+            .Select(candidate => candidate with
+            {
+                Rationale = [.. candidate.Rationale, new RuleFinding(MutualGainCode,
+                    "Both teams come out of it better by their own direction: a stronger rotation now, or — for a rebuilding team — a younger player with a ceiling at least as high.", shoppingTeamId)],
+            })
+            .ToList();
+    }
+
+    /// <summary>
+    /// Whether a one-for-one swap makes both teams better by their own lights: a team stronger as it would
+    /// field the players (see <see cref="RotationStrength"/>) — or, for a rebuilding team, a player at least
+    /// <see cref="RebuildingYouthYears"/> years younger coming back whose ceiling is no lower than the
+    /// current level of the player going out. A swap that helps neither, or only one, is not a trade a
+    /// front office makes, which is what keeps a summer from becoming a carousel.
+    /// </summary>
+    private static bool BothSidesGain(Team shopping, Team counterparty, Player outgoing, Player incoming, IReadOnlyDictionary<PlayerId, Player> playersById, TradeTargetingOptions options)
+    {
+        bool Gains(Team team, Player giving, Player getting)
+        {
+            if (RotationStrength(team, playersById, giving, getting) > RotationStrength(team, playersById, null, null))
+            {
+                return true;
+            }
+
+            return options.Directions.GetValueOrDefault(team.Id) == CompetitiveDirection.Rebuilding &&
+                getting.AgeOn(options.AsOf) + RebuildingYouthYears <= giving.AgeOn(options.AsOf) &&
+                getting.Rating.PotentialAbility >= giving.Rating.Overall;
+        }
+
+        return Gains(shopping, outgoing, incoming) && Gains(counterparty, incoming, outgoing);
+    }
+
+    /// <summary>
+    /// A team's strength as a coach would field it, with one player swapped for another if given: the
+    /// best player at each position counts twice (he starts), the next three best once (the bench that
+    /// plays). Position-aware on purpose — filling a weak starting spot is worth more than adding depth.
+    /// </summary>
+    private static int RotationStrength(Team team, IReadOnlyDictionary<PlayerId, Player> playersById, Player? leaving, Player? arriving)
+    {
+        var players = team.PlayerIds
+            .Where(id => playersById.ContainsKey(id) && id != leaving?.Id)
+            .Select(id => playersById[id])
+            .ToList();
+        if (arriving is not null)
+        {
+            players.Add(arriving);
+        }
+
+        var starters = players
+            .GroupBy(player => player.Position)
+            .Select(group => group.OrderByDescending(player => player.Rating.Overall).ThenBy(player => player.Id.Value, StringComparer.Ordinal).First())
+            .ToList();
+        var bench = players.Except(starters).Select(player => player.Rating.Overall).OrderDescending().Take(BenchCounted);
+        return (2 * starters.Sum(player => player.Rating.Overall)) + bench.Sum();
+    }
+
+    /// <summary>How many bench players beyond the starters count toward a team's strength.</summary>
+    private const int BenchCounted = 3;
+
+    private static int Gain(Team team, TradeTargetCandidate candidate, IReadOnlyDictionary<PlayerId, Player> playersById)
+    {
+        var arriving = candidate.Proposal.Movements.FirstOrDefault(movement => movement.ToTeamId == team.Id && movement.PlayerId is not null)?.PlayerId;
+        var leaving = candidate.Proposal.Movements.FirstOrDefault(movement => movement.FromTeamId == team.Id && movement.PlayerId is not null)?.PlayerId;
+        return arriving is null || leaving is null
+            ? 0
+            : RotationStrength(team, playersById, playersById[leaving], playersById[arriving]) - RotationStrength(team, playersById, null, null);
     }
 
     private static TradeTargetCandidate? TryBuildCandidate(

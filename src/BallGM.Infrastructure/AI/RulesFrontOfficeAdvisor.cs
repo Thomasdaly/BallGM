@@ -104,7 +104,9 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
 
     public DomainOperationResult<IReadOnlyList<TradeTargetCandidate>> FindTradeTargets(
         TeamId teamId,
-        LeagueSnapshot snapshot)
+        LeagueSnapshot snapshot,
+        IReadOnlySet<TeamId>? excludedTeams = null,
+        IReadOnlySet<PlayerId>? excludedPlayers = null)
     {
         ArgumentNullException.ThrowIfNull(teamId);
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -129,7 +131,23 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             ruleset.DraftRules,
             ruleset.CapMechanics);
 
-        var candidates = TradeTargetingModel.FindCandidates(teamId, context, ruleset.DevelopmentRules, ruleset.NegotiationRules);
+        TradeTargetingOptions? options = null;
+        if (excludedTeams is not null || excludedPlayers is not null)
+        {
+            var asOf = new DateOnly(snapshot.CurrentSeason.Year, 7, 1);
+            var records = ThisSeasonRecords(snapshot, snapshot.CurrentSeason.Year - 1);
+            var playersById = snapshot.Players.ToDictionary(player => player.Id);
+            var directions = snapshot.Teams.ToDictionary(
+                team => team.Id,
+                team => OffseasonModel.DirectionFor(
+                    records.TryGetValue(team.Id, out var record) ? record : null,
+                    team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList(),
+                    asOf,
+                    PeakAgeStart(ruleset)));
+            options = new TradeTargetingOptions(excludedTeams ?? new HashSet<TeamId>(), excludedPlayers ?? new HashSet<PlayerId>(), directions, asOf);
+        }
+
+        var candidates = TradeTargetingModel.FindCandidates(teamId, context, ruleset.DevelopmentRules, ruleset.NegotiationRules, options);
         return DomainOperationResult<IReadOnlyList<TradeTargetCandidate>>.Success(candidates);
     }
 

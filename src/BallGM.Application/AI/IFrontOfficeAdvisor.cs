@@ -36,9 +36,17 @@ public interface IFrontOfficeAdvisor
         LeagueSnapshot snapshot,
         StandingsRow? standing);
 
+    /// <param name="excludedTeams">
+    /// In a summer market, teams already part of a trade this summer (each makes at most one); when
+    /// given, every candidate must also leave both teams better by their own direction, and the best
+    /// for both comes first. Null outside a summer market.
+    /// </param>
+    /// <param name="excludedPlayers">In a summer market, players already moved this summer.</param>
     DomainOperationResult<IReadOnlyList<TradeTargetCandidate>> FindTradeTargets(
         TeamId teamId,
-        LeagueSnapshot snapshot);
+        LeagueSnapshot snapshot,
+        IReadOnlySet<TeamId>? excludedTeams = null,
+        IReadOnlySet<PlayerId>? excludedPlayers = null);
 
     /// <param name="freeAgents">
     /// The pool to offer against — the caller's own notion of who is unsigned, so this port carries no

@@ -167,7 +167,16 @@ public sealed partial class LeagueSession
     /// corrupting anything.
     /// </para>
     /// </summary>
-    public DomainOperationResult<AiFrontOfficeTurnSummary> RunAiFrontOfficeTurn(IReadOnlyCollection<string> teamIds)
+    public DomainOperationResult<AiFrontOfficeTurnSummary> RunAiFrontOfficeTurn(IReadOnlyCollection<string> teamIds) =>
+        RunAiFrontOfficeTurn(teamIds, summer: null);
+
+    /// <summary>
+    /// A summer trade market's bookkeeping: who has already traded this summer (each team at most once,
+    /// as either side) and who has already moved (nobody is flipped twice in one summer).
+    /// </summary>
+    private sealed record SummerTradeMarket(HashSet<TeamId> TradedTeams, HashSet<PlayerId> MovedPlayers);
+
+    private DomainOperationResult<AiFrontOfficeTurnSummary> RunAiFrontOfficeTurn(IReadOnlyCollection<string> teamIds, SummerTradeMarket? summer)
     {
         ArgumentNullException.ThrowIfNull(teamIds);
 
@@ -187,7 +196,7 @@ public sealed partial class LeagueSession
                     AIUnknownTeamCode, $"Team '{teamId}' is not a team in this league."));
             }
 
-            var outcomeResult = RunOneAiTurn(team.Id, team.Name);
+            var outcomeResult = RunOneAiTurn(team.Id, team.Name, summer);
             if (outcomeResult.IsFailure)
             {
                 return DomainOperationResult<AiFrontOfficeTurnSummary>.Failure(outcomeResult.Errors.ToArray());
@@ -199,14 +208,23 @@ public sealed partial class LeagueSession
         return DomainOperationResult<AiFrontOfficeTurnSummary>.Success(new AiFrontOfficeTurnSummary(outcomes));
     }
 
-    private DomainOperationResult<AiTeamTurnOutcome> RunOneAiTurn(TeamId teamId, string teamName)
+    private DomainOperationResult<AiTeamTurnOutcome> RunOneAiTurn(TeamId teamId, string teamName, SummerTradeMarket? summer)
     {
         var playersById = _snapshot!.Players.ToDictionary(player => player.Id);
         var teamNames = TeamNames(_snapshot);
         var names = ExplanationNames.From(_snapshot);
         var notes = new List<AIFindingLine>();
 
-        var tradeTargetsResult = _frontOfficeAdvisor.FindTradeTargets(teamId, _snapshot);
+        if (summer is not null && summer.TradedTeams.Contains(teamId))
+        {
+            return DomainOperationResult<AiTeamTurnOutcome>.Success(new AiTeamTurnOutcome(
+                teamId.Value, teamName, AiTurnAction.NoActionTaken, null, null,
+                [new AIFindingLine(AiTurnNoCandidateCode, "Already part of a trade this summer.", null)]));
+        }
+
+        var tradeTargetsResult = summer is null
+            ? _frontOfficeAdvisor.FindTradeTargets(teamId, _snapshot)
+            : _frontOfficeAdvisor.FindTradeTargets(teamId, _snapshot, summer.TradedTeams, summer.MovedPlayers);
         if (tradeTargetsResult.IsFailure)
         {
             return DomainOperationResult<AiTeamTurnOutcome>.Failure(tradeTargetsResult.Errors.ToArray());
@@ -218,6 +236,16 @@ public sealed partial class LeagueSession
             var executionResult = _tradeEngine.Execute(trade.Proposal, _snapshot);
             if (executionResult.IsSuccess)
             {
+                if (summer is not null)
+                {
+                    summer.TradedTeams.Add(trade.ShoppingTeamId);
+                    summer.TradedTeams.Add(trade.CounterpartyTeamId);
+                    foreach (var movement in trade.Proposal.Movements.Where(movement => movement.PlayerId is not null))
+                    {
+                        summer.MovedPlayers.Add(movement.PlayerId!);
+                    }
+                }
+
                 return DomainOperationResult<AiTeamTurnOutcome>.Success(new AiTeamTurnOutcome(
                     teamId.Value, teamName, AiTurnAction.TradeExecuted, ToLine(trade, playersById, teamNames, names), null, []));
             }
@@ -226,6 +254,12 @@ public sealed partial class LeagueSession
                 AiTurnTradeExecutionFailedCode,
                 $"The best available trade could not be executed after all: {string.Join("; ", executionResult.Errors.Select(error => names.Humanize(error.Message)))}",
                 null));
+        }
+
+        if (summer is not null)
+        {
+            notes.Add(new AIFindingLine(AiTurnNoCandidateCode, "No trade this summer leaves both sides better by their own direction.", null));
+            return DomainOperationResult<AiTeamTurnOutcome>.Success(new AiTeamTurnOutcome(teamId.Value, teamName, AiTurnAction.NoActionTaken, null, null, notes));
         }
 
         var freeAgents = _snapshot.Players.Where(player => IsFreeAgent(player, _snapshot)).ToList();

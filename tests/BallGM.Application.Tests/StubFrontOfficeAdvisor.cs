@@ -23,7 +23,9 @@ internal sealed class StubFrontOfficeAdvisor : IFrontOfficeAdvisor
 
     public DomainOperationResult<IReadOnlyList<Domain.AI.TradeTargetCandidate>> FindTradeTargets(
         TeamId teamId,
-        LeagueSnapshot snapshot) =>
+        LeagueSnapshot snapshot,
+        IReadOnlySet<TeamId>? excludedTeams = null,
+        IReadOnlySet<Domain.Players.PlayerId>? excludedPlayers = null) =>
         DomainOperationResult<IReadOnlyList<Domain.AI.TradeTargetCandidate>>.Success([]);
 
     public DomainOperationResult<IReadOnlyList<Domain.AI.FreeAgentTargetCandidate>> FindFreeAgentTargets(

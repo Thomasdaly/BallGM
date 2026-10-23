@@ -75,7 +75,7 @@ default league behaves like a modern one.
 | F2 | The season boundary for a long save: development, ageing and retirement wired every season; awards with eligibility rules (games and minutes floors, bench award, rookie, most improved, defensive, all-league teams) archived with the season | Done (§4) |
 | F3 | Re-signing, the market (§5), the rookie scale and option decisions (§7) done; restricted free agency next — contract structure: rookie scale with team options, option decisions, qualifying offers and restricted free agency with matching, incumbent rights over the cap, room allowance | |
 | F4 | Exits: waivers and claim order, buyouts with consent and guardrails, stretch provision, the post-cutoff rule, the re-sign wait, apron restrictions | Buyouts and their guardrails done (§6); waivers and stretch to come |
-| F5 | Trades: multi-asset with picks, trade restrictions on new signings, acceptance margins, direction-aware valuation | |
+| F5 | Trades: multi-asset with picks, trade restrictions on new signings, acceptance margins, direction-aware valuation | Summer market done (§8): one trade a team, nobody flipped, both sides must gain; picks and in-season trades to come |
 | F6 | Franchise direction that persists (contend / retool / rebuild) with hysteresis, owner expectations if modelled, and AI behaviour that follows it | |
 | F7 | A multi-season audit: twenty chained seasons reporting scoring leaders, award winners and their roles, star movement per season, buyouts, retirements by age, rating drift and title concentration, with seeded tests on the headline rows | |
 | F8 | Surfaces: awards and history screens, transaction feed, contract options and restricted free agency in the client | |
@@ -179,3 +179,21 @@ seasons, scoring leaders 31–35, the top of the league stable (94–97) and the
 players stable (~80). Known follow-up: the median rostered player still drifts up (64 → 70) and the
 league runs young (24.5) — the market and re-signing favour ceilings over veterans more than a real
 league does.
+
+## 8. F5 (first step) as built: a summer trade market, not a carousel
+
+Before: 21–29 one-for-one trades a summer on the calibration league, one team in six of them, the same
+player flipped two or three times. Now the boundary's AI turn is a summer market
+(`LeagueSession.SummerTradeMarket`, `TradeTargetingOptions`):
+
+- each team is part of at most one trade a summer, as either side, and nobody is moved twice;
+- a trade must leave **both** teams better by their own direction — stronger as they would field the
+  players (each position's best counts twice, the next three bench players once), or, for a rebuilding
+  team, a player at least three years younger coming back whose ceiling is no lower than the current
+  level of the one going out;
+- the market takes the trade best for both first; free-agent signings are the market's job, not the
+  trade turn's.
+
+Calibration league: 3–4 trades a summer, every one between two different teams, no player flipped
+(`SummerTradeMarketTests`). Picks as assets, multi-player trades and the in-season deadline market are
+the next steps; the "Run AI turn" button outside a summer keeps its old one-trade-or-one-signing shape.

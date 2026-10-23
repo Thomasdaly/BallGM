@@ -1,3 +1,4 @@
+using BallGM.Domain.AI;
 using BallGM.Domain.Common;
 using BallGM.Domain.Players;
 using BallGM.Domain.Teams;
@@ -67,6 +68,26 @@ public sealed class TradeTargetingModelTests
 
         Assert.Contains(candidate.Rationale, finding => finding.RuleCode == "ai_trade_target.needs_match");
         Assert.Contains(candidate.Rationale, finding => finding.RuleCode == "ai_trade_target.value_parity");
+    }
+
+    [Fact]
+    public void InASummerMarket_ATeamThatHasAlreadyTradedOrAPlayerAlreadyMovedIsOffTheTable()
+    {
+        var league = TradeTargetingTestLeague.Build()
+            .WithTeam("A", (Position.PointGuard, 75, 8_000_000), (Position.ShootingGuard, 70, 6_000_000), (Position.SmallForward, 70, 6_000_000), (Position.PowerForward, 70, 6_000_000), (Position.Center, 40, 3_000_000), (Position.PointGuard, 65, 3_000_000))
+            .WithTeam("B", (Position.PointGuard, 40, 3_000_000), (Position.ShootingGuard, 70, 6_000_000), (Position.SmallForward, 70, 6_000_000), (Position.PowerForward, 70, 6_000_000), (Position.Center, 72, 8_000_000), (Position.Center, 68, 3_000_000));
+        var directions = new Dictionary<TeamId, CompetitiveDirection>();
+        var asOf = new DateOnly(2031, 7, 1);
+
+        // Both sides gain (each fills a forty-rated hole with a spare), so the open market finds it ...
+        var open = new TradeTargetingOptions(new HashSet<TeamId>(), new HashSet<PlayerId>(), directions, asOf);
+        Assert.Contains(TradeTargetingModel.FindCandidates(league.TeamId("A"), league.Context(), PeakRules, OpenRules, open)[0].Rationale, finding => finding.RuleCode == "ai_trade_target.both_sides_gain");
+
+        // ... but not once B has traded this summer, or once A's spare has already been moved.
+        var traded = open with { ExcludedTeams = new HashSet<TeamId> { league.TeamId("B") } };
+        Assert.Empty(TradeTargetingModel.FindCandidates(league.TeamId("A"), league.Context(), PeakRules, OpenRules, traded));
+        var moved = open with { ExcludedPlayers = new HashSet<PlayerId> { league.PlayerId("A", 5) } };
+        Assert.Empty(TradeTargetingModel.FindCandidates(league.TeamId("A"), league.Context(), PeakRules, OpenRules, moved));
     }
 
     [Fact]

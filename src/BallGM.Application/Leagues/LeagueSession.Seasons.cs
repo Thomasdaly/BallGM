@@ -256,7 +256,7 @@ public sealed partial class LeagueSession
             .Select(team => team.Id.Value)
             .ToList();
 
-        var turnResult = RunAiFrontOfficeTurn(teamIds);
+        var turnResult = RunAiFrontOfficeTurn(teamIds, new SummerTradeMarket([], []));
         if (turnResult.IsFailure)
         {
             return (0, 0, turnResult.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList());
