@@ -129,6 +129,10 @@ public sealed partial class LeagueSession
                 $"Season {_seasonRun.Season.Year} has reached {_seasonRun.CurrentDay} of {_seasonRun.Calendar.LengthInDays} days and cannot be concluded until it is played out."));
         }
 
+        // Teams keep who they want before the contracts run out: an extension signed now carries the
+        // player past the expiry the conclusion below would otherwise release him at.
+        var (reSigned, reSigningNotes) = RunReSigningWindow();
+
         var concludedResult = _seasonEngine.ConcludeSeason(_seasonRun, _snapshot);
         if (concludedResult.IsFailure)
         {
@@ -151,6 +155,7 @@ public sealed partial class LeagueSession
             : development.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList();
 
         var (drafted, unrostered, draftNotes) = RunDraft(outcome.Entry.FinalStandings, seasonSeed.For("draft"));
+        var (marketSigned, marketNotes) = RunFreeAgencyMarket();
         var (aiTradesExecuted, aiSigningsExecuted, aiTurnNotes) = RunAiFrontOfficeTurnAtSeasonBoundary();
         var autoSigned = AutoResignToRosterFloor();
 
@@ -169,8 +174,10 @@ public sealed partial class LeagueSession
             autoSigned,
             aiTradesExecuted,
             aiSigningsExecuted,
-            outcome.Notes.Concat(developmentNotes).Concat(draftNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList())
+            reSigningNotes.Concat(outcome.Notes).Concat(developmentNotes).Concat(draftNotes).Concat(marketNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList())
         {
+            PlayersReSigned = reSigned,
+            MarketSignings = marketSigned,
             Awards = AwardLines(outcome.Entry.Awards, teamNames),
             PlayersDeveloped = development.IsSuccess ? development.Value.PlayersDeveloped : 0,
             PlayersRetired = development.IsSuccess

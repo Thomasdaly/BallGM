@@ -52,13 +52,13 @@ public sealed class DynastyIntegrationTests
 
             var conclusion = session.ConcludeSeason();
             Assert.True(conclusion.IsSuccess, $"Season {index}: {Describe(conclusion.Errors)}");
-            totalAutoSigned += conclusion.Value.PlayersAutoSigned;
+            totalAutoSigned += conclusion.Value.PlayersAutoSigned + conclusion.Value.MarketSignings;
             totalDrafted += conclusion.Value.PlayersDrafted;
         }
 
         Assert.True(
             totalAutoSigned > 0,
-            "Across 15 chained seasons of attrition with no human intervention, the roster-floor auto-resign never fired — either it is broken or this fixture league never falls below its minimum, which would make this test meaningless.");
+            "Across 15 chained seasons of attrition with no human intervention, neither the free-agency market nor the roster-floor auto-resign ever signed anyone — either both are broken or this fixture league never loses a player, which would make this test meaningless.");
 
         Assert.True(
             totalDrafted > 0,

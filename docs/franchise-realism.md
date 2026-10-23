@@ -73,7 +73,7 @@ default league behaves like a modern one.
 |---|---|---|
 | F1 | Engine tails: role minutes, ball handler, skill-driven shares, shooting and free-throw skill, foul drawing, injury proneness (attributes A3a–A6) | Done |
 | F2 | The season boundary for a long save: development, ageing and retirement wired every season; awards with eligibility rules (games and minutes floors, bench award, rookie, most improved, defensive, all-league teams) archived with the season | Done (§4) |
-| F3 | Next — contract structure: rookie scale with team options, option decisions, qualifying offers and restricted free agency with matching, incumbent rights over the cap, room allowance | |
+| F3 | Re-signing and the market done (§5); rookie scale, options and restricted free agency next — contract structure: rookie scale with team options, option decisions, qualifying offers and restricted free agency with matching, incumbent rights over the cap, room allowance | |
 | F4 | Exits: waivers and claim order, buyouts with consent and guardrails, stretch provision, the post-cutoff rule, the re-sign wait, apron restrictions | |
 | F5 | Trades: multi-asset with picks, trade restrictions on new signings, acceptance margins, direction-aware valuation | |
 | F6 | Franchise direction that persists (contend / retool / rebuild) with hysteresis, owner expectations if modelled, and AI behaviour that follows it | |
@@ -111,3 +111,25 @@ Multi-season baseline (calibration league, before F3): scoring leaders 30–36 a
 winners (the bench award to 0–30-start bench scorers), but ~330 players reach free agency every
 summer and refill on one-year minimum deals, so rosters churn and 6–19 of the top 30 players change
 teams a year. That is F3's problem.
+
+## 5. F3 (first half) as built: keep your core, then a market
+
+- **Re-signing window** (`OffseasonModel.ReSignings`, `IFrontOfficeAdvisor.PlanReSignings`): before a
+  season is concluded, every AI team keeps the expiring players it wants and can afford — rotation
+  players, and young players whose ceiling beats its fifth-best — at the player's asking price, as an
+  extension (which needs no cap room: the incumbent's advantage, the generic form of the real
+  agreement's veteran re-signing exception). The budget is the team's direction: a contender to the
+  first apron (the second for one of its three best), a retooling team to the tax line, a rebuilding
+  one to the cap and never past thirty. Terms by age: five years for a young star down to one past 31.
+- **Free-agency market** (`OffseasonModel.MarketOffers`/`ResolveRound`, `PlanMarketRound`): up to eight
+  rounds; each team bids on the free agents who beat its eighth man (or fill a short roster) at the
+  round's price — the asking price, 12% lower each round, never below the minimum — re-checked by the
+  signing validator at the price, its over-cap allowance or the minimum, and inside its budget. Each
+  player takes the most money, weighted slightly toward a winning team; a team adds at most one player
+  a round. Every signing executes through the signing engine.
+- Boundary order is now: re-signing window → conclude (archive, awards, service, expiries) → career
+  history → age and retire → draft → market → AI trades → floor fill.
+
+Calibration league, eight chained seasons: about 100 re-signings and 15–35 market signings a summer,
+**no top-30 player changing teams in any summer** (6–19 a summer before), rosters around 14, a
+different champion most years, scoring leaders 30–36.

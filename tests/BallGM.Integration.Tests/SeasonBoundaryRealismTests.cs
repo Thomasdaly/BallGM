@@ -87,6 +87,33 @@ public sealed class SeasonBoundaryRealismTests
             player => player.FullName == name));
     }
 
+    [Fact]
+    public void TheLeaguesStarsStayWithTeamsThatCanPayThem_SummerAfterSummer()
+    {
+        // The competitor's buyout-market failure in its general form: the league's best players changing
+        // teams every summer. Here a team re-signs the core it can afford before free agency opens, so a
+        // star moves only when his team cannot or will not pay him.
+        var session = NewSession();
+        for (var seed = 2031; seed < 2035; seed++)
+        {
+            PlaySeason(session, seed);
+            var before = session.Overview().Value.Teams
+                .SelectMany(team => team.Roster.Select(player => (player.PlayerId, player.Overall, team.TeamId)))
+                .OrderByDescending(entry => entry.Overall)
+                .Take(10)
+                .ToList();
+
+            var conclusion = session.ConcludeSeason();
+            Assert.True(conclusion.IsSuccess, string.Join("; ", conclusion.Errors.Select(error => error.Message)));
+
+            var teamOf = session.Overview().Value.Teams
+                .SelectMany(team => team.Roster.Select(player => (player.PlayerId, team.TeamId)))
+                .ToDictionary(entry => entry.PlayerId, entry => entry.TeamId);
+            var moved = before.Count(star => teamOf.TryGetValue(star.PlayerId, out var now) && now != star.TeamId);
+            Assert.True(moved <= 2, $"{moved} of the league's ten best players changed teams in the summer after {seed}.");
+        }
+    }
+
     private static void PlaySeason(LeagueSession session, int seed)
     {
         Assert.True(session.StartSeason(seed).IsSuccess);

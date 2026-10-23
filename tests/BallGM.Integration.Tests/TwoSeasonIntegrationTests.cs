@@ -40,7 +40,7 @@ public sealed class TwoSeasonIntegrationTests
         // AI-executed trades move an already-rostered player between two teams, so they leave the
         // league-wide rostered and free-agent totals below untouched; only a signing changes either,
         // the same way PlayersAutoSigned already does.
-        var aiSigned = conclusion.Value.AiSigningsExecuted;
+        var aiSigned = conclusion.Value.AiSigningsExecuted + conclusion.Value.MarketSignings;
 
         var overviewAfter = session.Overview().Value;
         Assert.Equal(conclusion.Value.NextSeasonYear, overviewAfter.SeasonYear);

@@ -37,4 +37,10 @@ internal sealed class StubFrontOfficeAdvisor : IFrontOfficeAdvisor
         LeagueSnapshot snapshot,
         int previewSeed) =>
         DomainOperationResult<DraftPreview?>.Success(null);
+
+    public DomainOperationResult<IReadOnlyList<ReSigningPlan>> PlanReSignings(LeagueSnapshot snapshot, IReadOnlyDictionary<TeamId, Domain.Seasons.TeamRecord> records) =>
+        DomainOperationResult<IReadOnlyList<ReSigningPlan>>.Success([]);
+
+    public DomainOperationResult<IReadOnlyList<MarketSigningPlan>> PlanMarketRound(LeagueSnapshot snapshot, IReadOnlyCollection<Player> freeAgents, int round) =>
+        DomainOperationResult<IReadOnlyList<MarketSigningPlan>>.Success([]);
 }

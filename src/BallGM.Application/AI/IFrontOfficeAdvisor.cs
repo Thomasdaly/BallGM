@@ -2,6 +2,7 @@ using BallGM.Application.Leagues;
 using BallGM.Domain.AI;
 using BallGM.Domain.Common;
 using BallGM.Domain.Draft;
+using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
@@ -63,7 +64,31 @@ public interface IFrontOfficeAdvisor
         TeamId teamId,
         LeagueSnapshot snapshot,
         int previewSeed);
+
+    /// <summary>
+    /// Which expiring players every team keeps (<c>docs/franchise-realism.md</c> → F3), decided in the
+    /// final season of their contracts, before it is concluded: each a re-signing at the player's asking
+    /// price, which he accepts from his own team. Read-only; the caller signs them.
+    /// </summary>
+    /// <param name="records">Each team's record in the season ending, which decides its direction.</param>
+    DomainOperationResult<IReadOnlyList<ReSigningPlan>> PlanReSignings(LeagueSnapshot snapshot, IReadOnlyDictionary<TeamId, TeamRecord> records);
+
+    /// <summary>
+    /// One round of the free-agency market: every team's best offers to <paramref name="freeAgents"/>
+    /// at round <paramref name="round"/>'s prices, and which of them each player takes (at most one
+    /// signing per team a round). Read-only; the caller executes the accepted offers, in order.
+    /// </summary>
+    DomainOperationResult<IReadOnlyList<MarketSigningPlan>> PlanMarketRound(
+        LeagueSnapshot snapshot,
+        IReadOnlyCollection<Player> freeAgents,
+        int round);
 }
+
+/// <summary>A team's decision to re-sign one of its own: the terms, and the reason.</summary>
+public sealed record ReSigningPlan(TeamId TeamId, PlayerId PlayerId, int Seasons, long FirstSeasonSalary, RuleFinding Rationale);
+
+/// <summary>An offer a free agent accepted in a market round: the offer, why the team made it, and why he took it.</summary>
+public sealed record MarketSigningPlan(Offer Offer, RuleFinding Bid, RuleFinding Choice);
 
 /// <summary>
 /// A draft recommendation alongside the prospect it names. <see cref="DraftPickRecommendation"/> only

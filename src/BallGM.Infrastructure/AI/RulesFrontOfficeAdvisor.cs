@@ -232,6 +232,95 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         return DomainOperationResult<DraftPreview?>.Success(new DraftPreview(recommendation, prospect));
     }
 
+    public DomainOperationResult<IReadOnlyList<ReSigningPlan>> PlanReSignings(LeagueSnapshot snapshot, IReadOnlyDictionary<TeamId, TeamRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(records);
+        var rulesetResult = BuildRuleset(snapshot);
+        if (rulesetResult.IsFailure)
+        {
+            return DomainOperationResult<IReadOnlyList<ReSigningPlan>>.Failure(rulesetResult.Errors.ToArray());
+        }
+
+        var ruleset = rulesetResult.Value;
+        var asOf = new DateOnly(snapshot.CurrentSeason.Year + 1, 7, 1);
+        var playersById = snapshot.Players.ToDictionary(player => player.Id);
+        var plans = new List<ReSigningPlan>();
+        foreach (var team in snapshot.Teams.OrderBy(team => team.Id.Value, StringComparer.Ordinal))
+        {
+            var roster = team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
+            var direction = OffseasonModel.DirectionFor(records.TryGetValue(team.Id, out var record) ? record : null, roster, asOf, PeakAgeStart(ruleset));
+            plans.AddRange(OffseasonModel
+                .ReSignings(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.NegotiationRules, ruleset.CapThresholds, direction, asOf)
+                .Select(decision => new ReSigningPlan(decision.TeamId, decision.PlayerId, decision.Seasons, decision.FirstSeasonSalary.SmallestUnits, decision.Rationale)));
+        }
+
+        return DomainOperationResult<IReadOnlyList<ReSigningPlan>>.Success(plans);
+    }
+
+    public DomainOperationResult<IReadOnlyList<MarketSigningPlan>> PlanMarketRound(
+        LeagueSnapshot snapshot,
+        IReadOnlyCollection<Player> freeAgents,
+        int round)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(freeAgents);
+        if (freeAgents.Count == 0)
+        {
+            return DomainOperationResult<IReadOnlyList<MarketSigningPlan>>.Success([]);
+        }
+
+        var rulesetResult = BuildRuleset(snapshot);
+        if (rulesetResult.IsFailure)
+        {
+            return DomainOperationResult<IReadOnlyList<MarketSigningPlan>>.Failure(rulesetResult.Errors.ToArray());
+        }
+
+        var ruleset = rulesetResult.Value;
+        var asOf = new DateOnly(snapshot.CurrentSeason.Year, 7, 1);
+        var context = new MarketContext(
+            snapshot.CurrentSeason,
+            SeasonDay.Opening,
+            freeAgents.First(),
+            snapshot.Teams,
+            snapshot.Players,
+            snapshot.Contracts,
+            snapshot.Ledger,
+            ruleset.RosterLimits,
+            ruleset.CapThresholds,
+            ruleset.NegotiationRules,
+            new SeededRandomSource(AskingPriceSeed),
+            ruleset.PostseasonRules,
+            ruleset.CapMechanics);
+
+        // Last season's table: the offseason follows the season it concluded.
+        var records = ThisSeasonRecords(snapshot, snapshot.CurrentSeason.Year - 1);
+        var playersById = snapshot.Players.ToDictionary(player => player.Id);
+        var offers = new List<MarketOffer>();
+        foreach (var team in snapshot.Teams.OrderBy(team => team.Id.Value, StringComparer.Ordinal))
+        {
+            var roster = context.RosterOf(team);
+            var direction = OffseasonModel.DirectionFor(records.TryGetValue(team.Id, out var record) ? record : null, roster, asOf, PeakAgeStart(ruleset));
+            offers.AddRange(OffseasonModel.MarketOffers(team, freeAgents, context, direction, asOf, round, MarketOffersPerTeam));
+        }
+
+        return DomainOperationResult<IReadOnlyList<MarketSigningPlan>>.Success(OffseasonModel
+            .ResolveRound(offers, playersById, records)
+            .Select(accepted => new MarketSigningPlan(accepted.Bid.Offer, accepted.Bid.Rationale, accepted.Choice))
+            .ToList());
+    }
+
+    /// <summary>How many offers one team makes in one market round, best first.</summary>
+    private const int MarketOffersPerTeam = 3;
+
+    private static int PeakAgeStart(LeagueRuleset ruleset) => ruleset.DevelopmentRules.IsConfigured ? ruleset.DevelopmentRules.PeakAgeStart : 26;
+
+    /// <summary>Each team's record in a concluded season, from the league's history (empty before any is archived).</summary>
+    private static Dictionary<TeamId, TeamRecord> ThisSeasonRecords(LeagueSnapshot snapshot, int year) =>
+        snapshot.League.History.FirstOrDefault(entry => entry.Season.Year == year)?.FinalStandings
+            .ToDictionary(row => row.TeamId, row => row.Record)
+        ?? [];
+
     private static DomainOperationResult<LeagueRuleset> BuildRuleset(LeagueSnapshot snapshot) =>
         snapshot.Configuration.ToRuleset(snapshot.League.Alignment.IsFlat);
 }

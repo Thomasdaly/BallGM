@@ -255,6 +255,12 @@ public sealed record SeasonConclusionSummary(
     /// <summary>The season's awards, in the order the league lists them.</summary>
     public IReadOnlyList<SeasonAwardLine> Awards { get; init; } = [];
 
+    /// <summary>How many expiring players their own teams re-signed before the season was concluded.</summary>
+    public int PlayersReSigned { get; init; }
+
+    /// <summary>How many free agents signed in the offseason market.</summary>
+    public int MarketSignings { get; init; }
+
     /// <summary>How many players' sheets the ageing pass moved.</summary>
     public int PlayersDeveloped { get; init; }
 
