@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 13,
+  "schemaVersion": 14,
   "name": "Continental Basketball Association — Standard Rules",
   "regularSeasonGameCount": 78,
   "minimumRosterPlayers": 12,
@@ -237,5 +237,10 @@
       "minimumMinutesPerGame": 20,
       "teams": 2
     }
-  ]
+  ],
+  "buyouts": {
+    "maximumGiveBackPercent": 40,
+    "releasingTeamWaitSeasons": 1,
+    "highEarnerBarAbove": "FirstApron"
+  }
 }

@@ -151,6 +151,7 @@ public sealed class RulesFreeAgencyMarket : IFreeAgencyMarket
             negotiationRulesResult.Value,
             random,
             postseasonResult.Value,
-            capMechanicsResult.Value));
+            capMechanicsResult.Value,
+            configuration.ToBuyoutRules().IsSuccess ? configuration.ToBuyoutRules().Value : null));
     }
 }

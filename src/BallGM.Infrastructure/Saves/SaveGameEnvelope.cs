@@ -73,6 +73,9 @@ public sealed record SaveGameEnvelope(
     /// <para>
     /// Moved 6 → 7 when a concluded season began to archive its awards beside its champion and table.
     /// </para>
+    /// <para>
+    /// Moved 7 → 8 when a contract could end in a buyout (contract schema 2: the share of the money kept).
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 7;
+    public const int CurrentSchemaVersion = 8;
 }

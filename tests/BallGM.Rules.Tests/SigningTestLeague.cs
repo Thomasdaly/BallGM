@@ -152,6 +152,25 @@ internal sealed class SigningTestLeague
                 return new ContractSeasonTerm(new Season(CurrentSeason.Year + index), compensation, compensation);
             })).Value;
 
+    /// <summary>
+    /// Gives the free agent a contract he was released from in the current season — by this team, or by
+    /// another — at the stated salary: the history the buyout guardrails read.
+    /// </summary>
+    public void ReleasedFrom(TeamId teamId, long salary, bool boughtOut = true)
+    {
+        var contract = Contract.Create(
+            new ContractId($"RELEASED-{teamId.Value}"),
+            teamId,
+            FreeAgent.Id,
+            [
+                new ContractSeasonTerm(CurrentSeason, new Money(salary), new Money(salary)),
+                new ContractSeasonTerm(new Season(CurrentSeason.Year + 1), new Money(salary), new Money(salary)),
+            ]).Value;
+        var ended = boughtOut ? contract.BuyOut(CurrentSeason, 70) : contract.Terminate(CurrentSeason);
+        Assert.True(ended.IsSuccess);
+        _contracts.Add(contract);
+    }
+
     private static Team BuildTeam(Franchise franchise, RosterSizeLimits limits, int rosterSize, List<PlayerId> playerIds)
     {
         for (var index = 0; index < rosterSize; index++)

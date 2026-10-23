@@ -293,6 +293,12 @@ internal static class LeagueConfigurationMapper
             return DomainOperationResult<LeagueRuleset>.Failure(leadersResult.Errors.ToArray());
         }
 
+        var buyoutsResult = configuration.ToBuyoutRules();
+        if (buyoutsResult.IsFailure)
+        {
+            return DomainOperationResult<LeagueRuleset>.Failure(buyoutsResult.Errors.ToArray());
+        }
+
         return DomainOperationResult<LeagueRuleset>.Success(new LeagueRuleset(
             LeagueRuleset.CurrentSchemaVersion,
             configuration.RulesetName,
@@ -313,7 +319,8 @@ internal static class LeagueConfigurationMapper
             awardRules,
             capMechanics,
             gameRulesResult.Value,
-            leadersResult.Value));
+            leadersResult.Value,
+            buyoutsResult.Value));
     }
 
     /// <summary>
@@ -419,7 +426,19 @@ internal static class LeagueConfigurationMapper
                     ruleset.CapMechanics.ReducedOverCapAllowanceUnavailableAbove)
                 : null,
             ruleset.GameRules.ToConfiguration(),
-            ruleset.LeaderQualifiers.ToConfiguration());
+            ruleset.LeaderQualifiers.ToConfiguration(),
+            ruleset.BuyoutRules.IsConfigured
+                ? new BuyoutConfiguration(ruleset.BuyoutRules.MaximumGiveBackPercent, ruleset.BuyoutRules.ReleasingTeamWaitSeasons, ruleset.BuyoutRules.HighEarnerBarAbove?.ToString())
+                : null);
+    }
+
+    /// <summary>The buyout rules a configuration states, or none.</summary>
+    public static DomainOperationResult<BuyoutRules> ToBuyoutRules(this LeagueConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return configuration.Buyouts is { } buyouts
+            ? LeagueRulesetSerializer.BuildBuyoutRules(new BuyoutRulesEnvelope(buyouts.MaximumGiveBackPercent, buyouts.ReleasingTeamWaitSeasons, buyouts.HighEarnerBarAbove))
+            : DomainOperationResult<BuyoutRules>.Success(BuyoutRules.None);
     }
 
     /// <summary>The game rules a configuration states, or the sport's default for any it leaves out.</summary>

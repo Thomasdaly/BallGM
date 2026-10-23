@@ -74,7 +74,7 @@ default league behaves like a modern one.
 | F1 | Engine tails: role minutes, ball handler, skill-driven shares, shooting and free-throw skill, foul drawing, injury proneness (attributes A3a–A6) | Done |
 | F2 | The season boundary for a long save: development, ageing and retirement wired every season; awards with eligibility rules (games and minutes floors, bench award, rookie, most improved, defensive, all-league teams) archived with the season | Done (§4) |
 | F3 | Re-signing and the market done (§5); rookie scale, options and restricted free agency next — contract structure: rookie scale with team options, option decisions, qualifying offers and restricted free agency with matching, incumbent rights over the cap, room allowance | |
-| F4 | Exits: waivers and claim order, buyouts with consent and guardrails, stretch provision, the post-cutoff rule, the re-sign wait, apron restrictions | |
+| F4 | Exits: waivers and claim order, buyouts with consent and guardrails, stretch provision, the post-cutoff rule, the re-sign wait, apron restrictions | Buyouts and their guardrails done (§6); waivers and stretch to come |
 | F5 | Trades: multi-asset with picks, trade restrictions on new signings, acceptance margins, direction-aware valuation | |
 | F6 | Franchise direction that persists (contend / retool / rebuild) with hysteresis, owner expectations if modelled, and AI behaviour that follows it | |
 | F7 | A multi-season audit: twenty chained seasons reporting scoring leaders, award winners and their roles, star movement per season, buyouts, retirements by age, rating drift and title concentration, with seeded tests on the headline rows | |
@@ -133,3 +133,25 @@ teams a year. That is F3's problem.
 Calibration league, eight chained seasons: about 100 re-signings and 15–35 market signings a summer,
 **no top-30 player changing teams in any summer** (6–19 a summer before), rosters around 14, a
 different champion most years, scoring leaders 30–36.
+
+## 6. F4 (buyouts) as built
+
+- **The rule** (`BuyoutRules`, ruleset schema 14, optional `buyouts` section): a buyout ends a contract
+  with the player giving back up to `maximumGiveBackPercent` of what he is still owed; the rest stays on
+  the releasing team as dead money (`Contract.BuyOut`, `RetainedPercent`, contract schema 2, save schema 8).
+- **The guardrails** (`SigningValidator`): the releasing team may not sign the player again for
+  `releasingTeamWaitSeasons`; a team that would finish over `highEarnerBarAbove` (the first apron in the
+  shipped leagues) may not sign a player released this season or last whose salary before release was
+  above the standard over-cap allowance. Both apply to every signing — the market, the floor fill and a
+  human's offer screen.
+- **Who buys out** (`BuyoutModel`): only a team that is not contending; only a veteran (30+) outside its
+  eight best players; only one clearly overpaid (asking price under 60% of this season's salary); at
+  most one a team a summer, the most overpaid first. He gives back about what he will earn elsewhere,
+  never more than the cap, so consent is what the terms are built to give. Executed by
+  `ISigningEngine.ExecuteBuyout` (`BuyoutExecutor`) before the market opens.
+
+Calibration league, eight summers: 0–2 buyouts a summer, all of fringe veterans, no top-30 player
+moving, and (locked by `BuyoutMarketTests`) no bought-out player back with the team that released him.
+The post-cutoff rule (a player released after the playoff eligibility cutoff cannot play in the
+postseason) needs in-season AI transactions, which do not exist yet: the cutoff is enforced at the
+signing, and buyouts happen in the offseason.

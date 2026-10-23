@@ -136,7 +136,8 @@ public sealed record LeagueConfiguration(
     IReadOnlyList<AwardDefinition>? Awards = null,
     CapMechanicsConfiguration? CapMechanics = null,
     GameRulesConfiguration? GameRules = null,
-    LeaderQualifiersConfiguration? LeaderQualifiers = null)
+    LeaderQualifiersConfiguration? LeaderQualifiers = null,
+    BuyoutConfiguration? Buyouts = null)
 {
     /// <summary>Whether this league configures any threshold at all.</summary>
     public bool IsUncapped =>
@@ -331,6 +332,9 @@ public sealed record NegotiationConfiguration(
 /// means the sport's usual six personal fouls and the bonus from the fifth team foul of a period (the
 /// fourth of an overtime).
 /// </summary>
+/// <summary>Contract buyouts and their guardrails, as the Application layer carries them; null means no buyouts.</summary>
+public sealed record BuyoutConfiguration(int MaximumGiveBackPercent, int ReleasingTeamWaitSeasons, string? HighEarnerBarAbove);
+
 public sealed record GameRulesConfiguration(int PersonalFoulLimit, int BonusTeamFoulsPerPeriod, int BonusTeamFoulsPerOvertime);
 
 /// <summary>

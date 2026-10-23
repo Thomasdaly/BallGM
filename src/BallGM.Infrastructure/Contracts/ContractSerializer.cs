@@ -40,7 +40,8 @@ public sealed class ContractSerializer
                     term.GuaranteedAmount.SmallestUnits,
                     term.Option.ToString(),
                     term.OptionStatus.ToString()))
-                .ToList());
+                .ToList(),
+            contract.IsBoughtOut ? contract.RetainedPercent : null);
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -117,7 +118,10 @@ public sealed class ContractSerializer
             // Termination is state the contract reaches through its own method, not a field the
             // file sets directly, so a save that claims an impossible release fails the same way a
             // live release would.
-            var terminateResult = contractResult.Value.Terminate(new Season(envelope.TerminatedFromSeasonYear.Value));
+            var terminatedFrom = new Season(envelope.TerminatedFromSeasonYear.Value);
+            var terminateResult = envelope.RetainedPercent is int retained
+                ? contractResult.Value.BuyOut(terminatedFrom, retained)
+                : contractResult.Value.Terminate(terminatedFrom);
             return terminateResult.IsFailure
                 ? DomainOperationResult<Contract>.Failure(terminateResult.Errors.ToArray())
                 : contractResult;

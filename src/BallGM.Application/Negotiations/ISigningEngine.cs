@@ -60,6 +60,13 @@ public interface ISigningEngine
     /// comes back as a success carrying the refusal and no contract — the player said no, nothing failed.
     /// </summary>
     DomainOperationResult<ExtensionResult> ExecuteExtension(Offer offer, LeagueSnapshot snapshot);
+
+    /// <summary>
+    /// Carries out an agreed buyout of <paramref name="contractId"/>: the player leaves the team, and
+    /// <paramref name="retainedPercent"/> per cent of the guaranteed money still owed stays as dead money.
+    /// Refused, with the reason, in a league with no buyouts or a give-back past its limit.
+    /// </summary>
+    DomainOperationResult ExecuteBuyout(LeagueSnapshot snapshot, TeamId teamId, PlayerId playerId, ContractId contractId, int retainedPercent);
 }
 
 public sealed record ExtensionResult(ExtensionAssessment Assessment, Contract? Contract);

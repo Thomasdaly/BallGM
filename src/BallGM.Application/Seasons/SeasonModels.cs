@@ -258,6 +258,12 @@ public sealed record SeasonConclusionSummary(
     /// <summary>How many expiring players their own teams re-signed before the season was concluded.</summary>
     public int PlayersReSigned { get; init; }
 
+    /// <summary>How many players their teams bought out this summer.</summary>
+    public int PlayersBoughtOut { get; init; }
+
+    /// <summary>Each buyout this summer: who, from which team, and on what terms.</summary>
+    public IReadOnlyList<BuyoutLine> Buyouts { get; init; } = [];
+
     /// <summary>How many free agents signed in the offseason market.</summary>
     public int MarketSignings { get; init; }
 
@@ -280,6 +286,9 @@ public sealed record SeasonAwardLine(
     string PlayerName,
     string? TeamName,
     string Explanation);
+
+/// <summary>One buyout: the player, the team that bought him out, the share of his money he kept, and why.</summary>
+public sealed record BuyoutLine(string PlayerId, string TeamId, int RetainedPercent, string Explanation);
 
 /// <summary>One concluded season as the league's history reads: its champion and its awards.</summary>
 public sealed record SeasonHistorySummary(

@@ -51,6 +51,9 @@ public enum TransactionKind
 
     /// <summary>A player under contract agreed a new one with his own team, starting when the current one ends.</summary>
     ContractExtended = 13,
+
+    /// <summary>A team and a player agreed a buyout: he gave back part of what he was owed and was released.</summary>
+    PlayerBoughtOut = 14,
 }
 
 public sealed record TransactionId

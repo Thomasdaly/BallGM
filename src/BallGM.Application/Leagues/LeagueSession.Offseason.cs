@@ -1,3 +1,4 @@
+using BallGM.Application.Seasons;
 using BallGM.Domain.Common;
 using BallGM.Domain.Players;
 
@@ -95,6 +96,38 @@ public sealed partial class LeagueSession
         }
 
         return (signed, notes);
+    }
+
+    /// <summary>
+    /// The summer's buyouts, before the market opens so a bought-out veteran can sign elsewhere: each
+    /// agreed by the front office's own rule and carried out by the signing engine, which refuses one
+    /// the league's buyout rules do not allow.
+    /// </summary>
+    private (IReadOnlyList<BuyoutLine> BoughtOut, IReadOnlyList<RuleFinding> Notes) RunBuyouts()
+    {
+        if (_snapshot is null)
+        {
+            return ([], []);
+        }
+
+        var plans = _frontOfficeAdvisor.PlanBuyouts(_snapshot);
+        if (plans.IsFailure)
+        {
+            return ([], plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList());
+        }
+
+        var boughtOut = new List<BuyoutLine>();
+        var notes = new List<RuleFinding>();
+        foreach (var plan in plans.Value)
+        {
+            if (_signingEngine.ExecuteBuyout(_snapshot, plan.TeamId, plan.PlayerId, plan.ContractId, plan.RetainedPercent).IsSuccess)
+            {
+                boughtOut.Add(new BuyoutLine(plan.PlayerId.Value, plan.TeamId.Value, plan.RetainedPercent, plan.Rationale.Explanation));
+                notes.Add(plan.Rationale);
+            }
+        }
+
+        return (boughtOut, notes);
     }
 
     /// <summary>Every unsigned, unretired player, worked out once rather than player by player against every contract.</summary>

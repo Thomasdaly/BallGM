@@ -22,6 +22,7 @@ public sealed class Contract
     private const string OptionAlreadyDecidedCode = "contract.option_already_decided";
     private const string AlreadyTerminatedCode = "contract.already_terminated";
     private const string AlreadyOnTeamCode = "contract.already_on_team";
+    private const string InvalidRetainedPercentCode = "contract.invalid_buyout_share";
 
     private readonly List<ContractSeasonTerm> _terms;
 
@@ -76,6 +77,40 @@ public sealed class Contract
     public Season? TerminatedFromSeason { get; private set; }
 
     public bool IsTerminated => TerminatedFromSeason is not null;
+
+    /// <summary>
+    /// The share of each remaining season's guaranteed money still owed after a release, in whole per
+    /// cent: 100 for an ordinary release (every guaranteed dollar becomes dead money), less for a buyout,
+    /// where the player gave some back to be let go. Meaningless on a live contract.
+    /// </summary>
+    public int RetainedPercent { get; private set; } = 100;
+
+    /// <summary>Whether this contract ended in a negotiated buyout rather than an ordinary release.</summary>
+    public bool IsBoughtOut => IsTerminated && RetainedPercent < 100;
+
+    /// <summary>
+    /// Ends the contract from <paramref name="effectiveSeason"/> in a buyout: the player agreed to give
+    /// back part of what he was owed, so only <paramref name="retainedPercent"/> per cent of each remaining
+    /// season's guaranteed money stays on the team's books as dead money.
+    /// </summary>
+    public DomainOperationResult BuyOut(Season effectiveSeason, int retainedPercent)
+    {
+        ArgumentNullException.ThrowIfNull(effectiveSeason);
+        if (retainedPercent is < 0 or > 100)
+        {
+            return DomainOperationResult.Failure(new DomainError(
+                InvalidRetainedPercentCode,
+                $"A buyout keeps 0 to 100 per cent of the guaranteed money, not {retainedPercent}."));
+        }
+
+        var terminated = Terminate(effectiveSeason);
+        if (terminated.IsSuccess)
+        {
+            RetainedPercent = retainedPercent;
+        }
+
+        return terminated;
+    }
 
     public ContractSeasonTerm? TermFor(Season season)
     {
@@ -178,9 +213,10 @@ public sealed class Contract
 
         if (IsTerminated && season.Year >= TerminatedFromSeason!.Year)
         {
-            return term.GuaranteedAmount.SmallestUnits == 0
+            var owed = term.GuaranteedAmount.SmallestUnits * RetainedPercent / 100;
+            return owed == 0
                 ? null
-                : CapCharge.DeadMoney(TeamId, season, PlayerId, Id, term.GuaranteedAmount);
+                : CapCharge.DeadMoney(TeamId, season, PlayerId, Id, new Money(owed));
         }
 
         if (term.IsPendingOption)

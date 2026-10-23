@@ -41,4 +41,7 @@ internal sealed class StubSigningEngine : ISigningEngine
 
     /// <summary>No league in these fixtures configures a floor or a ceiling, so neither applies.</summary>
     public CompensationLimits LimitsFor(LeagueSnapshot snapshot, int seasonsOfService) => new(null, null);
+
+    public DomainOperationResult ExecuteBuyout(LeagueSnapshot snapshot, TeamId teamId, Domain.Players.PlayerId playerId, Domain.Contracts.ContractId contractId, int retainedPercent) =>
+        DomainOperationResult.Success;
 }

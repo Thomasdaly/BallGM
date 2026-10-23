@@ -170,7 +170,8 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             ruleset.NegotiationRules,
             new SeededRandomSource(AskingPriceSeed),
             ruleset.PostseasonRules,
-            ruleset.CapMechanics);
+            ruleset.CapMechanics,
+            ruleset.BuyoutRules);
 
         var candidates = FreeAgentTargetingModel.FindCandidates(teamId, freeAgents, context);
         return DomainOperationResult<IReadOnlyList<FreeAgentTargetCandidate>>.Success(candidates);
@@ -291,7 +292,8 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             ruleset.NegotiationRules,
             new SeededRandomSource(AskingPriceSeed),
             ruleset.PostseasonRules,
-            ruleset.CapMechanics);
+            ruleset.CapMechanics,
+            ruleset.BuyoutRules);
 
         // Last season's table: the offseason follows the season it concluded.
         var records = ThisSeasonRecords(snapshot, snapshot.CurrentSeason.Year - 1);
@@ -308,6 +310,34 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             .ResolveRound(offers, playersById, records)
             .Select(accepted => new MarketSigningPlan(accepted.Bid.Offer, accepted.Bid.Rationale, accepted.Choice))
             .ToList());
+    }
+
+    public DomainOperationResult<IReadOnlyList<BuyoutPlan>> PlanBuyouts(LeagueSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var rulesetResult = BuildRuleset(snapshot);
+        if (rulesetResult.IsFailure)
+        {
+            return DomainOperationResult<IReadOnlyList<BuyoutPlan>>.Failure(rulesetResult.Errors.ToArray());
+        }
+
+        var ruleset = rulesetResult.Value;
+        var asOf = new DateOnly(snapshot.CurrentSeason.Year, 7, 1);
+        var records = ThisSeasonRecords(snapshot, snapshot.CurrentSeason.Year - 1);
+        var playersById = snapshot.Players.ToDictionary(player => player.Id);
+        var plans = new List<BuyoutPlan>();
+        foreach (var team in snapshot.Teams.OrderBy(team => team.Id.Value, StringComparer.Ordinal))
+        {
+            var roster = team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
+            var direction = OffseasonModel.DirectionFor(records.TryGetValue(team.Id, out var record) ? record : null, roster, asOf, PeakAgeStart(ruleset));
+            var decision = BuyoutModel.Decide(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.NegotiationRules, ruleset.CapThresholds, ruleset.BuyoutRules, direction, asOf);
+            if (decision is not null)
+            {
+                plans.Add(new BuyoutPlan(decision.TeamId, decision.PlayerId, decision.ContractId, decision.RetainedPercent, decision.Rationale));
+            }
+        }
+
+        return DomainOperationResult<IReadOnlyList<BuyoutPlan>>.Success(plans);
     }
 
     /// <summary>How many offers one team makes in one market round, best first.</summary>

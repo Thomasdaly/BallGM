@@ -78,11 +78,20 @@ public interface IFrontOfficeAdvisor
     /// at round <paramref name="round"/>'s prices, and which of them each player takes (at most one
     /// signing per team a round). Read-only; the caller executes the accepted offers, in order.
     /// </summary>
+    /// <summary>
+    /// The buyouts teams agree this summer (at most one a team, only by teams not contending, only of
+    /// overpaid veterans outside the rotation): read-only; the caller executes them.
+    /// </summary>
+    DomainOperationResult<IReadOnlyList<BuyoutPlan>> PlanBuyouts(LeagueSnapshot snapshot);
+
     DomainOperationResult<IReadOnlyList<MarketSigningPlan>> PlanMarketRound(
         LeagueSnapshot snapshot,
         IReadOnlyCollection<Player> freeAgents,
         int round);
 }
+
+/// <summary>A team's agreed buyout of one player: the contract, the share of his money kept, and why.</summary>
+public sealed record BuyoutPlan(TeamId TeamId, PlayerId PlayerId, Domain.Contracts.ContractId ContractId, int RetainedPercent, RuleFinding Rationale);
 
 /// <summary>A team's decision to re-sign one of its own: the terms, and the reason.</summary>
 public sealed record ReSigningPlan(TeamId TeamId, PlayerId PlayerId, int Seasons, long FirstSeasonSalary, RuleFinding Rationale);

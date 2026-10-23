@@ -132,7 +132,7 @@ public sealed class SaveGameSerializerTests
     {
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
 
-        Assert.Contains("\"schemaVersion\": 7", saved.Value, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": 8", saved.Value, StringComparison.Ordinal);
     }
 
     [Fact]

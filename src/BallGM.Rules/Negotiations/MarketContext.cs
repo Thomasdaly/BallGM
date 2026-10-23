@@ -40,7 +40,8 @@ public sealed record MarketContext(
     NegotiationRules NegotiationRules,
     IRandomSource Random,
     PostseasonRules? PostseasonRules = null,
-    CapMechanics? CapMechanics = null)
+    CapMechanics? CapMechanics = null,
+    BuyoutRules? Buyouts = null)
 {
     public Team? TeamFor(TeamId teamId)
     {
@@ -68,7 +69,8 @@ public sealed record MarketContext(
             NegotiationRules,
             PostseasonRules,
             Day,
-            CapMechanics);
+            CapMechanics,
+            Buyouts);
     }
 
     /// <summary>The players a team currently rosters, resolved from identifiers.</summary>

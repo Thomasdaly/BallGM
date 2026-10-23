@@ -93,7 +93,7 @@ public sealed class ContractSerializerTests
             new PlayerId("PLAYER-4"),
             [new ContractSeasonTerm(new Season(2031), new Money(1_000_000), new Money(1_000_000))]));
 
-        Assert.Contains("\"schemaVersion\": 1", Serializer.Serialize(contract), StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": 2", Serializer.Serialize(contract), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public sealed class ContractSerializerTests
         var result = Serializer.Deserialize(
             """
             {
-              "schemaVersion": 1,
+              "schemaVersion": 2,
               "contractId": "CONTRACT-6",
               "teamId": "TEAM-1",
               "playerId": "PLAYER-6",
@@ -155,7 +155,7 @@ public sealed class ContractSerializerTests
         var result = Serializer.Deserialize(
             """
             {
-              "schemaVersion": 1,
+              "schemaVersion": 2,
               "contractId": "CONTRACT-7",
               "teamId": "TEAM-1",
               "playerId": "PLAYER-7",
@@ -181,7 +181,7 @@ public sealed class ContractSerializerTests
         var result = Serializer.Deserialize(
             """
             {
-              "schemaVersion": 1,
+              "schemaVersion": 2,
               "contractId": "CONTRACT-8",
               "teamId": "TEAM-1",
               "playerId": "PLAYER-8",
@@ -199,6 +199,23 @@ public sealed class ContractSerializerTests
 
         Assert.True(result.IsFailure);
         Assert.Equal("contract.guarantee_exceeds_compensation", Assert.Single(result.Errors).Code);
+    }
+
+    [Fact]
+    public void ABoughtOutContractRoundTripsWithTheShareOfTheMoneyKept()
+    {
+        var contract = Unwrap(Contract.Create(
+            new ContractId("CONTRACT-BUYOUT"),
+            new TeamId("TEAM-1"),
+            new PlayerId("PLAYER-9"),
+            [new ContractSeasonTerm(new Season(2031), new Money(20_000_000), new Money(20_000_000))]));
+        Assert.True(contract.BuyOut(new Season(2031), 65).IsSuccess);
+
+        var back = Serializer.Deserialize(Serializer.Serialize(contract));
+
+        Assert.True(back.IsSuccess, string.Join("; ", back.Errors.Select(error => error.Message)));
+        Assert.True(back.Value.IsBoughtOut);
+        Assert.Equal(13_000_000, back.Value.ChargeFor(new Season(2031))!.Amount.SmallestUnits);
     }
 
     private static Contract Unwrap(DomainOperationResult<Contract> result)

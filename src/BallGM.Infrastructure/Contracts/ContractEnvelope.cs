@@ -16,9 +16,11 @@ public sealed record ContractEnvelope(
     string TeamId,
     string PlayerId,
     int? TerminatedFromSeasonYear,
-    IReadOnlyList<ContractSeasonTermEnvelope> Seasons)
+    IReadOnlyList<ContractSeasonTermEnvelope> Seasons,
+    int? RetainedPercent = null)
 {
-    public const int CurrentSchemaVersion = 1;
+    /// <summary>Version 2 added <see cref="RetainedPercent"/>: a buyout keeps only part of the guaranteed money.</summary>
+    public const int CurrentSchemaVersion = 2;
 }
 
 /// <summary>

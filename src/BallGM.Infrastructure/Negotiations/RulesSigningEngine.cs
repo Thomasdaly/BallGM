@@ -95,6 +95,26 @@ public sealed class RulesSigningEngine : ISigningEngine
             : DomainOperationResult<ExtensionResult>.Success(new ExtensionResult(assessment.Value, contract.Value));
     }
 
+    public DomainOperationResult ExecuteBuyout(LeagueSnapshot snapshot, TeamId teamId, PlayerId playerId, BallGM.Domain.Contracts.ContractId contractId, int retainedPercent)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var rules = snapshot.Configuration.ToBuyoutRules();
+        if (rules.IsFailure)
+        {
+            return DomainOperationResult.Failure(rules.Errors.ToArray());
+        }
+
+        var team = snapshot.Teams.FirstOrDefault(candidate => candidate.Id == teamId);
+        var player = snapshot.Players.FirstOrDefault(candidate => candidate.Id == playerId);
+        var contract = snapshot.Contracts.FirstOrDefault(candidate => candidate.Id == contractId);
+        if (team is null || player is null || contract is null)
+        {
+            return DomainOperationResult.Failure(new DomainError("buyout.unknown_party", "The team, player or contract named in this buyout is not in this league."));
+        }
+
+        return BuyoutExecutor.Execute(team, player, contract, retainedPercent, snapshot.CurrentSeason, rules.Value, snapshot.Ledger);
+    }
+
     public CompensationLimits LimitsFor(LeagueSnapshot snapshot, int seasonsOfService)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
@@ -192,6 +212,12 @@ public sealed class RulesSigningEngine : ISigningEngine
             return DomainOperationResult<SigningContext>.Failure(capMechanicsResult.Errors.ToArray());
         }
 
+        var buyoutsResult = configuration.ToBuyoutRules();
+        if (buyoutsResult.IsFailure)
+        {
+            return DomainOperationResult<SigningContext>.Failure(buyoutsResult.Errors.ToArray());
+        }
+
         return DomainOperationResult<SigningContext>.Success(new SigningContext(
             snapshot.CurrentSeason,
             team,
@@ -203,7 +229,8 @@ public sealed class RulesSigningEngine : ISigningEngine
             negotiationRulesResult.Value,
             postseasonResult.Value,
             day,
-            capMechanicsResult.Value));
+            capMechanicsResult.Value,
+            buyoutsResult.Value));
     }
 
     /// <summary>

@@ -155,6 +155,7 @@ public sealed partial class LeagueSession
             : development.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList();
 
         var (drafted, unrostered, draftNotes) = RunDraft(outcome.Entry.FinalStandings, seasonSeed.For("draft"));
+        var (boughtOut, buyoutNotes) = RunBuyouts();
         var (marketSigned, marketNotes) = RunFreeAgencyMarket();
         var (aiTradesExecuted, aiSigningsExecuted, aiTurnNotes) = RunAiFrontOfficeTurnAtSeasonBoundary();
         var autoSigned = AutoResignToRosterFloor();
@@ -174,10 +175,12 @@ public sealed partial class LeagueSession
             autoSigned,
             aiTradesExecuted,
             aiSigningsExecuted,
-            reSigningNotes.Concat(outcome.Notes).Concat(developmentNotes).Concat(draftNotes).Concat(marketNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList())
+            reSigningNotes.Concat(outcome.Notes).Concat(developmentNotes).Concat(draftNotes).Concat(buyoutNotes).Concat(marketNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList())
         {
             PlayersReSigned = reSigned,
             MarketSignings = marketSigned,
+            PlayersBoughtOut = boughtOut.Count,
+            Buyouts = boughtOut,
             Awards = AwardLines(outcome.Entry.Awards, teamNames),
             PlayersDeveloped = development.IsSuccess ? development.Value.PlayersDeveloped : 0,
             PlayersRetired = development.IsSuccess

@@ -36,6 +36,9 @@ public sealed class SigningValidator
 
     private readonly CapLedger _capLedger = new();
 
+    public const string ReleasedByThisTeamCode = "signing.released_by_this_team_within_waiting_period";
+    public const string ReleasedHighEarnerAboveLineCode = "signing.released_high_earner_above_line";
+
     public DomainOperationResult<SigningAssessment> Validate(Offer offer, SigningContext context)
     {
         ArgumentNullException.ThrowIfNull(offer);
@@ -144,6 +147,8 @@ public sealed class SigningValidator
                 offer.TeamId));
         }
 
+        CheckReleasedPlayerGuardrails(context, offer, after.TotalPayroll, violations);
+
         var allowanceUsed = SigningRouteTable.AllowanceUsed(context.Ledger, context.Team.Id, season);
         var reducedUsed = SigningRouteTable.AllowanceUsed(context.Ledger, context.Team.Id, season, SigningRouteKind.ReducedOverCapAllowance);
 
@@ -219,6 +224,61 @@ public sealed class SigningValidator
     /// other assessment in this codebase keeps.
     /// </para>
     /// </summary>
+    /// <summary>
+    /// The buyout guardrails (<see cref="BuyoutRules"/>), where the league states them: a team may not
+    /// sign a player it released within its waiting period, and a team that would finish over the
+    /// stated line may not sign a player released this season or last whose salary before the release
+    /// was above the standard over-cap allowance.
+    /// </summary>
+    private static void CheckReleasedPlayerGuardrails(SigningContext context, Offer offer, Money payrollAfter, List<RuleFinding> violations)
+    {
+        if (context.Buyouts is not { IsConfigured: true } buyouts)
+        {
+            return;
+        }
+
+        var season = context.CurrentSeason.Year;
+        var released = context.Contracts
+            .Where(contract => contract.PlayerId == context.Player.Id && contract.TerminatedFromSeason is not null)
+            .ToList();
+
+        if (buyouts.ReleasingTeamWaitSeasons > 0 &&
+            released.FirstOrDefault(contract => contract.TeamId == context.Team.Id && contract.TerminatedFromSeason!.Year > season - buyouts.ReleasingTeamWaitSeasons) is { } own)
+        {
+            violations.Add(new RuleFinding(
+                ReleasedByThisTeamCode,
+                $"{context.Team.Name} released {context.Player.FullName} from season {own.TerminatedFromSeason!.Year} and must wait {ExplanationText.Count(buyouts.ReleasingTeamWaitSeasons, "season")} before signing him again: a team cannot buy a player out and bring him straight back.",
+                offer.TeamId));
+        }
+
+        var line = buyouts.HighEarnerBarAbove switch
+        {
+            CapThresholdKind.SoftCap => context.CapThresholds.SoftCap,
+            CapThresholdKind.LuxuryTax => context.CapThresholds.LuxuryTax,
+            CapThresholdKind.FirstApron => context.CapThresholds.FirstApron,
+            CapThresholdKind.SecondApron => context.CapThresholds.SecondApron,
+            CapThresholdKind.HardCap => context.CapThresholds.HardCap,
+            _ => null,
+        };
+        var allowance = context.NegotiationRules.StandardOverCapAllowance;
+        if (line is null || allowance is null || payrollAfter <= line)
+        {
+            return;
+        }
+
+        var highEarner = released.FirstOrDefault(contract =>
+            contract.TerminatedFromSeason!.Year >= season - 1 &&
+            contract.TermFor(contract.TerminatedFromSeason!) is { } term &&
+            term.Compensation > allowance);
+        if (highEarner is not null)
+        {
+            violations.Add(new RuleFinding(
+                ReleasedHighEarnerAboveLineCode,
+                $"{context.Player.FullName} was released earning {ExplanationText.Money(highEarner.TermFor(highEarner.TerminatedFromSeason!)!.Compensation.SmallestUnits)}, above the standard over-cap allowance of {ExplanationText.Money(allowance.SmallestUnits)}, and this signing would leave {context.Team.Name} over the {ExplanationText.Money(line.SmallestUnits)} line: a team that far over may not sign a released high earner.",
+                offer.TeamId));
+        }
+    }
+
     private static void CheckPlayoffEligibility(
         SigningContext context,
         TeamId teamId,

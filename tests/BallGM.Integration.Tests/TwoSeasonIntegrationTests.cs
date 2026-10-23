@@ -44,10 +44,11 @@ public sealed class TwoSeasonIntegrationTests
 
         var overviewAfter = session.Overview().Value;
         Assert.Equal(conclusion.Value.NextSeasonYear, overviewAfter.SeasonYear);
-        Assert.Equal(rosteredBefore - released + drafted + autoSigned + aiSigned, overviewAfter.Teams.Sum(team => team.RosterCount));
+        var boughtOut = conclusion.Value.PlayersBoughtOut;
+        Assert.Equal(rosteredBefore - released - boughtOut + drafted + autoSigned + aiSigned, overviewAfter.Teams.Sum(team => team.RosterCount));
         // A free agent who retires leaves the pool for good.
         var retired = conclusion.Value.PlayersRetired.Count;
-        Assert.Equal(freeAgentsBefore + released + unrostered - autoSigned - aiSigned - retired, overviewAfter.FreeAgents.Players.Count);
+        Assert.Equal(freeAgentsBefore + released + boughtOut + unrostered - autoSigned - aiSigned - retired, overviewAfter.FreeAgents.Players.Count);
 
         var started = session.StartSeason(seed: 2032);
         Assert.True(started.IsSuccess, string.Join("; ", started.Errors.Select(error => error.Message)));

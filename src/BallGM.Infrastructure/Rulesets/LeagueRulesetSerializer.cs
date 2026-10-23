@@ -110,7 +110,8 @@ public sealed class LeagueRulesetSerializer
                 : null,
             ToEnvelope(ruleset.CapMechanics),
             ToEnvelope(ruleset.GameRules),
-            ToEnvelope(ruleset.LeaderQualifiers));
+            ToEnvelope(ruleset.LeaderQualifiers),
+            ToEnvelope(ruleset.BuyoutRules));
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -307,6 +308,12 @@ public sealed class LeagueRulesetSerializer
                 return DomainOperationResult<LeagueRuleset>.Failure(leadersResult.Errors.ToArray());
             }
 
+            var buyoutsResult = BuildBuyoutRules(envelope.Buyouts);
+            if (buyoutsResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(buyoutsResult.Errors.ToArray());
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
@@ -327,7 +334,8 @@ public sealed class LeagueRulesetSerializer
                 awardRulesResult.Value,
                 capMechanicsResult.Value,
                 gameRulesResult.Value,
-                leadersResult.Value);
+                leadersResult.Value,
+                buyoutsResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
@@ -559,6 +567,34 @@ public sealed class LeagueRulesetSerializer
         rules == GameRules.Default ? null : new GameRulesEnvelope(rules.PersonalFoulLimit, rules.BonusTeamFoulsPerPeriod, rules.BonusTeamFoulsPerOvertime);
 
     /// <summary>The leaderboard qualifiers a file states; an absent section, or an absent figure, is the default.</summary>
+    /// <summary>The buyout section, absent for a league with no buyouts.</summary>
+    internal static DomainOperationResult<BuyoutRules> BuildBuyoutRules(BuyoutRulesEnvelope? envelope)
+    {
+        if (envelope is null)
+        {
+            return DomainOperationResult<BuyoutRules>.Success(BuyoutRules.None);
+        }
+
+        CapThresholdKind? bar = null;
+        if (envelope.HighEarnerBarAbove is not null)
+        {
+            var parsed = NegotiationRules.ParseAllowanceLimit(envelope.HighEarnerBarAbove);
+            if (parsed.IsFailure)
+            {
+                return DomainOperationResult<BuyoutRules>.Failure(parsed.Errors.ToArray());
+            }
+
+            bar = parsed.Value;
+        }
+
+        return BuyoutRules.Create(envelope.MaximumGiveBackPercent, envelope.ReleasingTeamWaitSeasons ?? 0, bar);
+    }
+
+    internal static BuyoutRulesEnvelope? ToEnvelope(BuyoutRules rules) =>
+        rules.IsConfigured
+            ? new BuyoutRulesEnvelope(rules.MaximumGiveBackPercent, rules.ReleasingTeamWaitSeasons, rules.HighEarnerBarAbove?.ToString())
+            : null;
+
     internal static DomainOperationResult<LeaderQualifiers> BuildLeaderQualifiers(StatLeadersEnvelope? envelope) =>
         LeaderQualifiers.Create(envelope?.MinimumGamesShareBasisPoints, envelope?.MinimumMinutesPerGame, envelope?.MinimumFieldGoalsMadePerTeamGame, envelope?.MinimumThreesMadePerTeamGame, envelope?.MinimumFreeThrowsMadePerTeamGame);
 

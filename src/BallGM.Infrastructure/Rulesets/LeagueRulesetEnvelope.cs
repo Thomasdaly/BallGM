@@ -79,7 +79,8 @@ public sealed record LeagueRulesetEnvelope
         IReadOnlyList<AwardEnvelope>? awards = null,
         CapMechanicsEnvelope? capMechanics = null,
         GameRulesEnvelope? gameRules = null,
-        StatLeadersEnvelope? statLeaders = null)
+        StatLeadersEnvelope? statLeaders = null,
+        BuyoutRulesEnvelope? buyouts = null)
     {
         SchemaVersion = schemaVersion;
         Name = name;
@@ -146,6 +147,7 @@ public sealed record LeagueRulesetEnvelope
         Awards = awards;
         CapMechanics = capMechanics;
         GameRules = gameRules;
+        Buyouts = buyouts;
         StatLeaders = statLeaders;
     }
 
@@ -347,6 +349,9 @@ public sealed record LeagueRulesetEnvelope
     /// <summary>The personal foul limit and the bonus (schema v11). Absent means the sport's usual six and four.</summary>
     public GameRulesEnvelope? GameRules { get; }
 
+    /// <summary>The optional buyout section (schema 14).</summary>
+    public BuyoutRulesEnvelope? Buyouts { get; }
+
     /// <summary>Who qualifies for the leaderboards (schema v12). Absent means 70% of games and the usual makes.</summary>
     public StatLeadersEnvelope? StatLeaders { get; }
 }
@@ -360,6 +365,9 @@ public sealed record StatLeadersEnvelope(
     int? MinimumFreeThrowsMadePerTeamGame = null);
 
 /// <summary>The on-disk shape of <c>GameRules</c>; either figure may be left out for its default.</summary>
+/// <summary>The buyout section as a ruleset states it: the give-back cap, the releasing team's wait, and the high-earner bar.</summary>
+public sealed record BuyoutRulesEnvelope(int MaximumGiveBackPercent, int? ReleasingTeamWaitSeasons = null, string? HighEarnerBarAbove = null);
+
 public sealed record GameRulesEnvelope(int? PersonalFoulLimit = null, int? BonusTeamFoulsPerPeriod = null, int? BonusTeamFoulsPerOvertime = null);
 
 /// <summary>

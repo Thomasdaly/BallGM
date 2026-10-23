@@ -85,7 +85,12 @@ public sealed record LeagueRuleset
     /// award. The version moved because a version 12 reader handed a version 13 file would refuse an
     /// award kind it has never heard of, or worse, crown a bench award by total points.
     /// </remarks>
-    public const int CurrentSchemaVersion = 13;
+    /// <remarks>
+    /// Version 14 added the optional buyout section: whether a league has negotiated buyouts, how much
+    /// a player may give back, how long the releasing team waits before signing him again, and the line
+    /// above which a team may not sign a released high earner.
+    /// </remarks>
+    public const int CurrentSchemaVersion = 14;
 
     public LeagueRuleset(
         int schemaVersion,
@@ -107,7 +112,8 @@ public sealed record LeagueRuleset
         AwardRules? awardRules = null,
         CapMechanics? capMechanics = null,
         GameRules? gameRules = null,
-        LeaderQualifiers? leaderQualifiers = null)
+        LeaderQualifiers? leaderQualifiers = null,
+        BuyoutRules? buyoutRules = null)
     {
         if (schemaVersion <= 0)
         {
@@ -150,6 +156,7 @@ public sealed record LeagueRuleset
         CapMechanics = capMechanics ?? CapMechanics.None;
         GameRules = gameRules ?? GameRules.Default;
         LeaderQualifiers = leaderQualifiers ?? LeaderQualifiers.Default;
+        BuyoutRules = buyoutRules ?? BuyoutRules.None;
     }
 
     public int SchemaVersion { get; }
@@ -215,4 +222,7 @@ public sealed record LeagueRuleset
 
     /// <summary>Who qualifies for the statistical leaderboards (schema v12), or <see cref="Configuration.LeaderQualifiers.Default"/>.</summary>
     public LeaderQualifiers LeaderQualifiers { get; }
+
+    /// <summary>Contract buyouts and their guardrails (schema v14), or <see cref="Configuration.BuyoutRules.None"/>.</summary>
+    public BuyoutRules BuyoutRules { get; }
 }
