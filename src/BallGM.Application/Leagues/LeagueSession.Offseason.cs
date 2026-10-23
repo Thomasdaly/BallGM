@@ -79,6 +79,48 @@ public sealed partial class LeagueSession
     }
 
     /// <summary>
+    /// The summer's salary dumps, before free agency: a taxpayer clears an overpaid contract into a
+    /// rebuilding team's room, paying in picks. Each is executed through the trade engine (which
+    /// re-validates it); one that no longer passes is skipped and noted. Run twice a summer — before the
+    /// market, while rebuilding teams still have room, and after it, once rosters are filled enough
+    /// that sending a player out does not leave a team short — with <paramref name="dumpedTeams"/>
+    /// keeping it to one dump a team.
+    /// </summary>
+    private (int Executed, IReadOnlyList<RuleFinding> Notes) RunSalaryDumps(HashSet<TeamId> dumpedTeams)
+    {
+        if (_snapshot is null)
+        {
+            return (0, []);
+        }
+
+        var plans = _frontOfficeAdvisor.PlanSalaryDumps(_snapshot, dumpedTeams);
+        if (plans.IsFailure)
+        {
+            return (0, plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList());
+        }
+
+        var executed = 0;
+        var notes = new List<RuleFinding>();
+        foreach (var plan in plans.Value)
+        {
+            var result = _tradeEngine.Execute(plan.Proposal, _snapshot);
+            if (result.IsSuccess)
+            {
+                executed++;
+                dumpedTeams.Add(plan.FromTeamId);
+                dumpedTeams.Add(plan.ToTeamId);
+                notes.Add(plan.Rationale);
+            }
+            else
+            {
+                notes.Add(new RuleFinding("ai_trade.salary_dump_failed", $"A planned salary dump did not go through: {string.Join("; ", result.Errors.Select(error => error.Message))}", plan.FromTeamId));
+            }
+        }
+
+        return (executed, notes);
+    }
+
+    /// <summary>
     /// Restricted players nobody signed in the market sign their qualifying offers with their own teams —
     /// one season, through the incumbent-rights route — where the team still has a roster spot.
     /// </summary>

@@ -227,7 +227,7 @@ age of 24–28.
 
 **Still open** — competitive spread in an evolved league (win SD about 0.10 against a real league's
 ~0.15: the worst teams win 21–30 games, because nothing makes a rebuilding team deliberately worse),
-the blocks leader, waivers and the stretch provision, picks as trade assets (salary dumps, §12) and
+the blocks leader, waivers and the stretch provision, picks in player-for-player trades and
 in-season (deadline) moves, and the screens that show all of this.
 
 ## 10. F8 (first step): a season can end in the client
@@ -275,3 +275,29 @@ player — contenders preferring veterans, rebuilding teams youth. Rosters settl
 19–22, average 24.7). Prospects are now drawn up to four years older (30/25/20/15/10%), and an older one
 carries two rating points of polish per year with a ceiling nearer to it. Rostered ages after twelve
 seasons: 22/35/26/13/2% in 19–22/23–26/27–30/31–34/35+ (real ~18/35/28/15/4), average ~26.
+
+## 12. F5 (second step): salary dumps, and a pick window that rolls forward
+
+**Salary dumps (`SalaryDumpModel`).** A team over the luxury tax pays a rebuilding team with cap room, in
+draft picks, to take an overpaid contract: the taxpayer saves the salary and the tax on it, the rebuilding
+team spends room it had no good use for and is paid in the currency it needs. The price is the overpay —
+what the contract pays above the player's asking price, over every season left — at 12% of the cap of
+overpay per first-round pick and 2% per second; a contract that would take more than two firsts does not
+move. A team pays at most twice the tax the dump avoids this season (150% of the payroll it takes back
+under the line), so a team a hair over the tax does not throw firsts at it. A team's five best players are
+never dumped. Picks go latest first, spaced so a league's retained-round rule is never broken; a
+taxpayer at its roster minimum takes a cheap end-of-bench player back. Every dump is re-validated by the
+trade engine. It runs twice a summer — before the market, while rebuilding teams still have room, and
+after it, once rosters are filled — with one dump a team. Measured: 0–2 a summer on the calibration
+league, every one priced by its overpay, e.g. a contender $11.9M over the tax sending a $29.6M-a-season
+role player through 2038 with a first and a second.
+
+**The pick window rolls forward.** Future picks were registered only when a league was loaded, so after
+the tradable horizon a long save had no future picks to trade at all (and dumps, trades and the board went
+quiet). The draft now registers whatever the horizon newly reaches each season
+(`FixtureDraftAssets.ExtendHorizon`), leaving existing picks — owned, traded or encumbered — untouched.
+`LongSaveRealismTests` checks every franchise still has a pick in the last draft of the window after
+twelve seasons.
+
+The season review lists qualifying offers and salary dumps in its summer line and promotes dumps and
+matched offer sheets to its headlines.

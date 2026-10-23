@@ -158,8 +158,11 @@ public sealed partial class LeagueSession
 
         var (drafted, unrostered, draftNotes) = RunDraft(outcome.Entry.FinalStandings, seasonSeed.For("draft"));
         var (boughtOut, buyoutNotes) = RunBuyouts();
+        var dumpedTeams = new HashSet<TeamId>();
+        var (dumps, dumpNotes) = RunSalaryDumps(dumpedTeams);
         var (marketSigned, marketNotes) = RunFreeAgencyMarket(tendered.ToDictionary(plan => plan.PlayerId, plan => plan.TeamId));
         var (qualifyingSigned, qualifyingNotes) = SignQualifyingOffers(tendered);
+        var (lateDumps, lateDumpNotes) = RunSalaryDumps(dumpedTeams);
         var (aiTradesExecuted, aiSigningsExecuted, aiTurnNotes) = RunAiFrontOfficeTurnAtSeasonBoundary();
         var autoSigned = AutoResignToRosterFloor();
 
@@ -178,12 +181,13 @@ public sealed partial class LeagueSession
             autoSigned,
             aiTradesExecuted,
             aiSigningsExecuted,
-            optionNotes.Concat(reSigningNotes).Concat(tenderNotes).Concat(outcome.Notes).Concat(developmentNotes).Concat(draftNotes).Concat(buyoutNotes).Concat(marketNotes).Concat(qualifyingNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList())
+            optionNotes.Concat(reSigningNotes).Concat(tenderNotes).Concat(outcome.Notes).Concat(developmentNotes).Concat(draftNotes).Concat(buyoutNotes).Concat(dumpNotes).Concat(marketNotes).Concat(qualifyingNotes).Concat(lateDumpNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList())
         {
             PlayersReSigned = reSigned,
             OptionsDecided = optionsDecided,
             MarketSignings = marketSigned + qualifyingSigned,
             QualifyingOffersTendered = tendered.Count,
+            SalaryDumps = dumps + lateDumps,
             PlayersBoughtOut = boughtOut.Count,
             Buyouts = boughtOut,
             Awards = AwardLines(outcome.Entry.Awards, teamNames),

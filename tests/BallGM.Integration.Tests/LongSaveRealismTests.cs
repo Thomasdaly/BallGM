@@ -57,7 +57,13 @@ public sealed class LongSaveRealismTests
             var moved = stars.Count(star => teamOf.TryGetValue(star.PlayerId, out var now) && now != star.TeamId);
             Assert.True(moved <= 3, $"Summer after season {season}: {moved} of the league's thirty best players changed teams.");
             Assert.All(teams, team => Assert.InRange(team.RosterCount, 12, 15));
+            Assert.InRange(summary.SalaryDumps, 0, 6);
         }
+
+        // The tradable window of future picks rolls forward with the seasons rather than running out.
+        var board = session.Overview().Value.PickBoard;
+        var lastDraft = board.DraftSeasons.Max();
+        Assert.All(board.Franchises, row => Assert.NotEmpty(row.Drafts.Single(cell => cell.DraftSeason == lastDraft).Assets));
 
         Assert.True(leaders.Average() >= 30, $"Scoring leaders averaged {leaders.Average():F1} a game over {Seasons} seasons.");
         Assert.True(leaders.Min() >= 27, $"A season's scoring leader averaged only {leaders.Min():F1}.");

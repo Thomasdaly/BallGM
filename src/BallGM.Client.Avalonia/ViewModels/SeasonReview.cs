@@ -20,6 +20,8 @@ public sealed class SeasonReview
     private static readonly string[] HeadlineCodes =
     [
         "ai_turn.trade_executed",
+        "ai_trade.salary_dump",
+        "ai_offseason.offer_sheet_matched",
         "ai_buyout.agreed",
         "retirement.voluntary_drawn",
         "retirement.mandatory_age",
@@ -39,6 +41,7 @@ public sealed class SeasonReview
             .ToList();
         Summer =
             $"{summary.PlayersReSigned} re-signed · {summary.OptionsDecided} options decided · {summary.PlayersBoughtOut} bought out · " +
+            $"{summary.QualifyingOffersTendered} qualifying offers · {summary.SalaryDumps} salary dumps · " +
             $"{summary.PlayersDrafted} draft picks signed · {summary.MarketSignings} free-agent signings · {summary.AiTradesExecuted} trades · " +
             $"{summary.PlayersRetired.Count} retired";
         Headlines = summary.Notes

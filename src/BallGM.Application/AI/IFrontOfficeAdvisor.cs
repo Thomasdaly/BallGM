@@ -111,7 +111,17 @@ public interface IFrontOfficeAdvisor
     /// (decided after the re-signing window, before the season is concluded). Read-only.
     /// </summary>
     DomainOperationResult<IReadOnlyList<QualifyingOfferPlan>> PlanQualifyingOffers(LeagueSnapshot snapshot);
+
+    /// <summary>
+    /// The salary dumps of a summer: teams over the tax paying rebuilding teams with room, in picks, to
+    /// take overpaid contracts. Read-only; each plan is a trade the engine re-validates on execution.
+    /// </summary>
+    /// <param name="excludedTeams">Teams already part of a dump this summer, on either side.</param>
+    DomainOperationResult<IReadOnlyList<SalaryDumpPlan>> PlanSalaryDumps(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null);
 }
+
+/// <summary>A salary dump: the trade, the two teams, the player moved and why.</summary>
+public sealed record SalaryDumpPlan(BallGM.Domain.Trades.TradeProposal Proposal, TeamId FromTeamId, TeamId ToTeamId, PlayerId PlayerId, int PicksAttached, RuleFinding Rationale);
 
 /// <summary>A qualifying offer tendered: the player, his team, the one-season salary, and why.</summary>
 public sealed record QualifyingOfferPlan(PlayerId PlayerId, TeamId TeamId, long Salary, RuleFinding Rationale);

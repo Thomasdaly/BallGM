@@ -151,6 +151,55 @@ internal static class FixtureDraftAssets
     /// tradable horizon. Registering them all up front is what lets an obligation roll forward: a
     /// rollover needs the following draft's pick to already exist.
     /// </summary>
+    /// <summary>
+    /// Registers whatever picks the tradable horizon now reaches that the book does not hold yet: run
+    /// after each season's draft, so a long save always has the same window of future picks to deal
+    /// in as the season it started with (picks registered only at load would run out after the
+    /// horizon). Picks already in the book — owned, traded or encumbered — are left exactly as they are.
+    /// </summary>
+    internal static DomainOperationResult ExtendHorizon(
+        DraftAssetBook book,
+        LeagueId leagueId,
+        Season currentSeason,
+        IReadOnlyCollection<Franchise> franchises,
+        DraftRules draftRules)
+    {
+        var lastYear = currentSeason.Year + draftRules.TradableFutureDraftHorizon + 1;
+        for (var year = currentSeason.Year; year <= lastYear; year++)
+        {
+            for (var round = 1; round <= draftRules.RoundCount; round++)
+            {
+                foreach (var franchise in franchises.OrderBy(franchise => franchise.Id.Value, StringComparer.Ordinal))
+                {
+                    if (book.Find(new Season(year), round, franchise.Id) is not null)
+                    {
+                        continue;
+                    }
+
+                    var pickResult = DraftPick.Create(new DraftPickId(SortableId.NewId()), leagueId, new Season(year), round, franchise.Id);
+                    if (pickResult.IsFailure)
+                    {
+                        return DomainOperationResult.Failure(pickResult.Errors.ToArray());
+                    }
+
+                    var eligibilityResult = new PickOwnershipRules().ValidateRegistration(pickResult.Value, draftRules);
+                    if (eligibilityResult.IsFailure)
+                    {
+                        return eligibilityResult;
+                    }
+
+                    var registerResult = book.Register(pickResult.Value);
+                    if (registerResult.IsFailure)
+                    {
+                        return registerResult;
+                    }
+                }
+            }
+        }
+
+        return DomainOperationResult.Success;
+    }
+
     internal static DomainOperationResult RegisterPicks(
         DraftAssetBook book,
         LeagueId leagueId,

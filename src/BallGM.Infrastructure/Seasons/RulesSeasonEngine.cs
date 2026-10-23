@@ -270,6 +270,14 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
         }
 
         var notes = new List<RuleFinding>(dayResult.Value.Notes);
+
+        // The draft just made used one season's picks; the tradable window moves on a season with it.
+        if (ruleset.DraftRules.RoundCount > 0)
+        {
+            var horizon = Fixtures.FixtureDraftAssets.ExtendHorizon(snapshot.DraftAssets, snapshot.League.Id, draftSeason, snapshot.Franchises, ruleset.DraftRules);
+            notes.AddRange(horizon.Errors.Select(error => new RuleFinding(error.Code, error.Message)));
+        }
+
         var drafted = new List<DraftedPlayer>();
         var planned = snapshot.Teams.ToDictionary(team => team.Id, team => team.RosterCount);
 
