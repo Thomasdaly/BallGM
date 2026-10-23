@@ -52,7 +52,13 @@ public sealed class AttributeSheetView
         Body = sheet.Body is { } body ? Measurements(body) : null;
         Traits = sheet.Traits.Select(DisplayText.Words).ToList();
         Positions = sheet.Positions.Select(line => new PositionChip(line.Position, line.Familiarity, line.Level)).ToList();
+        Tendencies = sheet.Tendencies.Count == 0
+            ? null
+            : new AttributeGroupView("Tendencies", sheet.Tendencies.Select(line => new AttributeCell(AttributeDescriptions.NameOf(line.Key), line.Value, AttributeDescriptions.For(line.Key))).ToList());
     }
+
+    /// <summary>How often he does things, as a group of its own after the attributes; null on a sheet that states none.</summary>
+    public AttributeGroupView? Tendencies { get; }
 
     public IReadOnlyList<IReadOnlyList<AttributeGroupView>> Columns { get; }
 

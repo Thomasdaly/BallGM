@@ -43,6 +43,21 @@ public static class AttributeDescriptions
         ["Vertical"] = "How high and how quickly he gets off the floor.",
         ["Stamina"] = "How long he plays before tiring, in a game and over a season.",
         ["NaturalFitness"] = "How well he keeps his condition and recovers.",
+
+        // Tendencies: how often, not how well (50 is the league's middle).
+        ["Touches"] = "Tendency: how often the offence runs through him.",
+        ["Shot"] = "Tendency: how readily he shoots it himself rather than moving the ball on.",
+        ["Drive"] = "Tendency: how often he attacks the basket off the dribble.",
+        ["PostUp"] = "Tendency: how often he posts up.",
+        ["ShotClose"] = "Tendency: how much of his shooting comes at the rim and in the paint.",
+        ["ShotMid"] = "Tendency: how much of his shooting is from mid-range.",
+        ["ShotThree"] = "Tendency: how much of his shooting is from three.",
+        ["PullUp"] = "Tendency: how often he pulls up off the dribble.",
+        ["Pass"] = "Tendency: how often he looks to pass first.",
+        ["CrashGlass"] = "Tendency: how often he crashes the offensive glass.",
+        ["Gamble"] = "Tendency: how often he gambles for steals.",
+        ["BlockShot"] = "Tendency: how often he goes for blocks.",
+        ["Foul"] = "Tendency: how readily he fouls.",
     };
 
     public static string For(string key) => Lines.GetValueOrDefault(key, string.Empty);

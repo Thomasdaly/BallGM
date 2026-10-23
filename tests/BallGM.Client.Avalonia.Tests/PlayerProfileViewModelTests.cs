@@ -64,6 +64,21 @@ public sealed class PlayerProfileViewModelTests
     }
 
     [Fact]
+    public void Ratings_ShowTheTendenciesAsTheirOwnGroupAfterTheAttributes()
+    {
+        var sheet = Sample().Attributes with { Tendencies = [new AttributeLine("ShotThree", 82), new AttributeLine("Drive", 35)] };
+        var profile = new PlayerProfileViewModel(Sample() with { Attributes = sheet }, () => { });
+
+        var tendencies = profile.Groups[^1];
+        Assert.Equal("Tendencies", tendencies.Title);
+        Assert.Equal(["Shot three", "Drive"], tendencies.Attributes.Select(cell => cell.Name));
+        Assert.StartsWith("Tendency:", tendencies.Attributes[0].Description, StringComparison.Ordinal);
+        Assert.DoesNotContain(profile.OverviewGroups, group => group.Title == "Tendencies");
+
+        Assert.DoesNotContain(new PlayerProfileViewModel(Sample(), () => { }).Groups, group => group.Title == "Tendencies");
+    }
+
+    [Fact]
     public void Career_ListsAPlayoffRowSeparatelyAndLeavesItOutOfTheCareerTotals()
     {
         var playoffs = new CareerSeasonLine("2024-25", "Old Team", 8, 280, 200, 40, 30, IsPostseason: true);

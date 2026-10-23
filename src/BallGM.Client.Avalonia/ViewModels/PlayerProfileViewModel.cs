@@ -280,10 +280,12 @@ public sealed class PlayerProfileViewModel(PlayerProfileSummary profile, Action 
     /// <summary>Every attribute group with its average, for the Ratings tab and the Overview's top groups.</summary>
     public IReadOnlyList<AttributeGroupDisplay> Groups => Sheet.Columns
         .SelectMany(column => column)
+        .Append(Sheet.Tendencies)
+        .OfType<AttributeGroupView>()
         .Select(group => new AttributeGroupDisplay(group.Title, group.Attributes.Count == 0 ? 0 : (int)Math.Round(group.Attributes.Average(cell => cell.Value)), group.Attributes))
         .ToList();
 
-    public IReadOnlyList<AttributeGroupDisplay> OverviewGroups => Groups.Take(4).ToList();
+    public IReadOnlyList<AttributeGroupDisplay> OverviewGroups => Groups.Where(group => group.Title != "Tendencies").Take(4).ToList();
 
     public IReadOnlyList<Controls.FormResult> FormResults => GameLog.Take(SparklineGames).Select(game => new Controls.FormResult(game.Won, $"{game.Opponent} · {game.Result}")).Reverse().ToList();
 

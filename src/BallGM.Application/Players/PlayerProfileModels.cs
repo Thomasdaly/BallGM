@@ -78,7 +78,15 @@ public sealed record AttributeSheet(
     BodyLine? Body,
     IReadOnlyList<PositionFamiliarityLine> Positions,
     IReadOnlyList<string> Traits,
-    string Personality);
+    string Personality)
+{
+    /// <summary>
+    /// His tendencies, 0–100 with 50 the league's middle: how often he does things (touches the ball,
+    /// shoots, drives, posts up, shoots from close, mid-range or three, passes, crashes the glass, gambles,
+    /// goes for blocks, fouls) rather than how well — what the match engine reads as his choices.
+    /// </summary>
+    public IReadOnlyList<AttributeLine> Tendencies { get; init; } = [];
+}
 
 public sealed record AttributeGroupLine(string Group, IReadOnlyList<AttributeLine> Attributes);
 

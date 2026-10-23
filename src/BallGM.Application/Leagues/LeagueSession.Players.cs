@@ -238,7 +238,10 @@ public sealed partial class LeagueSession
                 : new PositionFamiliarityLine(GetLeagueOverviewQuery.DescribePosition(position), "Not assessed", PositionFamiliarityLine.NotAssessed))
             .ToList(),
         rating.Traits.Select(trait => trait.ToString()).ToList(),
-        Personality.Describe(rating));
+        Personality.Describe(rating))
+    {
+        Tendencies = PlayerAttributes.AllTendencies.Select(tendency => new AttributeLine(tendency.ToString(), rating.Tendency(tendency))).ToList(),
+    };
 
     /// <summary>Each rostered player's team name, by player identifier.</summary>
     private static Dictionary<string, string> TeamNameByPlayer(LeagueSnapshot snapshot) => snapshot.Teams
