@@ -111,7 +111,8 @@ public sealed class LeagueRulesetSerializer
             ToEnvelope(ruleset.CapMechanics),
             ToEnvelope(ruleset.GameRules),
             ToEnvelope(ruleset.LeaderQualifiers),
-            ToEnvelope(ruleset.BuyoutRules));
+            ToEnvelope(ruleset.BuyoutRules),
+            ToEnvelope(ruleset.RookieScaleRules));
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -314,6 +315,12 @@ public sealed class LeagueRulesetSerializer
                 return DomainOperationResult<LeagueRuleset>.Failure(buyoutsResult.Errors.ToArray());
             }
 
+            var rookieScaleResult = BuildRookieScale(envelope.RookieScale);
+            if (rookieScaleResult.IsFailure)
+            {
+                return DomainOperationResult<LeagueRuleset>.Failure(rookieScaleResult.Errors.ToArray());
+            }
+
             var ruleset = new LeagueRuleset(
                 envelope.SchemaVersion,
                 envelope.Name,
@@ -335,7 +342,8 @@ public sealed class LeagueRulesetSerializer
                 capMechanicsResult.Value,
                 gameRulesResult.Value,
                 leadersResult.Value,
-                buyoutsResult.Value);
+                buyoutsResult.Value,
+                rookieScaleResult.Value);
 
             return DomainOperationResult<LeagueRuleset>.Success(ruleset);
         }
@@ -567,6 +575,29 @@ public sealed class LeagueRulesetSerializer
         rules == GameRules.Default ? null : new GameRulesEnvelope(rules.PersonalFoulLimit, rules.BonusTeamFoulsPerPeriod, rules.BonusTeamFoulsPerOvertime);
 
     /// <summary>The leaderboard qualifiers a file states; an absent section, or an absent figure, is the default.</summary>
+    /// <summary>The rookie scale, absent for a league whose draftees sign one-season minimum deals.</summary>
+    internal static DomainOperationResult<RookieScaleRules> BuildRookieScale(RookieScaleEnvelope? envelope)
+    {
+        if (envelope is null)
+        {
+            return DomainOperationResult<RookieScaleRules>.Success(RookieScaleRules.None);
+        }
+
+        var scale = BandedScale.Create(envelope.FirstRoundShare?.Select(band => new ScaleBand(band.FromSelection, band.BasisPoints)));
+        return scale.IsFailure
+            ? DomainOperationResult<RookieScaleRules>.Failure(scale.Errors.ToArray())
+            : RookieScaleRules.Create(scale.Value, envelope.Seasons, envelope.TeamOptionSeasons, envelope.SecondRoundSeasons);
+    }
+
+    internal static RookieScaleEnvelope? ToEnvelope(RookieScaleRules rules) =>
+        rules.IsConfigured
+            ? new RookieScaleEnvelope(
+                rules.FirstRoundShare.Bands.Select(band => new PickShareBandEnvelope(band.MinimumKey, band.Value)).ToList(),
+                rules.Seasons,
+                rules.TeamOptionSeasons,
+                rules.SecondRoundSeasons)
+            : null;
+
     /// <summary>The buyout section, absent for a league with no buyouts.</summary>
     internal static DomainOperationResult<BuyoutRules> BuildBuyoutRules(BuyoutRulesEnvelope? envelope)
     {

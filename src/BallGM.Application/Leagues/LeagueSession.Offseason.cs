@@ -99,6 +99,38 @@ public sealed partial class LeagueSession
     }
 
     /// <summary>
+    /// Every option on next season, decided before the re-signing window so a declined option's player is
+    /// treated as expiring there (his own team may still re-sign him at his price) and a player who walks
+    /// away from his option reaches the market.
+    /// </summary>
+    private (int Decided, IReadOnlyList<RuleFinding> Notes) RunOptionDecisions()
+    {
+        if (_snapshot is null)
+        {
+            return (0, []);
+        }
+
+        var plans = _frontOfficeAdvisor.PlanOptionDecisions(_snapshot);
+        if (plans.IsFailure)
+        {
+            return (0, plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList());
+        }
+
+        var decided = 0;
+        var notes = new List<RuleFinding>();
+        foreach (var plan in plans.Value)
+        {
+            if (_signingEngine.DecideOption(_snapshot, plan.ContractId, plan.Season, plan.Exercise).IsSuccess)
+            {
+                decided++;
+                notes.Add(plan.Rationale);
+            }
+        }
+
+        return (decided, notes);
+    }
+
+    /// <summary>
     /// The summer's buyouts, before the market opens so a bought-out veteran can sign elsewhere: each
     /// agreed by the front office's own rule and carried out by the signing engine, which refuses one
     /// the league's buyout rules do not allow.

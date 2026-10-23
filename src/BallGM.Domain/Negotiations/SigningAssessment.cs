@@ -36,6 +36,9 @@ public enum SigningRouteKind
     /// A smaller allowance a team keeps after losing the standard one, up to its own higher cut-off.
     /// </summary>
     ReducedOverCapAllowance = 4,
+
+    /// <summary>A drafted player's first contract, on the league's rookie scale: the slot sets the pay, not the cap.</summary>
+    RookieScale = 5,
 }
 
 /// <summary>

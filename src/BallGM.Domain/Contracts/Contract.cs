@@ -71,7 +71,26 @@ public sealed class Contract
 
     public Season FirstSeason => _terms[0].Season;
 
-    public Season LastSeason => _terms[^1].Season;
+    /// <summary>
+    /// The last season the contract actually runs: the last stated season, or the one before a declined
+    /// option — declining an option ends the deal there, so nothing from that season on is owed or played.
+    /// </summary>
+    public Season LastSeason
+    {
+        get
+        {
+            var declined = _terms.FindIndex(term => term.IsDeclinedOption);
+            return declined switch
+            {
+                < 0 => _terms[^1].Season,
+                0 => _terms[0].Season,
+                _ => _terms[declined - 1].Season,
+            };
+        }
+    }
+
+    /// <summary>The last season the contract states, declined options included — what a save writes and a cap sheet lists.</summary>
+    public Season StatedLastSeason => _terms[^1].Season;
 
     /// <summary>The season the player was released in, if they were. Set by <see cref="Terminate"/>.</summary>
     public Season? TerminatedFromSeason { get; private set; }
@@ -112,9 +131,18 @@ public sealed class Contract
         return terminated;
     }
 
+    /// <summary>
+    /// What the contract owes for <paramref name="season"/>, or null where it does not run then — before
+    /// it starts, after it ends, or from a declined option on (the deal ended there).
+    /// </summary>
     public ContractSeasonTerm? TermFor(Season season)
     {
         ArgumentNullException.ThrowIfNull(season);
+        if (_terms.Any(term => term.IsDeclinedOption && term.Season.Year <= season.Year))
+        {
+            return null;
+        }
+
         return _terms.FirstOrDefault(term => term.Season == season);
     }
 

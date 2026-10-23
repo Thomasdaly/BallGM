@@ -131,6 +131,7 @@ public sealed partial class LeagueSession
 
         // Teams keep who they want before the contracts run out: an extension signed now carries the
         // player past the expiry the conclusion below would otherwise release him at.
+        var (optionsDecided, optionNotes) = RunOptionDecisions();
         var (reSigned, reSigningNotes) = RunReSigningWindow();
 
         var concludedResult = _seasonEngine.ConcludeSeason(_seasonRun, _snapshot);
@@ -175,9 +176,10 @@ public sealed partial class LeagueSession
             autoSigned,
             aiTradesExecuted,
             aiSigningsExecuted,
-            reSigningNotes.Concat(outcome.Notes).Concat(developmentNotes).Concat(draftNotes).Concat(buyoutNotes).Concat(marketNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList())
+            optionNotes.Concat(reSigningNotes).Concat(outcome.Notes).Concat(developmentNotes).Concat(draftNotes).Concat(buyoutNotes).Concat(marketNotes).Concat(aiTurnNotes).Select(finding => ToSeasonLine(finding, teamNames)).ToList())
         {
             PlayersReSigned = reSigned,
+            OptionsDecided = optionsDecided,
             MarketSignings = marketSigned,
             PlayersBoughtOut = boughtOut.Count,
             Buyouts = boughtOut,
@@ -330,6 +332,27 @@ public sealed partial class LeagueSession
         foreach (var selection in draftResult.Value.Selections)
         {
             _snapshot = _snapshot with { Players = [.. _snapshot.Players, selection.Player] };
+            if (!selection.ShouldSign)
+            {
+                unrosteredCount++;
+                continue;
+            }
+
+            // The rookie scale where the league has one; otherwise an ordinary one-season minimum deal.
+            var rookie = _signingEngine.ExecuteRookieContract(_snapshot, selection.TeamId, selection.Player.Id, selection.Round, selection.SelectionNumber);
+            if (rookie.IsSuccess)
+            {
+                _snapshot = _snapshot with { Contracts = [.. _snapshot.Contracts, rookie.Value] };
+                draftedCount++;
+                continue;
+            }
+
+            if (_snapshot.Configuration.RookieScale is not null)
+            {
+                unrosteredCount++;
+                notes.AddRange(rookie.Errors.Select(error => new RuleFinding(error.Code, $"{selection.Player.FullName} (round {selection.Round}, pick {selection.SelectionNumber}) could not be signed and stays a free agent: {error.Message}")));
+                continue;
+            }
 
             var floor = _signingEngine.LimitsFor(_snapshot, selection.Player.SeasonsOfService).Minimum ?? Money.Zero;
             var terms = new List<ContractSeasonTerm> { new(_snapshot.CurrentSeason, floor, floor) };

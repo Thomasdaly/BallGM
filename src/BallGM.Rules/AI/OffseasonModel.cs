@@ -397,6 +397,88 @@ public static class OffseasonModel
         return accepted;
     }
 
+    /// <summary>
+    /// Every option on next season's term of a team's contracts, decided now: a team takes up its option
+    /// on a player in its rotation, or a young one whose ceiling beats its fifth-best, and declines the
+    /// rest; a player takes up his own option when it pays at least his asking price and walks away from
+    /// it to free agency when the market would pay him more.
+    /// </summary>
+    public static IReadOnlyList<(ContractId ContractId, Season Season, bool Exercise, RuleFinding Rationale)> OptionDecisions(
+        Team team,
+        IReadOnlyList<Player> roster,
+        IReadOnlyCollection<Contract> contracts,
+        Season currentSeason,
+        NegotiationRules rules,
+        CapThresholds thresholds,
+        DateOnly asOf)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(roster);
+        ArgumentNullException.ThrowIfNull(contracts);
+
+        var next = new Season(currentSeason.Year + 1);
+        var ranked = roster.OrderByDescending(player => player.Rating.Overall).ThenBy(player => player.Id.Value, StringComparer.Ordinal).ToList();
+        var rotationFloor = ranked.Count >= RotationSize ? ranked[RotationSize - 1].Rating.Overall : 0;
+        var fifthBest = ranked.Count >= 5 ? ranked[4].Rating.Overall : 0;
+        var decisions = new List<(ContractId, Season, bool, RuleFinding)>();
+        foreach (var player in ranked)
+        {
+            var contract = contracts.FirstOrDefault(candidate => candidate.PlayerId == player.Id && candidate.TeamId == team.Id && !candidate.IsTerminated);
+            if (contract?.TermFor(next) is not { IsPendingOption: true } term)
+            {
+                continue;
+            }
+
+            if (term.Option == ContractOptionKind.Team)
+            {
+                var keep = player.Rating.Overall >= rotationFloor || (player.AgeOn(asOf) <= 24 && player.Rating.PotentialAbility > fifthBest);
+                decisions.Add((contract.Id, next, keep, new RuleFinding(keep ? "ai_option.team_exercises" : "ai_option.team_declines",
+                    keep
+                        ? $"{team.Name} takes up its {next.Year} option on {player.FullName} ({player.Rating.Overall}, potential {player.Rating.PotentialAbility}) at {ExplanationText.Money(term.Compensation.SmallestUnits)}."
+                        : $"{team.Name} declines its {next.Year} option on {player.FullName} ({player.Rating.Overall}): he has not earned a place in its rotation, and becomes a free agent when this season ends.",
+                    team.Id)));
+            }
+            else
+            {
+                var ask = PreferenceModel.AskingPriceFor(player, rules, thresholds)?.SmallestUnits ?? 0;
+                var stay = term.Compensation.SmallestUnits >= ask;
+                decisions.Add((contract.Id, next, stay, new RuleFinding(stay ? "ai_option.player_exercises" : "ai_option.player_declines",
+                    stay
+                        ? $"{player.FullName} takes up his {next.Year} option at {ExplanationText.Money(term.Compensation.SmallestUnits)}, at least what the market would pay him ({ExplanationText.Money(ask)})."
+                        : $"{player.FullName} declines his {next.Year} option at {ExplanationText.Money(term.Compensation.SmallestUnits)}: the market would pay him {ExplanationText.Money(ask)}.",
+                    team.Id)));
+            }
+        }
+
+        return decisions;
+    }
+
+    /// <summary>
+    /// Whether a team signs one of its draft picks: a first-round pick whenever it has a roster spot (his
+    /// contract is guaranteed by the scale); a second-round pick only if a spot would still be left for
+    /// the market afterwards and he is at least as good as the worst player it carries, or his ceiling
+    /// beats its eighth man — otherwise he goes to free agency, as most second-round picks do.
+    /// </summary>
+    public static bool SignsDraftPick(int round, PlayerRating rating, IReadOnlyList<Player> roster, int rosterCount, int maximumRoster)
+    {
+        ArgumentNullException.ThrowIfNull(rating);
+        ArgumentNullException.ThrowIfNull(roster);
+        if (round <= 1)
+        {
+            return rosterCount < maximumRoster;
+        }
+
+        if (rosterCount >= maximumRoster - 1)
+        {
+            return false;
+        }
+
+        var ranked = roster.Select(player => player.Rating.Overall).OrderDescending().ToList();
+        var worst = ranked.Count == 0 ? 0 : ranked[^1];
+        var eighth = ranked.Count >= RotationSize ? ranked[RotationSize - 1] : 0;
+        return rating.Overall >= worst || rating.PotentialAbility > eighth;
+    }
+
     private static Offer? BuildOffer(TeamId teamId, PlayerId playerId, Season start, int seasons, Money salary, int round)
     {
         var terms = Enumerable.Range(0, Math.Max(1, seasons))

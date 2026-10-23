@@ -67,6 +67,16 @@ public interface ISigningEngine
     /// Refused, with the reason, in a league with no buyouts or a give-back past its limit.
     /// </summary>
     DomainOperationResult ExecuteBuyout(LeagueSnapshot snapshot, TeamId teamId, PlayerId playerId, ContractId contractId, int retainedPercent);
+
+    /// <summary>
+    /// Signs a drafted player to his rookie-scale contract for round <paramref name="round"/>, pick
+    /// <paramref name="selection"/>. Refused in a league with no rookie scale (the caller falls back to
+    /// an ordinary signing), on a full roster, or for a player already under contract.
+    /// </summary>
+    DomainOperationResult<Contract> ExecuteRookieContract(LeagueSnapshot snapshot, TeamId teamId, PlayerId playerId, int round, int selection);
+
+    /// <summary>Takes up (or declines) the option on <paramref name="season"/> of a contract, and records it.</summary>
+    DomainOperationResult DecideOption(LeagueSnapshot snapshot, ContractId contractId, Domain.Leagues.Season season, bool exercise);
 }
 
 public sealed record ExtensionResult(ExtensionAssessment Assessment, Contract? Contract);

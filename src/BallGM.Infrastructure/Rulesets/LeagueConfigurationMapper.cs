@@ -299,6 +299,12 @@ internal static class LeagueConfigurationMapper
             return DomainOperationResult<LeagueRuleset>.Failure(buyoutsResult.Errors.ToArray());
         }
 
+        var rookieScaleResult = configuration.ToRookieScale();
+        if (rookieScaleResult.IsFailure)
+        {
+            return DomainOperationResult<LeagueRuleset>.Failure(rookieScaleResult.Errors.ToArray());
+        }
+
         return DomainOperationResult<LeagueRuleset>.Success(new LeagueRuleset(
             LeagueRuleset.CurrentSchemaVersion,
             configuration.RulesetName,
@@ -320,7 +326,8 @@ internal static class LeagueConfigurationMapper
             capMechanics,
             gameRulesResult.Value,
             leadersResult.Value,
-            buyoutsResult.Value));
+            buyoutsResult.Value,
+            rookieScaleResult.Value));
     }
 
     /// <summary>
@@ -429,7 +436,27 @@ internal static class LeagueConfigurationMapper
             ruleset.LeaderQualifiers.ToConfiguration(),
             ruleset.BuyoutRules.IsConfigured
                 ? new BuyoutConfiguration(ruleset.BuyoutRules.MaximumGiveBackPercent, ruleset.BuyoutRules.ReleasingTeamWaitSeasons, ruleset.BuyoutRules.HighEarnerBarAbove?.ToString())
+                : null,
+            ruleset.RookieScaleRules.IsConfigured
+                ? new RookieScaleConfiguration(
+                    ruleset.RookieScaleRules.FirstRoundShare.Bands.Select(band => (band.MinimumKey, band.Value)).ToList(),
+                    ruleset.RookieScaleRules.Seasons,
+                    ruleset.RookieScaleRules.TeamOptionSeasons,
+                    ruleset.RookieScaleRules.SecondRoundSeasons)
                 : null);
+    }
+
+    /// <summary>The rookie scale a configuration states, or none.</summary>
+    public static DomainOperationResult<RookieScaleRules> ToRookieScale(this LeagueConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return configuration.RookieScale is { } scale
+            ? LeagueRulesetSerializer.BuildRookieScale(new RookieScaleEnvelope(
+                scale.FirstRoundShare.Select(band => new PickShareBandEnvelope(band.FromSelection, band.BasisPoints)).ToList(),
+                scale.Seasons,
+                scale.TeamOptionSeasons,
+                scale.SecondRoundSeasons))
+            : DomainOperationResult<RookieScaleRules>.Success(RookieScaleRules.None);
     }
 
     /// <summary>The buyout rules a configuration states, or none.</summary>

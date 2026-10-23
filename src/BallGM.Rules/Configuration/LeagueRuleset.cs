@@ -90,7 +90,11 @@ public sealed record LeagueRuleset
     /// a player may give back, how long the releasing team waits before signing him again, and the line
     /// above which a team may not sign a released high earner.
     /// </remarks>
-    public const int CurrentSchemaVersion = 14;
+    /// <remarks>
+    /// Version 15 added the optional rookie scale: a first-round pick's salary as a share of the cap by
+    /// selection, the seasons it covers and how many are team options, and a second-round pick's term.
+    /// </remarks>
+    public const int CurrentSchemaVersion = 15;
 
     public LeagueRuleset(
         int schemaVersion,
@@ -113,7 +117,8 @@ public sealed record LeagueRuleset
         CapMechanics? capMechanics = null,
         GameRules? gameRules = null,
         LeaderQualifiers? leaderQualifiers = null,
-        BuyoutRules? buyoutRules = null)
+        BuyoutRules? buyoutRules = null,
+        RookieScaleRules? rookieScaleRules = null)
     {
         if (schemaVersion <= 0)
         {
@@ -157,6 +162,7 @@ public sealed record LeagueRuleset
         GameRules = gameRules ?? GameRules.Default;
         LeaderQualifiers = leaderQualifiers ?? LeaderQualifiers.Default;
         BuyoutRules = buyoutRules ?? BuyoutRules.None;
+        RookieScaleRules = rookieScaleRules ?? RookieScaleRules.None;
     }
 
     public int SchemaVersion { get; }
@@ -225,4 +231,7 @@ public sealed record LeagueRuleset
 
     /// <summary>Contract buyouts and their guardrails (schema v14), or <see cref="Configuration.BuyoutRules.None"/>.</summary>
     public BuyoutRules BuyoutRules { get; }
+
+    /// <summary>How a drafted player's first contract is written (schema v15), or <see cref="Configuration.RookieScaleRules.None"/>.</summary>
+    public RookieScaleRules RookieScaleRules { get; }
 }

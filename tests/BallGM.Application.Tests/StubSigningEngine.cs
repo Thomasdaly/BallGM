@@ -44,4 +44,10 @@ internal sealed class StubSigningEngine : ISigningEngine
 
     public DomainOperationResult ExecuteBuyout(LeagueSnapshot snapshot, TeamId teamId, Domain.Players.PlayerId playerId, Domain.Contracts.ContractId contractId, int retainedPercent) =>
         DomainOperationResult.Success;
+
+    public DomainOperationResult<Domain.Contracts.Contract> ExecuteRookieContract(LeagueSnapshot snapshot, TeamId teamId, Domain.Players.PlayerId playerId, int round, int selection) =>
+        DomainOperationResult<Domain.Contracts.Contract>.Failure(new DomainError("stub.no_rookie_scale", "The stub signs no rookies."));
+
+    public DomainOperationResult DecideOption(LeagueSnapshot snapshot, Domain.Contracts.ContractId contractId, Domain.Leagues.Season season, bool exercise) =>
+        DomainOperationResult.Success;
 }

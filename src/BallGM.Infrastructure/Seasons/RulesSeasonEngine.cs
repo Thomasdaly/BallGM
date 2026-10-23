@@ -8,6 +8,7 @@ using BallGM.Domain.Randomness;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 using BallGM.Infrastructure.Rulesets;
+using BallGM.Rules.AI;
 using BallGM.Rules.Configuration;
 using BallGM.Rules.Development;
 using BallGM.Rules.Draft;
@@ -270,6 +271,7 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
 
         var notes = new List<RuleFinding>(dayResult.Value.Notes);
         var drafted = new List<DraftedPlayer>();
+        var planned = snapshot.Teams.ToDictionary(team => team.Id, team => team.RosterCount);
 
         foreach (var selection in dayResult.Value.Selections)
         {
@@ -287,7 +289,21 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
                 continue;
             }
 
-            drafted.Add(new DraftedPlayer(selection.TeamId, playerResult.Value, selection.Round, selection.SelectionNumber));
+            var drafting = snapshot.Teams.First(team => team.Id == selection.TeamId);
+            var roster = drafting.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
+            var sign = OffseasonModel.SignsDraftPick(selection.Round, playerResult.Value.Rating, roster, planned[selection.TeamId], drafting.RosterLimits.MaximumPlayers);
+            if (sign)
+            {
+                planned[selection.TeamId]++;
+            }
+            else
+            {
+                notes.Add(new RuleFinding("draft.pick_not_signed",
+                    $"{drafting.Name} does not sign round {selection.Round} pick {selection.SelectionNumber} {playerResult.Value.FullName}: he does not earn a roster spot, and becomes a free agent.",
+                    drafting.Id));
+            }
+
+            drafted.Add(new DraftedPlayer(selection.TeamId, playerResult.Value, selection.Round, selection.SelectionNumber) { ShouldSign = sign });
         }
 
         return DomainOperationResult<SeasonDraftOutcome>.Success(new SeasonDraftOutcome(draftSeason.Year, drafted, notes));

@@ -73,7 +73,7 @@ default league behaves like a modern one.
 |---|---|---|
 | F1 | Engine tails: role minutes, ball handler, skill-driven shares, shooting and free-throw skill, foul drawing, injury proneness (attributes A3a–A6) | Done |
 | F2 | The season boundary for a long save: development, ageing and retirement wired every season; awards with eligibility rules (games and minutes floors, bench award, rookie, most improved, defensive, all-league teams) archived with the season | Done (§4) |
-| F3 | Re-signing and the market done (§5); rookie scale, options and restricted free agency next — contract structure: rookie scale with team options, option decisions, qualifying offers and restricted free agency with matching, incumbent rights over the cap, room allowance | |
+| F3 | Re-signing, the market (§5), the rookie scale and option decisions (§7) done; restricted free agency next — contract structure: rookie scale with team options, option decisions, qualifying offers and restricted free agency with matching, incumbent rights over the cap, room allowance | |
 | F4 | Exits: waivers and claim order, buyouts with consent and guardrails, stretch provision, the post-cutoff rule, the re-sign wait, apron restrictions | Buyouts and their guardrails done (§6); waivers and stretch to come |
 | F5 | Trades: multi-asset with picks, trade restrictions on new signings, acceptance margins, direction-aware valuation | |
 | F6 | Franchise direction that persists (contend / retool / rebuild) with hysteresis, owner expectations if modelled, and AI behaviour that follows it | |
@@ -155,3 +155,27 @@ moving, and (locked by `BuyoutMarketTests`) no bought-out player back with the t
 The post-cutoff rule (a player released after the playoff eligibility cutoff cannot play in the
 postseason) needs in-season AI transactions, which do not exist yet: the cutoff is enforced at the
 signing, and buyouts happen in the offseason.
+
+## 7. F3 (second half) as built: the rookie scale and options
+
+- **Rookie scale** (`RookieScaleRules`, ruleset schema 15, optional `rookieScale` section): a first-round
+  pick's first-season salary is a share of the soft cap by selection (the shipped leagues: 8.5% for the
+  first pick down to 1.85% at the end of the round, rising 5% a season), for four seasons of which the
+  last two are the team's options; a second-round pick signs for two seasons at the minimum. Executed by
+  `RookieScaleExecutor` with no signing route — a team over the cap can always sign its own pick, as the
+  real agreement's rookie exception allows — but never into a full roster (`SigningRouteKind.RookieScale`
+  on the ledger).
+- **Who gets signed** (`OffseasonModel.SignsDraftPick`): every first-round pick with a roster spot; a
+  second-round pick only if a spot is left for the market afterwards and he is at least as good as the
+  worst player carried (or his ceiling beats the eighth man). The rest are free agents.
+- **Options** (`OffseasonModel.OptionDecisions`, `ISigningEngine.DecideOption`): before the re-signing
+  window, every option on next season is decided — a team keeps its rotation players and high-ceiling
+  youngsters and declines the rest; a player takes up his option when it pays at least his asking price
+  and walks away when the market would pay more. A declined option now ends the contract at the domain:
+  `Contract.TermFor` and `LastSeason` stop before it, so every "is he under contract?" question agrees.
+
+Calibration league, twelve chained seasons: 35–50 picks signed a summer, a different champion most
+seasons, scoring leaders 31–35, the top of the league stable (94–97) and the tenth percentile of rostered
+players stable (~80). Known follow-up: the median rostered player still drifts up (64 → 70) and the
+league runs young (24.5) — the market and re-signing favour ceilings over veterans more than a real
+league does.

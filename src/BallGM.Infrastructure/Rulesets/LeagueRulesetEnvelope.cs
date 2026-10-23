@@ -80,7 +80,8 @@ public sealed record LeagueRulesetEnvelope
         CapMechanicsEnvelope? capMechanics = null,
         GameRulesEnvelope? gameRules = null,
         StatLeadersEnvelope? statLeaders = null,
-        BuyoutRulesEnvelope? buyouts = null)
+        BuyoutRulesEnvelope? buyouts = null,
+        RookieScaleEnvelope? rookieScale = null)
     {
         SchemaVersion = schemaVersion;
         Name = name;
@@ -148,6 +149,7 @@ public sealed record LeagueRulesetEnvelope
         CapMechanics = capMechanics;
         GameRules = gameRules;
         Buyouts = buyouts;
+        RookieScale = rookieScale;
         StatLeaders = statLeaders;
     }
 
@@ -352,6 +354,9 @@ public sealed record LeagueRulesetEnvelope
     /// <summary>The optional buyout section (schema 14).</summary>
     public BuyoutRulesEnvelope? Buyouts { get; }
 
+    /// <summary>The optional rookie scale (schema 15).</summary>
+    public RookieScaleEnvelope? RookieScale { get; }
+
     /// <summary>Who qualifies for the leaderboards (schema v12). Absent means 70% of games and the usual makes.</summary>
     public StatLeadersEnvelope? StatLeaders { get; }
 }
@@ -367,6 +372,12 @@ public sealed record StatLeadersEnvelope(
 /// <summary>The on-disk shape of <c>GameRules</c>; either figure may be left out for its default.</summary>
 /// <summary>The buyout section as a ruleset states it: the give-back cap, the releasing team's wait, and the high-earner bar.</summary>
 public sealed record BuyoutRulesEnvelope(int MaximumGiveBackPercent, int? ReleasingTeamWaitSeasons = null, string? HighEarnerBarAbove = null);
+
+/// <summary>The rookie scale as a ruleset states it: first-round shares of the cap by selection (basis points), and the terms.</summary>
+public sealed record RookieScaleEnvelope(IReadOnlyList<PickShareBandEnvelope> FirstRoundShare, int Seasons, int TeamOptionSeasons, int SecondRoundSeasons);
+
+/// <summary>From this selection on (0 for the first pick's band), this many basis points of the soft cap.</summary>
+public sealed record PickShareBandEnvelope(long FromSelection, long BasisPoints);
 
 public sealed record GameRulesEnvelope(int? PersonalFoulLimit = null, int? BonusTeamFoulsPerPeriod = null, int? BonusTeamFoulsPerOvertime = null);
 

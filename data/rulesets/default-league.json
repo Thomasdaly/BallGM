@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 14,
+  "schemaVersion": 15,
   "name": "Continental Basketball Association — Standard Rules",
   "regularSeasonGameCount": 78,
   "minimumRosterPlayers": 12,
@@ -95,22 +95,18 @@
   "developmentGrowthCurve": [
     {
       "minimumAge": 0,
-      "value": 5
-    },
-    {
-      "minimumAge": 20,
       "value": 4
     },
     {
-      "minimumAge": 22,
+      "minimumAge": 20,
       "value": 3
     },
     {
-      "minimumAge": 23,
+      "minimumAge": 22,
       "value": 2
     },
     {
-      "minimumAge": 25,
+      "minimumAge": 24,
       "value": 1
     }
   ],
@@ -120,27 +116,27 @@
       "value": 0
     },
     {
-      "minimumAge": 30,
+      "minimumAge": 29,
       "value": 1
     },
     {
-      "minimumAge": 31,
+      "minimumAge": 30,
       "value": 2
     },
     {
-      "minimumAge": 33,
+      "minimumAge": 32,
       "value": 3
     },
     {
-      "minimumAge": 35,
+      "minimumAge": 34,
       "value": 4
     },
     {
-      "minimumAge": 36,
+      "minimumAge": 35,
       "value": 5
     },
     {
-      "minimumAge": 38,
+      "minimumAge": 36,
       "value": 6
     }
   ],
@@ -153,36 +149,36 @@
       "value": 0
     },
     {
-      "minimumAge": 30,
-      "value": 300
+      "minimumAge": 31,
+      "value": 200
     },
     {
-      "minimumAge": 32,
-      "value": 800
+      "minimumAge": 33,
+      "value": 600
     },
     {
       "minimumAge": 34,
-      "value": 1800
+      "value": 1200
     },
     {
       "minimumAge": 35,
-      "value": 2800
+      "value": 2000
     },
     {
       "minimumAge": 36,
-      "value": 4000
+      "value": 3200
     },
     {
       "minimumAge": 37,
-      "value": 5500
+      "value": 4500
     },
     {
       "minimumAge": 38,
-      "value": 7000
+      "value": 6000
     },
     {
       "minimumAge": 40,
-      "value": 9000
+      "value": 8500
     }
   ],
   "awards": [
@@ -242,5 +238,68 @@
     "maximumGiveBackPercent": 40,
     "releasingTeamWaitSeasons": 1,
     "highEarnerBarAbove": "FirstApron"
+  },
+  "rookieScale": {
+    "firstRoundShare": [
+      {
+        "fromSelection": 0,
+        "basisPoints": 850
+      },
+      {
+        "fromSelection": 2,
+        "basisPoints": 760
+      },
+      {
+        "fromSelection": 3,
+        "basisPoints": 680
+      },
+      {
+        "fromSelection": 4,
+        "basisPoints": 615
+      },
+      {
+        "fromSelection": 5,
+        "basisPoints": 560
+      },
+      {
+        "fromSelection": 6,
+        "basisPoints": 510
+      },
+      {
+        "fromSelection": 7,
+        "basisPoints": 470
+      },
+      {
+        "fromSelection": 8,
+        "basisPoints": 430
+      },
+      {
+        "fromSelection": 10,
+        "basisPoints": 370
+      },
+      {
+        "fromSelection": 12,
+        "basisPoints": 330
+      },
+      {
+        "fromSelection": 15,
+        "basisPoints": 290
+      },
+      {
+        "fromSelection": 20,
+        "basisPoints": 230
+      },
+      {
+        "fromSelection": 25,
+        "basisPoints": 200
+      },
+      {
+        "fromSelection": 28,
+        "basisPoints": 185
+      }
+    ],
+    "seasons": 4,
+    "teamOptionSeasons": 2,
+    "secondRoundSeasons": 2
   }
 }

@@ -2,6 +2,7 @@ using BallGM.Application.Leagues;
 using BallGM.Domain.AI;
 using BallGM.Domain.Common;
 using BallGM.Domain.Draft;
+using BallGM.Domain.Leagues;
 using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
@@ -70,6 +71,12 @@ public interface IFrontOfficeAdvisor
     /// final season of their contracts, before it is concluded: each a re-signing at the player's asking
     /// price, which he accepts from his own team. Read-only; the caller signs them.
     /// </summary>
+    /// <summary>
+    /// Every option on next season's term, decided now by whichever side holds it (team options by
+    /// the team's needs, player options by what the market would pay him). Read-only; the caller applies them.
+    /// </summary>
+    DomainOperationResult<IReadOnlyList<OptionPlan>> PlanOptionDecisions(LeagueSnapshot snapshot);
+
     /// <param name="records">Each team's record in the season ending, which decides its direction.</param>
     DomainOperationResult<IReadOnlyList<ReSigningPlan>> PlanReSignings(LeagueSnapshot snapshot, IReadOnlyDictionary<TeamId, TeamRecord> records);
 
@@ -89,6 +96,9 @@ public interface IFrontOfficeAdvisor
         IReadOnlyCollection<Player> freeAgents,
         int round);
 }
+
+/// <summary>One option decided: the contract, the season, whether it is taken up, and why.</summary>
+public sealed record OptionPlan(Domain.Contracts.ContractId ContractId, Season Season, bool Exercise, RuleFinding Rationale);
 
 /// <summary>A team's agreed buyout of one player: the contract, the share of his money kept, and why.</summary>
 public sealed record BuyoutPlan(TeamId TeamId, PlayerId PlayerId, Domain.Contracts.ContractId ContractId, int RetainedPercent, RuleFinding Rationale);

@@ -312,6 +312,30 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             .ToList());
     }
 
+    public DomainOperationResult<IReadOnlyList<OptionPlan>> PlanOptionDecisions(LeagueSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var rulesetResult = BuildRuleset(snapshot);
+        if (rulesetResult.IsFailure)
+        {
+            return DomainOperationResult<IReadOnlyList<OptionPlan>>.Failure(rulesetResult.Errors.ToArray());
+        }
+
+        var ruleset = rulesetResult.Value;
+        var asOf = new DateOnly(snapshot.CurrentSeason.Year + 1, 7, 1);
+        var playersById = snapshot.Players.ToDictionary(player => player.Id);
+        var plans = new List<OptionPlan>();
+        foreach (var team in snapshot.Teams.OrderBy(team => team.Id.Value, StringComparer.Ordinal))
+        {
+            var roster = team.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
+            plans.AddRange(OffseasonModel
+                .OptionDecisions(team, roster, snapshot.Contracts, snapshot.CurrentSeason, ruleset.NegotiationRules, ruleset.CapThresholds, asOf)
+                .Select(decision => new OptionPlan(decision.ContractId, decision.Season, decision.Exercise, decision.Rationale)));
+        }
+
+        return DomainOperationResult<IReadOnlyList<OptionPlan>>.Success(plans);
+    }
+
     public DomainOperationResult<IReadOnlyList<BuyoutPlan>> PlanBuyouts(LeagueSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(snapshot);

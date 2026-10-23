@@ -5,6 +5,7 @@ using BallGM.Domain.Negotiations;
 using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
+using BallGM.Domain.Transactions;
 using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.Configuration;
 using BallGM.Rules.Signings;
@@ -113,6 +114,54 @@ public sealed class RulesSigningEngine : ISigningEngine
         }
 
         return BuyoutExecutor.Execute(team, player, contract, retainedPercent, snapshot.CurrentSeason, rules.Value, snapshot.Ledger);
+    }
+
+    public DomainOperationResult<BallGM.Domain.Contracts.Contract> ExecuteRookieContract(LeagueSnapshot snapshot, TeamId teamId, PlayerId playerId, int round, int selection)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var rules = snapshot.Configuration.ToRookieScale();
+        if (rules.IsFailure)
+        {
+            return DomainOperationResult<BallGM.Domain.Contracts.Contract>.Failure(rules.Errors.ToArray());
+        }
+
+        var team = snapshot.Teams.FirstOrDefault(candidate => candidate.Id == teamId);
+        var player = snapshot.Players.FirstOrDefault(candidate => candidate.Id == playerId);
+        if (team is null || player is null)
+        {
+            return DomainOperationResult<BallGM.Domain.Contracts.Contract>.Failure(new DomainError("rookie_scale.unknown_party", "The team or player named for this rookie contract is not in this league."));
+        }
+
+        var minimum = LimitsFor(snapshot, 0).Minimum ?? Money.Zero;
+        return RookieScaleExecutor.Execute(team, player, round, selection, snapshot.CurrentSeason, rules.Value, snapshot.Configuration.SoftCap, minimum, snapshot.Contracts, snapshot.Ledger);
+    }
+
+    public DomainOperationResult DecideOption(LeagueSnapshot snapshot, BallGM.Domain.Contracts.ContractId contractId, BallGM.Domain.Leagues.Season season, bool exercise)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var contract = snapshot.Contracts.FirstOrDefault(candidate => candidate.Id == contractId);
+        if (contract is null)
+        {
+            return DomainOperationResult.Failure(new DomainError("option.unknown_contract", $"No contract '{contractId.Value}' is in this league."));
+        }
+
+        var term = contract.TermFor(season);
+        var decided = exercise ? contract.ExerciseOption(season) : contract.DeclineOption(season);
+        if (decided.IsFailure)
+        {
+            return decided;
+        }
+
+        var name = snapshot.Players.FirstOrDefault(player => player.Id == contract.PlayerId)?.FullName ?? contract.PlayerId.Value;
+        snapshot.Ledger.Record(
+            exercise ? TransactionKind.OptionExercised : TransactionKind.OptionDeclined,
+            snapshot.CurrentSeason,
+            contract.TeamId,
+            exercise ? $"The {season.Year} option on {name}'s contract was taken up." : $"The {season.Year} option on {name}'s contract was declined; the deal now ends after {season.Year - 1}.",
+            contract.PlayerId,
+            contract.Id,
+            term?.Compensation);
+        return DomainOperationResult.Success;
     }
 
     public CompensationLimits LimitsFor(LeagueSnapshot snapshot, int seasonsOfService)

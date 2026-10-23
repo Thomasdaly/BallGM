@@ -9,7 +9,11 @@ namespace BallGM.Application.Seasons;
 public sealed record SeasonFindingLine(string RuleCode, string Explanation, string? TeamName);
 
 /// <summary>One prospect turned into a player by the draft, and the team that selected them.</summary>
-public sealed record DraftedPlayer(TeamId TeamId, Player Player, int Round, int SelectionNumber);
+public sealed record DraftedPlayer(TeamId TeamId, Player Player, int Round, int SelectionNumber)
+{
+    /// <summary>Whether the team signs him: a first-round pick always, a second-round pick only when he earns a roster spot.</summary>
+    public bool ShouldSign { get; init; } = true;
+}
 
 /// <summary>
 /// What one draft did, in the shape the Application port hands back. Mirrors
@@ -254,6 +258,9 @@ public sealed record SeasonConclusionSummary(
 {
     /// <summary>The season's awards, in the order the league lists them.</summary>
     public IReadOnlyList<SeasonAwardLine> Awards { get; init; } = [];
+
+    /// <summary>How many contract options were decided for next season.</summary>
+    public int OptionsDecided { get; init; }
 
     /// <summary>How many expiring players their own teams re-signed before the season was concluded.</summary>
     public int PlayersReSigned { get; init; }

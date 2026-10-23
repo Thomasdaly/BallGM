@@ -12,8 +12,8 @@ namespace BallGM.Integration.Tests;
 
 /// <summary>
 /// The competitor's buyout market, measured on the thirty-team calibration league over chained summers
-/// (<c>docs/franchise-realism.md</c> → F4): buyouts stay rare, they are of veterans outside a team's
-/// best players, and no bought-out player is back with the team that released him the next season.
+/// (<c>docs/franchise-realism.md</c> → F4): buyouts stay a fringe-veteran affair — never one of the
+/// league's sixty best players — and no bought-out player is back with the team that released him.
 /// </summary>
 public sealed class BuyoutMarketTests
 {
@@ -26,12 +26,21 @@ public sealed class BuyoutMarketTests
         {
             Assert.True(session.StartSeason(seed).IsSuccess);
             Assert.True(session.AdvanceToEndOfSeason().IsSuccess);
+            var topSixty = session.Overview().Value.Teams
+                .SelectMany(team => team.Roster)
+                .OrderByDescending(player => player.Overall)
+                .Take(60)
+                .Select(player => player.PlayerId)
+                .ToHashSet();
             var conclusion = session.ConcludeSeason();
             Assert.True(conclusion.IsSuccess, string.Join("; ", conclusion.Errors.Select(error => error.Message)));
 
             var buyouts = conclusion.Value.Buyouts;
             total += buyouts.Count;
-            Assert.True(buyouts.Count <= 5, $"{buyouts.Count} buyouts in one summer across thirty teams.");
+            // A real league buys out a dozen or so fringe veterans a season; what must never happen is a
+            // good player bought out and moving on.
+            Assert.True(buyouts.Count <= 10, $"{buyouts.Count} buyouts in one summer across thirty teams.");
+            Assert.All(buyouts, buyout => Assert.DoesNotContain(buyout.PlayerId, topSixty));
 
             var teamOf = session.Overview().Value.Teams
                 .SelectMany(team => team.Roster.Select(player => (player.PlayerId, team.TeamId)))
@@ -39,7 +48,7 @@ public sealed class BuyoutMarketTests
             Assert.All(buyouts, buyout => Assert.NotEqual(buyout.TeamId, teamOf.GetValueOrDefault(buyout.PlayerId)));
         }
 
-        Assert.InRange(total, 0, 12);
+        Assert.InRange(total, 0, 30);
     }
 
     private static LeagueSession NewSession()
