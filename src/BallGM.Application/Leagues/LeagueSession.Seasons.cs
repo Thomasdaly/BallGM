@@ -148,12 +148,17 @@ public sealed partial class LeagueSession
         var seasonSeed = _seasonRun.Seed;
 
         CarryInjuriesOutOfSeason(_snapshot, _seasonRun);
+        var longInjuries = _seasonRun.Injuries
+            .Select(spell => (spell.PlayerId, Days: spell.UntilDayExclusive.Index - spell.FromDay.Index, spell.Description))
+            .Where(spell => spell.Days >= LongInjuryDays)
+            .GroupBy(spell => spell.PlayerId)
+            .ToDictionary(group => group.Key, group => { var longest = group.MaxBy(spell => spell.Days); return (longest.Days, longest.Description); });
         _snapshot = WithConcludedSeason(_snapshot, _seasonRun) with { CurrentSeason = new Season(concludedYear + 1) };
         ClearExtensionRefusals();
         _seasonRun = null;
 
         // Everyone a year older before the draft: the class arrives into a league that has already aged.
-        var development = _seasonEngine.DevelopPlayers(_snapshot, AgeDate, seasonSeed.For("development"));
+        var development = _seasonEngine.DevelopPlayers(_snapshot, AgeDate, seasonSeed.For("development"), longInjuries);
         var developmentNotes = development.IsSuccess
             ? development.Value.Notes
             : development.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList();
@@ -500,6 +505,9 @@ public sealed partial class LeagueSession
             ? DomainOperationResult<SeasonAdvanceSummary>.Failure(assessment.Errors.ToArray())
             : DomainOperationResult<SeasonAdvanceSummary>.Success(ToSummary(_snapshot, _seasonRun, assessment.Value));
     }
+
+    /// <summary>The days out, from one injury, that leave a lasting mark (InjuryAftermathModel.MinimumDays).</summary>
+    public const int LongInjuryDays = 45;
 
     /// <summary>How long a carried injury that states no length keeps a player out of a new season.</summary>
     public const int DefaultCarriedInjuryDays = 21;

@@ -109,7 +109,7 @@ internal sealed class StubSeasonEngine : ISeasonEngine
         int seed) =>
         DomainOperationResult<SeasonDraftOutcome>.Success(new SeasonDraftOutcome(draftSeason.Year, [], []));
 
-    public DomainOperationResult<PlayerDevelopmentOutcome> DevelopPlayers(LeagueSnapshot snapshot, DateOnly asOf, int seed) =>
+    public DomainOperationResult<PlayerDevelopmentOutcome> DevelopPlayers(LeagueSnapshot snapshot, DateOnly asOf, int seed, IReadOnlyDictionary<Domain.Players.PlayerId, (int Days, string Injury)>? longInjuries = null) =>
         DomainOperationResult<PlayerDevelopmentOutcome>.Success(new PlayerDevelopmentOutcome(0, [], []));
 
     private SeasonAdvanceOutcome Outcome(SeasonRun run, int days) =>

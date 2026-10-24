@@ -158,7 +158,7 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
                 concluded.Value.Notes));
     }
 
-    public DomainOperationResult<PlayerDevelopmentOutcome> DevelopPlayers(LeagueSnapshot snapshot, DateOnly asOf, int seed)
+    public DomainOperationResult<PlayerDevelopmentOutcome> DevelopPlayers(LeagueSnapshot snapshot, DateOnly asOf, int seed, IReadOnlyDictionary<PlayerId, (int Days, string Injury)>? longInjuries = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
@@ -197,6 +197,17 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
             {
                 player.Develop(AttributeDevelopmentModel.Develop(player.Rating, age, ruleset.DevelopmentRules, random));
                 developed++;
+            }
+
+            // A long injury this season leaves its mark after the year's development.
+            if (longInjuries is not null && longInjuries.TryGetValue(player.Id, out var injury))
+            {
+                var (rating, finding) = InjuryAftermathModel.Apply(player.Rating, age, injury.Days, player.FullName, injury.Injury, random);
+                player.Develop(rating);
+                if (finding is not null)
+                {
+                    notes.Add(finding);
+                }
             }
 
             var signed = rostered.Contains(player.Id.Value) || underContract.Contains(player.Id.Value);

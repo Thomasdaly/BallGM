@@ -2,6 +2,7 @@ using BallGM.Application.Leagues;
 using BallGM.Domain.Common;
 using BallGM.Domain.Leagues;
 using BallGM.Domain.Negotiations;
+using BallGM.Domain.Players;
 using BallGM.Domain.Seasons;
 using BallGM.Domain.Teams;
 
@@ -88,7 +89,8 @@ public interface ISeasonEngine
     /// snapshot's players in place, as concluding a season does; deterministic in <paramref name="seed"/>
     /// whatever order the players are listed in.
     /// </summary>
-    DomainOperationResult<PlayerDevelopmentOutcome> DevelopPlayers(LeagueSnapshot snapshot, DateOnly asOf, int seed);
+    /// <param name="longInjuries">This season's long injuries by player: the days lost and what it was (see <c>InjuryAftermathModel</c>).</param>
+    DomainOperationResult<PlayerDevelopmentOutcome> DevelopPlayers(LeagueSnapshot snapshot, DateOnly asOf, int seed, IReadOnlyDictionary<PlayerId, (int Days, string Injury)>? longInjuries = null);
 
     /// <summary>
     /// Runs this league's draft for <paramref name="draftSeason"/>: generates a class from this
