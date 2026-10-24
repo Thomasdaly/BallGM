@@ -257,7 +257,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
                 plan.Rating,
                 plan.BirthDate,
                 plan.SeasonsOfService,
-                plan.Injury is null ? null : new Injury(plan.Injury));
+                plan.Injury is null ? null : new Injury(plan.Injury, plan.InjuryDays));
 
             if (playerResult.IsFailure)
             {
@@ -530,7 +530,13 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
             return null;
         }
 
-        return new ParsedPlayer(plan.Name!, position, rating, birthDate, service, plan.Team, plan.Injury, plan.Contract, portrait, career);
+        if (plan.InjuryDays is not null && (schemaVersion < 4 || plan.Injury is null || plan.InjuryDays < 1))
+        {
+            errors.Add(Invalid(label, "Injury days need schema version 4, an injury to belong to, and at least one day."));
+            return null;
+        }
+
+        return new ParsedPlayer(plan.Name!, position, rating, birthDate, service, plan.Team, plan.Injury, plan.Contract, portrait, career, plan.InjuryDays);
     }
 
     private static IReadOnlyList<CareerSeasonLine> ParseCareer(
@@ -1012,5 +1018,6 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
         string? Injury,
         LeaguePackContractEnvelope? Contract,
         string? PortraitPath,
-        IReadOnlyList<CareerSeasonLine> Career);
+        IReadOnlyList<CareerSeasonLine> Career,
+        int? InjuryDays = null);
 }

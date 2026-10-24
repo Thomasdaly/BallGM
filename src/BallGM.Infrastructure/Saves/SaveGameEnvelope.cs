@@ -76,6 +76,9 @@ public sealed record SaveGameEnvelope(
     /// <para>
     /// Moved 7 → 8 when a contract could end in a buyout (contract schema 2: the share of the money kept).
     /// </para>
+    /// <para>
+    /// Moved 8 → 9 when an injury carried outside a season stated how long the player is still out.
+    /// </para>
     /// </summary>
-    public const int CurrentSchemaVersion = 8;
+    public const int CurrentSchemaVersion = 9;
 }

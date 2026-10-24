@@ -149,3 +149,41 @@ public sealed class TradeDeadlineTests
         return session;
     }
 }
+
+public sealed class CarriedInjuryTests
+{
+    [Fact]
+    public void ACarriedInjuryKeepsAPlayerOutForItsDays_ThenHePlays()
+    {
+        var session = new LeagueSession(
+            new GeneratedLeagueDataSource(GeneratedLeagueDataSource.CalibrationRulesetFilePath, 2),
+            new RulesCapLedger(),
+            new RulesDraftAssetLedger(),
+            new RulesTradeEngine(),
+            new RulesSigningEngine(),
+            new RulesFreeAgencyMarket(),
+            new RulesSeasonEngine(),
+            new SaveGameSerializer(),
+            new RulesFrontOfficeAdvisor(new RulesCapLedger()));
+        Assert.True(session.Load().IsSuccess);
+
+        // The best player in the league: he plays whenever he can.
+        var star = session.Overview().Value.Teams.SelectMany(team => team.Roster).MaxBy(spot => spot.Overall)!;
+        var snapshotField = typeof(LeagueSession).GetField("_snapshot", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+        var snapshot = (LeagueSnapshot)snapshotField.GetValue(session)!;
+        var player = snapshot.Players.Single(candidate => candidate.Id.Value == star.PlayerId);
+        Assert.True(player.MarkInjured(new BallGM.Domain.Players.Injury("fractured foot", 40)).IsSuccess);
+
+        Assert.True(session.StartSeason(77).IsSuccess);
+        Assert.False(player.IsInjured);
+
+        // Preseason (14 days) and the first 26 days of the season: out.
+        Assert.True(session.AdvanceToDay(40).IsSuccess);
+        var early = session.PlayerSeasonTotals(BallGM.Domain.Seasons.SeasonPhase.RegularSeason).GetValueOrDefault(star.PlayerId);
+        Assert.Equal(0, early?.Stats.Games ?? 0);
+
+        Assert.True(session.AdvanceToDay(80).IsSuccess);
+        var later = session.PlayerSeasonTotals(BallGM.Domain.Seasons.SeasonPhase.RegularSeason)[star.PlayerId];
+        Assert.True(later.Stats.Games > 10, $"He played {later.Stats.Games} games after he was healthy.");
+    }
+}

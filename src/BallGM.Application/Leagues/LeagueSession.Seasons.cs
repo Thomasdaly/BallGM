@@ -68,6 +68,7 @@ public sealed partial class LeagueSession
         }
 
         _seasonRun = startResult.Value.Run;
+        CarryInjuriesIntoSeason(_snapshot, _seasonRun);
 
         return DomainOperationResult<SeasonSummary>.Success(BuildSummary(
             _snapshot,
@@ -146,6 +147,7 @@ public sealed partial class LeagueSession
         var concludedYear = _seasonRun.Season.Year;
         var seasonSeed = _seasonRun.Seed;
 
+        CarryInjuriesOutOfSeason(_snapshot, _seasonRun);
         _snapshot = WithConcludedSeason(_snapshot, _seasonRun) with { CurrentSeason = new Season(concludedYear + 1) };
         ClearExtensionRefusals();
         _seasonRun = null;
@@ -497,6 +499,45 @@ public sealed partial class LeagueSession
         return assessment.IsFailure
             ? DomainOperationResult<SeasonAdvanceSummary>.Failure(assessment.Errors.ToArray())
             : DomainOperationResult<SeasonAdvanceSummary>.Success(ToSummary(_snapshot, _seasonRun, assessment.Value));
+    }
+
+    /// <summary>How long a carried injury that states no length keeps a player out of a new season.</summary>
+    public const int DefaultCarriedInjuryDays = 21;
+
+    /// <summary>
+    /// A new season's first day: every injury a player carries into it (one a pack states, or one that
+    /// ran past the end of last season) becomes a spell from day one for the days it has left, and the
+    /// player's carried injury is cleared — he heals like any other injured player, rather than being
+    /// out for good because nothing said when he would be back.
+    /// </summary>
+    private static void CarryInjuriesIntoSeason(LeagueSnapshot snapshot, SeasonRun run)
+    {
+        foreach (var player in snapshot.Players.Where(player => player.IsInjured && !player.IsRetired))
+        {
+            var injury = player.CurrentInjury!;
+            var days = injury.DaysRemaining ?? DefaultCarriedInjuryDays;
+            run.RecordInjury(new InjurySpell(player.Id, injury.Description, SeasonDay.Opening, SeasonDay.Opening.Plus(days)));
+            player.ClearInjury();
+        }
+    }
+
+    /// <summary>
+    /// A season's end: a spell that runs past its last day (a long injury late in the season — the
+    /// offseason is already part of the calendar, so the summer's recovery is counted) is carried on the
+    /// player into the next season with the days it has left.
+    /// </summary>
+    private static void CarryInjuriesOutOfSeason(LeagueSnapshot snapshot, SeasonRun run)
+    {
+        var end = run.Calendar.EndDayExclusive.Index;
+        var playersById = snapshot.Players.ToDictionary(player => player.Id);
+        foreach (var spell in run.Injuries.Where(spell => spell.UntilDayExclusive.Index > end).GroupBy(spell => spell.PlayerId))
+        {
+            var longest = spell.MaxBy(candidate => candidate.UntilDayExclusive.Index)!;
+            if (playersById.TryGetValue(longest.PlayerId, out var player) && !player.IsInjured)
+            {
+                player.MarkInjured(new Injury(longest.Description, longest.UntilDayExclusive.Index - end));
+            }
+        }
     }
 
     /// <summary>

@@ -302,7 +302,7 @@ public sealed class SaveGameSerializer : ISaveGameStore
                 rating,
                 birthDate,
                 envelope.SeasonsOfService,
-                envelope.InjuryDescription is null ? null : new Injury(envelope.InjuryDescription),
+                envelope.InjuryDescription is null ? null : new Injury(envelope.InjuryDescription, envelope.InjuryDaysRemaining is >= 1 ? envelope.InjuryDaysRemaining : null),
                 biography,
                 envelope.IsRetired);
 
@@ -656,7 +656,8 @@ public sealed class SaveGameSerializer : ISaveGameStore
             player.Biography == PlayerBiography.Unknown
                 ? null
                 : new PlayerBiographyEnvelope(player.Biography.Birthplace, player.Biography.PriorProgramme, player.Biography.DraftSeasonYear, player.Biography.DraftRound, player.Biography.DraftSelection),
-            PlayerSheetCodec.TendencyMap(player.Rating));
+            PlayerSheetCodec.TendencyMap(player.Rating),
+            player.CurrentInjury?.DaysRemaining);
 
     private static TransactionLedgerEnvelope ToEnvelope(TransactionLedger ledger) =>
         new(ledger.Entries.Select(ToEnvelope).ToList());

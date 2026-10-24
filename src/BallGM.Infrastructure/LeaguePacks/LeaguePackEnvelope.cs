@@ -102,7 +102,8 @@ public sealed record LeaguePackPlayerEnvelope(
     Players.PlayerBodyEnvelope? Body = null,
     IReadOnlyDictionary<string, string>? Positions = null,
     IReadOnlyList<string>? Traits = null,
-    IReadOnlyDictionary<string, int?>? Tendencies = null);
+    IReadOnlyDictionary<string, int?>? Tendencies = null,
+    int? InjuryDays = null);
 
 /// <summary>
 /// A contract as consecutive season salaries starting with the pack's season, in the currency's

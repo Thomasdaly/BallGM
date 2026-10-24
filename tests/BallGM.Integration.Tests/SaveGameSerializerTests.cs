@@ -128,11 +128,25 @@ public sealed class SaveGameSerializerTests
     }
 
     [Fact]
+    public void ACarriedInjurysDaysRemainingSurviveASave()
+    {
+        var snapshot = LoadFixture();
+        var player = snapshot.Players.First(candidate => !candidate.IsInjured);
+        Assert.True(player.MarkInjured(new Injury("ruptured Achilles tendon", 140)).IsSuccess);
+
+        var saved = _serializer.Save(snapshot, season: null, negotiations: new Dictionary<string, Negotiation>());
+        var restored = _serializer.Load(saved.Value).Value.Snapshot.Players.Single(candidate => candidate.Id == player.Id);
+
+        Assert.Equal("ruptured Achilles tendon", restored.CurrentInjury?.Description);
+        Assert.Equal(140, restored.CurrentInjury?.DaysRemaining);
+    }
+
+    [Fact]
     public void SaveDeclaresItsSchemaVersion()
     {
         var saved = _serializer.Save(LoadFixture(), null, new Dictionary<string, Negotiation>());
 
-        Assert.Contains("\"schemaVersion\": 8", saved.Value, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": 9", saved.Value, StringComparison.Ordinal);
     }
 
     [Fact]
