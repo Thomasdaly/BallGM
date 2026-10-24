@@ -298,7 +298,7 @@ def _tendency_composites(f, size):
 # calibration league that larger value averages 64 with a spread of 13. A box score says how often a
 # player actually got to the line, so the larger of the two is set from that, and the smaller kept
 # below it: a big who posts up but rarely draws a whistle is not a foul-line regular.
-ATTACK_MEAN, ATTACK_SPREAD = 64, 13
+ATTACK_MEAN, ATTACK_SPREAD = 64, 8
 
 
 def _tendency_values(standard):

@@ -164,6 +164,22 @@ public sealed class DepthChartBuilder
         }
 
         var count = candidates.Count;
+
+        // The best by Current Ability alone: a tanking team's rotation priority decides its bench,
+        // not whether its best player starts.
+        // Ranked, so when they cannot all fit on the floor the better player keeps his place.
+        var alwaysStart = pool
+            .OrderByDescending(player => player.Overall)
+            .ThenBy(player => player.PlayerId.Value, StringComparer.Ordinal)
+            .Take(MinutesAllocationBounds.AlwaysStart)
+            .Select((player, rank) => (player, Bonus: AlwaysStartBonus + ((MinutesAllocationBounds.AlwaysStart - rank) * AlwaysStartRankStep)))
+            .ToDictionary(entry => entry.player, entry => entry.Bonus);
+        foreach (var star in alwaysStart.Keys.Where(star => !candidates.Contains(star)))
+        {
+            candidates.Add(star);
+        }
+
+        count = candidates.Count;
         var fit = new int[count, positions.Length];
         for (var index = 0; index < count; index++)
         {
@@ -171,7 +187,7 @@ public sealed class DepthChartBuilder
             {
                 // A coach starts his best players: each of the top few carries a bonus no fit
                 // difference can outweigh, short of a position he cannot really play.
-                fit[index, slot] = FitAt(candidates[index], positions[slot]) + (index < MinutesAllocationBounds.AlwaysStart ? AlwaysStartBonus : 0);
+                fit[index, slot] = FitAt(candidates[index], positions[slot]) + alwaysStart.GetValueOrDefault(candidates[index]);
             }
         }
 
@@ -252,10 +268,14 @@ public sealed class DepthChartBuilder
 
     /// <summary>
     /// What one of a team's <see cref="MinutesAllocationBounds.AlwaysStart"/> best players adds to a
-    /// starting five's score: more than any arrangement of fits can differ by, less than the
-    /// last-resort penalty, so he starts wherever he can genuinely play.
+    /// starting five's score (at least; see <see cref="AlwaysStartRankStep"/>): more than any arrangement
+    /// of fits can differ by, less than the last-resort penalty even at the top rank, so he starts
+    /// wherever he can genuinely play.
     /// </summary>
-    private const int AlwaysStartBonus = 500;
+    private const int AlwaysStartBonus = 400;
+
+    /// <summary>How much more each rank above the last carries, so the best of them wins a contested place.</summary>
+    private const int AlwaysStartRankStep = 40;
 
     /// <summary>
     /// Divides the game's minutes across the rotation the way a coach does: by role first — the

@@ -167,8 +167,11 @@ public sealed class DepthChartBuilderTests
     {
         var fillers = Enum.GetValues<Position>()
             .Where(position => position != Position.Center)
-            .Select(position => new AvailablePlayer(new PlayerId($"FILLER-{position}"), position, new PlayerRating(60)))
+            .Select(position => new AvailablePlayer(new PlayerId($"FILLER-{position}"), position, new PlayerRating(80)))
             .ToList();
+
+        // The team's four best players are the 80s, who always start; the centre spot is between a
+        // role-player veteran and a youngster a little behind him.
         var veteran = new AvailablePlayer(new PlayerId("VETERAN"), Position.Center, new PlayerRating(70));
         var youngster = new AvailablePlayer(new PlayerId("YOUNGSTER"), Position.Center, new PlayerRating(66));
 
@@ -180,7 +183,7 @@ public sealed class DepthChartBuilderTests
     }
 
     [Fact]
-    public void Rotation_ATeamsThreeBestPlayersAlwaysStart_EvenWhenAnotherPlayerFitsTheSpotBetter()
+    public void Rotation_ATeamsBestPlayersAlwaysStart_EvenWhenAnotherPlayerFitsTheSpotBetter()
     {
         // The team's three best players are interior bigs: elite inside, poor on the perimeter, able to
         // play small forward only passably. Natural role players at every spot fit those spots better.
@@ -222,6 +225,11 @@ public sealed class DepthChartBuilderTests
         var starters = Enum.GetValues<Position>().Select(position => build.Chart.At(position)[0].PlayerId.Value).ToList();
 
         Assert.All(stars, star => Assert.Contains(star.PlayerId.Value, starters));
+
+        // A tanking team's rotation priority moves its bench, not its best players out of the five.
+        var tanking = Build([.. stars.Select(star => star with { MinutesPriority = -6 }), .. fillers.Select(filler => filler with { MinutesPriority = 8 })], rosterCount: stars.Count + fillers.Count);
+        var tankingStarters = Enum.GetValues<Position>().Select(position => tanking.Chart.At(position)[0].PlayerId.Value).ToList();
+        Assert.All(stars, star => Assert.Contains(star.PlayerId.Value, tankingStarters));
     }
 
     private DepthChartBuild Build(IReadOnlyList<AvailablePlayer> players, int rosterCount)

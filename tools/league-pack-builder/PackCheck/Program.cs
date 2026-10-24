@@ -32,7 +32,7 @@ var simWins = keyByName.Values.ToDictionary(key => key, _ => new List<double>())
 var seasonSds = new List<double>();
 // Opt-in per-player output for rating calibration: summed simulated totals across every season run.
 var playersOut = Environment.GetEnvironmentVariable("PACKCHECK_PLAYERS_OUT");
-var playerTotals = new Dictionary<string, (string Name, int Games, int Minutes, int Points, int Rebounds, int Assists)>();
+var playerTotals = new Dictionary<string, (string Name, int Games, int Minutes, int Points, int Rebounds, int Assists, int FieldGoalsAttempted, int FreeThrowsAttempted)>();
 double points = 0, games = 0;
 
 for (var season = 0; season < seasons; season++)
@@ -62,7 +62,8 @@ for (var season = 0; season < seasons; season++)
             var name = names.GetValueOrDefault(id, id);
             playerTotals.TryGetValue(name, out var before);
             playerTotals[name] = (name, before.Games + line.Games, before.Minutes + line.Minutes, before.Points + line.Points,
-                before.Rebounds + line.Rebounds, before.Assists + line.Assists);
+                before.Rebounds + line.Rebounds, before.Assists + line.Assists,
+                before.FieldGoalsAttempted + line.FieldGoalsAttempted, before.FreeThrowsAttempted + line.FreeThrowsAttempted);
         }
     }
 
@@ -98,8 +99,8 @@ if (paired.Count >= 3)
 
 if (playersOut is not null)
 {
-    File.WriteAllLines(playersOut, new[] { "name,games,minutes,points,rebounds,assists" }.Concat(
-        playerTotals.Values.Select(p => string.Join(",", $"\"{p.Name}\"", p.Games, p.Minutes, p.Points, p.Rebounds, p.Assists))));
+    File.WriteAllLines(playersOut, new[] { "name,games,minutes,points,rebounds,assists,fga,fta" }.Concat(
+        playerTotals.Values.Select(p => string.Join(",", $"\"{p.Name}\"", p.Games, p.Minutes, p.Points, p.Rebounds, p.Assists, p.FieldGoalsAttempted, p.FreeThrowsAttempted))));
 }
 
 Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));

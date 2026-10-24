@@ -347,14 +347,24 @@ the multi-season chain exposed logic the generated league had hidden:
   shot creation, handling, off-ball movement, first step, weighted as Current Ability weights them).
   Team strength still reads Overall. The generated league's shape and every calibration test are
   unchanged (league-shape rows 29 → 28 of 61 at 40 seasons, within run-to-run noise; 16.4 ms a season).
-- **A team's three best players always start** (`MinutesAllocationBounds.AlwaysStart`), wherever they
-  can genuinely play: the starting-five search no longer brings a star off the bench because a role
-  player fits a crowded position a little better — the competitor's "best player in the league wins
-  Sixth Man" failure. Regression test: three interior bigs who all must start.
-- **Open:** foul drawing stacks three multipliers (rim shot, attack tendency, level), roughly doubling an
-  elite foul-drawer's real free-throw rate; and a pack pipeline that carries a team-strength offset on
-  every player permanently inflates the best real team's roster for years. Both are the next sim-logic
-  items.
+- **A team's four best players always start** (`MinutesAllocationBounds.AlwaysStart`), ranked by Current
+  Ability alone (a tanking team's rotation priority moves its bench, not its stars), wherever they can
+  genuinely play: the starting-five search no longer brings a star off the bench because a role player
+  fits a crowded position a little better — the competitor's "best player in the league wins Sixth Man"
+  failure. Their bonus is ranked, so when they cannot all fit the better player keeps his place.
+  Regression test: three interior bigs who all must start, tanking or not. Sixth Man now goes mostly to
+  bench scorers; an ageing former star past a team's top four can still win it, as in a real league.
+- **Foul drawing** stacks three multipliers (rim shot, attack tendency, level). Lowering the engine's cap
+  broke the locked leader calibration, so the pack calibrates instead: the attack tendency is set from
+  the real free-throw rate with a spread (8) that brings simulated free throws per 36 to 1.28× the real
+  rate for the top foul-drawers and 1.13× in the middle (from 1.44× and 1.32×).
+- **Team offsets** fitted to the real table are carried on every player's sheet, so they are capped at ±6
+  rather than ±15: a strong team's whole roster was being inflated for years, and a good scorer on a bad
+  team (26.7 points a game) rated a bench player and was bought out within two seasons.
+- **Still open:** a position-blind Current Ability means an elite rebounding, rim-protecting centre must be
+  rated a good shooter to reach a star's Overall; one such player (an efficient, foul-drawing young
+  centre on the best team) still wins MVP in about half of five-season runs. A position-aware Current
+  Ability (the competitor rates bigs and guards on different formulas) is the next lever.
 
 **League packs at the current standard (pack schema 4).** The builder writes every player's full sheet
 from stats (`tools/league-pack-builder/sheet.py`; see `docs/architecture.md` → "League packs"): attribute
