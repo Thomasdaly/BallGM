@@ -35,6 +35,10 @@ TENDENCIES = ["touches", "shot", "drive", "postUp", "shotClose", "shotMid", "sho
 POSITIONS = ["PointGuard", "ShootingGuard", "SmallForward", "PowerForward", "Center"]
 FAMILIARITY_BY_DISTANCE = ["Natural", "Accomplished", "Competent", "Unconvincing", "Awkward"]
 ATTRIBUTE_FLOOR, ATTRIBUTE_CEILING = 5, 99
+# The league's middle Overall, where an average player's sheet is centred before it is shaped.
+LEAGUE_MIDDLE = 64
+# How far a star's strengths may be amplified, before a uniform shift, to reach his Overall.
+SHAPE_AMPLIFICATION = 2.5
 TENDENCY_FLOOR, TENDENCY_CEILING = 2, 98
 
 # How far each attribute strays from a player's Overall (standard deviation of attribute - Overall),
@@ -214,8 +218,11 @@ def sheets(rows, overall, spread=1.0, skill_weight=0.3, adjust=None, ceiling=Non
     raw_tendencies = [_tendency_composites(per_row[i], size[i]) for i in range(len(rows))]
     keys = list(raw_tendencies[0])
     tendency_z = {key: _z([t[key] for t in raw_tendencies]) for key in keys}
+    usages = [getattr(row, "extras", {}).get("usg") for row in rows]
+    known = [usage for usage in usages if usage]
+    usage_mean = statistics.fmean(known) if known else None
     return [_sheet(rows[i], targets[i], per_row[i], {name: standard[name][i] for name, _ in VISIBLE}, size[i], spread,
-                   _tendency_values({key: tendency_z[key][i] for key in keys}))
+                   _tendency_values({key: tendency_z[key][i] for key in keys}, usages[i] / usage_mean if usages[i] and usage_mean else None))
             for i in range(len(rows))]
 
 
@@ -289,10 +296,17 @@ def _tendency_composites(f, size):
         "foul": g("pf36"),
         # Not a tendency of its own: how often he gets to the line, which the engine reads as the larger
         # of drive and post-up (see _tendency_values).
-        "attack": 0.6 * g("ft_rate") + 0.4 * g("fta36", g("ft_rate")),
+        # Beyond what his shot diet explains: the engine already draws more fouls on shots at the rim,
+        # so a rim-runner's free throws are not counted twice; a guard who gets to the line from the
+        # perimeter keeps his.
+        "attack": 0.6 * g("ft_rate") + 0.4 * g("fta36", g("ft_rate")) - 0.6 * paint,
     }
     return raw
 
+
+# MatchModelBounds.UsageTouchesDoublingPoints: touch-tendency points that double a player's share of
+# the ball against his team-mates'. Re-check if the engine's constant changes.
+TOUCHES_DOUBLING = 10
 
 # The engine draws a shooting foul by the larger of a player's drive and post-up tendencies; in the
 # calibration league that larger value averages 64 with a spread of 13. A box score says how often a
@@ -301,9 +315,14 @@ def _tendency_composites(f, size):
 ATTACK_MEAN, ATTACK_SPREAD = 64, 8
 
 
-def _tendency_values(standard):
+def _tendency_values(standard, usage_ratio=None):
     values = {key: max(TENDENCY_FLOOR, min(TENDENCY_CEILING, int(round(TENDENCY_MEANS[key] + TENDENCY_SPREADS[key] * value))))
               for key, value in standard.items() if key != "attack"}
+    if usage_ratio:
+        # The engine weighs touches exponentially (doubling every TOUCHES_DOUBLING points against his
+        # team-mates'), and a usage rate is a ratio: 32% against 16% is twice the ball, not five times.
+        touches = TENDENCY_MEANS["touches"] + TOUCHES_DOUBLING * math.log2(usage_ratio)
+        values["touches"] = max(TENDENCY_FLOOR, min(TENDENCY_CEILING, int(round(touches))))
     if "attack" in standard:
         attack = max(TENDENCY_FLOOR, min(TENDENCY_CEILING, int(round(ATTACK_MEAN + ATTACK_SPREAD * standard["attack"]))))
         lead, other = ("postUp", "drive") if values["postUp"] > values["drive"] else ("drive", "postUp")
@@ -313,31 +332,43 @@ def _tendency_values(standard):
 
 
 def _logistic_sheet(target, composites, scale):
-    """Attributes on a logistic curve around the target: target + spread x z in the middle of the
-    scale, bending smoothly toward the floor and ceiling instead of clipping at them, so a star's
-    sheet keeps its order (his best skill above his second best) rather than flattening at 99. The
-    curve is shifted until the weighted mean is the target."""
+    """Attributes on a logistic curve: the attribute's own spread per z in the middle of the scale,
+    bending smoothly toward the floor and ceiling instead of clipping at them, so a star's sheet keeps
+    its order rather than flattening at 99.
+
+    Reaching the target Overall, a player's shape is amplified before it is shifted: starting from
+    the league's middle, a player whose strengths outweigh his weaknesses gets them more pronounced
+    (up to SHAPE_AMPLIFICATION times), and only what that cannot reach is a shift of every attribute.
+    A rebounding, rim-protecting centre rated a star stays a non-shooter; a shift alone would have made
+    him a good shooter to average out to his Overall, and the ball would find him.
+    """
     names = [name for name, _ in VISIBLE]
     weight = dict(VISIBLE)
     span = ATTRIBUTE_CEILING - ATTRIBUTE_FLOOR + 2
     low = ATTRIBUTE_FLOOR - 1
-    # Logit units per z, so the middle of the curve moves the attribute's own spread per z.
     slope = {name: scale * ATTRIBUTE_SPREADS[name] / (span / 4.0) for name in names}
+    centre = math.log((LEAGUE_MIDDLE - low) / (span - (LEAGUE_MIDDLE - low)))
 
-    def value(name, shift):
-        return low + span / (1.0 + math.exp(-(shift + slope[name] * composites[name])))
+    def value(name, shift, amplify):
+        return low + span / (1.0 + math.exp(-(shift + amplify * slope[name] * composites[name])))
 
-    def mean(shift):
-        return sum(weight[name] * value(name, shift) for name in names) / 100.0
+    def mean(shift, amplify):
+        return sum(weight[name] * value(name, shift, amplify) for name in names) / 100.0
 
-    lo, hi = -12.0, 12.0
-    for _ in range(60):
-        mid = (lo + hi) / 2
-        if mean(mid) < target + 0.5:
-            lo = mid
-        else:
-            hi = mid
-    return {name: value(name, (lo + hi) / 2) for name in names}
+    def solve(lo, hi, function):
+        for _ in range(60):
+            mid = (lo + hi) / 2
+            if function(mid) < target + 0.5:
+                lo = mid
+            else:
+                hi = mid
+        return (lo + hi) / 2
+
+    amplify = 1.0
+    if mean(centre, 1.0) < target and mean(centre, SHAPE_AMPLIFICATION) > mean(centre, 1.0):
+        amplify = min(SHAPE_AMPLIFICATION, solve(1.0, SHAPE_AMPLIFICATION, lambda k: mean(centre, k)))
+    shift = solve(-12.0, 12.0, lambda x: mean(x, amplify))
+    return {name: value(name, shift, amplify) for name in names}
 
 
 def _recentre(target, values):

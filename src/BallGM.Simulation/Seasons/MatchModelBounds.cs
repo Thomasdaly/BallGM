@@ -516,10 +516,10 @@ public static class MatchModelBounds
     /// rotation's mean, in his usage weight: the best player takes far more than his share of the shots,
     /// and a player who wants the ball gets it a little more often than one who does not.
     /// </summary>
-    public const int UsageRatingDoublingPoints = 10;
+    public const int UsageRatingDoublingPoints = 18;
 
     /// <inheritdoc cref="UsageRatingDoublingPoints"/>
-    public const int UsageTouchesDoublingPoints = 17;
+    public const int UsageTouchesDoublingPoints = 10;
 
     /// <summary>
     /// Doubling points for how far a player's defensive discipline falls short of his rotation's mean

@@ -361,10 +361,19 @@ the multi-season chain exposed logic the generated league had hidden:
 - **Team offsets** fitted to the real table are carried on every player's sheet, so they are capped at ±6
   rather than ±15: a strong team's whole roster was being inflated for years, and a good scorer on a bad
   team (26.7 points a game) rated a bench player and was bought out within two seasons.
-- **Still open:** a position-blind Current Ability means an elite rebounding, rim-protecting centre must be
-  rated a good shooter to reach a star's Overall; one such player (an efficient, foul-drawing young
-  centre on the best team) still wins MVP in about half of five-season runs. A position-aware Current
-  Ability (the competitor rates bigs and guards on different formulas) is the next lever.
+- **The specialist-centre MVP (fixed in steps).** An efficient, foul-drawing young centre on the best
+  real team won MVP in about half of five-season runs — a player who, by the owner's own judgement,
+  would never win one. Four causes, four fixes: (1) usage leans on the touch tendency more than on
+  level — `UsageTouchesDoublingPoints` 17 → 10, `UsageRatingDoublingPoints` 10 → 18 — which the locked
+  calibrations pass and which improves the generated league's shape (29 → 31 of 61 rows); (2) a pack
+  sets touches on a log scale of the real usage rate matched to that doubling (32% against 16% is twice
+  the ball, not five times); (3) a sheet reaches a high Overall by amplifying the player's strengths
+  before shifting everything, so a star rim-runner stays a non-shooter and a shooter's shooting reads
+  99; (4) the attack tendency measures free throws beyond what the shot diet explains, since the
+  engine already draws more fouls at the rim. He now scores ~25 a game (real 19.5 in fewer minutes)
+  and wins 2 MVPs in 20 simulated seasons; the MVPs go to the league's real stars.
+- **Still open:** an aged star who missed most of last season (injury proneness from games missed is
+  not yet strong enough) can carry a thin roster to an MVP in a pack's first season.
 
 **League packs at the current standard (pack schema 4).** The builder writes every player's full sheet
 from stats (`tools/league-pack-builder/sheet.py`; see `docs/architecture.md` → "League packs"): attribute
