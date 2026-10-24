@@ -130,6 +130,9 @@ PRIOR_3P, PRIOR_3P_ATTEMPTS = 0.355, 80
 PRIOR_FT, PRIOR_FT_ATTEMPTS = 0.770, 50
 PRIOR_2P, PRIOR_2P_ATTEMPTS = 0.530, 100
 
+# Injury proneness per standard deviation of games played (fewer games, more prone).
+INJURY_PRONENESS_PER_Z = 20
+
 # Potential: rating points of headroom by age, the rest of a career's growth.
 HEADROOM_BY_AGE = {19: 16, 20: 14, 21: 11, 22: 8, 23: 6, 24: 4, 25: 2}
 
@@ -400,7 +403,9 @@ def _sheet(row, target, f, composites, size, spread, tendencies):
 
     potential = min(99, target + HEADROOM_BY_AGE.get(row.age, 0 if row.age > 25 else 16))
     hidden = {name: 50 for name in HIDDEN}
-    hidden["injuryProneness"] = max(5, min(95, int(round(50 - 14 * f.get("games_share", 0.0)))))
+    # Games missed over the seasons blended: the engine scales a player's injury chance by up to 2.2x
+    # from this, so a player who missed half of each of the last seasons reads near the top of it.
+    hidden["injuryProneness"] = max(5, min(95, int(round(50 - INJURY_PRONENESS_PER_Z * f.get("games_share", 0.0)))))
 
     height_cm = int(round((row.height or 78.0) * 2.54))
     weight_kg = int(round((row.weight or 215.0) * 0.4536))
