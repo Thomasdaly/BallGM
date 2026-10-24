@@ -375,3 +375,23 @@ history (signed season, years with the team, rookie-deal options, partial guaran
 pack, simulated against the real season it came from, per-player correlations rose from minutes 0.638,
 points 0.785, rebounds 0.768, assists 0.771 (the old five-attribute ratings on the same engine) to 0.61,
 0.86, 0.83, 0.84, with the table reproduced at r 0.97; packs are written compact and load in ~47 ms.
+
+## 15. Your franchise is yours; the payroll floor means something
+
+**The managed franchise (`LeagueSession.ManagedTeamId`).** The session now knows which team the person
+plays — the client sets it from the selected team. The summer's AI acts for every other team and never
+for this one, nor with it: no re-signing, qualifying offer, buyout, free-agent bid, salary dump, veteran
+sale or summer trade. What the league itself requires still happens to it — options decided, draft picks
+signed on the scale, a roster below the minimum filled — because an empty roster is not a choice.
+Session state, like an in-flight negotiation: not saved. `ManagedTeamTests` plays three summers and
+checks nobody under contract left, nobody arrived but draft picks, and no expiring player was re-signed
+on its behalf (and fails if the team is left unmanaged). Open: an interactive offseason, where the
+person makes those moves themselves before the AI market runs.
+
+**The payroll floor.** It was informational: nothing made a team spend to it, and payrolls fell to a
+quarter of the cap. A team below the floor pays the shortfall in the real agreement, so it spends it: in
+the market it bids for anyone near its rotation (or better than its weakest player, with a spot open)
+and overpays on one-season deals — the gap spread across its open spots, at least twice the player's
+price, never above his maximum salary — and it takes on salary dumps whatever its direction. The lowest
+payroll in a twelve-season chain is now 75–87% of the cap (was 50–70%, once 25%). The shortfall itself
+is not charged: there are no team finances yet to charge it to.

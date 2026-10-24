@@ -158,7 +158,7 @@ public sealed partial class LeagueSession
 
         var (drafted, unrostered, draftNotes) = RunDraft(outcome.Entry.FinalStandings, seasonSeed.For("draft"));
         var (boughtOut, buyoutNotes) = RunBuyouts();
-        var dumpedTeams = new HashSet<TeamId>();
+        var dumpedTeams = ManagedTeams();
         var (dumps, dumpNotes) = RunSalaryDumps(dumpedTeams);
         var (marketSigned, marketNotes) = RunFreeAgencyMarket(tendered.ToDictionary(plan => plan.PlayerId, plan => plan.TeamId));
         var (qualifyingSigned, qualifyingNotes) = SignQualifyingOffers(tendered);
@@ -261,11 +261,13 @@ public sealed partial class LeagueSession
         }
 
         var teamIds = _snapshot.Teams
+            .Where(team => team.Id != ManagedTeamId)
             .OrderBy(team => team.Id.Value, StringComparer.Ordinal)
             .Select(team => team.Id.Value)
             .ToList();
 
-        var turnResult = RunAiFrontOfficeTurn(teamIds, new SummerTradeMarket([], []));
+        // The managed franchise is off the table: no AI trade is made with it either.
+        var turnResult = RunAiFrontOfficeTurn(teamIds, new SummerTradeMarket(ManagedTeams(), []));
         if (turnResult.IsFailure)
         {
             return (0, 0, turnResult.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList());

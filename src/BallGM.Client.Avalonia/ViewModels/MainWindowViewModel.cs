@@ -213,6 +213,9 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             RaiseBannerChanged();
             RaiseShellChanged();
 
+            // The selected team is the one the person plays: the summer's AI leaves it alone.
+            _session?.SetManagedTeam(value?.TeamId);
+
             if (_roster is not null)
             {
                 _roster.Team = value;
@@ -362,6 +365,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _pickBoard = new PickBoardViewModel(overview);
 
         _selectedTeam = Teams.FirstOrDefault(team => team.TeamId == selectedTeamId) ?? Teams.FirstOrDefault();
+        _session?.SetManagedTeam(_selectedTeam?.TeamId);
         RaisePropertyChanged(nameof(SelectedTeam));
         RaisePropertyChanged(nameof(SelectedTeamDetail));
         RaiseBannerChanged();

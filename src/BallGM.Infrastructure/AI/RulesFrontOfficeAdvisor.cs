@@ -372,7 +372,8 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         LeagueSnapshot snapshot,
         IReadOnlyCollection<Player> freeAgents,
         int round,
-        IReadOnlyDictionary<PlayerId, TeamId>? restricted = null)
+        IReadOnlyDictionary<PlayerId, TeamId>? restricted = null,
+        IReadOnlySet<TeamId>? nonBiddingTeams = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(freeAgents);
@@ -411,7 +412,7 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         var records = ThisSeasonRecords(snapshot, snapshot.CurrentSeason.Year - 1);
         var playersById = snapshot.Players.ToDictionary(player => player.Id);
         var offers = new List<MarketOffer>();
-        foreach (var team in snapshot.Teams.OrderBy(team => team.Id.Value, StringComparer.Ordinal))
+        foreach (var team in snapshot.Teams.Where(team => nonBiddingTeams?.Contains(team.Id) != true).OrderBy(team => team.Id.Value, StringComparer.Ordinal))
         {
             var roster = context.RosterOf(team);
             var direction = DirectionOf(snapshot, team, playersById, snapshot.CurrentSeason.Year, asOf, ruleset);

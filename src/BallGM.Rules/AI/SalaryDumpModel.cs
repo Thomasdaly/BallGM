@@ -89,6 +89,9 @@ public static class SalaryDumpModel
         var teamsByFranchise = context.Teams.ToDictionary(team => team.FranchiseId);
         var payroll = context.Teams.ToDictionary(team => team.Id, team => OffseasonModel.PayrollFor(team.Id, context.Contracts, season).SmallestUnits);
         var used = new HashSet<TeamId>(excludedTeams ?? new HashSet<TeamId>());
+        // A team under the payroll floor takes on salary whatever its direction: it pays the shortfall
+        // otherwise, so being paid in picks to reach the floor is free money.
+        var floorLine = context.CapThresholds.PayrollFloor?.SmallestUnits ?? 0;
         var minimumSalary = negotiationRules.CompensationFloor.FloorFor(0)?.SmallestUnits ?? 0;
         long SalaryOf(PlayerId playerId, TeamId teamId) => context.Contracts
             .FirstOrDefault(contract => contract.PlayerId == playerId && contract.TeamId == teamId && !contract.IsTerminated && contract.TermFor(season) is not null)?
@@ -178,7 +181,7 @@ public static class SalaryDumpModel
 
                 foreach (var receiver in context.Teams
                     .Where(team => team.Id != dumper.Id && !used.Contains(team.Id) &&
-                        directions.GetValueOrDefault(team.Id) == CompetitiveDirection.Rebuilding &&
+                        (directions.GetValueOrDefault(team.Id) == CompetitiveDirection.Rebuilding || payroll[team.Id] < floorLine) &&
                         payroll[team.Id] + salary <= cap &&
                         team.RosterCount < team.RosterLimits.MaximumPlayers)
                     .OrderBy(team => payroll[team.Id])
@@ -233,7 +236,7 @@ public static class SalaryDumpModel
                         : string.Join(", ", picks.Select(pick =>
                             $"{(teamsByFranchise.TryGetValue(pick.OriginalFranchiseId, out var original) && original.Id != dumper.Id ? original.Name + "'s " : string.Empty)}{pick.DraftSeason.Year} {(pick.Round == 1 ? "first" : "second")}-round pick"));
                     dumps.Add(new SalaryDump(proposal.Value, dumper.Id, receiver.Id, player.Id, picks.Select(pick => pick.Id).ToList(), new RuleFinding(DumpCode,
-                        $"{dumper.Name}, {ExplanationText.Money(payroll[dumper.Id] - taxLine)} over the tax, sends {player.FullName} ({player.Rating.Overall}, {ExplanationText.Money(salary)} a season through {lastYear}) to {receiver.Name}, who are rebuilding with {ExplanationText.Money(cap - payroll[receiver.Id])} of room — paid {ExplanationText.Money(overpay)} more than the market would pay him — with {price} to take him{(filler is null ? string.Empty : $", and takes {filler.FullName} back on a minimum deal to keep its roster full")}.",
+                        $"{dumper.Name}, {ExplanationText.Money(payroll[dumper.Id] - taxLine)} over the tax, sends {player.FullName} ({player.Rating.Overall}, {ExplanationText.Money(salary)} a season through {lastYear}) to {receiver.Name}, who {(payroll[receiver.Id] < floorLine ? "are under the payroll floor" : "are rebuilding")} with {ExplanationText.Money(cap - payroll[receiver.Id])} of room — paid {ExplanationText.Money(overpay)} more than the market would pay him — with {price} to take him{(filler is null ? string.Empty : $", and takes {filler.FullName} back on a minimum deal to keep its roster full")}.",
                         dumper.Id)));
                     used.Add(dumper.Id);
                     used.Add(receiver.Id);

@@ -104,7 +104,8 @@ public interface IFrontOfficeAdvisor
         LeagueSnapshot snapshot,
         IReadOnlyCollection<Player> freeAgents,
         int round,
-        IReadOnlyDictionary<PlayerId, TeamId>? restricted = null);
+        IReadOnlyDictionary<PlayerId, TeamId>? restricted = null,
+        IReadOnlySet<TeamId>? nonBiddingTeams = null);
 
     /// <summary>
     /// The qualifying offers every team tenders to its expiring restricted players it did not re-sign

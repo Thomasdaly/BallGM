@@ -30,10 +30,28 @@ public sealed class OffseasonModelTests
         var full = MarketTestLeague.Build([[1_000_000, 1_000_000, 1_000_000]], maximumRoster: 3);
         Assert.Empty(OffseasonModel.MarketOffers(full.Team(0), [full.FreeAgent], full.Context(), CompetitiveDirection.Retooling, Summer, 0, 3));
 
-        var open = MarketTestLeague.Build([[5_000_000, 5_000_000, 5_000_000]], freeAgentOverall: 80);
+        // At the payroll floor (80M) with room under the cap: a team spending to the floor overpays
+        // instead (see ATeamUnderThePayrollFloorOverpaysForOneSeason).
+        var open = MarketTestLeague.Build([[27_000_000, 27_000_000, 27_000_000]], freeAgentOverall: 80);
         var first = OffseasonModel.MarketOffers(open.Team(0), [open.FreeAgent], open.Context(), CompetitiveDirection.Retooling, Summer, 0, 3).Single();
         var later = OffseasonModel.MarketOffers(open.Team(0), [open.FreeAgent], open.Context(), CompetitiveDirection.Retooling, Summer, 3, 3).Single();
         Assert.True(later.Offer.FirstSeasonCompensation < first.Offer.FirstSeasonCompensation);
+    }
+
+    [Fact]
+    public void ATeamUnderThePayrollFloorOverpaysForOneSeason_NeverAboveTheMaximum()
+    {
+        // 15M of payroll against an 80M floor: the team pays the shortfall anyway, so it spends it.
+        var under = MarketTestLeague.Build([[5_000_000, 5_000_000, 5_000_000]], freeAgentOverall: 80);
+        var atFloor = MarketTestLeague.Build([[27_000_000, 27_000_000, 27_000_000]], freeAgentOverall: 80);
+
+        var overpay = OffseasonModel.MarketOffers(under.Team(0), [under.FreeAgent], under.Context(), CompetitiveDirection.Rebuilding, Summer, 0, 3).Single();
+        var normal = OffseasonModel.MarketOffers(atFloor.Team(0), [atFloor.FreeAgent], atFloor.Context(), CompetitiveDirection.Rebuilding, Summer, 0, 3).Single();
+
+        Assert.True(overpay.Offer.FirstSeasonCompensation > normal.Offer.FirstSeasonCompensation);
+        Assert.Single(overpay.Offer.Terms);
+        Assert.True(overpay.Offer.FirstSeasonCompensation.SmallestUnits <= 25_000_000, "never above the player's maximum salary");
+        Assert.Contains("payroll floor", overpay.Rationale.Explanation, StringComparison.Ordinal);
     }
 
     [Fact]

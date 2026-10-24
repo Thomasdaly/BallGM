@@ -25,6 +25,36 @@ public sealed partial class LeagueSession
     /// player's asking price, which he accepts from his own team; a team's payroll budget, by its
     /// direction, decides how many it can keep.
     /// </summary>
+    /// <summary>
+    /// The franchise the person playing runs, if one is set: the summer's AI acts for every other team
+    /// and never for this one — no re-signing, qualifying offer, buyout, free-agent bid, dump, sale or
+    /// trade is made on its behalf or with it. What the league itself requires still happens to it
+    /// (options decided, draft picks signed, a roster below the minimum filled), because an empty roster
+    /// is not a choice. Session state, like an in-flight negotiation: not saved with the league.
+    /// </summary>
+    public TeamId? ManagedTeamId { get; private set; }
+
+    /// <summary>Sets (or clears, with null) the franchise the person playing runs.</summary>
+    public DomainOperationResult SetManagedTeam(string? teamId)
+    {
+        if (teamId is null)
+        {
+            ManagedTeamId = null;
+            return DomainOperationResult.Success;
+        }
+
+        if (_snapshot?.Teams.FirstOrDefault(team => team.Id.Value == teamId) is not { } team)
+        {
+            return DomainOperationResult.Failure(new DomainError(AIUnknownTeamCode, $"Team '{teamId}' is not a team in this league."));
+        }
+
+        ManagedTeamId = team.Id;
+        return DomainOperationResult.Success;
+    }
+
+    /// <summary>The managed franchise as a set the planners exclude, empty when none is set.</summary>
+    private HashSet<TeamId> ManagedTeams() => ManagedTeamId is { } managed ? [managed] : [];
+
     private (int ReSigned, IReadOnlyList<RuleFinding> Notes) RunReSigningWindow()
     {
         if (_snapshot is null || _seasonRun is null)
@@ -41,7 +71,7 @@ public sealed partial class LeagueSession
 
         var reSigned = 0;
         var notes = new List<RuleFinding>();
-        foreach (var plan in plans.Value)
+        foreach (var plan in plans.Value.Where(plan => plan.TeamId != ManagedTeamId))
         {
             var outcome = OfferExtension(plan.PlayerId.Value, plan.Seasons, plan.FirstSeasonSalary, annualRaisePercent: 0);
             if (outcome.IsSuccess && outcome.Value.Accepted)
@@ -73,9 +103,13 @@ public sealed partial class LeagueSession
         }
 
         var plans = _frontOfficeAdvisor.PlanQualifyingOffers(_snapshot);
-        return plans.IsFailure
-            ? ([], plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList())
-            : (plans.Value, plans.Value.Select(plan => plan.Rationale).ToList());
+        if (plans.IsFailure)
+        {
+            return ([], plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList());
+        }
+
+        var tendered = plans.Value.Where(plan => plan.TeamId != ManagedTeamId).ToList();
+        return (tendered, tendered.Select(plan => plan.Rationale).ToList());
     }
 
     /// <summary>
@@ -84,7 +118,7 @@ public sealed partial class LeagueSession
     /// </summary>
     private (int Executed, IReadOnlyList<RuleFinding> Notes) RunVeteranSales()
     {
-        var soldTeams = new HashSet<TeamId>();
+        var soldTeams = ManagedTeams();
         var starSold = false;
         return ExecuteTradesOneAtATime(
             () =>
@@ -226,7 +260,7 @@ public sealed partial class LeagueSession
                 break;
             }
 
-            var plans = _frontOfficeAdvisor.PlanMarketRound(_snapshot, pool, round, restricted);
+            var plans = _frontOfficeAdvisor.PlanMarketRound(_snapshot, pool, round, restricted, ManagedTeams());
             if (plans.IsFailure)
             {
                 notes.AddRange(plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)));
@@ -294,11 +328,13 @@ public sealed partial class LeagueSession
             return ([], []);
         }
 
-        var plans = _frontOfficeAdvisor.PlanBuyouts(_snapshot);
-        if (plans.IsFailure)
+        var planned = _frontOfficeAdvisor.PlanBuyouts(_snapshot);
+        if (planned.IsFailure)
         {
-            return ([], plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList());
+            return ([], planned.Errors.Select(error => new RuleFinding(error.Code, error.Message)).ToList());
         }
+
+        var plans = DomainOperationResult<List<AI.BuyoutPlan>>.Success(planned.Value.Where(plan => plan.TeamId != ManagedTeamId).ToList());
 
         var boughtOut = new List<BuyoutLine>();
         var notes = new List<RuleFinding>();

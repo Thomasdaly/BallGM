@@ -46,6 +46,18 @@ public static class OffseasonModel
     public const int ContendingWinPercent = 55;
 
     /// <summary>
+    /// How far below its eighth man a team under the payroll floor will still bid for a player: it is
+    /// spending money it owes anyway, so a near-rotation player is worth a one-season overpay.
+    /// </summary>
+    public const int FloorRotationReach = 4;
+
+    /// <summary>
+    /// The least a team under the floor overpays a free agent, as a share of his price; it pays more when
+    /// the gap spread over its open roster spots is larger.
+    /// </summary>
+    public const int FloorOverpayPercent = 200;
+
+    /// <summary>
     /// Roster spots a team keeps open below the maximum when it signs depth: a full complement less one,
     /// the flexibility real teams keep for a trade or an in-season signing.
     /// </summary>
@@ -289,6 +301,11 @@ public static class OffseasonModel
         var minimumSalary = context.NegotiationRules.CompensationFloor.FloorFor(0)?.SmallestUnits ?? 0;
         var validator = new SigningValidator();
 
+        // Below the payroll floor a team pays the shortfall anyway, so it spends it: it bids for anyone
+        // near its rotation, and overpays on one-season deals up to the gap — the real league's
+        // floor-team behaviour, rather than a payroll left at a quarter of the cap.
+        var floorGap = context.CapThresholds.PayrollFloor is { } floor ? Math.Max(0, floor.SmallestUnits - payroll) : 0;
+
         var scored = new List<(Player Player, int Value)>();
         foreach (var player in freeAgents)
         {
@@ -300,6 +317,10 @@ public static class OffseasonModel
             if (shortOfMinimum)
             {
                 value = Math.Max(value, player.Rating.Overall - 40);
+            }
+            else if (floorGap > 0 && (player.Rating.Overall >= replacement - FloorRotationReach || (shortOfDepth && player.Rating.Overall > weakest)))
+            {
+                value = Math.Max(value, 1 + player.Rating.Overall - replacement + FloorRotationReach);
             }
             else if (shortOfDepth && player.Rating.Overall > weakest)
             {
@@ -343,6 +364,20 @@ public static class OffseasonModel
             };
             var price = RoundToTenThousand(Math.Max(minimumSalary, ask.Value * Math.Max(0, 100 + premium - (PriceDropPercentPerRound * round)) / 100));
             var seasons = TermFor(player.AgeOn(asOf), star: false, context.NegotiationRules.MaximumSeasonsFor(isIncumbentTeam: false));
+            var floorOverpay = false;
+            if (floorGap > 0)
+            {
+                // The gap spread across the spots it has left to fill, never less than twice his price.
+                var openSpots = Math.Max(1, team.RosterLimits.MaximumPlayers - DepthSpotsKeptOpen - team.RosterCount - offers.Count);
+                var ceiling = context.NegotiationRules.CompensationCeiling.CeilingFor(player.SeasonsOfService, context.CapThresholds.SoftCap)?.SmallestUnits ?? long.MaxValue;
+                var overpaid = RoundToTenThousand(Math.Min(ceiling, Math.Min(floorGap, Math.Max(floorGap / openSpots, Math.Max(price, ask.Value) * FloorOverpayPercent / 100))));
+                if (overpaid > price)
+                {
+                    price = overpaid;
+                    seasons = 1;
+                    floorOverpay = true;
+                }
+            }
             var allowance = context.NegotiationRules.StandardOverCapAllowance?.SmallestUnits;
             var candidates = new List<long> { price };
             if (allowance is long pot && pot < price && pot * 100 >= price * PreferenceModel.ReservationPercentOfAsk)
@@ -376,8 +411,13 @@ public static class OffseasonModel
                 }
 
                 offers.Add(new MarketOffer(offer, value, new RuleFinding(BidCode,
-                    $"{team.Name} ({direction}) bids {ExplanationText.Money(salary)} a season for {ExplanationText.Count(offer.Terms.Count, "season")} on {player.FullName} ({player.Rating.Overall}), who would {(shortOfMinimum ? "fill a roster short of the minimum" : player.Rating.Overall > replacement ? $"improve on its eighth man ({replacement})" : $"add depth over its weakest player ({weakest})")}.",
+                    $"{team.Name} ({direction}) bids {ExplanationText.Money(salary)} a season for {ExplanationText.Count(offer.Terms.Count, "season")} on {player.FullName} ({player.Rating.Overall}), who would {(shortOfMinimum ? "fill a roster short of the minimum" : player.Rating.Overall > replacement ? $"improve on its eighth man ({replacement})" : $"add depth over its weakest player ({weakest})")}{(floorOverpay ? $" — overpaying for one season, {ExplanationText.Money(floorGap)} short of the payroll floor" : string.Empty)}.",
                     team.Id)));
+                if (floorOverpay)
+                {
+                    floorGap = Math.Max(0, floorGap - salary);
+                }
+
                 break;
             }
         }
