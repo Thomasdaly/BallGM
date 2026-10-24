@@ -757,11 +757,16 @@ public sealed class PossessionMatchEngine : IMatchEngine
             // roster would rate a team by its twelfth man as much as by its best player.
 
             var meanOverall = Math.Max(1, Overalls.Length == 0 ? 1 : Overalls.Sum() / Overalls.Length);
+            var offensiveLevels = ratings.Select(rating => rating.OffensiveLevel).ToArray();
+            var meanOffence = Math.Max(1, offensiveLevels.Length == 0 ? 1 : offensiveLevels.Sum() / offensiveLevels.Length);
             var meanTouches = Math.Max(1, touches.Length == 0 ? 1 : touches.Sum() / touches.Length);
 
             // Usage concentrates faster than talent does. A player twenty per cent better than his
             // team's average takes rather more than twenty per cent more of its shots, so the
             // relative rating is squared before it becomes a weight — and then clamped, which is
+            // The rating usage reads is his offensive level (PlayerRating.OffensiveLevel), not his
+            // Overall: the ball finds the player who can score and create, so a great rebounder and
+            // rim protector is a great player without becoming his team's first option.
             // where the bound earns its keep: an outlier is a first option, not the whole offence.
             // Per player, not per minute: a pick is only ever among the five on the floor, so how
             // long someone plays already decides how often they can be picked.
@@ -770,7 +775,7 @@ public sealed class PossessionMatchEngine : IMatchEngine
             // neutral tendencies (a flat test fixture) uses rating alone, as before.
             UsageFactors = Enumerable.Range(0, count)
                 .Select(index => (int)Math.Clamp(
-                    (long)MatchModelBounds.RelativeWeight(Overalls[index], meanOverall, MatchModelBounds.UsageRatingDoublingPoints)
+                    (long)MatchModelBounds.RelativeWeight(offensiveLevels[index], meanOffence, MatchModelBounds.UsageRatingDoublingPoints)
                         * MatchModelBounds.RelativeWeight(touches[index], meanTouches, MatchModelBounds.UsageTouchesDoublingPoints) / 100,
                     MatchModelBounds.MinimumUsageFactor,
                     MatchModelBounds.MaximumUsageFactor))

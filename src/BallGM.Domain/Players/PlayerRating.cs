@@ -121,6 +121,17 @@ public sealed record PlayerRating
     /// <summary>Ball skills: handling, passing and vision together — what the engine reads as a handler's security.</summary>
     public int Playmaking => (this[PlayerAttribute.BallHandling] + this[PlayerAttribute.Passing] + this[PlayerAttribute.Vision]) / 3;
 
+    /// <summary>
+    /// How much offence a player can carry: scoring at every range, creating his own shot, handling,
+    /// moving without the ball and the first step — weighted as Current Ability weights them. What the
+    /// ball finds, which is not the same as how good he is: a great defensive centre is a great
+    /// player and not his team's first option.
+    /// </summary>
+    public int OffensiveLevel =>
+        ((4 * this[PlayerAttribute.Finishing]) + (2 * this[PlayerAttribute.CloseRange]) + (3 * this[PlayerAttribute.MidRange])
+            + (5 * this[PlayerAttribute.ThreePoint]) + (2 * this[PlayerAttribute.FreeThrow]) + (5 * this[PlayerAttribute.ShotCreation])
+            + (4 * this[PlayerAttribute.BallHandling]) + (2 * this[PlayerAttribute.OffBallMovement]) + (3 * this[PlayerAttribute.FirstStep])) / 30;
+
     /// <summary>Feet: speed, first step and lateral quickness together.</summary>
     public int Quickness => (this[PlayerAttribute.Speed] + this[PlayerAttribute.FirstStep] + this[PlayerAttribute.LateralQuickness]) / 3;
 

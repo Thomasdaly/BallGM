@@ -169,7 +169,9 @@ public sealed class DepthChartBuilder
         {
             for (var slot = 0; slot < positions.Length; slot++)
             {
-                fit[index, slot] = FitAt(candidates[index], positions[slot]);
+                // A coach starts his best players: each of the top few carries a bonus no fit
+                // difference can outweigh, short of a position he cannot really play.
+                fit[index, slot] = FitAt(candidates[index], positions[slot]) + (index < MinutesAllocationBounds.AlwaysStart ? AlwaysStartBonus : 0);
             }
         }
 
@@ -247,6 +249,13 @@ public sealed class DepthChartBuilder
 
     /// <summary>What putting a player somewhere he cannot really play costs a starting five's score.</summary>
     private const int LastResortPenalty = 1_000;
+
+    /// <summary>
+    /// What one of a team's <see cref="MinutesAllocationBounds.AlwaysStart"/> best players adds to a
+    /// starting five's score: more than any arrangement of fits can differ by, less than the
+    /// last-resort penalty, so he starts wherever he can genuinely play.
+    /// </summary>
+    private const int AlwaysStartBonus = 500;
 
     /// <summary>
     /// Divides the game's minutes across the rotation the way a coach does: by role first — the

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a BallGM league pack (schema v1) from a season of per-player box-score stats.
+"""Build a BallGM league pack (schema v4, full player sheets) from a season of per-player box-score stats.
 
 Content-neutral: this tool knows no league. You supply
   --players   CSV of per-player season stats (totals or per-game, see --per-mode)
@@ -15,8 +15,10 @@ Ratings pipeline (the "tuning"):
      blended with minutes-per-game (a coach's revealed evaluation of the player);
   2. that composite is percentile-ranked and mapped through a target Overall quantile table
      (--overall-scale stretches it around the median; tune it with tune.sh against real records);
-  3. five attributes are spread around the Overall from stat-derived z-scores, then re-centred so
-     the attributes' integer mean -- which is how PlayerRating derives Overall -- equals the target.
+  3. the full sheet (sheet.py): every attribute spread around the Overall from stat composites, then
+     re-centred so its weighted Current Ability -- which is how PlayerRating derives Overall -- equals
+     the target; body, position familiarity, potential, injury proneness, traits and tendencies with it.
+     The pack states all of it, so nothing is generated at load.
 """
 from __future__ import annotations
 
@@ -28,6 +30,8 @@ import os
 import statistics
 import sys
 from dataclasses import dataclass, field
+
+import sheet
 
 # Column aliases: the canonical name first, then common exports' spellings.
 ALIASES = {
@@ -194,22 +198,12 @@ def derive(rows, args, team_offsets):
     else:
         size_raw = [row.derived["reb36"] + 1.5 * row.derived["blk36"] - 0.6 * row.derived["ast36"] - 4 * row.derived["fg3a_share"] for row in rows]
         size_z = zscores(size_raw)
-    weight_z = zscores([row.weight for row in rows]) if all(row.weight for row in rows) else size_z
-    ast_z = zscores([row.derived["ast36"] - 0.3 * row.derived["tov36"] for row in rows])
-    stl_z = zscores([row.derived["stl36"] for row in rows])
-    phys_z = zscores([row.derived["oreb36"] + 0.4 * row.derived["fta36"] for row in rows])
 
     for index, row in enumerate(rows):
         row.derived["size_z"] = size_z[index]
-        raw = {
-            "height": size_z[index],
-            "strength": 0.5 * weight_z[index] + 0.5 * phys_z[index],
-            "speed": -0.6 * size_z[index] + 0.4 * stl_z[index],
-            "passing": ast_z[index],
-            "lateralQuickness": -0.5 * size_z[index] + 0.5 * stl_z[index],
-        }
-        row.derived["ratings"] = spread_attributes(row.derived["overall"], raw, args.attribute_spread)
         row.derived["position"] = position_for(row, size_z[index])
+    for row, full in zip(rows, sheet.sheets(rows, [row.derived["overall"] for row in rows], args.attribute_spread)):
+        row.derived["sheet"] = full
 
 
 def spread_attributes(overall, raw, spread):
@@ -348,7 +342,7 @@ def build(args):
             "position": row.derived["position"],
             "birthDate": f"{season_start - row.age:04d}-01-01",
             "seasonsOfService": service,
-            "ratings": row.derived["ratings"],
+            **row.derived["sheet"],
         }
         if key is not None:
             player["team"] = key
@@ -358,7 +352,7 @@ def build(args):
     # Teams pass through from the alignment as written, so an alignment team may carry "logo",
     # "taxRepeater", and (schema version 2) "colours": {"primary": "#RRGGBB", "secondary": ...}.
     pack = {
-        "schemaVersion": 2,
+        "schemaVersion": 4,
         "name": alignment.get("name", "Local League Pack"),
         "season": season_start,
         "rulesetFile": "ruleset.json",
@@ -369,7 +363,9 @@ def build(args):
 
     os.makedirs(args.out, exist_ok=True)
     with open(os.path.join(args.out, "pack.json"), "w", encoding="utf-8") as handle:
-        json.dump(pack, handle, indent=2, ensure_ascii=False)
+        # Compact unless asked: a pack is read far more often than it is read by a person, and
+        # indentation roughly doubles what every load has to parse.
+        json.dump(pack, handle, ensure_ascii=False, **({"indent": 2} if args.pretty else {"separators": (",", ":")}))
     with open(os.path.join(args.out, "ruleset.json"), "w", encoding="utf-8") as handle:
         json.dump(ruleset, handle, indent=2, ensure_ascii=False)
 
@@ -446,7 +442,8 @@ def main():
     parser.add_argument("--rate-weight", type=float, default=0.6)
     parser.add_argument("--shrink-minutes", type=float, default=400)
     parser.add_argument("--replacement-gmsc36", type=float, default=8.0)
-    parser.add_argument("--attribute-spread", type=float, default=9.0)
+    parser.add_argument("--attribute-spread", type=float, default=1.0, help="scales every attribute's spread (1.0 = the engine's calibration league)")
+    parser.add_argument("--pretty", action="store_true", help="indent pack.json for reading (larger, slower to load)")
     parser.add_argument("--team-offsets", help="JSON {teamKey: rating points} added to each rostered player's Overall")
     args = parser.parse_args()
     build(args)

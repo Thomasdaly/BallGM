@@ -179,6 +179,51 @@ public sealed class DepthChartBuilderTests
         Assert.Equal("YOUNGSTER", tanking.Chart.At(Position.Center)[0].PlayerId.Value);
     }
 
+    [Fact]
+    public void Rotation_ATeamsThreeBestPlayersAlwaysStart_EvenWhenAnotherPlayerFitsTheSpotBetter()
+    {
+        // The team's three best players are interior bigs: elite inside, poor on the perimeter, able to
+        // play small forward only passably. Natural role players at every spot fit those spots better.
+        // A coach still starts all three of his best players.
+        PlayerRating Big(int level)
+        {
+            var rating = new PlayerRating(level);
+            foreach (var attribute in new[] { PlayerAttribute.ThreePoint, PlayerAttribute.MidRange, PlayerAttribute.BallHandling, PlayerAttribute.PerimeterDefence, PlayerAttribute.Speed, PlayerAttribute.LateralQuickness, PlayerAttribute.FirstStep, PlayerAttribute.ShotCreation })
+            {
+                rating = rating.With(attribute, 45);
+            }
+
+            foreach (var attribute in new[] { PlayerAttribute.Blocking, PlayerAttribute.InteriorDefence, PlayerAttribute.OffensiveRebounding, PlayerAttribute.DefensiveRebounding, PlayerAttribute.PostScoring, PlayerAttribute.Strength, PlayerAttribute.Finishing })
+            {
+                rating = rating.With(attribute, 100);
+            }
+
+            return new PlayerRating(
+                PlayerAttributes.All.Select(attribute => rating[attribute]).ToArray(),
+                Enumerable.Repeat(PlayerRating.NeutralHidden, PlayerAttributes.HiddenCount).ToArray(),
+                rating.Overall,
+                positions: new Dictionary<Position, PositionFamiliarity>
+                {
+                    [Position.Center] = PositionFamiliarity.Natural,
+                    [Position.PowerForward] = PositionFamiliarity.Accomplished,
+                    [Position.SmallForward] = PositionFamiliarity.Unconvincing,
+                });
+        }
+
+        var stars = new[] { 92, 90, 88 }
+            .Select((level, index) => new AvailablePlayer(new PlayerId($"STAR-{index}"), Position.Center, Big(level)))
+            .ToList();
+        var fillers = Enum.GetValues<Position>()
+            .Select(position => new AvailablePlayer(new PlayerId($"FILLER-{position}"), position, new PlayerRating(72)))
+            .ToList();
+        Assert.All(stars, star => Assert.True(star.Overall > 72, $"{star.PlayerId.Value} rates {star.Overall}"));
+
+        var build = Build([.. stars, .. fillers], rosterCount: stars.Count + fillers.Count);
+        var starters = Enum.GetValues<Position>().Select(position => build.Chart.At(position)[0].PlayerId.Value).ToList();
+
+        Assert.All(stars, star => Assert.Contains(star.PlayerId.Value, starters));
+    }
+
     private DepthChartBuild Build(IReadOnlyList<AvailablePlayer> players, int rosterCount)
     {
         var result = _builder.Build(Team, players, Limits, rosterCount);

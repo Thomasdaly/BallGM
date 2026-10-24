@@ -335,3 +335,33 @@ the market still spreads good players evenly; recorded as open.
 The season boundary order is now: options → re-signing window → qualifying offers → conclude → career
 history → age and retire → draft (rookie scale, the pick window rolls forward) → buyouts → salary dumps →
 market → qualifying offers signed → salary dumps (second pass) → veteran sales → summer trades → floor fill.
+
+## 14. Sim logic exposed by a real-data pack: usage, foul drawing, and starters
+
+Running a private, local pack built from a real league's stats (never committed; `local-packs/`) through
+the multi-season chain exposed logic the generated league had hidden:
+
+- **Usage reads offensive level, not Overall.** The ball found a player by his Current Ability squared,
+  so a great rebounder and rim protector — a great player — became his team's first option, led the
+  league in scoring and won MVP. Usage now reads `PlayerRating.OffensiveLevel` (scoring at every range,
+  shot creation, handling, off-ball movement, first step, weighted as Current Ability weights them).
+  Team strength still reads Overall. The generated league's shape and every calibration test are
+  unchanged (league-shape rows 29 → 28 of 61 at 40 seasons, within run-to-run noise; 16.4 ms a season).
+- **A team's three best players always start** (`MinutesAllocationBounds.AlwaysStart`), wherever they
+  can genuinely play: the starting-five search no longer brings a star off the bench because a role
+  player fits a crowded position a little better — the competitor's "best player in the league wins
+  Sixth Man" failure. Regression test: three interior bigs who all must start.
+- **Open:** foul drawing stacks three multipliers (rim shot, attack tendency, level), roughly doubling an
+  elite foul-drawer's real free-throw rate; and a pack pipeline that carries a team-strength offset on
+  every player permanently inflates the best real team's roster for years. Both are the next sim-logic
+  items.
+
+**League packs at the current standard (pack schema 4).** The builder writes every player's full sheet
+from stats (`tools/league-pack-builder/sheet.py`; see `docs/architecture.md` → "League packs"): attribute
+spreads matched to the calibration league the engine was tuned on (×2 for a real league's wider skill
+gaps), stamina from minutes, the attack tendency from real free-throw rate, Overall blended from
+production and the sheet's own skill level with the team offset applied after. Contracts carry their
+history (signed season, years with the team, rookie-deal options, partial guarantees). On the private
+pack, simulated against the real season it came from, per-player correlations rose from minutes 0.638,
+points 0.785, rebounds 0.768, assists 0.771 (the old five-attribute ratings on the same engine) to 0.61,
+0.86, 0.83, 0.84, with the table reproduced at r 0.97; packs are written compact and load in ~47 ms.

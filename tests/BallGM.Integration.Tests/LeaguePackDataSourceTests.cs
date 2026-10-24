@@ -127,6 +127,90 @@ public sealed class LeaguePackDataSourceTests : IDisposable
     }
 
     [Fact]
+    public void Pack_SchemaFourStatesAContractsHistoryAndShape()
+    {
+        var pack = SamplePack();
+        pack["schemaVersion"] = 4;
+        foreach (var each in pack["players"]!.AsArray())
+        {
+            each!["ratings"] = SheetJson(new PlayerRating(60));
+        }
+
+        var season = pack["season"]!.GetValue<int>();
+
+        // A rookie deal in its second season: signed last season, team options on its third and fourth
+        // seasons, the second only half guaranteed; with the team two seasons before that deal.
+        pack["players"]![0]!["contract"] = new JsonObject
+        {
+            ["salaries"] = new JsonArray(8_000_000L, 8_400_000L, 8_800_000L),
+            ["options"] = new JsonArray(null, "Team", "Team"),
+            ["guaranteed"] = new JsonArray(4_000_000L, null, null),
+            ["signedSeason"] = season - 1,
+            ["teamSince"] = season - 3,
+        };
+
+        var loaded = Load(pack);
+
+        Assert.True(loaded.IsSuccess, string.Join("; ", loaded.Errors.Select(error => error.Message)));
+        var snapshot = loaded.Value;
+        var player = snapshot.Players.Single(candidate => candidate.FullName == "Player T0-S0");
+        var contracts = snapshot.Contracts.Where(candidate => candidate.PlayerId == player.Id).OrderBy(candidate => candidate.FirstSeason.Year).ToList();
+        Assert.Equal(2, contracts.Count);
+
+        var earlier = contracts[0];
+        Assert.Equal(season - 3, earlier.FirstSeason.Year);
+        Assert.Equal(season - 2, earlier.Terms[^1].Season.Year);
+
+        var current = contracts[1];
+        Assert.Equal(season - 1, current.FirstSeason.Year);
+        Assert.Equal(8_000_000, current.TermFor(new BallGM.Domain.Leagues.Season(season - 1))!.Compensation.SmallestUnits);
+        var now = current.TermFor(new BallGM.Domain.Leagues.Season(season))!;
+        Assert.Equal(4_000_000, now.GuaranteedAmount.SmallestUnits);
+        Assert.False(now.IsPendingOption);
+        Assert.True(current.TermFor(new BallGM.Domain.Leagues.Season(season + 1))!.IsPendingOption);
+        Assert.True(current.TermFor(new BallGM.Domain.Leagues.Season(season + 2))!.IsPendingOption);
+    }
+
+    [Fact]
+    public void Pack_RefusesAContractHistoryItCannotRead()
+    {
+        var pack = SamplePack();
+        pack["schemaVersion"] = 3;
+        foreach (var player in pack["players"]!.AsArray())
+        {
+            player!["ratings"] = SheetJson(new PlayerRating(60));
+        }
+
+        var season = pack["season"]!.GetValue<int>();
+        var contract = pack["players"]![0]!["contract"]!.AsObject();
+        contract["signedSeason"] = season - 1;
+
+        // Schema 3 does not know a contract's history: refused, not half-read.
+        Assert.Contains(Load(pack).Errors, error => error.Message.Contains("schema version 4", StringComparison.Ordinal));
+
+        pack["schemaVersion"] = 4;
+        contract["signedSeason"] = season + 1;
+        Assert.Contains(Load(pack).Errors, error => error.Message.Contains("signed in the pack's season", StringComparison.Ordinal));
+
+        contract["signedSeason"] = season;
+        contract["teamSince"] = season + 1;
+        Assert.Contains(Load(pack).Errors, error => error.Message.Contains("joins his team", StringComparison.Ordinal));
+
+        contract.Remove("teamSince");
+        contract["options"] = new JsonArray("Team");
+        contract["finalSeasonOption"] = "Team";
+        Assert.Contains(Load(pack).Errors, error => error.Message.Contains("not both", StringComparison.Ordinal));
+
+        contract.Remove("finalSeasonOption");
+        contract["options"] = new JsonArray("Sometimes", null);
+        Assert.False(Load(pack).IsSuccess);
+
+        contract.Remove("options");
+        contract["guaranteed"] = new JsonArray(999_000_000L, 999_000_000L);
+        Assert.Contains(Load(pack).Errors, error => error.Message.Contains("guaranteed amount", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Pack_RegistersEveryFranchisesOwnPicksWithNoHistory()
     {
         var snapshot = Load(SamplePack()).Value;

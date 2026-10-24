@@ -31,15 +31,25 @@ python3 tune.py --players sample/generated/players.csv --teams sample/generated/
 BALLGM_LEAGUE_PACK=$PWD/../../local-packs/sample/pack.json dotnet run --project ../../src/BallGM.Client.Avalonia
 ```
 
+## Output format
+
+Pack schema version 4: every player's **full sheet** (all visible attributes, hidden attributes, potential, body,
+position familiarity, traits, tendencies) is written by `sheet.py`, so a load reads ratings as stated instead of
+generating them. Contracts may also state per-season `options` and `guaranteed` amounts, `signedSeason` and
+`teamSince` (see `docs/architecture.md` → "League packs"); this generic builder writes salaries with an optional
+final-season option, and a pipeline with contract data adds the rest.
+
 ## How ratings are derived
 
 1. Production: Game Score per 36 minutes, shrunk toward replacement level by minutes played (`--shrink-minutes`,
    `--replacement-gmsc36`), blended with minutes per game (`--rate-weight`).
 2. Overall: that composite is percentile-ranked and mapped through a quantile table anchored to the shipped
    fixture's scale, stretched around the median by `--overall-scale`.
-3. Attributes: height/strength/speed/passing/lateral quickness spread around the Overall from stat z-scores
-   (real height/weight if the CSV has them, a rebounding/blocks-vs-assists/threes proxy if not), re-centred so
-   `PlayerRating.Overall` (the integer mean) is exactly the target.
+3. The full sheet (`sheet.py`): each attribute is the Overall plus `--attribute-spread` (default 15) times a
+   standardised stat composite, on a logistic curve so the best players keep their shape, re-centred so the
+   sheet's weighted Current Ability (`PlayerRating.Overall`) is exactly the target. Optional per-player extras
+   (`row.extras`: usage, assist/rebound percentages, true shooting, PIE, shot-diet shares, hustle per 36)
+   sharpen the composites when a pipeline supplies them.
 4. Salaries: the CSV's salary column if present, otherwise synthesised from Overall and service against the
    ruleset's compensation floor and ceiling.
 

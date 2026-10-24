@@ -56,11 +56,12 @@ for (var season = 0; season < seasons; season++)
     if (playersOut is not null)
     {
         var names = loaded.Value.Teams.SelectMany(team => team.Roster).ToDictionary(spot => spot.PlayerId, spot => spot.FullName);
-        foreach (var (id, line) in session.PlayerSeasonTotals())
+        foreach (var (id, totals) in session.PlayerSeasonTotals(BallGM.Domain.Seasons.SeasonPhase.RegularSeason))
         {
+            var line = totals.Stats;
             var name = names.GetValueOrDefault(id, id);
             playerTotals.TryGetValue(name, out var before);
-            playerTotals[name] = (name, before.Games + line.GamesPlayed, before.Minutes + line.Minutes, before.Points + line.Points,
+            playerTotals[name] = (name, before.Games + line.Games, before.Minutes + line.Minutes, before.Points + line.Points,
                 before.Rebounds + line.Rebounds, before.Assists + line.Assists);
         }
     }

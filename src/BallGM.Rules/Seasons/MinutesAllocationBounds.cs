@@ -48,6 +48,14 @@ public static class MinutesAllocationBounds
     public const int StarterCandidates = 7;
 
     /// <summary>
+    /// How many of a team's best players (in the rotation's order) always start, wherever on the floor
+    /// they can genuinely play: a coach does not bring his star off the bench because another player
+    /// fits the position a little better — the competitor's "best player in the league is the sixth
+    /// man" failure.
+    /// </summary>
+    public const int AlwaysStart = 3;
+
+    /// <summary>
     /// The minutes a role is worth before quality and stamina move them, by place in the rotation: the
     /// five starters ranked among themselves by rating, then the bench in order. Sums to the game for a
     /// full rotation, which is the shape a real team's minutes take — a starter's thirty-odd, a sixth

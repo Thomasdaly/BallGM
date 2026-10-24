@@ -42,7 +42,15 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
     /// Version 2 added optional team colours. Version 1 is a strict subset, so this build still reads
     /// it; a version-1 file that states colours is refused rather than half-read.
     /// </summary>
-    public const int CurrentSchemaVersion = 3;
+    /// <remarks>
+    /// Version 3 added the full player sheet. Version 4 adds a contract's history and shape — options
+    /// on any season, guaranteed amounts, the season a deal was signed and the season the player
+    /// joined his team — all optional, and refused in an older file rather than half-read.
+    /// </remarks>
+    public const int CurrentSchemaVersion = 4;
+
+    /// <summary>The oldest season a contract's stated history may reach back to, in seasons before the pack's.</summary>
+    public const int MaximumContractHistorySeasons = 25;
 
     public const int OldestSupportedSchemaVersion = 1;
 
@@ -324,22 +332,23 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
 
             foreach (var (player, plan) in roster)
             {
-                var contractResult = CreateContract(teamResult.Value.Id, player.Id, season, plan.Contract!);
+                var contractResult = CreateContracts(teamResult.Value.Id, player.Id, season, plan.Contract!);
                 if (contractResult.IsFailure)
                 {
                     errors.AddRange(contractResult.Errors);
                     continue;
                 }
 
-                contracts.Add(contractResult.Value);
+                contracts.AddRange(contractResult.Value);
+                var signedContract = contractResult.Value[^1];
                 ledger.Record(
                     TransactionKind.ContractSigned,
                     season,
                     teamResult.Value.Id,
-                    $"{player.FullName} signed a {contractResult.Value.Terms.Count}-season contract.",
+                    $"{player.FullName} signed a {signedContract.Terms.Count}-season contract.",
                     player.Id,
-                    contractResult.Value.Id,
-                    contractResult.Value.Terms[0].Compensation);
+                    signedContract.Id,
+                    signedContract.Terms[0].Compensation);
             }
         }
 
@@ -510,7 +519,7 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
 
         if (plan.Contract is not null)
         {
-            ValidateContract(plan.Contract, label, errors);
+            ValidateContract(plan.Contract, schemaVersion, season, label, errors);
         }
 
         var portrait = ResolveImage(plan.Portrait, packDirectory, $"{label} portrait", errors);
@@ -576,11 +585,12 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
         return rating;
     }
 
-    private static void ValidateContract(LeaguePackContractEnvelope contract, string label, List<DomainError> errors)
+    private static void ValidateContract(LeaguePackContractEnvelope contract, int schemaVersion, Season season, string label, List<DomainError> errors)
     {
         if (contract.Salaries is null || contract.Salaries.Count == 0 || contract.Salaries.Any(salary => salary <= 0))
         {
             errors.Add(Invalid(label, "A contract needs at least one season, and every season's salary must be positive."));
+            return;
         }
 
         if (contract.FinalSeasonOption is not null
@@ -588,30 +598,113 @@ public sealed class LeaguePackDataSource : ILeagueDataSource
         {
             errors.Add(Invalid(label, $"Final-season option '{contract.FinalSeasonOption}' is not one of {string.Join(", ", Enum.GetNames<ContractOptionKind>())}."));
         }
+
+        var statesHistory = contract.Options is not null || contract.Guaranteed is not null || contract.SignedSeason is not null || contract.TeamSince is not null;
+        if (statesHistory && schemaVersion < 4)
+        {
+            errors.Add(Invalid(label, "A contract's options, guarantees, signed season and team-since season need schema version 4."));
+            return;
+        }
+
+        if (contract.Options is { } options)
+        {
+            if (contract.FinalSeasonOption is not null)
+            {
+                errors.Add(Invalid(label, "A contract states its options either per season or as a final-season option, not both."));
+            }
+
+            if (options.Count != contract.Salaries.Count)
+            {
+                errors.Add(Invalid(label, $"A contract states one option per salary ({contract.Salaries.Count}), not {options.Count}."));
+            }
+            else if (options.FirstOrDefault(kind => kind is not null && (!Enum.TryParse<ContractOptionKind>(kind, ignoreCase: false, out var parsed) || !Enum.IsDefined(parsed))) is { } unknown)
+            {
+                errors.Add(Invalid(label, $"Option '{unknown}' is not one of {string.Join(", ", Enum.GetNames<ContractOptionKind>())}."));
+            }
+        }
+
+        if (contract.Guaranteed is { } guaranteed)
+        {
+            if (guaranteed.Count != contract.Salaries.Count)
+            {
+                errors.Add(Invalid(label, $"A contract states one guaranteed amount per salary ({contract.Salaries.Count}), not {guaranteed.Count}."));
+            }
+            else if (guaranteed.Select((amount, index) => (amount, index)).Any(entry => entry.amount is < 0 || entry.amount > contract.Salaries[entry.index]))
+            {
+                errors.Add(Invalid(label, "A guaranteed amount is between nothing and that season's salary."));
+            }
+        }
+
+        var signed = contract.SignedSeason ?? season.Year;
+        if (signed > season.Year || signed < season.Year - MaximumContractHistorySeasons)
+        {
+            errors.Add(Invalid(label, $"A contract is signed in the pack's season ({season.Year}) or up to {MaximumContractHistorySeasons} seasons before it, not {signed}."));
+        }
+
+        if (contract.TeamSince is int since && (since > signed || since < season.Year - MaximumContractHistorySeasons))
+        {
+            errors.Add(Invalid(label, $"A player joins his team no later than his contract was signed ({signed}) and no more than {MaximumContractHistorySeasons} seasons before the pack's, not {since}."));
+        }
     }
 
-    private static DomainOperationResult<Contract> CreateContract(
+    /// <summary>
+    /// The player's contract, and — when the pack says he joined the team before the deal was signed —
+    /// the earlier deal his years with the team ran on, ended at the season before (schema 4).
+    /// </summary>
+    private static DomainOperationResult<IReadOnlyList<Contract>> CreateContracts(
         TeamId teamId,
         PlayerId playerId,
         Season season,
         LeaguePackContractEnvelope plan)
     {
-        var option = plan.FinalSeasonOption is null ? ContractOptionKind.None : Enum.Parse<ContractOptionKind>(plan.FinalSeasonOption);
+        var finalOption = plan.FinalSeasonOption is null ? ContractOptionKind.None : Enum.Parse<ContractOptionKind>(plan.FinalSeasonOption);
         var salaries = plan.Salaries!;
-        var terms = new List<ContractSeasonTerm>(salaries.Count);
+        var signed = plan.SignedSeason ?? season.Year;
+        var first = new Money(salaries[0]);
+        var terms = new List<ContractSeasonTerm>(salaries.Count + season.Year - signed);
+
+        // Seasons already played under this deal: history, at the first stated salary.
+        for (var year = signed; year < season.Year; year++)
+        {
+            terms.Add(new ContractSeasonTerm(new Season(year), first, first));
+        }
 
         for (var offset = 0; offset < salaries.Count; offset++)
         {
-            var isOptionSeason = offset == salaries.Count - 1 && option != ContractOptionKind.None;
+            var option = plan.Options is { } options
+                ? (options[offset] is { } kind ? Enum.Parse<ContractOptionKind>(kind) : ContractOptionKind.None)
+                : offset == salaries.Count - 1 ? finalOption : ContractOptionKind.None;
             var compensation = new Money(salaries[offset]);
-            terms.Add(new ContractSeasonTerm(
-                new Season(season.Year + offset),
-                compensation,
-                isOptionSeason ? Money.Zero : compensation,
-                isOptionSeason ? option : ContractOptionKind.None));
+            var guaranteed = option != ContractOptionKind.None
+                ? Money.Zero
+                : plan.Guaranteed?[offset] is long stated ? new Money(stated) : compensation;
+            terms.Add(new ContractSeasonTerm(new Season(season.Year + offset), compensation, guaranteed, option));
         }
 
-        return Contract.Create(new ContractId(SortableId.NewId()), teamId, playerId, terms);
+        var contracts = new List<Contract>(2);
+        if (plan.TeamSince is int since && since < signed)
+        {
+            var earlier = Contract.Create(
+                new ContractId(SortableId.NewId()),
+                teamId,
+                playerId,
+                Enumerable.Range(since, signed - since).Select(year => new ContractSeasonTerm(new Season(year), first, first)));
+            if (earlier.IsFailure)
+            {
+                return DomainOperationResult<IReadOnlyList<Contract>>.Failure(earlier.Errors.ToArray());
+            }
+
+            contracts.Add(earlier.Value);
+        }
+
+        var current = Contract.Create(new ContractId(SortableId.NewId()), teamId, playerId, terms);
+        if (current.IsFailure)
+        {
+            return DomainOperationResult<IReadOnlyList<Contract>>.Failure(current.Errors.ToArray());
+        }
+
+        contracts.Add(current.Value);
+        return DomainOperationResult<IReadOnlyList<Contract>>.Success(contracts);
     }
 
     private static void ValidatePickTrade(

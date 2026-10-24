@@ -106,9 +106,24 @@ public sealed record LeaguePackPlayerEnvelope(
 
 /// <summary>
 /// A contract as consecutive season salaries starting with the pack's season, in the currency's
-/// smallest units. Every season is fully guaranteed except an undecided option on the final one,
-/// which — as everywhere else — is not money owed until somebody takes it up.
+/// smallest units. Every season is fully guaranteed except an undecided option, which — as everywhere
+/// else — is not money owed until somebody takes it up.
+/// <para>
+/// Schema version 4 adds the contract's history and shape, each optional:
+/// <see cref="Options"/> states an option on any season (<c>Player</c>, <c>Team</c>, or null), one per
+/// salary, in place of <see cref="FinalSeasonOption"/> — a rookie deal's options on its third and
+/// fourth seasons; <see cref="Guaranteed"/> each season's guaranteed amount, one per salary, for a
+/// partly or non-guaranteed season; <see cref="SignedSeason"/> the season the deal began, when that
+/// was before the pack's season — the seasons already played are kept as history at the first stated
+/// salary, so the rules can see a deal signed this summer, a rookie deal, and how long it has run;
+/// and <see cref="TeamSince"/> the season the player joined the team, when earlier than the deal,
+/// so a team's years with its own player (what incumbent rights read) survive the load.
+/// </para>
 /// </summary>
 public sealed record LeaguePackContractEnvelope(
     IReadOnlyList<long>? Salaries,
-    string? FinalSeasonOption);
+    string? FinalSeasonOption,
+    IReadOnlyList<string?>? Options = null,
+    IReadOnlyList<long?>? Guaranteed = null,
+    int? SignedSeason = null,
+    int? TeamSince = null);
