@@ -169,7 +169,7 @@ public sealed class MatchModelBoundsTests
     }
 
     [Fact]
-    public void OneInjuryCannotEndASeason()
+    public void AnOrdinaryInjuryCannotEndASeason_AndASevereOneIsRareAndUnderAYear()
     {
         Assert.True(MatchModelBounds.MinimumInjuryDays >= 1, "An injury has to cost at least a day to be one.");
 
@@ -185,6 +185,15 @@ public sealed class MatchModelBoundsTests
         Assert.True(
             MatchModelBounds.InjuryChancePerFullGame < TwoPerCent,
             $"A full-minutes player's per-game injury risk is {MatchModelBounds.InjuryChancePerFullGame} basis points.");
+
+        // The severe tier is its own range, longer than any ordinary knock and under a year, and rare
+        // even for the most injury-prone player.
+        Assert.True(MatchModelBounds.MinimumSevereInjuryDays > MatchModelBounds.MaximumInjuryDays);
+        Assert.True(MatchModelBounds.MaximumSevereInjuryDays > MatchModelBounds.MinimumSevereInjuryDays);
+        Assert.True(MatchModelBounds.MaximumSevereInjuryDays < 365);
+        Assert.True(
+            MatchModelBounds.SevereInjuryShare * MatchModelBounds.MaximumInjuryPronenessFactor / 100 < MatchModelBounds.ProbabilityScale / 10,
+            "Even the most injury-prone player's injuries are mostly ordinary.");
     }
 
     private static (int Fg2Percent, int Fg3Percent) Percentages(int efficiency)

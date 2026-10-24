@@ -61,6 +61,17 @@ public sealed class PossessionMatchEngine : IMatchEngine
         "calf tightness",
     ];
 
+    /// <summary>The injuries of the severe tier: generic, like the rest, and long.</summary>
+    private static readonly string[] SevereInjuryDescriptions =
+    [
+        "torn knee ligament",
+        "ruptured Achilles tendon",
+        "fractured foot",
+        "torn meniscus",
+        "back surgery",
+        "torn hamstring",
+    ];
+
     public bool CanPlay => true;
 
     public DomainOperationResult<MatchOutcome> Play(MatchSetup setup)
@@ -598,12 +609,19 @@ public sealed class PossessionMatchEngine : IMatchEngine
                 continue;
             }
 
+            // Rarely, a severe injury: likelier for the injury-prone (and so, with age, for veterans).
+            var severe = random.NextBasisPoint() < MatchModelBounds.SevereInjuryShare * side.InjuryFactors[index] / 100;
+            var (minimum, maximum) = severe
+                ? (MatchModelBounds.MinimumSevereInjuryDays, MatchModelBounds.MaximumSevereInjuryDays)
+                : (MatchModelBounds.MinimumInjuryDays, MatchModelBounds.MaximumInjuryDays);
+
             // Two draws and the shorter one, so most knocks are short and a long one is rare
             // without needing a second distribution to state it.
-            var first = random.NextInt32(MatchModelBounds.MinimumInjuryDays, MatchModelBounds.MaximumInjuryDays + 1);
-            var second = random.NextInt32(MatchModelBounds.MinimumInjuryDays, MatchModelBounds.MaximumInjuryDays + 1);
+            var first = random.NextInt32(minimum, maximum + 1);
+            var second = random.NextInt32(minimum, maximum + 1);
 
-            var description = InjuryDescriptions[random.NextInt32(0, InjuryDescriptions.Length)];
+            var descriptions = severe ? SevereInjuryDescriptions : InjuryDescriptions;
+            var description = descriptions[random.NextInt32(0, descriptions.Length)];
 
             injuries.Add(new MatchInjury(
                 side.Players[index].PlayerId,

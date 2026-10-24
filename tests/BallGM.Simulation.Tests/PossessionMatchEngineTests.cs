@@ -134,7 +134,11 @@ public sealed class PossessionMatchEngineTests
         {
             foreach (var injury in outcome.Injuries)
             {
-                Assert.InRange(injury.DaysOut, MatchModelBounds.MinimumInjuryDays, MatchModelBounds.MaximumInjuryDays);
+                // Either an ordinary knock or the severe tier: never between the two ranges.
+                Assert.True(
+                    injury.DaysOut is >= MatchModelBounds.MinimumInjuryDays and <= MatchModelBounds.MaximumInjuryDays
+                        or >= MatchModelBounds.MinimumSevereInjuryDays and <= MatchModelBounds.MaximumSevereInjuryDays,
+                    $"{injury.DaysOut} days is in neither stated range.");
                 Assert.Contains(injury.PlayerId.Value, rostered);
                 Assert.False(string.IsNullOrWhiteSpace(injury.Description));
             }

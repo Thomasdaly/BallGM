@@ -447,11 +447,33 @@ public static class MatchModelBounds
     public const int MinimumInjuryDays = 2;
 
     /// <summary>
-    /// The longest spell an injury can cost. Bounded so that one draw cannot end a season: a model
-    /// that can delete a franchise's best player for the year on a single roll is a model whose
-    /// worst outcome nobody chose.
+    /// The longest spell an ordinary injury can cost: most knocks are days to a few weeks.
     /// </summary>
+    /// <remarks>
+    /// This bound used to be the whole model — "one draw cannot end a season" — on the reasoning that a
+    /// model which can delete a franchise's best player for the year on one roll has an outcome nobody
+    /// chose. Reversed on the owner's request (<c>docs/franchise-realism.md</c> → F9): real leagues have
+    /// season-ending and career-altering injuries, and the trades, buyouts and gambles that follow them
+    /// are part of running a franchise. They now come from the separate, rare severe tier below.
+    /// </remarks>
     public const int MaximumInjuryDays = 28;
+
+    /// <summary>
+    /// The share of injuries, in basis points, that are severe — a torn ligament, a ruptured tendon, a
+    /// broken bone — before injury proneness scales it (which also rises with age). Around one injury in
+    /// twenty-five: a league sees a couple of dozen long injuries a season, a handful of them
+    /// season-ending.
+    /// </summary>
+    public const int SevereInjuryShare = 400;
+
+    /// <summary>The shortest spell a severe injury costs: six weeks and more.</summary>
+    public const int MinimumSevereInjuryDays = 45;
+
+    /// <summary>
+    /// The longest spell a severe injury costs: under a year, the length of the worst real recoveries.
+    /// Drawn as the shorter of two draws, so most severe injuries are months, not the year.
+    /// </summary>
+    public const int MaximumSevereInjuryDays = 330;
 
     // Player couplings (attributes A3–A6). Each reads a player's sheet against his team-mates' (a
     // difference from the rotation's mean, through RelativeWeight, so a pack on its own scale still plays
