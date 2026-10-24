@@ -41,6 +41,7 @@ public sealed class TradeValidator
     private const string AggregationCode = "trade.second_apron_salary_aggregation";
     private const string CrossesTaxCode = "trade.crosses_luxury_tax";
     private const string CrossesApronCode = "trade.crosses_apron";
+    public const string PastTradeDeadlineCode = "trade.past_deadline";
     private const string SalaryMatchingSkippedNoSoftCapCode = "trade.salary_matching_skipped_no_soft_cap";
     private const string SalaryMatchingSkippedNotConfiguredCode = "trade.salary_matching_skipped_not_configured";
     private const string HardCapCheckSkippedCode = "trade.hard_cap_check_skipped_no_hard_cap";
@@ -77,6 +78,16 @@ public sealed class TradeValidator
         // indistinguishable from a check that ran and approved, and that is the confusion this task
         // exists to end.
         var notes = SkippedMoneyRules(context);
+
+        // The deadline: from its day until the season is over, no trade. A league with no deadline,
+        // or a trade made in the offseason (no season day), is never past it.
+        if (context.TradeRules.TradeDeadlineDay is int deadline && context.Day is { } day && day.Index >= deadline)
+        {
+            violations.Add(new RuleFinding(
+                PastTradeDeadlineCode,
+                $"The trade deadline (day {deadline}) has passed; trades open again when the season is over.",
+                null));
+        }
 
         // A proposal built against a league that has since moved cannot be trusted: the player in it
         // may already have been traded, the pick may already have conveyed.

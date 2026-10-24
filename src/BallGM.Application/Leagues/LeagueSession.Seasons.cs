@@ -499,7 +499,11 @@ public sealed partial class LeagueSession
             : DomainOperationResult<SeasonAdvanceSummary>.Success(ToSummary(_snapshot, _seasonRun, assessment.Value));
     }
 
-    /// <summary>Advances the league by a number of days, playing whatever falls inside the advance.</summary>
+    /// <summary>
+    /// Advances the league by a number of days, playing whatever falls inside the advance. An advance
+    /// that crosses the trade deadline stops the day before it, lets the AI front offices make their
+    /// deadline deals (<see cref="RunDeadlineMarket"/>), then plays on.
+    /// </summary>
     public DomainOperationResult<SeasonAdvanceSummary> AdvanceDays(int days)
     {
         if (_snapshot is null)
@@ -512,11 +516,76 @@ public sealed partial class LeagueSession
             return NoSeason<SeasonAdvanceSummary>();
         }
 
-        var advanced = _seasonEngine.Advance(_seasonRun, _snapshot, days);
+        var current = _seasonRun.CurrentDay.Index;
+        if (_snapshot.Configuration.TradeDeadlineDay is int deadline && days > 0 && current <= deadline - 1 && current + days > deadline - 1)
+        {
+            var before = deadline - 1 - current;
+            var first = before > 0 ? AdvanceWithinSeason(before) : null;
+            if (first is { IsFailure: true })
+            {
+                return first;
+            }
+
+            var deals = RunDeadlineMarket();
+            var rest = AdvanceWithinSeason(days - before);
+            if (rest.IsFailure)
+            {
+                return rest;
+            }
+
+            var teamNames = TeamNames(_snapshot);
+            var merged = first is null ? rest.Value : Merge(first.Value, rest.Value);
+            return DomainOperationResult<SeasonAdvanceSummary>.Success(merged with
+            {
+                DeadlineDeals = deals.Select(deal => ToSeasonLine(deal, teamNames)).ToList(),
+            });
+        }
+
+        return AdvanceWithinSeason(days);
+    }
+
+    private static SeasonAdvanceSummary Merge(SeasonAdvanceSummary first, SeasonAdvanceSummary second) => second with
+    {
+        IsPermitted = first.IsPermitted && second.IsPermitted,
+        FromDay = first.FromDay,
+        FromDate = first.FromDate,
+        FromPhase = first.FromPhase,
+        GamesInRange = first.GamesInRange + second.GamesInRange,
+        GamesPlayed = first.GamesPlayed + second.GamesPlayed,
+        Fixtures = [.. first.Fixtures, .. second.Fixtures],
+        Violations = [.. first.Violations, .. second.Violations],
+        Warnings = [.. first.Warnings, .. second.Warnings],
+        Notes = [.. first.Notes, .. second.Notes],
+    };
+
+    /// <summary>
+    /// The trade deadline's deals, the day before it (<c>docs/franchise-realism.md</c> → F9): taxpayers
+    /// dump salary, teams out of contention on this season's table sell veterans to contenders, and the
+    /// trade market runs once — the managed franchise left alone, as in the summer. After this day the
+    /// trade validator refuses every trade until the season is over.
+    /// </summary>
+    private IReadOnlyList<RuleFinding> RunDeadlineMarket()
+    {
+        if (_snapshot is null || _seasonRun is null)
+        {
+            return [];
+        }
+
+        var records = _seasonEngine.Standings(_seasonRun, _snapshot).Rows.ToDictionary(row => row.TeamId, row => row.Overall);
+        var dumped = ManagedTeams();
+        var (_, dumpNotes) = RunSalaryDumps(dumped, inSeason: true);
+        var (_, saleNotes) = RunVeteranSales(records);
+        var (_, _, tradeNotes) = RunAiFrontOfficeTurnAtSeasonBoundary();
+        return [.. dumpNotes, .. saleNotes, .. tradeNotes.Where(note => note.RuleCode == "ai_turn.trade_executed")];
+    }
+
+    private DomainOperationResult<SeasonAdvanceSummary> AdvanceWithinSeason(int days)
+    {
+        var advanced = _seasonEngine.Advance(_seasonRun!, _snapshot!, days);
 
         return advanced.IsFailure
             ? DomainOperationResult<SeasonAdvanceSummary>.Failure(advanced.Errors.ToArray())
-            : DomainOperationResult<SeasonAdvanceSummary>.Success(ToSummary(_snapshot, _seasonRun, advanced.Value));
+            : DomainOperationResult<SeasonAdvanceSummary>.Success(ToSummary(_snapshot!, _seasonRun!, advanced.Value));
     }
 
     /// <summary>Advances to a stated day. Expressed in days so the engine has one notion of an advance.</summary>

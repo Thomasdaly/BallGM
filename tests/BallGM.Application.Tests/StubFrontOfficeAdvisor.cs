@@ -55,9 +55,9 @@ internal sealed class StubFrontOfficeAdvisor : IFrontOfficeAdvisor
     public DomainOperationResult<IReadOnlyList<QualifyingOfferPlan>> PlanQualifyingOffers(LeagueSnapshot snapshot) =>
         DomainOperationResult<IReadOnlyList<QualifyingOfferPlan>>.Success([]);
 
-    public DomainOperationResult<IReadOnlyList<SalaryDumpPlan>> PlanSalaryDumps(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null) =>
+    public DomainOperationResult<IReadOnlyList<SalaryDumpPlan>> PlanSalaryDumps(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool inSeason = false) =>
         DomainOperationResult<IReadOnlyList<SalaryDumpPlan>>.Success([]);
 
-    public DomainOperationResult<IReadOnlyList<VeteranSalePlan>> PlanVeteranSales(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool starAlreadySold = false) =>
+    public DomainOperationResult<IReadOnlyList<VeteranSalePlan>> PlanVeteranSales(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool starAlreadySold = false, IReadOnlyDictionary<TeamId, Domain.Seasons.TeamRecord>? records = null) =>
         DomainOperationResult<IReadOnlyList<VeteranSalePlan>>.Success([]);
 }

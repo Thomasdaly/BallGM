@@ -187,7 +187,11 @@ public sealed record SeasonAdvanceSummary(
     IReadOnlyList<SeasonFindingLine> Violations,
     IReadOnlyList<SeasonFindingLine> Warnings,
     IReadOnlyList<SeasonFindingLine> Notes,
-    SeasonCalendarSummary Calendar);
+    SeasonCalendarSummary Calendar)
+{
+    /// <summary>What the AI front offices did at the trade deadline, when this advance crossed it.</summary>
+    public IReadOnlyList<SeasonFindingLine> DeadlineDeals { get; init; } = [];
+}
 
 /// <summary>One player in a rotation.</summary>
 public sealed record DepthChartLine(

@@ -1,5 +1,6 @@
 using BallGM.Application.Leagues;
 using BallGM.Domain.Common;
+using BallGM.Domain.Negotiations;
 using BallGM.Domain.Trades;
 
 namespace BallGM.Application.Trades;
@@ -16,9 +17,11 @@ namespace BallGM.Application.Trades;
 /// </summary>
 public interface ITradeEngine
 {
-    DomainOperationResult<TradeAssessment> Assess(TradeProposal proposal, LeagueSnapshot snapshot);
+    /// <param name="day">The season day, while a season is under way: what the trade deadline is measured against.</param>
+    DomainOperationResult<TradeAssessment> Assess(TradeProposal proposal, LeagueSnapshot snapshot, SeasonDay? day = null);
 
-    DomainOperationResult<TradeResult> Execute(TradeProposal proposal, LeagueSnapshot snapshot);
+    /// <inheritdoc cref="Assess"/>
+    DomainOperationResult<TradeResult> Execute(TradeProposal proposal, LeagueSnapshot snapshot, SeasonDay? day = null);
 }
 
 /// <summary>

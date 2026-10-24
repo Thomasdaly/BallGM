@@ -82,7 +82,8 @@ public sealed record LeagueRulesetEnvelope
         StatLeadersEnvelope? statLeaders = null,
         BuyoutRulesEnvelope? buyouts = null,
         RookieScaleEnvelope? rookieScale = null,
-        IncumbentRightsEnvelope? incumbentRights = null)
+        IncumbentRightsEnvelope? incumbentRights = null,
+        int? tradeDeadlineDay = null)
     {
         SchemaVersion = schemaVersion;
         Name = name;
@@ -152,6 +153,7 @@ public sealed record LeagueRulesetEnvelope
         Buyouts = buyouts;
         RookieScale = rookieScale;
         IncumbentRights = incumbentRights;
+        TradeDeadlineDay = tradeDeadlineDay;
         StatLeaders = statLeaders;
     }
 
@@ -361,6 +363,9 @@ public sealed record LeagueRulesetEnvelope
 
     /// <summary>The optional incumbent-rights section (schema 16).</summary>
     public IncumbentRightsEnvelope? IncumbentRights { get; }
+
+    /// <summary>The optional trade deadline, a season day (schema 17).</summary>
+    public int? TradeDeadlineDay { get; }
 
     /// <summary>Who qualifies for the leaderboards (schema v12). Absent means 70% of games and the usual makes.</summary>
     public StatLeadersEnvelope? StatLeaders { get; }

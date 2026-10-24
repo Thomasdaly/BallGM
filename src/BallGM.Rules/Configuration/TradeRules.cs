@@ -22,17 +22,27 @@ public sealed record TradeRules
     private const string UnknownEligibilityCode = "ruleset.unknown_injured_player_eligibility";
     private const string AllowanceWithoutMatchingCode = "ruleset.salary_match_allowance_without_matching";
 
+    private const string InvalidDeadlineCode = "ruleset.invalid_trade_deadline";
+
     private TradeRules(
         int? salaryMatchPercent,
         Money salaryMatchAllowance,
         InjuredPlayerTradeEligibility injuredPlayerEligibility,
-        bool secondApronBlocksSalaryIncrease)
+        bool secondApronBlocksSalaryIncrease,
+        int? tradeDeadlineDay)
     {
         SalaryMatchPercent = salaryMatchPercent;
         SalaryMatchAllowance = salaryMatchAllowance;
         InjuredPlayerEligibility = injuredPlayerEligibility;
         SecondApronBlocksSalaryIncrease = secondApronBlocksSalaryIncrease;
+        TradeDeadlineDay = tradeDeadlineDay;
     }
+
+    /// <summary>
+    /// The season day (schema v17) from which no trade may be made until the season is over, or null
+    /// for a league with no deadline. The offseason is never past it.
+    /// </summary>
+    public int? TradeDeadlineDay { get; }
 
     /// <summary>
     /// How much salary a team over the cap may take back, as a percentage of what it sends out. 100
@@ -69,9 +79,17 @@ public sealed record TradeRules
         int? salaryMatchPercent,
         Money? salaryMatchAllowance,
         InjuredPlayerTradeEligibility injuredPlayerEligibility,
-        bool secondApronBlocksSalaryIncrease)
+        bool secondApronBlocksSalaryIncrease,
+        int? tradeDeadlineDay = null)
     {
         var allowance = salaryMatchAllowance ?? Money.Zero;
+
+        if (tradeDeadlineDay is < 1)
+        {
+            return DomainOperationResult<TradeRules>.Failure(new DomainError(
+                InvalidDeadlineCode,
+                $"A trade deadline is a day of the season after its first, not {tradeDeadlineDay}. Leave it out for a league with no deadline."));
+        }
 
         if (salaryMatchPercent is null && allowance.SmallestUnits != 0)
         {
@@ -100,7 +118,8 @@ public sealed record TradeRules
             salaryMatchPercent,
             allowance,
             injuredPlayerEligibility,
-            secondApronBlocksSalaryIncrease));
+            secondApronBlocksSalaryIncrease,
+            tradeDeadlineDay));
     }
 
     /// <summary>

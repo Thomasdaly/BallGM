@@ -154,7 +154,8 @@ internal static class LeagueConfigurationMapper
             configuration.SalaryMatchPercent,
             configuration.SalaryMatchAllowance,
             configuration.InjuredPlayerTradeEligibility,
-            configuration.SecondApronBlocksSalaryIncrease);
+            configuration.SecondApronBlocksSalaryIncrease,
+            configuration.TradeDeadlineDay);
 
         if (tradeRulesResult.IsFailure)
         {
@@ -453,7 +454,8 @@ internal static class LeagueConfigurationMapper
                 : null,
             ruleset.IncumbentRightsRules.IsConfigured
                 ? new IncumbentRightsConfiguration(ruleset.IncumbentRightsRules.MinimumSeasonsWithTeam, ruleset.IncumbentRightsRules.RestrictedServiceSeasons, ruleset.IncumbentRightsRules.QualifyingOfferPercent)
-                : null);
+                : null,
+            ruleset.TradeRules.TradeDeadlineDay);
     }
 
     /// <summary>The incumbent rights a configuration states, or none.</summary>

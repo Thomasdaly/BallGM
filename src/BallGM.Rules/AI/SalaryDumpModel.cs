@@ -71,7 +71,8 @@ public static class SalaryDumpModel
         IReadOnlyDictionary<TeamId, CompetitiveDirection> directions,
         NegotiationRules negotiationRules,
         SalaryScale? scale,
-        IReadOnlySet<TeamId>? excludedTeams = null)
+        IReadOnlySet<TeamId>? excludedTeams = null,
+        bool inSeason = false)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(directions);
@@ -118,7 +119,7 @@ public static class SalaryDumpModel
             {
                 var contract = context.Contracts.FirstOrDefault(candidate =>
                     candidate.PlayerId == player.Id && candidate.TeamId == dumper.Id && !candidate.IsTerminated && candidate.TermFor(season) is not null);
-                if (contract is null || contract.FirstSeason.Year == season.Year)
+                if (contract is null || (!inSeason && contract.FirstSeason.Year == season.Year))
                 {
                     continue;
                 }

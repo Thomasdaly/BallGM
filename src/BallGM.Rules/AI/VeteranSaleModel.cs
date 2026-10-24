@@ -78,7 +78,8 @@ public static class VeteranSaleModel
         IReadOnlyDictionary<TeamId, TeamRecord> lastSeason,
         DateOnly asOf,
         IReadOnlySet<TeamId>? excludedTeams = null,
-        bool excludedStarSold = false)
+        bool excludedStarSold = false,
+        bool inSeason = false)
     {
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(directions);
@@ -94,7 +95,9 @@ public static class VeteranSaleModel
 
         // Signed this summer (a re-signing, an extension starting now, a free agent): not traded the
         // summer he signed — a team does not keep a player only to move him, and real leagues bar it.
-        bool SignedThisSummer(PlayerId playerId, TeamId teamId) => context.Contracts
+        // In season (the trade deadline) a summer signing has been with his team for months and moves
+        // like anyone else, as in a real league.
+        bool SignedThisSummer(PlayerId playerId, TeamId teamId) => !inSeason && context.Contracts
             .Any(contract => contract.PlayerId == playerId && contract.TeamId == teamId && !contract.IsTerminated && contract.FirstSeason.Year == season.Year);
         long SalaryOf(PlayerId playerId, TeamId teamId) => context.Contracts
             .FirstOrDefault(contract => contract.PlayerId == playerId && contract.TeamId == teamId && !contract.IsTerminated && contract.TermFor(season) is not null)?

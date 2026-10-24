@@ -163,7 +163,7 @@ public sealed partial class LeagueSession
             return DomainOperationResult<TradeAssessmentSummary>.Failure(proposalResult.Errors.ToArray());
         }
 
-        var assessmentResult = _tradeEngine.Assess(proposalResult.Value, _snapshot);
+        var assessmentResult = _tradeEngine.Assess(proposalResult.Value, _snapshot, _seasonRun?.CurrentDay);
         return assessmentResult.IsFailure
             ? DomainOperationResult<TradeAssessmentSummary>.Failure(assessmentResult.Errors.ToArray())
             : DomainOperationResult<TradeAssessmentSummary>.Success(ToSummary(assessmentResult.Value, _snapshot));
@@ -189,7 +189,7 @@ public sealed partial class LeagueSession
             return DomainOperationResult<TradeSubmission>.Failure(proposalResult.Errors.ToArray());
         }
 
-        var executionResult = _tradeEngine.Execute(proposalResult.Value, _snapshot);
+        var executionResult = _tradeEngine.Execute(proposalResult.Value, _snapshot, _seasonRun?.CurrentDay);
         if (executionResult.IsFailure)
         {
             return DomainOperationResult<TradeSubmission>.Failure(executionResult.Errors.ToArray());

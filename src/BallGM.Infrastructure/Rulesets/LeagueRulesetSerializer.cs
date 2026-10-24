@@ -113,7 +113,8 @@ public sealed class LeagueRulesetSerializer
             ToEnvelope(ruleset.LeaderQualifiers),
             ToEnvelope(ruleset.BuyoutRules),
             ToEnvelope(ruleset.RookieScaleRules),
-            ToEnvelope(ruleset.IncumbentRightsRules));
+            ToEnvelope(ruleset.IncumbentRightsRules),
+            ruleset.TradeRules.TradeDeadlineDay);
 
         return JsonSerializer.Serialize(envelope, Options);
     }
@@ -187,7 +188,8 @@ public sealed class LeagueRulesetSerializer
                 envelope.SalaryMatchPercent,
                 ToMoney(envelope.SalaryMatchAllowance),
                 eligibilityResult.Value,
-                envelope.SecondApronBlocksSalaryIncrease);
+                envelope.SecondApronBlocksSalaryIncrease,
+                envelope.TradeDeadlineDay);
 
             if (tradeRulesResult.IsFailure)
             {

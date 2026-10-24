@@ -91,3 +91,61 @@ public sealed class ManagedTeamTests
         return session;
     }
 }
+
+public sealed class TradeDeadlineTests
+{
+    [Fact]
+    public void TheAiTradesAtTheDeadline_LeavesTheManagedTeamAlone_ThenNobodyTradesUntilTheSeasonEnds()
+    {
+        var deals = 0;
+        var session = NewSession(1);
+        var managedId = session.Overview().Value.Teams[0].TeamId;
+        Assert.True(session.SetManagedTeam(managedId).IsSuccess);
+
+        // Three seasons: a league's first has no contenders yet (no record to read), so its deadline
+        // is quiet; the deals come once there are buyers and sellers.
+        for (var season = 1; season <= 3; season++)
+        {
+            Assert.True(session.StartSeason(500 + season).IsSuccess);
+            var managed = session.Overview().Value.Teams.Single(team => team.TeamId == managedId);
+            var mine = managed.Roster.Select(spot => spot.PlayerId).ToHashSet();
+
+            var advance = session.AdvanceToEndOfSeason();
+            Assert.True(advance.IsSuccess);
+            deals += advance.Value.DeadlineDeals.Count;
+            Assert.All(advance.Value.DeadlineDeals, deal => Assert.DoesNotContain(managed.TeamName, deal.Explanation, StringComparison.Ordinal));
+            var now = session.Overview().Value.Teams.Single(team => team.TeamId == managed.TeamId).Roster.Select(spot => spot.PlayerId).ToHashSet();
+            Assert.True(mine.SetEquals(now), $"Season {season}: the managed team's roster changed through the deadline.");
+
+            // Past the deadline: the person's own trade is refused until the season is over.
+            var other = session.Overview().Value.Teams[1];
+            var trade = session.AssessTrade(new BallGM.Application.Trades.TradeRequest(
+                [managed.TeamId, other.TeamId],
+                [
+                    new BallGM.Application.Trades.TradeAssetRequest("player", now.First(), managed.TeamId, other.TeamId),
+                    new BallGM.Application.Trades.TradeAssetRequest("player", other.Roster[^1].PlayerId, other.TeamId, managed.TeamId),
+                ]));
+            Assert.True(trade.IsSuccess);
+            Assert.Contains(trade.Value.Violations, violation => violation.RuleCode == BallGM.Rules.Trades.TradeValidator.PastTradeDeadlineCode);
+            Assert.True(session.ConcludeSeason().IsSuccess);
+        }
+
+        Assert.True(deals > 0, "No AI front office made a deadline deal in three seasons.");
+    }
+
+    private static LeagueSession NewSession(int seed)
+    {
+        var session = new LeagueSession(
+            new GeneratedLeagueDataSource(GeneratedLeagueDataSource.CalibrationRulesetFilePath, seed),
+            new RulesCapLedger(),
+            new RulesDraftAssetLedger(),
+            new RulesTradeEngine(),
+            new RulesSigningEngine(),
+            new RulesFreeAgencyMarket(),
+            new RulesSeasonEngine(),
+            new SaveGameSerializer(),
+            new RulesFrontOfficeAdvisor(new RulesCapLedger()));
+        Assert.True(session.Load().IsSuccess);
+        return session;
+    }
+}

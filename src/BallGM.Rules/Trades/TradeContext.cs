@@ -24,4 +24,5 @@ public sealed record TradeContext(
     CapThresholds CapThresholds,
     TradeRules TradeRules,
     DraftRules DraftRules,
-    CapMechanics? CapMechanics = null);
+    CapMechanics? CapMechanics = null,
+    BallGM.Domain.Negotiations.SeasonDay? Day = null);

@@ -118,7 +118,8 @@ public interface IFrontOfficeAdvisor
     /// take overpaid contracts. Read-only; each plan is a trade the engine re-validates on execution.
     /// </summary>
     /// <param name="excludedTeams">Teams already part of a dump this summer, on either side.</param>
-    DomainOperationResult<IReadOnlyList<SalaryDumpPlan>> PlanSalaryDumps(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null);
+    /// <param name="inSeason">At the trade deadline, when a summer signing may be moved like anyone else.</param>
+    DomainOperationResult<IReadOnlyList<SalaryDumpPlan>> PlanSalaryDumps(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool inSeason = false);
 
     /// <summary>
     /// The veteran sales of a summer: losing teams out of contention sending good veterans to contenders
@@ -126,7 +127,8 @@ public interface IFrontOfficeAdvisor
     /// </summary>
     /// <param name="excludedTeams">Teams already part of a sale this summer, on either side.</param>
     /// <param name="starAlreadySold">Whether one of the league's stars has already been sold this summer (one a summer).</param>
-    DomainOperationResult<IReadOnlyList<VeteranSalePlan>> PlanVeteranSales(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool starAlreadySold = false);
+    /// <param name="records">The records a seller is judged on: last season's by default, this season's at the trade deadline.</param>
+    DomainOperationResult<IReadOnlyList<VeteranSalePlan>> PlanVeteranSales(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool starAlreadySold = false, IReadOnlyDictionary<TeamId, TeamRecord>? records = null);
 }
 
 /// <summary>A veteran sale: the trade, the seller and buyer, the veteran, and why.</summary>

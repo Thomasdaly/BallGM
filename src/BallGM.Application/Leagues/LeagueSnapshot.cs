@@ -139,7 +139,8 @@ public sealed record LeagueConfiguration(
     LeaderQualifiersConfiguration? LeaderQualifiers = null,
     BuyoutConfiguration? Buyouts = null,
     RookieScaleConfiguration? RookieScale = null,
-    IncumbentRightsConfiguration? IncumbentRights = null)
+    IncumbentRightsConfiguration? IncumbentRights = null,
+    int? TradeDeadlineDay = null)
 {
     /// <summary>Whether this league configures any threshold at all.</summary>
     public bool IsUncapped =>

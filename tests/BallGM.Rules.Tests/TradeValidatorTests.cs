@@ -1,5 +1,6 @@
 using BallGM.Domain.Common;
 using BallGM.Domain.DraftAssets;
+using BallGM.Domain.Negotiations;
 using BallGM.Domain.Trades;
 using BallGM.Domain.Transactions;
 using BallGM.Rules.Configuration;
@@ -415,6 +416,24 @@ public sealed class TradeValidatorTests
 
         Assert.True(result.IsFailure);
         Assert.Equal("pick_registration.league_has_no_draft", Assert.Single(result.Errors).Code);
+    }
+
+    [Fact]
+    public void Trade_IsRefusedFromTheDeadlineUntilTheSeasonIsOver_AndAllowedBeforeItAndInTheOffseason()
+    {
+        var withDeadline = Configuration.TradeRules.Create(125, new Money(1_000_000), InjuredPlayerTradeEligibility.AllowedWithWarning, true, tradeDeadlineDay: 100).Value;
+        var league = TradeTestLeague.Build()
+            .WithTeam("A", 20_000_000, 10_000_000)
+            .WithTeam("B", 20_000_000, 10_000_000)
+            .WithTradeRules(withDeadline);
+        var proposal = league.Proposal(league.SendPlayer("A", 1, "B"), league.SendPlayer("B", 1, "A"));
+        TradeAssessment On(int? day) => new TradeValidator().Validate(proposal, league.Context() with { Day = day is int index ? new SeasonDay(index) : null }).Value;
+
+        Assert.DoesNotContain(On(99).Violations, violation => violation.RuleCode == TradeValidator.PastTradeDeadlineCode);
+        Assert.Contains(On(100).Violations, violation => violation.RuleCode == TradeValidator.PastTradeDeadlineCode);
+        Assert.Contains(On(160).Violations, violation => violation.RuleCode == TradeValidator.PastTradeDeadlineCode);
+        Assert.DoesNotContain(On(null).Violations, violation => violation.RuleCode == TradeValidator.PastTradeDeadlineCode);
+        Assert.True(Configuration.TradeRules.Create(125, new Money(1_000_000), InjuredPlayerTradeEligibility.AllowedWithWarning, true, tradeDeadlineDay: 0).IsFailure);
     }
 
     private static TradeAssessment Assess(TradeTestLeague league, params TradeAssetMovement[] movements)

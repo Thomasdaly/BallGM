@@ -116,14 +116,14 @@ public sealed partial class LeagueSession
     /// The summer's veteran sales, after free agency: losing teams send good veterans to contenders for
     /// picks and matching salary. Executed through the trade engine like any trade.
     /// </summary>
-    private (int Executed, IReadOnlyList<RuleFinding> Notes) RunVeteranSales()
+    private (int Executed, IReadOnlyList<RuleFinding> Notes) RunVeteranSales(IReadOnlyDictionary<TeamId, Domain.Seasons.TeamRecord>? records = null)
     {
         var soldTeams = ManagedTeams();
         var starSold = false;
         return ExecuteTradesOneAtATime(
             () =>
             {
-                var plans = _frontOfficeAdvisor.PlanVeteranSales(_snapshot!, soldTeams, starSold);
+                var plans = _frontOfficeAdvisor.PlanVeteranSales(_snapshot!, soldTeams, starSold, records);
                 // The first plan is the one executed next; once a star's sale is planned first, the cap
                 // is spent whether or not it goes through, so no second star is ever planned behind it.
                 starSold |= plans.IsSuccess && plans.Value.Count > 0 && plans.Value[0].IsStar;
@@ -174,7 +174,7 @@ public sealed partial class LeagueSession
             }
 
             var (proposal, first, second, rationale) = plans.Value[0];
-            var result = _tradeEngine.Execute(proposal, _snapshot);
+            var result = _tradeEngine.Execute(proposal, _snapshot, _seasonRun?.CurrentDay);
             involved.Add(first);
             involved.Add(second);
             if (result.IsFailure)
@@ -198,9 +198,9 @@ public sealed partial class LeagueSession
     /// that sending a player out does not leave a team short — with <paramref name="dumpedTeams"/>
     /// keeping it to one dump a team.
     /// </summary>
-    private (int Executed, IReadOnlyList<RuleFinding> Notes) RunSalaryDumps(HashSet<TeamId> dumpedTeams) =>
+    private (int Executed, IReadOnlyList<RuleFinding> Notes) RunSalaryDumps(HashSet<TeamId> dumpedTeams, bool inSeason = false) =>
         ExecuteTradesOneAtATime(
-            () => Trades(_frontOfficeAdvisor.PlanSalaryDumps(_snapshot!, dumpedTeams), plan => (plan.Proposal, plan.FromTeamId, plan.ToTeamId, plan.Rationale)),
+            () => Trades(_frontOfficeAdvisor.PlanSalaryDumps(_snapshot!, dumpedTeams, inSeason), plan => (plan.Proposal, plan.FromTeamId, plan.ToTeamId, plan.Rationale)),
             dumpedTeams,
             "ai_trade.salary_dump_failed",
             "A planned salary dump did not go through");

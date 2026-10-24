@@ -233,7 +233,7 @@ public sealed partial class LeagueSession
         var trade = tradeTargetsResult.Value.FirstOrDefault();
         if (trade is not null)
         {
-            var executionResult = _tradeEngine.Execute(trade.Proposal, _snapshot);
+            var executionResult = _tradeEngine.Execute(trade.Proposal, _snapshot, _seasonRun?.CurrentDay);
             if (executionResult.IsSuccess)
             {
                 if (summer is not null)

@@ -404,3 +404,21 @@ and overpays on one-season deals — the gap spread across its open spots, at le
 price, never above his maximum salary — and it takes on salary dumps whatever its direction. The lowest
 payroll in a twelve-season chain is now 75–87% of the cap (was 50–70%, once 25%). The shortfall itself
 is not charged: there are no team finances yet to charge it to.
+
+## 16. The trade deadline (ruleset 17)
+
+An optional `tradeDeadlineDay` (shipped: day 119 of a regular season running days 14–184, about 62% of
+the way through, as a real deadline sits). From that day until the season is over `TradeValidator`
+refuses every trade (`trade.past_deadline`) — the person's and the AI's alike; the offseason (no season
+day) is never past it. The day travels from the session's season through `ITradeEngine` onto
+`TradeContext.Day`.
+
+**Deadline day.** An advance that crosses the deadline stops the day before it, the AI front offices make
+their deadline deals, and play continues; the deals come back on `SeasonAdvanceSummary.DeadlineDeals`.
+Taxpayers dump salary; teams under .450 on *this season's* table sell veterans to contenders; the trade
+market runs once — the managed franchise left alone, as in the summer. A summer signing may be moved at
+the deadline (the "not traded the summer he signed" guard is a summer rule; in the real league he becomes
+tradeable months before the deadline). A league's first season has no contenders yet (no record to
+read), so its deadline is quiet; thereafter 1–8 deals a deadline on the calibration league.
+`TradeDeadlineTests` plays three seasons with a managed team: deals happen, none touches the managed
+roster, and a trade after the deadline is refused.

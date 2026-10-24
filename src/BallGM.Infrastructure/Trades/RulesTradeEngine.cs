@@ -1,6 +1,7 @@
 using BallGM.Application.Leagues;
 using BallGM.Application.Trades;
 using BallGM.Domain.Common;
+using BallGM.Domain.Negotiations;
 using BallGM.Domain.Trades;
 using BallGM.Infrastructure.Rulesets;
 using BallGM.Rules.Configuration;
@@ -21,17 +22,17 @@ public sealed class RulesTradeEngine : ITradeEngine
     private readonly TradeValidator _validator = new();
     private readonly TradeExecutor _executor = new();
 
-    public DomainOperationResult<TradeAssessment> Assess(TradeProposal proposal, LeagueSnapshot snapshot)
+    public DomainOperationResult<TradeAssessment> Assess(TradeProposal proposal, LeagueSnapshot snapshot, SeasonDay? day = null)
     {
-        var contextResult = BuildContext(snapshot);
+        var contextResult = BuildContext(snapshot, day);
         return contextResult.IsFailure
             ? DomainOperationResult<TradeAssessment>.Failure(contextResult.Errors.ToArray())
             : _validator.Validate(proposal, contextResult.Value);
     }
 
-    public DomainOperationResult<TradeResult> Execute(TradeProposal proposal, LeagueSnapshot snapshot)
+    public DomainOperationResult<TradeResult> Execute(TradeProposal proposal, LeagueSnapshot snapshot, SeasonDay? day = null)
     {
-        var contextResult = BuildContext(snapshot);
+        var contextResult = BuildContext(snapshot, day);
         if (contextResult.IsFailure)
         {
             return DomainOperationResult<TradeResult>.Failure(contextResult.Errors.ToArray());
@@ -50,7 +51,7 @@ public sealed class RulesTradeEngine : ITradeEngine
     /// can edit, so an incoherent set of rules fails explainably here rather than throwing out of a
     /// command.
     /// </summary>
-    private static DomainOperationResult<TradeContext> BuildContext(LeagueSnapshot snapshot)
+    private static DomainOperationResult<TradeContext> BuildContext(LeagueSnapshot snapshot, SeasonDay? day)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
@@ -73,7 +74,8 @@ public sealed class RulesTradeEngine : ITradeEngine
             configuration.SalaryMatchPercent,
             configuration.SalaryMatchAllowance,
             configuration.InjuredPlayerTradeEligibility,
-            configuration.SecondApronBlocksSalaryIncrease);
+            configuration.SecondApronBlocksSalaryIncrease,
+            configuration.TradeDeadlineDay);
 
         if (tradeRulesResult.IsFailure)
         {
@@ -113,6 +115,7 @@ public sealed class RulesTradeEngine : ITradeEngine
             thresholdsResult.Value,
             tradeRulesResult.Value,
             draftRulesResult.Value,
-            capMechanicsResult.Value));
+            capMechanicsResult.Value,
+            day));
     }
 }

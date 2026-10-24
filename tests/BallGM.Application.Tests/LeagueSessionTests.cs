@@ -250,13 +250,13 @@ public sealed class LeagueSessionTests
 
         public DomainError? ExecutionFailure { get; set; }
 
-        public DomainOperationResult<TradeAssessment> Assess(TradeProposal proposal, LeagueSnapshot snapshot)
+        public DomainOperationResult<TradeAssessment> Assess(TradeProposal proposal, LeagueSnapshot snapshot, Domain.Negotiations.SeasonDay? day = null)
         {
             LastProposal = proposal;
             return DomainOperationResult<TradeAssessment>.Success(BuildAssessment(proposal));
         }
 
-        public DomainOperationResult<TradeResult> Execute(TradeProposal proposal, LeagueSnapshot snapshot)
+        public DomainOperationResult<TradeResult> Execute(TradeProposal proposal, LeagueSnapshot snapshot, Domain.Negotiations.SeasonDay? day = null)
         {
             LastProposal = proposal;
 

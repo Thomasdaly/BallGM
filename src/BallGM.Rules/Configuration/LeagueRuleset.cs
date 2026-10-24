@@ -98,7 +98,11 @@ public sealed record LeagueRuleset
     /// Version 16 added the optional incumbent-rights section: the seasons with a team that let it sign its
     /// own free agent over the cap, and restricted free agency (who is restricted, and the qualifying offer).
     /// </remarks>
-    public const int CurrentSchemaVersion = 16;
+    /// <remarks>
+    /// Version 17 added the optional trade deadline: the season day from which no trade may be made
+    /// until the season is over.
+    /// </remarks>
+    public const int CurrentSchemaVersion = 17;
 
     public LeagueRuleset(
         int schemaVersion,
