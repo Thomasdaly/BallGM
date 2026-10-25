@@ -17,8 +17,17 @@ namespace BallGM.Rules.Seasons;
 /// (<c>BallGM.Rules.AI.DevelopmentMinutesPolicy</c>). It moves who starts and in what order the bench
 /// plays; it never changes how well anyone plays.
 /// </param>
-public sealed record AvailablePlayer(PlayerId PlayerId, Position Position, PlayerRating Rating, int MinutesPriority = 0)
+/// <param name="MinutesLimit">
+/// The most minutes a game his coach will play him (0: the league's maximum) — an ageing star's load
+/// managed (<see cref="VeteranMinutesPolicy"/>).
+/// </param>
+public sealed record AvailablePlayer(PlayerId PlayerId, Position Position, PlayerRating Rating, int MinutesPriority = 0, int MinutesLimit = 0)
 {
+    /// <summary>The most minutes a game he may be planned for.</summary>
+    public int MaximumMinutes => MinutesLimit > 0
+        ? Math.Max(MinutesAllocationBounds.MinimumRotationMinutes, Math.Min(MinutesAllocationBounds.MaximumPlannedMinutes, MinutesLimit))
+        : MinutesAllocationBounds.MaximumPlannedMinutes;
+
     public int Overall => Rating.Overall;
 }
 
@@ -167,16 +176,43 @@ public sealed class DepthChartBuilder
 
         // The best by Current Ability alone: a tanking team's rotation priority decides its bench,
         // not whether its best player starts.
-        // Ranked, so when they cannot all fit on the floor the better player keeps his place.
-        var alwaysStart = pool
-            .OrderByDescending(player => player.Overall)
-            .ThenBy(player => player.PlayerId.Value, StringComparer.Ordinal)
-            .Take(MinutesAllocationBounds.AlwaysStart)
-            .Select((player, rank) => (player, Bonus: AlwaysStartBonus + ((MinutesAllocationBounds.AlwaysStart - rank) * AlwaysStartRankStep)))
-            .ToDictionary(entry => entry.player, entry => entry.Bonus);
-        foreach (var star in alwaysStart.Keys.Where(star => !candidates.Contains(star)))
+        // Ranked, so when they cannot all fit on the floor the better player keeps his place. A partial
+        // selection rather than a sort: this runs every time a rotation is rebuilt.
+        var stars = new AvailablePlayer[Math.Min(MinutesAllocationBounds.AlwaysStart, pool.Count)];
+        var filled = 0;
+        foreach (var player in pool)
         {
-            candidates.Add(star);
+            var at = filled;
+            while (at > 0 && Better(player, stars[at - 1]))
+            {
+                at--;
+            }
+
+            if (at >= stars.Length)
+            {
+                continue;
+            }
+
+            for (var shift = Math.Min(filled, stars.Length - 1); shift > at; shift--)
+            {
+                stars[shift] = stars[shift - 1];
+            }
+
+            stars[at] = player;
+            filled = Math.Min(filled + 1, stars.Length);
+        }
+
+        var bonus = new int[pool.Count == 0 ? 0 : candidates.Count + stars.Length];
+        foreach (var (star, rank) in stars.Select((star, rank) => (star, rank)))
+        {
+            var index = candidates.IndexOf(star);
+            if (index < 0)
+            {
+                candidates.Add(star);
+                index = candidates.Count - 1;
+            }
+
+            bonus[index] = AlwaysStartBonus + ((MinutesAllocationBounds.AlwaysStart - rank) * AlwaysStartRankStep);
         }
 
         count = candidates.Count;
@@ -187,7 +223,7 @@ public sealed class DepthChartBuilder
             {
                 // A coach starts his best players: each of the top few carries a bonus no fit
                 // difference can outweigh, short of a position he cannot really play.
-                fit[index, slot] = FitAt(candidates[index], positions[slot]) + alwaysStart.GetValueOrDefault(candidates[index]);
+                fit[index, slot] = FitAt(candidates[index], positions[slot]) + bonus[index];
             }
         }
 
@@ -262,6 +298,10 @@ public sealed class DepthChartBuilder
             : player.Position == position;
         return playable ? rating : rating - LastResortPenalty;
     }
+
+    /// <summary>Higher Current Ability first, identifier breaking a tie: the always-start order.</summary>
+    private static bool Better(AvailablePlayer player, AvailablePlayer than) =>
+        player.Overall > than.Overall || (player.Overall == than.Overall && string.CompareOrdinal(player.PlayerId.Value, than.PlayerId.Value) < 0);
 
     /// <summary>What putting a player somewhere he cannot really play costs a starting five's score.</summary>
     private const int LastResortPenalty = 1_000;
@@ -350,7 +390,7 @@ public sealed class DepthChartBuilder
             minutes[index] = Math.Clamp(
                 (tenths + 5) / 10,
                 MinutesAllocationBounds.MinimumRotationMinutes,
-                MinutesAllocationBounds.MaximumPlannedMinutes);
+                assignments[index].Player.MaximumMinutes);
 
             allocated += minutes[index];
         }
@@ -372,7 +412,7 @@ public sealed class DepthChartBuilder
             {
                 var target = difference > 0 ? order[index] : order[count - 1 - index];
 
-                if (difference > 0 && minutes[target] < MinutesAllocationBounds.MaximumPlannedMinutes)
+                if (difference > 0 && minutes[target] < assignments[target].Player.MaximumMinutes)
                 {
                     minutes[target]++;
                     difference--;

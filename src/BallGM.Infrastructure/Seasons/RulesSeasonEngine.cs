@@ -374,7 +374,8 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
                         player!.Id,
                         player.Position,
                         player.Rating,
-                        DevelopmentMinutesPolicy.PriorityFor(lastSeason?.GetValueOrDefault(team.Id), player.AgeOn(openingDay))))
+                        DevelopmentMinutesPolicy.PriorityFor(lastSeason?.GetValueOrDefault(team.Id), player.AgeOn(openingDay)),
+                        VeteranMinutesPolicy.LimitFor(player.AgeOn(openingDay))))
                     .ToList()))
             .ToList();
 

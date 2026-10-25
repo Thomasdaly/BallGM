@@ -452,3 +452,34 @@ former All-Star's last chance.
 - Measured on the calibration league: about one injury-priced deal every four seasons per league load,
   mostly at the deadline — last-chance gambles on former All-Stars for a late first, discounted sales of
   injured veterans, the occasional dead-weight dump.
+
+## 18. Re-audit on the private pack, and what it fixed
+
+Three runs of eight seasons on the private real-data pack, after §14–17:
+
+- **MVP is the focal point of his team's offence.** A candidate must have used the most possessions on his
+  team (shots, 0.44 × free throws, turnovers a game) among its qualified players — real MVPs always have.
+  `LongSaveRealismTests` checks every MVP against his clearly qualified teammates.
+- **Load management** (`VeteranMinutesPolicy`, `AvailablePlayer.MinutesLimit`): from 34 a player's minutes
+  are capped (34, then two fewer a year, never under 24). A 37-year-old was playing 38 minutes and
+  winning MVP.
+- **Sheets that do not lie about weaknesses** (`sheet.py`). A pack's free-throw tendency is set linearly in
+  the real free-throw rate (the engine's foul draw is linear), with the rim's share taken out — top
+  foul-drawers now draw 1.01× their real rate (from 1.9× for the extremes). A player's weaknesses (more
+  than half a standard deviation below the league) rise with his sheet only a little; when his shape
+  cannot honestly reach his production Overall, the Overall comes down. Shot creation no longer counts
+  a big's put-backs (unassisted rim shots) or his points per 36; mid-range no longer counts rim finishing.
+- **Result:** the league's two best players took 10 and 8 MVPs, then one each for six others in 24 seasons; the efficient young
+  centre who was winning most of them, 1. Scoring leaders 31–36. No player in a top 198 bought out in 24
+  seasons (113 buyouts, ~5 a summer). Sixth Man goes to bench scorers (an ageing former star now and then).
+  Top-30 movement 0–6 a summer. Per-player correlations against the real season: minutes 0.64, points
+  0.84, rebounds 0.84, assists 0.85.
+- **Performance.** The trade deadline (a502d4c) had pushed the season benchmark to 18.4 ms against the
+  16.9 ms budget, unnoticed. Fixed without touching behaviour: the advisor maps the ruleset once per
+  configuration and builds each team's depth chart once per snapshot (every team's trade search read
+  every other team's chart: ~900 builds a pass in a 30-team league, now 30); a postseason game is added to
+  the schedule incrementally instead of the season being re-indexed; the always-start pick is a partial
+  selection. Now 16.4 ms.
+- **Still open:** a few teams still sit well under the payroll floor in some summers on the real pack (the
+  free-agent pool is thin late in a long save); the shortfall is not charged, as there are no team
+  finances.

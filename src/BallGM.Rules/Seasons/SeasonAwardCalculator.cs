@@ -142,6 +142,15 @@ public static class SeasonAwardCalculator
         IReadOnlyDictionary<TeamId, int> allowedByTeam)
     {
         var floorGames = (season.SeasonGames * award.MinimumGamesPercent + 99) / 100;
+
+        // The most valuable player is his team's focal point: the qualified player who used the most of
+        // its possessions. A great rebounder and rim protector on a winning team is a great player, but
+        // real voters have always given this award to the player the offence runs through.
+        var focalPoints = players
+            .Where(player => player.LastTeamId is not null && player.Minutes.Count(minutes => minutes >= award.MinimumMinutesPerGame) >= floorGames)
+            .GroupBy(player => player.LastTeamId!)
+            .Select(team => team.OrderByDescending(UsageHundredths).ThenBy(player => player.PlayerId.Value, StringComparer.Ordinal).First().PlayerId)
+            .ToHashSet();
         var eligible = new List<(PlayerSeason Player, int Score)>();
         var excludedByRole = 0;
         var excludedByGames = 0;
@@ -157,7 +166,8 @@ public static class SeasonAwardCalculator
 
             var score = award.Kind switch
             {
-                AwardKind.MostValuable or AwardKind.AllLeague => ValueScore(player, season),
+                AwardKind.MostValuable => focalPoints.Contains(player.PlayerId) ? ValueScore(player, season) : null,
+                AwardKind.AllLeague => ValueScore(player, season),
                 AwardKind.Defensive or AwardKind.AllDefensive => DefensiveScore(player, leagueAllowed, allowedByTeam),
                 AwardKind.Bench => player.BenchGames > player.Totals.Starts ? GameScoreHundredths(player) : (int?)null,
                 AwardKind.Rookie => season.SeasonsOfService.GetValueOrDefault(player.PlayerId) == 0 ? GameScoreHundredths(player) : null,
@@ -312,9 +322,17 @@ public static class SeasonAwardCalculator
             AwardKind.Bench => $"; {excludedByRole} more started at least as often as they came off the bench",
             AwardKind.Rookie => $"; {excludedByRole} more were not in their first season",
             AwardKind.MostImproved => $"; {excludedByRole} more had no comparable previous season",
+            AwardKind.MostValuable => $"; {excludedByRole} more were not the player their team's offence ran through",
             _ => string.Empty,
         };
         return $"Eligibility: {floor} ({excludedByGames} fell short){role}; {eligible} eligible.";
+    }
+
+    /// <summary>Possessions used a game, in hundredths: shots, trips to the line, turnovers.</summary>
+    private static int UsageHundredths(PlayerSeason player)
+    {
+        var totals = player.Totals;
+        return ((totals.FieldGoalsAttempted * 100) + (totals.FreeThrowsAttempted * 44) + (totals.Turnovers * 100)) / Math.Max(1, totals.Games);
     }
 
     private static int StatFor(CountingStats totals, AwardStatBasis basis) => basis switch

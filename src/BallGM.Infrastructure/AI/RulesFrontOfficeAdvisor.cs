@@ -144,7 +144,9 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             options = new TradeTargetingOptions(excludedTeams ?? new HashSet<TeamId>(), excludedPlayers ?? new HashSet<PlayerId>(), directions, asOf);
         }
 
-        var candidates = TradeTargetingModel.FindCandidates(teamId, context, ruleset.DevelopmentRules, ruleset.NegotiationRules, options);
+        var candidates = TradeTargetingModel.FindCandidates(
+            teamId, context, ruleset.DevelopmentRules, ruleset.NegotiationRules, options,
+            (team, playersById) => ChartFor(snapshot, team, playersById, ruleset.RosterLimits));
         return DomainOperationResult<IReadOnlyList<TradeTargetCandidate>>.Success(candidates);
     }
 
@@ -556,6 +558,48 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             .ToDictionary(row => row.TeamId, row => row.Record)
         ?? [];
 
-    private static DomainOperationResult<LeagueRuleset> BuildRuleset(LeagueSnapshot snapshot) =>
-        snapshot.Configuration.ToRuleset(snapshot.League.Alignment.IsFlat);
+    /// <summary>
+    /// The rules types for a snapshot's configuration, mapped once per configuration: the advisor is
+    /// asked once per team per pass, and the configuration is an immutable record.
+    /// </summary>
+    private DomainOperationResult<LeagueRuleset> BuildRuleset(LeagueSnapshot snapshot)
+    {
+        var flat = snapshot.League.Alignment.IsFlat;
+        if (_ruleset is null || !ReferenceEquals(_rulesetConfiguration, snapshot.Configuration) || _rulesetFlat != flat)
+        {
+            _ruleset = snapshot.Configuration.ToRuleset(flat);
+            _rulesetConfiguration = snapshot.Configuration;
+            _rulesetFlat = flat;
+        }
+
+        return _ruleset;
+    }
+
+    /// <summary>
+    /// A team's depth chart as this snapshot leaves it, built once per snapshot: every team's trade
+    /// search reads every other team's chart, and a snapshot is immutable, so the charts only change
+    /// when a trade (a new snapshot) does.
+    /// </summary>
+    private DepthChart? ChartFor(LeagueSnapshot snapshot, Team team, IReadOnlyDictionary<PlayerId, Player> playersById, RosterSizeLimits rosterLimits)
+    {
+        if (!ReferenceEquals(_chartsSnapshot, snapshot))
+        {
+            _charts.Clear();
+            _chartsSnapshot = snapshot;
+        }
+
+        if (!_charts.TryGetValue(team.Id, out var chart))
+        {
+            chart = DepthChartSupport.BuildChart(team, playersById, rosterLimits);
+            _charts[team.Id] = chart;
+        }
+
+        return chart;
+    }
+
+    private readonly Dictionary<TeamId, DepthChart?> _charts = [];
+    private LeagueSnapshot? _chartsSnapshot;
+    private DomainOperationResult<LeagueRuleset>? _ruleset;
+    private LeagueConfiguration? _rulesetConfiguration;
+    private bool _rulesetFlat;
 }

@@ -46,6 +46,15 @@ public sealed class LongSaveRealismTests
             Assert.True(conclusion.IsSuccess, $"Season {season}: {string.Join("; ", conclusion.Errors.Select(error => error.Message))}");
             var summary = conclusion.Value;
 
+            // The MVP is the player his team's offence ran through: no clearly qualified teammate used more of its possessions.
+            if (summary.Awards.FirstOrDefault(award => award.AwardCode == "most-valuable") is { } mvp)
+            {
+                static double Usage(BallGM.Domain.Seasons.CountingStats line) => (line.FieldGoalsAttempted + (0.44 * line.FreeThrowsAttempted) + line.Turnovers) / (double)Math.Max(1, line.Games);
+                var winner = stats[mvp.PlayerId];
+                var teammates = stats.Values.Where(line => line.TeamName == winner.TeamName && line.PlayerId != winner.PlayerId && line.Stats.Games >= 75 && line.Stats.Minutes >= 30 * line.Stats.Games);
+                Assert.All(teammates, mate => Assert.True(Usage(mate.Stats) <= Usage(winner.Stats), $"Season {season}: {mvp.PlayerName} won MVP while {mate.FullName} used more of their team's possessions."));
+            }
+
             if (summary.Awards.FirstOrDefault(award => award.AwardCode == "sixth-man") is { } bench)
             {
                 var line = stats[bench.PlayerId].Stats;

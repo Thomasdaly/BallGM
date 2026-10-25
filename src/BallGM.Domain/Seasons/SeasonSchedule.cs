@@ -40,6 +40,18 @@ public sealed class SeasonSchedule
             .ToDictionary(group => group.Key, group => group.Select(entry => entry.Day).Distinct().Order().ToArray(), StringComparer.Ordinal);
     }
 
+    private SeasonSchedule(
+        List<Fixture> fixtures,
+        Dictionary<string, Fixture> byId,
+        Dictionary<int, IReadOnlyList<Fixture>> byDay,
+        Dictionary<string, int[]> daysByTeam)
+    {
+        _fixtures = fixtures;
+        _byId = byId;
+        _byDay = byDay;
+        _daysByTeam = daysByTeam;
+    }
+
     /// <summary>A season with no fixtures at all. What a league that plays no games has.</summary>
     public static SeasonSchedule Empty { get; } = new([]);
 
@@ -146,10 +158,90 @@ public sealed class SeasonSchedule
         return _fixtures.Count(fixture => fixture.Phase == phase && fixture.Involves(teamId));
     }
 
-    /// <summary>A schedule with more fixtures added — used when the postseason bracket is drawn.</summary>
+    /// <summary>
+    /// A schedule with more fixtures added — used when the postseason bracket is drawn, a game at a
+    /// time. Only the added fixtures are checked against the indexes and merged into the order, rather
+    /// than the whole season rebuilt for every postseason game; anything that would be refused goes
+    /// through <see cref="Create"/> so the refusal reads exactly as it always has.
+    /// </summary>
     public DomainOperationResult<SeasonSchedule> With(IEnumerable<Fixture> additional)
     {
         ArgumentNullException.ThrowIfNull(additional);
-        return Create(_fixtures.Concat(additional));
+
+        var added = additional.ToList();
+        if (added.Any(fixture => fixture is null) || !CanAddCleanly(added))
+        {
+            return Create(_fixtures.Concat(added));
+        }
+
+        added.Sort(PlayOrder);
+        var merged = new List<Fixture>(_fixtures.Count + added.Count);
+        var existing = 0;
+        foreach (var fixture in added)
+        {
+            while (existing < _fixtures.Count && PlayOrder(_fixtures[existing], fixture) <= 0)
+            {
+                merged.Add(_fixtures[existing++]);
+            }
+
+            merged.Add(fixture);
+        }
+
+        merged.AddRange(_fixtures.Skip(existing));
+
+        var byId = new Dictionary<string, Fixture>(_byId, StringComparer.Ordinal);
+        var byDay = new Dictionary<int, IReadOnlyList<Fixture>>(_byDay);
+        var daysByTeam = new Dictionary<string, int[]>(_daysByTeam, StringComparer.Ordinal);
+        foreach (var fixture in added)
+        {
+            byId.Add(fixture.Id.Value, fixture);
+        }
+
+        foreach (var day in added.Select(fixture => fixture.Day.Index).Distinct())
+        {
+            byDay[day] = Array.AsReadOnly(merged.Where(fixture => fixture.Day.Index == day).ToArray());
+        }
+
+        foreach (var fixture in added)
+        {
+            foreach (var team in new[] { fixture.HomeTeamId.Value, fixture.AwayTeamId.Value })
+            {
+                var days = daysByTeam.GetValueOrDefault(team) ?? [];
+                daysByTeam[team] = days.Contains(fixture.Day.Index) ? days : [.. days.Append(fixture.Day.Index).Order()];
+            }
+        }
+
+        return DomainOperationResult<SeasonSchedule>.Success(new SeasonSchedule(merged, byId, byDay, daysByTeam));
+    }
+
+    /// <summary>Whether these fixtures join this schedule without a duplicate game or a team playing twice in a day.</summary>
+    private bool CanAddCleanly(IReadOnlyList<Fixture> added)
+    {
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        var playing = new HashSet<(int Day, string Team)>();
+        foreach (var fixture in added)
+        {
+            if (_byId.ContainsKey(fixture.Id.Value) || !ids.Add(fixture.Id.Value))
+            {
+                return false;
+            }
+
+            foreach (var team in new[] { fixture.HomeTeamId.Value, fixture.AwayTeamId.Value })
+            {
+                var alreadyThatDay = _daysByTeam.TryGetValue(team, out var days) && Array.BinarySearch(days, fixture.Day.Index) >= 0;
+                if (alreadyThatDay || !playing.Add((fixture.Day.Index, team)))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static int PlayOrder(Fixture left, Fixture right)
+    {
+        var byDay = left.Day.Index.CompareTo(right.Day.Index);
+        return byDay != 0 ? byDay : string.CompareOrdinal(left.Id.Value, right.Id.Value);
     }
 }

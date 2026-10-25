@@ -54,8 +54,10 @@ public static class TradeTargetingModel
         TradeContext context,
         DevelopmentRules developmentRules,
         NegotiationRules negotiationRules,
-        TradeTargetingOptions? options = null)
+        TradeTargetingOptions? options = null,
+        Func<Team, IReadOnlyDictionary<PlayerId, Player>, DepthChart?>? chartFor = null)
     {
+        chartFor ??= (team, players) => DepthChartSupport.BuildChart(team, players, context.RosterLimits);
         ArgumentNullException.ThrowIfNull(shoppingTeamId);
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(developmentRules);
@@ -81,7 +83,7 @@ public static class TradeTargetingModel
             .Where(contract => !contract.IsTerminated && contract.TermFor(context.CurrentSeason) is not null)
             .ToDictionary(contract => contract.PlayerId);
 
-        var shoppingChart = DepthChartSupport.BuildChart(shoppingTeam, playersById, context.RosterLimits);
+        var shoppingChart = chartFor(shoppingTeam, playersById);
         if (shoppingChart is null)
         {
             return [];
@@ -96,7 +98,7 @@ public static class TradeTargetingModel
 
         foreach (var counterpartyTeam in context.Teams.Where(team => team.Id != shoppingTeamId && options?.ExcludedTeams.Contains(team.Id) != true))
         {
-            var counterpartyChart = DepthChartSupport.BuildChart(counterpartyTeam, playersById, context.RosterLimits);
+            var counterpartyChart = chartFor(counterpartyTeam, playersById);
             if (counterpartyChart is null)
             {
                 continue;
@@ -198,22 +200,60 @@ public static class TradeTargetingModel
     /// </summary>
     private static int RotationStrength(Team team, IReadOnlyDictionary<PlayerId, Player> playersById, Player? leaving, Player? arriving)
     {
-        var players = team.PlayerIds
-            .Where(id => playersById.ContainsKey(id) && id != leaving?.Id)
-            .Select(id => playersById[id])
-            .ToList();
-        if (arriving is not null)
+        // The best player at each position starts; the next BenchCounted best of the rest count once.
+        // Written without LINQ: the trade search asks this four times for every pair it weighs.
+        Span<int> starter = stackalloc int[PositionCount];
+        Span<int> bench = stackalloc int[BenchCounted];
+        starter.Fill(-1);
+        bench.Fill(-1);
+
+        static void Consider(Player player, Span<int> starter, Span<int> bench)
         {
-            players.Add(arriving);
+            var overall = player.Rating.Overall;
+            var position = (int)player.Position;
+            if (overall > starter[position])
+            {
+                (overall, starter[position]) = (starter[position], overall);
+            }
+
+            for (var index = 0; index < bench.Length && overall >= 0; index++)
+            {
+                if (overall > bench[index])
+                {
+                    (overall, bench[index]) = (bench[index], overall);
+                }
+            }
         }
 
-        var starters = players
-            .GroupBy(player => player.Position)
-            .Select(group => group.OrderByDescending(player => player.Rating.Overall).ThenBy(player => player.Id.Value, StringComparer.Ordinal).First())
-            .ToList();
-        var bench = players.Except(starters).Select(player => player.Rating.Overall).OrderDescending().Take(BenchCounted);
-        return (2 * starters.Sum(player => player.Rating.Overall)) + bench.Sum();
+        foreach (var id in team.PlayerIds)
+        {
+            if (id != leaving?.Id && playersById.TryGetValue(id, out var player))
+            {
+                Consider(player, starter, bench);
+            }
+        }
+
+        if (arriving is not null)
+        {
+            Consider(arriving, starter, bench);
+        }
+
+        var strength = 0;
+        foreach (var overall in starter)
+        {
+            strength += overall < 0 ? 0 : 2 * overall;
+        }
+
+        foreach (var overall in bench)
+        {
+            strength += Math.Max(0, overall);
+        }
+
+        return strength;
     }
+
+    /// <summary>One slot per <see cref="Position"/> value, indexed by the value itself.</summary>
+    private static readonly int PositionCount = Enum.GetValues<Position>().Max(position => (int)position) + 1;
 
     /// <summary>How many bench players beyond the starters count toward a team's strength.</summary>
     private const int BenchCounted = 3;

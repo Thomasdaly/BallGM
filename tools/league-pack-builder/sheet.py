@@ -37,6 +37,12 @@ FAMILIARITY_BY_DISTANCE = ["Natural", "Accomplished", "Competent", "Unconvincing
 ATTRIBUTE_FLOOR, ATTRIBUTE_CEILING = 5, 99
 # The league's middle Overall, where an average player's sheet is centred before it is shaped.
 LEAGUE_MIDDLE = 64
+# How far above the sheet's own skill level production may lift a player's Overall.
+MAXIMUM_ABOVE_SKILL = 3
+# How far (logit units) a player's weaknesses may be lifted with the rest of his sheet.
+WEAKNESS_LIFT_LIMIT = 0.6
+# How far below the league (standard deviations) an attribute must sit to count as a weakness.
+WEAKNESS_Z = -0.5
 # How far a star's strengths may be amplified, before a uniform shift, to reach his Overall.
 SHAPE_AMPLIFICATION = 2.5
 TENDENCY_FLOOR, TENDENCY_CEILING = 2, 98
@@ -208,13 +214,23 @@ def sheets(rows, overall, spread=1.0, skill_weight=0.3, adjust=None, ceiling=Non
     # Composites are weighted sums of z-scores with different spreads; standardise each across the
     # league so every attribute moves the same distance for the same standing.
     standard = {name: _z([r[name] for r in raw]) for name, _ in VISIBLE}
-    weight = dict(VISIBLE)
-    skill = _z([sum(weight[name] * standard[name][i] for name, _ in VISIBLE) for i in range(len(rows))])
-    level_mean, level_sd = statistics.fmean(overall), statistics.pstdev(overall) or 1.0
+    # Each player's skill level: the Current Ability of his honest sheet (his own shape at the league's
+    # middle, nothing shifted), placed by rank onto the production Overalls' distribution.
+    honest = [_honest_ability({name: standard[name][i] for name, _ in VISIBLE}, spread) for i in range(len(rows))]
+    by_rank = sorted(overall)
+    order = sorted(range(len(rows)), key=lambda i: honest[i])
+    skill_level = [0.0] * len(rows)
+    for rank, i in enumerate(order):
+        skill_level[i] = by_rank[round(rank * (len(by_rank) - 1) / max(1, len(rows) - 1))]
     top = max(overall)
     bound = ceiling or (lambda value: min(top, value))
     adjust = adjust or [0] * len(rows)
-    targets = [max(ATTRIBUTE_FLOOR, int(round(bound((1 - skill_weight) * overall[i] + skill_weight * (level_mean + level_sd * skill[i]) + adjust[i]))))
+    # Never far above what the player's own skills say: a sheet can only average higher than its shape
+    # by inflating its weaknesses (a rim-running centre rated a good shooter), and the engine gives the
+    # ball to whoever looks like he can score.
+    targets = [max(ATTRIBUTE_FLOOR, int(round(bound(min(
+                   (1 - skill_weight) * overall[i] + skill_weight * skill_level[i],
+                   skill_level[i] + MAXIMUM_ABOVE_SKILL) + adjust[i]))))
                for i in range(len(rows))]
     for row, target in zip(rows, targets):
         row.derived["sheet_overall"] = target
@@ -224,8 +240,21 @@ def sheets(rows, overall, spread=1.0, skill_weight=0.3, adjust=None, ceiling=Non
     usages = [getattr(row, "extras", {}).get("usg") for row in rows]
     known = [usage for usage in usages if usage]
     usage_mean = statistics.fmean(known) if known else None
+    # Free throws beyond what a shot diet explains: free-throw rate against the league's, the paint's
+    # share of it taken out (the engine adds rim fouls itself).
+    rates = [row.stats["fta"] / max(row.stats["fga"], 1.0) for row in rows]
+    paint = [getattr(row, "extras", {}).get("paint_share") for row in rows]
+    paint_mean = statistics.fmean([value for value in paint if value is not None]) if any(value is not None for value in paint) else None
+    rate_mean = statistics.fmean(rates) or 1.0
+    def foul_ratio(i):
+        if row_minutes(rows[i]) < FOUL_RATE_MINIMUM_MINUTES:
+            return None
+        ratio = rates[i] / rate_mean
+        if paint_mean and paint[i] is not None and paint_mean > 0:
+            ratio /= max(0.5, min(1.5, paint[i] / paint_mean)) ** RIM_FOUL_SHARE
+        return ratio
     return [_sheet(rows[i], targets[i], per_row[i], {name: standard[name][i] for name, _ in VISIBLE}, size[i], spread,
-                   _tendency_values({key: tendency_z[key][i] for key in keys}, usages[i] / usage_mean if usages[i] and usage_mean else None))
+                   _tendency_values({key: tendency_z[key][i] for key in keys}, usages[i] / usage_mean if usages[i] and usage_mean else None, foul_ratio(i)))
             for i in range(len(rows))]
 
 
@@ -235,7 +264,9 @@ def _composites(f, size, mass, age):
     g = lambda key, default=0.0: f.get(key, default)
     paint = g("paint_share", 0.6 * size - 0.6 * g("three_rate"))
     mid = g("mid_share", -0.3 * g("three_rate"))
-    creation = g("unassisted_share", 0.6 * g("usg", g("fga36")))
+    # Unassisted shots away from the rim: a big's put-backs and dunks are unassisted too, and are not
+    # creating his own shot.
+    creation = g("unassisted_share", 0.6 * g("usg", g("fga36"))) - 0.6 * g("paint_share", 0.0)
     deflect = g("deflections36", g("stl36"))
     hustle = g("loose_balls36", 0.5 * g("oreb36")) + 0.5 * g("charges36") + 0.3 * deflect
     return {
@@ -243,10 +274,10 @@ def _composites(f, size, mass, age):
         "dunking": 0.5 * size + 0.4 * paint + 0.3 * g("blk36") + 0.2 * g("oreb36") - 0.2 * mass,
         "postScoring": 0.6 * size + 0.5 * paint - 0.4 * g("three_rate") + 0.2 * g("pts36"),
         "closeRange": 0.6 * g("two") + 0.4 * paint,
-        "midRange": 0.5 * g("free") + 0.4 * mid + 0.2 * g("two"),
+        "midRange": 0.6 * g("free") + 0.5 * mid,
         "threePoint": 0.7 * g("three") + 0.5 * g("three_rate"),
         "freeThrow": g("free"),
-        "shotCreation": 0.5 * creation + 0.4 * g("usg", g("fga36")) + 0.3 * g("pts36"),
+        "shotCreation": 0.6 * creation + 0.4 * g("usg", g("fga36")),
         "ballHandling": 0.5 * g("ast36") + 0.4 * g("usg", g("fga36")) - 0.3 * size - 0.2 * g("tov36"),
         "passing": 0.7 * g("ast_pct", g("ast36")) + 0.3 * g("ast36"),
         "vision": 0.6 * g("ast_pct", g("ast36")) + 0.4 * g("ast_to"),
@@ -317,8 +348,21 @@ TOUCHES_DOUBLING = 10
 # below it: a big who posts up but rarely draws a whistle is not a foul-line regular.
 ATTACK_MEAN, ATTACK_SPREAD = 64, 8
 
+# MatchModelBounds.FoulDrawPerTendencyPoint: per cent of foul-drawing per attack-tendency point.
+FOUL_DRAW_PER_POINT = 8
 
-def _tendency_values(standard, usage_ratio=None):
+# Minutes of evidence before a player's free-throw rate is read directly rather than from his z-score.
+FOUL_RATE_MINIMUM_MINUTES = 400
+
+# How much of a player's free-throw rate the rim explains (the engine adds rim fouls by shot zone).
+RIM_FOUL_SHARE = 0.5
+
+
+def row_minutes(row):
+    return row.stats.get("min", 0.0)
+
+
+def _tendency_values(standard, usage_ratio=None, foul_ratio=None):
     values = {key: max(TENDENCY_FLOOR, min(TENDENCY_CEILING, int(round(TENDENCY_MEANS[key] + TENDENCY_SPREADS[key] * value))))
               for key, value in standard.items() if key != "attack"}
     if usage_ratio:
@@ -327,11 +371,29 @@ def _tendency_values(standard, usage_ratio=None):
         touches = TENDENCY_MEANS["touches"] + TOUCHES_DOUBLING * math.log2(usage_ratio)
         values["touches"] = max(TENDENCY_FLOOR, min(TENDENCY_CEILING, int(round(touches))))
     if "attack" in standard:
-        attack = max(TENDENCY_FLOOR, min(TENDENCY_CEILING, int(round(ATTACK_MEAN + ATTACK_SPREAD * standard["attack"]))))
+        if foul_ratio is not None:
+            # The engine draws fouls linearly in the attack tendency (FOUL_DRAW_PER_POINT per cent a point
+            # from the middle), so a player who gets to the line twice as often as the league's average
+            # sits 100/FOUL_DRAW_PER_POINT points above it — not a standard deviation's worth, which over-
+            # rewarded the extremes.
+            raw = ATTACK_MEAN + (foul_ratio - 1.0) * 100.0 / FOUL_DRAW_PER_POINT
+        else:
+            raw = ATTACK_MEAN + ATTACK_SPREAD * standard["attack"]
+        attack = max(TENDENCY_FLOOR, min(TENDENCY_CEILING, int(round(raw))))
         lead, other = ("postUp", "drive") if values["postUp"] > values["drive"] else ("drive", "postUp")
         values[lead] = attack
         values[other] = min(values[other], attack)
     return values
+
+
+def _honest_ability(composites, scale):
+    """The weighted mean of a sheet drawn from the player's own shape at the league's middle."""
+    span = ATTRIBUTE_CEILING - ATTRIBUTE_FLOOR + 2
+    low = ATTRIBUTE_FLOOR - 1
+    centre = math.log((LEAGUE_MIDDLE - low) / (span - (LEAGUE_MIDDLE - low)))
+    weight = dict(VISIBLE)
+    return sum(weight[name] * (low + span / (1.0 + math.exp(-(centre + scale * ATTRIBUTE_SPREADS[name] / (span / 4.0) * composites[name]))))
+               for name, _ in VISIBLE) / 100.0
 
 
 def _logistic_sheet(target, composites, scale):
@@ -353,6 +415,10 @@ def _logistic_sheet(target, composites, scale):
     centre = math.log((LEAGUE_MIDDLE - low) / (span - (LEAGUE_MIDDLE - low)))
 
     def value(name, shift, amplify):
+        # A weakness rises with the sheet only so far: past WEAKNESS_LIFT_LIMIT (in logit units, about
+        # a dozen rating points at the middle) a high Overall has to come from the player's strengths.
+        if composites[name] < WEAKNESS_Z:
+            shift = min(shift, centre + WEAKNESS_LIFT_LIMIT)
         return low + span / (1.0 + math.exp(-(shift + amplify * slope[name] * composites[name])))
 
     def mean(shift, amplify):
@@ -395,7 +461,11 @@ def _recentre(target, values):
 
 
 def _sheet(row, target, f, composites, size, spread, tendencies):
-    ratings = _recentre(target, _logistic_sheet(target, composites, spread))
+    values = _logistic_sheet(target, composites, spread)
+    # The Overall his shape can honestly reach, when that is short of the target.
+    reachable = int(sum(weight * values[name] for name, weight in VISIBLE) / 100.0)
+    ratings = _recentre(min(target, reachable), values)
+    target = min(target, reachable)
 
     position = row.derived["position"]
     natural = POSITIONS.index(position)
