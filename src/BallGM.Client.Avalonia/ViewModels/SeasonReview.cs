@@ -21,6 +21,7 @@ public sealed class SeasonReview
     [
         "ai_turn.trade_executed",
         "ai_trade.veteran_sale",
+        "development.injury_aftermath",
         "ai_trade.salary_dump",
         "ai_offseason.offer_sheet_matched",
         "ai_buyout.agreed",

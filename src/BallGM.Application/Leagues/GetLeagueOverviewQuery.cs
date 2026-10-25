@@ -63,7 +63,8 @@ public sealed class GetLeagueOverviewQuery(
     /// a league in memory can re-project it after a trade without reloading from disk — reloading
     /// would throw away the very change the screen is meant to show.
     /// </summary>
-    public DomainOperationResult<LeagueOverview> Project(LeagueSnapshot snapshot)
+    /// <param name="seasonInjuries">The injuries of a season under way — each player still out, why and for how many more days — which a roster shows beside the injuries players carry.</param>
+    public DomainOperationResult<LeagueOverview> Project(LeagueSnapshot snapshot, IReadOnlyDictionary<PlayerId, (string Description, int DaysOut)>? seasonInjuries = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
 
@@ -92,7 +93,7 @@ public sealed class GetLeagueOverviewQuery(
                 continue;
             }
 
-            var roster = ResolveRoster(team, snapshot, playersById, errors);
+            var roster = ResolveRoster(team, snapshot, playersById, errors, seasonInjuries);
 
             teamSummaries.Add(new TeamSummary(
                 team.Id.Value,
@@ -397,7 +398,8 @@ public sealed class GetLeagueOverviewQuery(
         Team team,
         LeagueSnapshot snapshot,
         IReadOnlyDictionary<PlayerId, Player> playersById,
-        List<DomainError> errors)
+        List<DomainError> errors,
+        IReadOnlyDictionary<PlayerId, (string Description, int DaysOut)>? seasonInjuries)
     {
         var roster = new List<RosterSpot>();
         var contractsByPlayer = snapshot.Contracts
@@ -419,13 +421,18 @@ public sealed class GetLeagueOverviewQuery(
 
             contractsByPlayer.TryGetValue(playerId, out var contract);
 
+            // Hurt in this season's games, or carrying an injury into it: either way, out — and for how long.
+            (string Description, int? DaysOut)? injury = seasonInjuries is not null && seasonInjuries.TryGetValue(player.Id, out var live)
+                ? (live.Description, live.DaysOut)
+                : player.CurrentInjury is { } carried ? (carried.Description, carried.DaysRemaining) : null;
+
             roster.Add(new RosterSpot(
                 player.Id.Value,
                 player.FullName,
                 DescribePosition(player.Position),
                 player.Rating.Overall,
-                player.IsInjured,
-                player.CurrentInjury?.Description,
+                injury is not null,
+                injury is { } hurt ? hurt.DaysOut is int days ? $"{hurt.Description} — out {days} more {(days == 1 ? "day" : "days")}" : hurt.Description : null,
                 contract?.ChargeFor(snapshot.CurrentSeason)?.Amount.SmallestUnits ?? 0,
                 SeasonsRemaining(contract, snapshot.CurrentSeason),
                 player.Rating.PotentialAbility,
@@ -433,6 +440,7 @@ public sealed class GetLeagueOverviewQuery(
             {
                 Age = player.AgeOn(AgeReferenceDate(snapshot.CurrentSeason)),
                 BirthDate = player.BirthDate,
+                InjuryDaysRemaining = injury?.DaysOut,
             });
         }
 

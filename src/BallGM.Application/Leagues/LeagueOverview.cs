@@ -45,6 +45,9 @@ public sealed record RosterSpot(
 
     /// <summary>Birth date, so a screen can state age on the current game date.</summary>
     public DateOnly BirthDate { get; init; }
+
+    /// <summary>Days still out, when injured and the length is known.</summary>
+    public int? InjuryDaysRemaining { get; init; }
 }
 
 /// <summary>

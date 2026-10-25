@@ -129,7 +129,7 @@ public sealed partial class LeagueSession
 
         _snapshot = snapshotResult.Value;
         _seasonRun = null;
-        return _overviewQuery.Project(_snapshot);
+        return _overviewQuery.Project(_snapshot, LiveInjuryMap());
     }
 
     /// <summary>
@@ -142,7 +142,7 @@ public sealed partial class LeagueSession
     public DomainOperationResult<LeagueOverview> Overview() =>
         _snapshot is null
             ? NotLoaded<LeagueOverview>()
-            : _overviewQuery.Project(_snapshot);
+            : _overviewQuery.Project(_snapshot, LiveInjuryMap());
 
     /// <summary>
     /// Judges a proposal without changing anything. Safe to call on every keystroke: the trade
@@ -195,7 +195,7 @@ public sealed partial class LeagueSession
             return DomainOperationResult<TradeSubmission>.Failure(executionResult.Errors.ToArray());
         }
 
-        var overviewResult = _overviewQuery.Project(_snapshot);
+        var overviewResult = _overviewQuery.Project(_snapshot, LiveInjuryMap());
         if (overviewResult.IsFailure)
         {
             return DomainOperationResult<TradeSubmission>.Failure(overviewResult.Errors.ToArray());
@@ -282,7 +282,7 @@ public sealed partial class LeagueSession
         var execution = executionResult.Value;
         _snapshot = _snapshot with { Contracts = [.. _snapshot.Contracts, execution.Contract] };
 
-        var overviewResult = _overviewQuery.Project(_snapshot);
+        var overviewResult = _overviewQuery.Project(_snapshot, LiveInjuryMap());
         if (overviewResult.IsFailure)
         {
             return DomainOperationResult<SigningSubmission>.Failure(overviewResult.Errors.ToArray());

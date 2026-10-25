@@ -320,7 +320,7 @@ public sealed partial class LeagueSession
             _snapshot = _snapshot with { Contracts = [.. _snapshot.Contracts, execution.Contract] };
         }
 
-        var overviewResult = _overviewQuery.Project(_snapshot);
+        var overviewResult = _overviewQuery.Project(_snapshot, LiveInjuryMap());
         if (overviewResult.IsFailure)
         {
             return DomainOperationResult<MarketResolutionSubmission>.Failure(overviewResult.Errors.ToArray());
@@ -375,7 +375,7 @@ public sealed partial class LeagueSession
                 $"Team '{teamId}' is not a team in this league."));
         }
 
-        var overviewResult = _overviewQuery.Project(_snapshot);
+        var overviewResult = _overviewQuery.Project(_snapshot, LiveInjuryMap());
         if (overviewResult.IsFailure)
         {
             return DomainOperationResult<FreeAgencyBoardSummary>.Failure(overviewResult.Errors.ToArray());

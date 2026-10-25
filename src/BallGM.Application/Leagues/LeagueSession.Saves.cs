@@ -49,6 +49,6 @@ public sealed partial class LeagueSession
             _negotiations[playerId] = negotiation;
         }
 
-        return _overviewQuery.Project(_snapshot);
+        return _overviewQuery.Project(_snapshot, LiveInjuryMap());
     }
 }

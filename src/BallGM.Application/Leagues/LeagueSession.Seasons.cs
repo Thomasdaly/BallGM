@@ -509,6 +509,25 @@ public sealed partial class LeagueSession
     /// <summary>The days out, from one injury, that leave a lasting mark (InjuryAftermathModel.MinimumDays).</summary>
     public const int LongInjuryDays = 45;
 
+    /// <summary>Who is out today in the season under way, why, and for how many more days.</summary>
+    private Dictionary<PlayerId, (string Description, int DaysOut)>? LiveInjuryMap()
+    {
+        if (_seasonRun is null)
+        {
+            return null;
+        }
+
+        var today = _seasonRun.CurrentDay.Index;
+        return _seasonRun.Injuries
+            .Where(spell => spell.FromDay.Index <= today && spell.UntilDayExclusive.Index > today)
+            .GroupBy(spell => spell.PlayerId)
+            .ToDictionary(group => group.Key, group =>
+            {
+                var longest = group.MaxBy(spell => spell.UntilDayExclusive.Index)!;
+                return (longest.Description, longest.UntilDayExclusive.Index - today);
+            });
+    }
+
     /// <summary>How long a carried injury that states no length keeps a player out of a new season.</summary>
     public const int DefaultCarriedInjuryDays = 21;
 

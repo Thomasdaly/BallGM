@@ -153,6 +153,39 @@ public sealed class TradeDeadlineTests
 public sealed class CarriedInjuryTests
 {
     [Fact]
+    public void TheRosterShowsWhoIsHurtInTheSeason_AndForHowLong()
+    {
+        var session = NewSession(3);
+        Assert.True(session.StartSeason(31).IsSuccess);
+        Assert.True(session.AdvanceToDay(90).IsSuccess);
+
+        var hurt = session.Overview().Value.Teams.SelectMany(team => team.Roster).Where(spot => spot.IsInjured).ToList();
+
+        Assert.NotEmpty(hurt);
+        Assert.All(hurt, spot =>
+        {
+            Assert.True(spot.InjuryDaysRemaining > 0);
+            Assert.Contains("more day", spot.InjuryDescription, StringComparison.Ordinal);
+        });
+    }
+
+    private static LeagueSession NewSession(int seed)
+    {
+        var session = new LeagueSession(
+            new GeneratedLeagueDataSource(GeneratedLeagueDataSource.CalibrationRulesetFilePath, seed),
+            new RulesCapLedger(),
+            new RulesDraftAssetLedger(),
+            new RulesTradeEngine(),
+            new RulesSigningEngine(),
+            new RulesFreeAgencyMarket(),
+            new RulesSeasonEngine(),
+            new SaveGameSerializer(),
+            new RulesFrontOfficeAdvisor(new RulesCapLedger()));
+        Assert.True(session.Load().IsSuccess);
+        return session;
+    }
+
+    [Fact]
     public void ACarriedInjuryKeepsAPlayerOutForItsDays_ThenHePlays()
     {
         var session = new LeagueSession(

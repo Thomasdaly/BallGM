@@ -388,6 +388,9 @@ public sealed partial class SeasonViewModel : ViewModelBase
         AdvanceBy(_season.Calendar.LengthInDays - _season.Calendar.CurrentDay);
     }
 
+    /// <summary>The most deadline deals listed in the advance report; the rest are counted.</summary>
+    private const int MaximumDeadlineLines = 8;
+
     private void AdvanceBy(int days)
     {
         var result = _session.AdvanceDays(days);
@@ -401,13 +404,18 @@ public sealed partial class SeasonViewModel : ViewModelBase
         _lastAdvance = result.Value;
         Refresh();
 
+        // Crossing the trade deadline: the AI front offices' deals come back with the advance.
+        var deadline = result.Value.DeadlineDeals;
         Report(
-            [$"Advanced to day {result.Value.ToDay} ({result.Value.ToDate}). {DisplayText.Count(result.Value.GamesPlayed, "game")} played."],
+            [
+                $"Advanced to day {result.Value.ToDay} ({result.Value.ToDate}). {DisplayText.Count(result.Value.GamesPlayed, "game")} played.",
+                .. deadline.Count == 0 ? Array.Empty<string>() : [$"Trade deadline: {DisplayText.Count(deadline.Count, "deal")} across the league."],
+                .. deadline.Take(MaximumDeadlineLines).Select(deal => deal.Explanation),
+            ],
             isError: false);
 
-        // The league itself has not changed — a day passing moves no money and no players — but the
-        // overview is what every other screen is projected from, so it is refreshed rather than left
-        // to go stale behind whichever screen the GM opens next.
+        // Days passing injure players and, at the deadline, move them: the overview every other screen
+        // is projected from is refreshed rather than left to go stale behind whichever screen opens next.
         var overview = _session.Overview();
         if (overview.IsSuccess)
         {
