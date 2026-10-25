@@ -72,8 +72,10 @@ public static class SalaryDumpModel
         NegotiationRules negotiationRules,
         SalaryScale? scale,
         IReadOnlySet<TeamId>? excludedTeams = null,
-        bool inSeason = false)
+        bool inSeason = false,
+        InjuryReport? injuries = null)
     {
+        injuries ??= InjuryReport.None;
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(directions);
         ArgumentNullException.ThrowIfNull(negotiationRules);
@@ -86,6 +88,7 @@ public static class SalaryDumpModel
         }
 
         var season = context.CurrentSeason;
+        var asOf = new DateOnly(season.Year, 7, 1);
         var playersById = context.Players.ToDictionary(player => player.Id);
         var teamsByFranchise = context.Teams.ToDictionary(team => team.FranchiseId);
         var payroll = context.Teams.ToDictionary(team => team.Id, team => OffseasonModel.PayrollFor(team.Id, context.Contracts, season).SmallestUnits);
@@ -107,7 +110,9 @@ public static class SalaryDumpModel
             .ToList())
         {
             var roster = dumper.PlayerIds.Where(playersById.ContainsKey).Select(id => playersById[id]).ToList();
+            // A veteran out long is not why his team pays the tax any more: his deal can be moved.
             var protectedIds = roster
+                .Where(player => !injuries.IsCareerThreatened(player, asOf))
                 .OrderByDescending(player => player.Rating.Overall)
                 .ThenBy(player => player.Id.Value, StringComparer.Ordinal)
                 .Take(ProtectedTopPlayers)
@@ -125,6 +130,12 @@ public static class SalaryDumpModel
                 }
 
                 var ask = PreferenceModel.AskingPriceFor(player, negotiationRules, context.CapThresholds, scale)?.SmallestUnits ?? 0;
+
+                // A veteran's long injury is priced in: what he is worth falls the longer he is out.
+                if (injuries.IsCareerThreatened(player, asOf))
+                {
+                    ask = ask * (100 - Math.Min(PreferenceModel.MaximumInjuryDiscountPercent, injuries.DaysOutFor(player.Id) * PreferenceModel.MaximumInjuryDiscountPercent / PreferenceModel.InjuryDiscountFullDays)) / 100;
+                }
                 var salary = contract.TermFor(season)!.Compensation.SmallestUnits;
                 if ((salary - ask) * 100 < cap * MinimumOverpayPercentOfCap)
                 {
@@ -236,8 +247,9 @@ public static class SalaryDumpModel
                         ? "nothing but the room"
                         : string.Join(", ", picks.Select(pick =>
                             $"{(teamsByFranchise.TryGetValue(pick.OriginalFranchiseId, out var original) && original.Id != dumper.Id ? original.Name + "'s " : string.Empty)}{pick.DraftSeason.Year} {(pick.Round == 1 ? "first" : "second")}-round pick"));
+                    var injured = injuries.IsCareerThreatened(player, asOf) ? $" — out {injuries.DaysOutFor(player.Id)} more days, his deal now mostly dead weight —" : string.Empty;
                     dumps.Add(new SalaryDump(proposal.Value, dumper.Id, receiver.Id, player.Id, picks.Select(pick => pick.Id).ToList(), new RuleFinding(DumpCode,
-                        $"{dumper.Name}, {ExplanationText.Money(payroll[dumper.Id] - taxLine)} over the tax, sends {player.FullName} ({player.Rating.Overall}, {ExplanationText.Money(salary)} a season through {lastYear}) to {receiver.Name}, who {(payroll[receiver.Id] < floorLine ? "are under the payroll floor" : "are rebuilding")} with {ExplanationText.Money(cap - payroll[receiver.Id])} of room — paid {ExplanationText.Money(overpay)} more than the market would pay him — with {price} to take him{(filler is null ? string.Empty : $", and takes {filler.FullName} back on a minimum deal to keep its roster full")}.",
+                        $"{dumper.Name}, {ExplanationText.Money(payroll[dumper.Id] - taxLine)} over the tax, sends {player.FullName} ({player.Rating.Overall}, {ExplanationText.Money(salary)} a season through {lastYear}){injured} to {receiver.Name}, who {(payroll[receiver.Id] < floorLine ? "are under the payroll floor" : "are rebuilding")} with {ExplanationText.Money(cap - payroll[receiver.Id])} of room — paid {ExplanationText.Money(overpay)} more than the market would pay him — with {price} to take him{(filler is null ? string.Empty : $", and takes {filler.FullName} back on a minimum deal to keep its roster full")}.",
                         dumper.Id)));
                     used.Add(dumper.Id);
                     used.Add(receiver.Id);

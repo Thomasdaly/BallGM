@@ -170,7 +170,7 @@ public sealed partial class LeagueSession
         var (marketSigned, marketNotes) = RunFreeAgencyMarket(tendered.ToDictionary(plan => plan.PlayerId, plan => plan.TeamId));
         var (qualifyingSigned, qualifyingNotes) = SignQualifyingOffers(tendered);
         var (lateDumps, lateDumpNotes) = RunSalaryDumps(dumpedTeams);
-        var (sales, saleNotes) = RunVeteranSales();
+        var (sales, saleNotes) = RunVeteranSales(alreadyTraded: dumpedTeams);
         var (aiTradesExecuted, aiSigningsExecuted, aiTurnNotes) = RunAiFrontOfficeTurnAtSeasonBoundary();
         var autoSigned = AutoResignToRosterFloor();
 
@@ -621,9 +621,19 @@ public sealed partial class LeagueSession
         }
 
         var records = _seasonEngine.Standings(_seasonRun, _snapshot).Rows.ToDictionary(row => row.TeamId, row => row.Overall);
+
+        // Who is hurt today, and for how long: deals are priced around it.
+        var today = _seasonRun.CurrentDay.Index;
+        var daysOut = _seasonRun.Injuries
+            .Where(spell => spell.FromDay.Index <= today && spell.UntilDayExclusive.Index > today)
+            .GroupBy(spell => spell.PlayerId)
+            .ToDictionary(group => group.Key, group => group.Max(spell => spell.UntilDayExclusive.Index) - today);
+        var schedule = _snapshot.Configuration.ResolvedSchedule;
+        var live = new AI.LiveInjuries(daysOut, Math.Max(0, schedule.PreseasonDays + schedule.RegularSeasonDays - today));
+
         var dumped = ManagedTeams();
-        var (_, dumpNotes) = RunSalaryDumps(dumped, inSeason: true);
-        var (_, saleNotes) = RunVeteranSales(records);
+        var (_, dumpNotes) = RunSalaryDumps(dumped, inSeason: true, live);
+        var (_, saleNotes) = RunVeteranSales(records, live, dumped);
         var (_, _, tradeNotes) = RunAiFrontOfficeTurnAtSeasonBoundary();
         return [.. dumpNotes, .. saleNotes, .. tradeNotes.Where(note => note.RuleCode == "ai_turn.trade_executed")];
     }

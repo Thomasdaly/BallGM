@@ -276,7 +276,7 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         return DomainOperationResult<IReadOnlyList<ReSigningPlan>>.Success(plans);
     }
 
-    public DomainOperationResult<IReadOnlyList<VeteranSalePlan>> PlanVeteranSales(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool starAlreadySold = false, IReadOnlyDictionary<TeamId, TeamRecord>? records = null)
+    public DomainOperationResult<IReadOnlyList<VeteranSalePlan>> PlanVeteranSales(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool starAlreadySold = false, IReadOnlyDictionary<TeamId, TeamRecord>? records = null, LiveInjuries? injuries = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         var rulesetResult = BuildRuleset(snapshot);
@@ -305,12 +305,12 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             team => DirectionOf(snapshot, team, playersById, snapshot.CurrentSeason.Year, asOf, ruleset));
 
         return DomainOperationResult<IReadOnlyList<VeteranSalePlan>>.Success(VeteranSaleModel
-            .Find(context, directions, records ?? ThisSeasonRecords(snapshot, snapshot.CurrentSeason.Year - 1), asOf, excludedTeams, starAlreadySold, inSeason: records is not null)
+            .Find(context, directions, records ?? ThisSeasonRecords(snapshot, snapshot.CurrentSeason.Year - 1), asOf, excludedTeams, starAlreadySold, inSeason: records is not null, ReportFor(snapshot, injuries))
             .Select(sale => new VeteranSalePlan(sale.Proposal, sale.SellerTeamId, sale.BuyerTeamId, sale.VeteranId, sale.IsStar, sale.Rationale))
             .ToList());
     }
 
-    public DomainOperationResult<IReadOnlyList<SalaryDumpPlan>> PlanSalaryDumps(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool inSeason = false)
+    public DomainOperationResult<IReadOnlyList<SalaryDumpPlan>> PlanSalaryDumps(LeagueSnapshot snapshot, IReadOnlySet<TeamId>? excludedTeams = null, bool inSeason = false, LiveInjuries? injuries = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         var rulesetResult = BuildRuleset(snapshot);
@@ -339,7 +339,7 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             team => DirectionOf(snapshot, team, playersById, snapshot.CurrentSeason.Year, asOf, ruleset));
 
         return DomainOperationResult<IReadOnlyList<SalaryDumpPlan>>.Success(SalaryDumpModel
-            .Find(context, directions, ruleset.NegotiationRules, LeagueSalaryScale.For(snapshot), excludedTeams, inSeason)
+            .Find(context, directions, ruleset.NegotiationRules, LeagueSalaryScale.For(snapshot), excludedTeams, inSeason, ReportFor(snapshot, injuries))
             .Select(dump => new SalaryDumpPlan(dump.Proposal, dump.FromTeamId, dump.ToTeamId, dump.PlayerId, dump.Picks.Count, dump.Rationale))
             .ToList());
     }
@@ -512,6 +512,45 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
     }
 
     /// <summary>Each team's record in a concluded season, from the league's history (empty before any is archived).</summary>
+    /// <summary>
+    /// The injury report a deal is made against: at the deadline, the live spells; in the summer, each
+    /// player's carried injury against a whole season ahead. Former stars: a season of
+    /// <see cref="FormerStarPointsPerGame"/> points a game over <see cref="FormerStarGames"/> games, in a
+    /// pack's career or one played here, or an all-league team.
+    /// </summary>
+    private static InjuryReport ReportFor(LeagueSnapshot snapshot, LiveInjuries? live)
+    {
+        var daysOut = live?.DaysOut ?? snapshot.Players
+            .Where(player => player.CurrentInjury is not null && !player.IsRetired)
+            .ToDictionary(player => player.Id, player => player.CurrentInjury!.DaysRemaining ?? DefaultCarriedInjuryDays);
+        var daysLeft = live?.DaysLeftInRegularSeason ?? (snapshot.Configuration.ResolvedSchedule.PreseasonDays + snapshot.Configuration.ResolvedSchedule.RegularSeasonDays);
+
+        var stars = new HashSet<PlayerId>();
+        foreach (var (playerId, seasons) in snapshot.CareerHistory)
+        {
+            if (seasons.Any(season => !season.IsPostseason && season.GamesPlayed >= FormerStarGames && season.Points >= FormerStarPointsPerGame * season.GamesPlayed))
+            {
+                stars.Add(new PlayerId(playerId));
+            }
+        }
+
+        foreach (var award in snapshot.League.History.SelectMany(entry => entry.Awards).Where(award => award.AwardCode == "all-league"))
+        {
+            stars.Add(award.PlayerId);
+        }
+
+        return new InjuryReport(daysOut, daysLeft, stars);
+    }
+
+    /// <summary>A season's points a game, over enough games, that made a player a star.</summary>
+    private const int FormerStarPointsPerGame = 22;
+
+    /// <inheritdoc cref="FormerStarPointsPerGame"/>
+    private const int FormerStarGames = 50;
+
+    /// <summary>LeagueSession.DefaultCarriedInjuryDays: how long an injury with no stated length lasts.</summary>
+    private const int DefaultCarriedInjuryDays = 21;
+
     private static Dictionary<TeamId, TeamRecord> ThisSeasonRecords(LeagueSnapshot snapshot, int year) =>
         snapshot.League.History.FirstOrDefault(entry => entry.Season.Year == year)?.FinalStandings
             .ToDictionary(row => row.TeamId, row => row.Record)

@@ -422,3 +422,33 @@ tradeable months before the deadline). A league's first season has no contenders
 read), so its deadline is quiet; thereafter 1–8 deals a deadline on the calibration league.
 `TradeDeadlineTests` plays three seasons with a managed team: deals happen, none touches the managed
 roster, and a trade after the deadline is refused.
+
+## 17. Injuries that matter (F9)
+
+Asked for directly: injured players can be traded, and are priced by their injury — a young player expected
+to bounce back, a veteran with a career-defining injury that turns his deal into almost a salary dump, a
+former All-Star's last chance.
+
+- **Injuries have a length and heal** (save schema 9; pack `injuryDays`). `Injury.DaysRemaining`; a new
+  season turns a carried injury into a spell from day one (21 days when nothing says) and clears it — a
+  pack-injured player used to be out for good. A spell running past the season's last day is carried into
+  the next season with the days left (the offseason is in the calendar, so the summer's recovery counts).
+- **A rare severe tier** (`MatchModelBounds.SevereInjuryShare` 400 bp of injuries, scaled by injury
+  proneness, which rises with age; 45–330 days, the shorter of two draws) beside the ordinary 2–28-day
+  knocks. This reverses the old "one draw cannot end a season" bound on the owner's request; the
+  reversal is recorded on `MaximumInjuryDays`, and the bounds test keeps every old assertion and adds the
+  severe tier's. 2–4 long injuries carry into each new season.
+- **Aftermath** (`InjuryAftermathModel`): 45+ days out leaves a mark at the season boundary. Through 25,
+  nothing lost (a little more injury-prone); 26–29, up to 3 points off athleticism; 30+, up to 9 plus one
+  a year past 30 off speed, first step, vertical, lateral quickness and stamina, scaled by how long he
+  was out — for good, potential following him down.
+- **Valuation** (`InjuryReport`: days out, days left in the regular season, former stars — a 22-point
+  season over 50 games in a career, or an all-league team). An injured free agent asks less, up to half,
+  the longer he is out. A veteran (30+) out 45+ days loses his top-five protection and his lost time is
+  priced into his overpay, so a taxpayer dumps him. A former All-Star, 30+, hurt but back before the
+  postseason, is a contender's last-chance gamble, a price tier cheaper; one out past the season is not
+  bought (his contract is a dump's business). A knock of under 20 days moves no price. A team in a salary
+  dump sits out that window's veteran sales, so a contract is not dumped and sold straight back.
+- Measured on the calibration league: about one injury-priced deal every four seasons per league load,
+  mostly at the deadline — last-chance gambles on former All-Stars for a late first, discounted sales of
+  injured veterans, the occasional dead-weight dump.

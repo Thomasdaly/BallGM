@@ -98,8 +98,7 @@ public sealed class PreferenceModel
         var service = player.SeasonsOfService;
         var floor = rules.CompensationFloor.FloorFor(service);
         var ceiling = rules.CompensationCeiling.CeilingFor(service, thresholds.SoftCap);
-
-        return (floor, ceiling) switch
+        var ask = (floor, ceiling) switch
         {
             (null, null) => null,
 
@@ -113,7 +112,22 @@ public sealed class PreferenceModel
                 floor.SmallestUnits +
                 ((ceiling.SmallestUnits - floor.SmallestUnits) * Share(player, scale) / 100)),
         };
+
+        // An injured free agent asks less, the longer he is still out: a prove-it deal, never below the floor.
+        if (ask is not null && player.CurrentInjury?.DaysRemaining is int daysOut)
+        {
+            var discount = Math.Min(MaximumInjuryDiscountPercent, daysOut * MaximumInjuryDiscountPercent / InjuryDiscountFullDays);
+            ask = new Money(Math.Max(floor?.SmallestUnits ?? 0, ask.SmallestUnits * (100 - discount) / 100));
+        }
+
+        return ask;
     }
+
+    /// <summary>The most an injured free agent's ask falls, in per cent, and the days out at which it does.</summary>
+    public const int MaximumInjuryDiscountPercent = 50;
+
+    /// <inheritdoc cref="MaximumInjuryDiscountPercent"/>
+    public const int InjuryDiscountFullDays = 180;
 
     /// <summary>
     /// Where a player sits between "asks the league minimum" and "asks the maximum", from their

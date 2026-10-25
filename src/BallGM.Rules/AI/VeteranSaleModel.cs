@@ -79,8 +79,10 @@ public static class VeteranSaleModel
         DateOnly asOf,
         IReadOnlySet<TeamId>? excludedTeams = null,
         bool excludedStarSold = false,
-        bool inSeason = false)
+        bool inSeason = false,
+        InjuryReport? injuries = null)
     {
+        injuries ??= InjuryReport.None;
         ArgumentNullException.ThrowIfNull(context);
         ArgumentNullException.ThrowIfNull(directions);
         ArgumentNullException.ThrowIfNull(lastSeason);
@@ -112,7 +114,9 @@ public static class VeteranSaleModel
             .Where(team => !used.Contains(team.Id) && IsSeller(team))
             .SelectMany(team => RosterOf(team).Select(player => (Team: team, Player: player)))
             .Where(entry => entry.Player.AgeOn(asOf) >= MinimumAge && SalaryOf(entry.Player.Id, entry.Team.Id) > 0 && !SignedThisSummer(entry.Player.Id, entry.Team.Id) && PriceFor(Rank(entry.Player.Rating.Overall)) is not null)
-            .Where(entry => entry.Player.AgeOn(asOf) >= FranchisePlayerSaleAge ||
+            // Out past the season's end, nobody buys him for this one (his contract is a dump's business).
+            .Where(entry => injuries.DaysOutFor(entry.Player.Id) == 0 || injuries.ReturnsThisSeason(entry.Player.Id))
+            .Where(entry => entry.Player.AgeOn(asOf) >= FranchisePlayerSaleAge || IsLastChance(entry.Player) ||
                 (Above(entry.Player.Rating.Overall) >= FranchisePlayers && RosterOf(entry.Team).Max(player => player.Rating.Overall) > entry.Player.Rating.Overall))
             .OrderByDescending(entry => entry.Player.Rating.Overall)
             .ThenBy(entry => entry.Player.Id.Value, StringComparer.Ordinal)
@@ -126,6 +130,11 @@ public static class VeteranSaleModel
 
         int Rank(int overall) => Above(overall) * 1_000 / Math.Max(1, leagueOveralls.Length);
 
+        // A former All-Star, past thirty and hurt, but back before the postseason: a contender's
+        // last-chance gamble, bought cheap.
+        bool IsLastChance(Player player) =>
+            injuries.IsPricedIn(player.Id) && injuries.FormerStars.Contains(player.Id) && player.AgeOn(asOf) >= InjuryReport.VeteranAge;
+
         var starSold = excludedStarSold;
         foreach (var (seller, veteran) in veterans)
         {
@@ -137,6 +146,12 @@ public static class VeteranSaleModel
 
             var salary = SalaryOf(veteran.Id, seller.Id);
             var (firsts, seconds) = PriceFor(Rank(veteran.Rating.Overall))!.Value;
+            var hurt = injuries.IsPricedIn(veteran.Id);
+            if (hurt)
+            {
+                // Hurt, he goes a tier cheaper: the buyer is paying for a chance, not a sure thing.
+                (firsts, seconds) = Cheaper(firsts, seconds);
+            }
 
             foreach (var buyer in context.Teams
                 .Where(team => team.Id != seller.Id && !used.Contains(team.Id) && directions.GetValueOrDefault(team.Id) == CompetitiveDirection.Contending)
@@ -195,7 +210,7 @@ public static class VeteranSaleModel
                         var salaryBack = back.Count == 0 ? string.Empty : $" and {string.Join(", ", back.Select(player => player.FullName))} to match salaries";
                         sale = new VeteranSale(proposal.Value, seller.Id, buyer.Id, veteran.Id, back.Select(player => player.Id).ToList(), picks.Select(pick => pick.Id).ToList(), isStar,
                             new RuleFinding(SaleCode,
-                                $"{seller.Name}, out of contention, sell {veteran.FullName} ({veteran.Rating.Overall}, age {veteran.AgeOn(asOf)}, {ExplanationText.Money(salary)}) to contending {buyer.Name} for {(price.Length == 0 ? "salary relief" : price)}{salaryBack}.",
+                                $"{seller.Name}, out of contention, sell {veteran.FullName} ({veteran.Rating.Overall}, age {veteran.AgeOn(asOf)}, {ExplanationText.Money(salary)}) to contending {buyer.Name} for {(price.Length == 0 ? "salary relief" : price)}{salaryBack}{(IsLastChance(veteran) ? $" — a last-chance gamble on a former All-Star, out {injuries.DaysOutFor(veteran.Id)} more days but back before the postseason" : hurt ? $" — cheaper for the {injuries.DaysOutFor(veteran.Id)} days he is still out" : string.Empty)}.",
                                 seller.Id));
                         break;
                     }
@@ -227,6 +242,16 @@ public static class VeteranSaleModel
     /// two firsts, the top 12% a first and a second, the top 25% a first, the top 40% two seconds; a
     /// veteran below that is not worth a contender's picks, and is not sold.
     /// </summary>
+    /// <summary>One price tier down: two firsts to one, a first to two seconds, two seconds to one.</summary>
+    public static (int Firsts, int Seconds) Cheaper(int firsts, int seconds) => (firsts, seconds) switch
+    {
+        ( >= 2, _) => (firsts - 1, 0),
+        (1, > 0) => (1, 0),
+        (1, 0) => (0, 2),
+        (0, > 1) => (0, seconds - 1),
+        _ => (0, 0),
+    };
+
     public static (int Firsts, int Seconds)? PriceFor(int topPerMille) => topPerMille switch
     {
         < 50 => (2, 0),
