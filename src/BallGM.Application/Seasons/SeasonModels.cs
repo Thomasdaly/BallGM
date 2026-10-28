@@ -287,6 +287,9 @@ public sealed record SeasonConclusionSummary(
     /// <summary>How many free agents signed in the offseason market.</summary>
     public int MarketSignings { get; init; }
 
+    /// <summary>What became of each of the managed franchise's standing summer offers.</summary>
+    public IReadOnlyList<string> SummerOfferOutcomes { get; init; } = [];
+
     /// <summary>How many players' sheets the ageing pass moved.</summary>
     public int PlayersDeveloped { get; init; }
 

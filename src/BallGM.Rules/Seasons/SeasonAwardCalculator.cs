@@ -149,7 +149,7 @@ public static class SeasonAwardCalculator
         var focalPoints = players
             .Where(player => player.LastTeamId is not null && player.Minutes.Count(minutes => minutes >= award.MinimumMinutesPerGame) >= floorGames)
             .GroupBy(player => player.LastTeamId!)
-            .Select(team => team.OrderByDescending(UsageHundredths).ThenBy(player => player.PlayerId.Value, StringComparer.Ordinal).First().PlayerId)
+            .Select(team => team.Aggregate((best, player) => UsedMore(player, best) ? player : best).PlayerId)
             .ToHashSet();
         var eligible = new List<(PlayerSeason Player, int Score)>();
         var excludedByRole = 0;
@@ -328,11 +328,17 @@ public static class SeasonAwardCalculator
         return $"Eligibility: {floor} ({excludedByGames} fell short){role}; {eligible} eligible.";
     }
 
-    /// <summary>Possessions used a game, in hundredths: shots, trips to the line, turnovers.</summary>
-    private static int UsageHundredths(PlayerSeason player)
+    /// <summary>
+    /// Whether this player used more possessions a game than that one (shots, 0.44 of a trip to the line,
+    /// turnovers), compared exactly — cross-multiplied rather than rounded per game, so two players a
+    /// fraction apart are never put level and split by identifier. A true tie goes to the lower identifier.
+    /// </summary>
+    private static bool UsedMore(PlayerSeason player, PlayerSeason than)
     {
-        var totals = player.Totals;
-        return ((totals.FieldGoalsAttempted * 100) + (totals.FreeThrowsAttempted * 44) + (totals.Turnovers * 100)) / Math.Max(1, totals.Games);
+        static long Used(CountingStats totals) => (totals.FieldGoalsAttempted * 100L) + (totals.FreeThrowsAttempted * 44L) + (totals.Turnovers * 100L);
+        var left = Used(player.Totals) * Math.Max(1, than.Totals.Games);
+        var right = Used(than.Totals) * Math.Max(1, player.Totals.Games);
+        return left != right ? left > right : string.CompareOrdinal(player.PlayerId.Value, than.PlayerId.Value) < 0;
     }
 
     private static int StatFor(CountingStats totals, AwardStatBasis basis) => basis switch

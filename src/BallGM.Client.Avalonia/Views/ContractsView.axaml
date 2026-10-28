@@ -138,7 +138,7 @@
                   <ItemsControl Classes="table" ItemsSource="{Binding Players}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:UpcomingFreeAgentRow">
-                        <Grid ColumnDefinitions="40,34,*,44,40,80,150,Auto" Height="32">
+                        <Grid ColumnDefinitions="40,34,*,44,40,80,150,Auto,Auto" Height="32">
                           <Border Classes="ovr small" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}">
                             <TextBlock Text="{Binding Overall}" />
                           </Border>
@@ -158,6 +158,9 @@
                           <Button Grid.Column="7" Content="Extend…" Classes="small" IsVisible="{Binding ExtensionEligible}" Padding="10,3"
                                   Command="{Binding $parent[UserControl].((vm:ContractsViewModel)DataContext).SelectForExtensionCommand}"
                                   CommandParameter="{Binding PlayerId}" />
+                          <Button Grid.Column="8" Content="Summer offer…" Classes="small" IsVisible="{Binding SummerOfferEligible}" Padding="10,3" Margin="6,0,0,0"
+                                  Command="{Binding $parent[UserControl].((vm:ContractsViewModel)DataContext).SelectForSummerCommand}"
+                                  CommandParameter="{Binding PlayerId}" />
                         </Grid>
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -168,8 +171,9 @@
           </ItemsControl>
         </StackPanel>
 
-        <!-- Re-signing panel. -->
-        <Border Grid.Column="1" Classes="panel" VerticalAlignment="Top">
+        <!-- Re-signing and summer-offer panels. -->
+        <StackPanel Grid.Column="1" Spacing="18" VerticalAlignment="Top">
+        <Border Classes="panel">
           <StackPanel Spacing="10">
             <TextBlock Text="Re-sign a player" Classes="section" />
             <TextBlock Text="Pick an extension-eligible player (final season of his contract) from the list." Classes="faint small" TextWrapping="Wrap" IsVisible="{Binding !HasSelection}" />
@@ -192,6 +196,45 @@
             </Border>
           </StackPanel>
         </Border>
+
+        <Border Classes="panel">
+          <StackPanel Spacing="10">
+            <TextBlock Text="Summer offers" Classes="section" />
+            <TextBlock Text="{Binding SummerIntro}" Classes="faint small" TextWrapping="Wrap" />
+            <StackPanel Spacing="6" IsVisible="{Binding HasSummerSelection}">
+              <TextBlock Text="{Binding SummerSelected.FullName, FallbackValue=''}" Classes="h2" />
+              <TextBlock Text="{Binding SummerAskingLine}" Classes="strong small" TextWrapping="Wrap" />
+              <TextBlock Text="Salary a season ($M)" Classes="eyebrow" />
+              <TextBox x:Name="SummerSalary" Text="{Binding SummerSalary}" />
+              <TextBlock Text="Seasons" Classes="eyebrow" />
+              <NumericUpDown Value="{Binding SummerSeasons}" Minimum="1" Maximum="{Binding MaximumSummerSeasons}" Increment="1" FormatString="0" />
+              <Button Classes="primary" Content="Make summer offer" Command="{Binding PlaceSummerOfferCommand}" HorizontalAlignment="Left" Margin="0,6,0,0" />
+            </StackPanel>
+            <Border Classes="callout" Classes.bad="{Binding !SummerOutcomeAccepted}" IsVisible="{Binding HasSummerOutcome}">
+              <TextBlock Text="{Binding SummerOutcome}" TextWrapping="Wrap" />
+            </Border>
+            <ItemsControl Classes="table" ItemsSource="{Binding SummerOffers}" IsVisible="{Binding HasSummerOffers}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:SummerOfferRow">
+                  <Grid ColumnDefinitions="40,*,Auto,Auto" Height="32" ColumnSpacing="8">
+                    <Border Classes="ovr small" Background="{Binding Overall, Converter={x:Static conv:OverallTierConverter.Instance}}">
+                      <TextBlock Text="{Binding Overall}" />
+                    </Border>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding FullName}" Classes="strong small" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Text="{Binding TeamName}" Classes="faint tiny" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{Binding Terms}" Classes="num small" VerticalAlignment="Center" />
+                    <Button Grid.Column="3" Content="Withdraw" Classes="small" Padding="10,3"
+                            Command="{Binding $parent[UserControl].((vm:ContractsViewModel)DataContext).WithdrawSummerOfferCommand}"
+                            CommandParameter="{Binding PlayerId}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+        </StackPanel>
       </Grid>
     </StackPanel>
   </ScrollViewer>

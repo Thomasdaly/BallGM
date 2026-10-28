@@ -44,6 +44,7 @@ public sealed partial class LeagueSession
         _seasonRun = loaded.Value.Season;
 
         _negotiations.Clear();
+        _summerOffers.Clear();
         foreach (var (playerId, negotiation) in loaded.Value.Negotiations)
         {
             _negotiations[playerId] = negotiation;

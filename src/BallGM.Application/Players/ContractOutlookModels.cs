@@ -59,6 +59,15 @@ public sealed record UpcomingFreeAgentLine(
     bool RefusedExtension,
     string? PortraitPath);
 
+/// <summary>One of the managed franchise's standing offers for the coming summer.</summary>
+public sealed record SummerOfferLine(
+    string PlayerId,
+    string FullName,
+    string TeamName,
+    int Overall,
+    long Salary,
+    int Seasons);
+
 /// <summary>What an extension to this player would have to look like, and what he wants.</summary>
 public sealed record ExtensionTermsSummary(
     string PlayerId,

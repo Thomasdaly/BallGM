@@ -25,6 +25,12 @@ public sealed class ContractsViewModel : ViewModelBase
     private decimal _offerRaise = 5;
     private string? _outcome;
     private bool _outcomeAccepted;
+    private UpcomingFreeAgentRow? _summerSelected;
+    private string _summerAsking = string.Empty;
+    private string _summerSalary = string.Empty;
+    private decimal _summerSeasons = 2;
+    private string? _summerOutcome;
+    private bool _summerOutcomeAccepted;
 
     public ContractsViewModel(LeagueSession session, Action onContractsChanged)
     {
@@ -32,6 +38,9 @@ public sealed class ContractsViewModel : ViewModelBase
         _onContractsChanged = onContractsChanged ?? throw new ArgumentNullException(nameof(onContractsChanged));
         OfferCommand = new RelayCommand(Offer);
         SelectForExtensionCommand = new ParameterCommand<string>(SelectForExtension);
+        SelectForSummerCommand = new ParameterCommand<string>(SelectForSummer);
+        PlaceSummerOfferCommand = new RelayCommand(PlaceSummerOffer);
+        WithdrawSummerOfferCommand = new ParameterCommand<string>(WithdrawSummerOffer);
     }
 
     public string Title => "Contracts";
@@ -92,6 +101,9 @@ public sealed class ContractsViewModel : ViewModelBase
         RaisePropertyChanged(nameof(Alerts));
         RaisePropertyChanged(nameof(HasAlerts));
         RaisePropertyChanged(nameof(AlertCountLine));
+        RaisePropertyChanged(nameof(SummerOffers));
+        RaisePropertyChanged(nameof(HasSummerOffers));
+        RaisePropertyChanged(nameof(SummerIntro));
     }
 
     private CapOutlookSummary? Outlook => _team is null ? null : _session.CapOutlook(_team.TeamId, _capGrowthPercent) is { IsSuccess: true } result ? result.Value : null;
@@ -141,13 +153,21 @@ public sealed class ContractsViewModel : ViewModelBase
         ? $"{outlook.Totals[1].Season}: {Money(outlook.Totals[1].Guaranteed)} committed to {outlook.Totals[1].PlayersUnderContract} players — {Signed(outlook.Totals[1].CapRoom)} of cap room at {_capGrowthPercent}% cap growth."
         : string.Empty;
 
-    public IReadOnlyList<FreeAgentClassRow> FreeAgentClasses => _session
-        .UpcomingFreeAgents(_wholeLeague ? null : _team?.TeamId)
-        .Select(freeAgentClass => new FreeAgentClassRow(
-            freeAgentClass.Summer.ToUpper(Invariant),
-            $"{freeAgentClass.Players.Count} player{(freeAgentClass.Players.Count == 1 ? string.Empty : "s")}",
-            freeAgentClass.Players.Select(UpcomingFreeAgentRow.From).ToList()))
-        .ToList();
+    public IReadOnlyList<FreeAgentClassRow> FreeAgentClasses
+    {
+        get
+        {
+            var classes = _session.UpcomingFreeAgents(_wholeLeague ? null : _team?.TeamId);
+            var nextSummer = classes.Count == 0 ? 0 : classes.Min(freeAgentClass => freeAgentClass.Year);
+            var managing = _session.ManagedTeamId is not null;
+            return classes
+                .Select(freeAgentClass => new FreeAgentClassRow(
+                    freeAgentClass.Summer.ToUpper(Invariant),
+                    $"{freeAgentClass.Players.Count} player{(freeAgentClass.Players.Count == 1 ? string.Empty : "s")}",
+                    freeAgentClass.Players.Select(line => UpcomingFreeAgentRow.From(line, managing && freeAgentClass.Year == nextSummer)).ToList()))
+                .ToList();
+        }
+    }
 
     public IReadOnlyList<ExtensionRefusalLine> Alerts => _session.ExtensionAlerts(_wholeLeague ? null : _team?.TeamId);
 
@@ -287,6 +307,126 @@ public sealed class ContractsViewModel : ViewModelBase
         _onContractsChanged();
     }
 
+    // Summer offers: the person's own bids in the coming free-agent market.
+    public ParameterCommand<string> SelectForSummerCommand { get; }
+
+    public RelayCommand PlaceSummerOfferCommand { get; }
+
+    public ParameterCommand<string> WithdrawSummerOfferCommand { get; }
+
+    public IReadOnlyList<SummerOfferRow> SummerOffers => _session.SummerOffers().Select(SummerOfferRow.From).ToList();
+
+    public bool HasSummerOffers => SummerOffers.Count > 0;
+
+    public string SummerIntro => _session.ManagedTeamId is null
+        ? "Choose the franchise you run to make summer offers."
+        : "Offers stand through every round of the summer market. Each player compares yours with the AI teams' bids, and takes yours only if it meets his price that round, you have a roster spot and the signing is legal.";
+
+    public UpcomingFreeAgentRow? SummerSelected
+    {
+        get => _summerSelected;
+        private set
+        {
+            if (SetProperty(ref _summerSelected, value))
+            {
+                RaisePropertyChanged(nameof(HasSummerSelection));
+            }
+        }
+    }
+
+    public bool HasSummerSelection => _summerSelected is not null;
+
+    public string SummerAskingLine
+    {
+        get => _summerAsking;
+        private set => SetProperty(ref _summerAsking, value);
+    }
+
+    public string SummerSalary
+    {
+        get => _summerSalary;
+        set => SetProperty(ref _summerSalary, value);
+    }
+
+    public decimal SummerSeasons
+    {
+        get => _summerSeasons;
+        set => SetProperty(ref _summerSeasons, value);
+    }
+
+    public int MaximumSummerSeasons => LeagueSession.MaximumSummerOfferSeasons;
+
+    public string? SummerOutcome
+    {
+        get => _summerOutcome;
+        private set
+        {
+            if (SetProperty(ref _summerOutcome, value))
+            {
+                RaisePropertyChanged(nameof(HasSummerOutcome));
+            }
+        }
+    }
+
+    public bool HasSummerOutcome => _summerOutcome is not null;
+
+    public bool SummerOutcomeAccepted
+    {
+        get => _summerOutcomeAccepted;
+        private set => SetProperty(ref _summerOutcomeAccepted, value);
+    }
+
+    private void SelectForSummer(string playerId)
+    {
+        SummerSelected = FreeAgentClasses.SelectMany(freeAgentClass => freeAgentClass.Players).FirstOrDefault(candidate => candidate.PlayerId == playerId);
+        SummerOutcome = null;
+        var terms = _session.ExtensionTerms(playerId);
+        if (terms.IsSuccess && terms.Value.AskingPrice is { } ask)
+        {
+            SummerAskingLine = $"He is asking for about {Money(ask)} a season. His price falls as the summer goes on.";
+            SummerSalary = (Math.Ceiling(ask / 100_000m) / 10m).ToString("0.0", Invariant);
+        }
+        else
+        {
+            SummerAskingLine = string.Empty;
+        }
+    }
+
+    private void PlaceSummerOffer()
+    {
+        if (_summerSelected is null)
+        {
+            SummerOutcome = "Pick one of next summer's free agents first.";
+            SummerOutcomeAccepted = false;
+            return;
+        }
+
+        if (!decimal.TryParse(_summerSalary, NumberStyles.Number, Invariant, out var millions) || millions <= 0)
+        {
+            SummerOutcome = "Enter a salary a season in millions, e.g. 12.5.";
+            SummerOutcomeAccepted = false;
+            return;
+        }
+
+        var result = _session.PlaceSummerOffer(_summerSelected.PlayerId, (long)(millions * 1_000_000m), (int)_summerSeasons);
+        SummerOutcomeAccepted = result.IsSuccess;
+        SummerOutcome = result.IsSuccess
+            ? $"Offer made: {Money((long)(millions * 1_000_000m))} a season for {(int)_summerSeasons} season{((int)_summerSeasons == 1 ? string.Empty : "s")} to {_summerSelected.FullName}."
+            : string.Join(" ", result.Errors.Select(error => error.Message));
+        if (result.IsSuccess)
+        {
+            SummerSelected = null;
+        }
+
+        Refresh();
+    }
+
+    private void WithdrawSummerOffer(string playerId)
+    {
+        _session.WithdrawSummerOffer(playerId);
+        Refresh();
+    }
+
     internal static string Money(long? amount) => amount is null ? "–" : MoneyDisplay.ToMillions(amount.Value);
 
     internal static string Signed(long? amount) => amount is null ? "–" : (amount < 0 ? "−" : "+") + MoneyDisplay.ToMillions(Math.Abs(amount.Value));
@@ -312,11 +452,23 @@ public sealed record OutlookTotalCell(string Text, bool IsBad);
 
 public sealed record FreeAgentClassRow(string Summer, string CountLine, IReadOnlyList<UpcomingFreeAgentRow> Players);
 
+public sealed record SummerOfferRow(string PlayerId, string FullName, string TeamName, int Overall, string Terms)
+{
+    public static SummerOfferRow From(SummerOfferLine line) => new(
+        line.PlayerId,
+        line.FullName,
+        line.TeamName,
+        line.Overall,
+        $"{ContractsViewModel.Money(line.Salary)} × {line.Seasons}");
+}
+
 public sealed record UpcomingFreeAgentRow(
     string PlayerId, string FullName, string TeamName, string Position, int Overall, string Age, string Salary,
-    string Status, bool ExtensionEligible, bool RefusedExtension, string? PortraitPath)
+    string Status, bool ExtensionEligible, bool RefusedExtension, string? PortraitPath, bool SummerOfferEligible = false)
 {
-    public static UpcomingFreeAgentRow From(UpcomingFreeAgentLine line) => new(
+    public static UpcomingFreeAgentRow From(UpcomingFreeAgentLine line) => From(line, summerOfferEligible: false);
+
+    public static UpcomingFreeAgentRow From(UpcomingFreeAgentLine line, bool summerOfferEligible) => new(
         line.PlayerId,
         line.FullName,
         line.TeamName,
@@ -330,5 +482,6 @@ public sealed record UpcomingFreeAgentRow(
             : "Under contract",
         line.ExtensionEligible,
         line.RefusedExtension,
-        line.PortraitPath);
+        line.PortraitPath,
+        summerOfferEligible && line.FinalSeasonOption is null);
 }

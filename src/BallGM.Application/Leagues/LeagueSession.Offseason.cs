@@ -1,3 +1,5 @@
+using BallGM.Application.AI;
+using BallGM.Application.Players;
 using BallGM.Application.Seasons;
 using BallGM.Domain.Common;
 using BallGM.Domain.Contracts;
@@ -50,6 +52,145 @@ public sealed partial class LeagueSession
 
         ManagedTeamId = team.Id;
         return DomainOperationResult.Success;
+    }
+
+    private const string SummerOfferNoTeamCode = "summer_offer.no_managed_team";
+    private const string SummerOfferUnknownPlayerCode = "summer_offer.unknown_player";
+    private const string SummerOfferNotAvailableCode = "summer_offer.not_a_free_agent_this_summer";
+    private const string SummerOfferTermsCode = "summer_offer.invalid_terms";
+
+    /// <summary>The most seasons a standing summer offer may run; the signing rules still decide what is legal.</summary>
+    public const int MaximumSummerOfferSeasons = 5;
+
+    /// <summary>
+    /// The managed franchise's standing offers for the coming summer, by player
+    /// (<c>docs/franchise-realism.md</c> → §19). Session state, like an in-flight negotiation's, and not
+    /// saved with the league; cleared when the market they were made for has run.
+    /// </summary>
+    private readonly Dictionary<PlayerId, SummerOffer> _summerOffers = [];
+
+    /// <summary>The managed franchise's standing offers for the coming summer, best player first.</summary>
+    public IReadOnlyList<SummerOfferLine> SummerOffers()
+    {
+        if (_snapshot is null || ManagedTeamId is not { } managed)
+        {
+            return [];
+        }
+
+        var teamNames = TeamNames(_snapshot);
+        var playersById = _snapshot.Players.ToDictionary(player => player.Id);
+        return _summerOffers.Values
+            .Where(offer => offer.TeamId == managed && playersById.ContainsKey(offer.PlayerId))
+            .Select(offer =>
+            {
+                var player = playersById[offer.PlayerId];
+                var team = _snapshot.Teams.FirstOrDefault(candidate => candidate.PlayerIds.Contains(player.Id));
+                return new SummerOfferLine(
+                    player.Id.Value,
+                    player.FullName,
+                    team is null ? "Free agent" : teamNames.GetValueOrDefault(team.Id, team.Name),
+                    player.Rating.Overall,
+                    offer.Salary.SmallestUnits,
+                    offer.Seasons);
+            })
+            .OrderByDescending(line => line.Overall)
+            .ThenBy(line => line.PlayerId, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Makes (or replaces) a standing offer for the coming summer to a player who will be a free agent
+    /// then — a flat salary a season for a number of seasons from the season the market opens. It joins
+    /// every round of the market alongside the AI's bids, and the player weighs it against them by the
+    /// same rule; it bids only in a round where it meets what he will take, there is a roster spot, and
+    /// the signing is legal.
+    /// </summary>
+    public DomainOperationResult PlaceSummerOffer(string playerId, long salary, int seasons)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(playerId);
+        if (_snapshot is null)
+        {
+            return DomainOperationResult.Failure(new DomainError(NotLoadedCode, "No league is loaded."));
+        }
+
+        if (ManagedTeamId is not { } managed)
+        {
+            return DomainOperationResult.Failure(new DomainError(SummerOfferNoTeamCode, "Choose the franchise you run before making summer offers."));
+        }
+
+        if (_snapshot.Players.FirstOrDefault(candidate => candidate.Id.Value == playerId) is not { } player)
+        {
+            return DomainOperationResult.Failure(new DomainError(SummerOfferUnknownPlayerCode, $"Player '{playerId}' is not in this league."));
+        }
+
+        if (!FreeAgentThisSummer(_snapshot, player.Id))
+        {
+            return DomainOperationResult.Failure(new DomainError(SummerOfferNotAvailableCode, $"{player.FullName} is under contract beyond this season, so he will not be a free agent this summer."));
+        }
+
+        if (salary <= 0 || seasons < 1 || seasons > MaximumSummerOfferSeasons)
+        {
+            return DomainOperationResult.Failure(new DomainError(SummerOfferTermsCode, $"A summer offer is a salary above zero for 1 to {MaximumSummerOfferSeasons} seasons."));
+        }
+
+        _summerOffers[player.Id] = new SummerOffer(managed, player.Id, new Money(salary), seasons);
+        return DomainOperationResult.Success;
+    }
+
+    /// <summary>Withdraws a standing summer offer; withdrawing one that was never made is not an error.</summary>
+    public DomainOperationResult WithdrawSummerOffer(string playerId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(playerId);
+        _summerOffers.Remove(new PlayerId(playerId));
+        return DomainOperationResult.Success;
+    }
+
+    /// <summary>
+    /// Whether a player reaches free agency at the end of this season: no live contract running past
+    /// it (an option on next season may still keep him, which the market will find out).
+    /// </summary>
+    private static bool FreeAgentThisSummer(LeagueSnapshot snapshot, PlayerId playerId) =>
+        !snapshot.Contracts.Any(contract => contract.PlayerId == playerId && !contract.IsTerminated && contract.LastSeason.Year > snapshot.CurrentSeason.Year);
+
+    /// <summary>What became of each standing offer once the market has run, then the offers are spent.</summary>
+    private IReadOnlyList<string> SettleSummerOffers()
+    {
+        if (_snapshot is null || _summerOffers.Count == 0)
+        {
+            _summerOffers.Clear();
+            return [];
+        }
+
+        var teamNames = TeamNames(_snapshot);
+        var outcomes = new List<string>();
+        foreach (var offer in _summerOffers.Values.OrderBy(offer => offer.PlayerId.Value, StringComparer.Ordinal))
+        {
+            if (_snapshot.Players.FirstOrDefault(player => player.Id == offer.PlayerId) is not { } player)
+            {
+                continue;
+            }
+
+            var signed = _snapshot.Contracts.FirstOrDefault(contract =>
+                contract.PlayerId == offer.PlayerId && !contract.IsTerminated && contract.TermFor(_snapshot.CurrentSeason) is not null);
+            if (signed is not null && signed.TeamId == offer.TeamId)
+            {
+                outcomes.Add($"{player.FullName} accepted your offer of {ExplanationText.Money(signed.TermFor(_snapshot.CurrentSeason)!.Compensation)} a season.");
+            }
+            else if (signed is not null)
+            {
+                outcomes.Add($"{player.FullName} chose {teamNames.GetValueOrDefault(signed.TeamId, signed.TeamId.Value)} ({ExplanationText.Money(signed.TermFor(_snapshot.CurrentSeason)!.Compensation)} a season) over your offer.");
+            }
+            else
+            {
+                var reason = _frontOfficeAdvisor.ExplainStandingOffer(_snapshot, offer, MarketRounds - 1);
+                outcomes.Add(reason.IsSuccess
+                    ? $"{player.FullName} is still unsigned. {reason.Value.Explanation}"
+                    : $"{player.FullName} is still unsigned.");
+            }
+        }
+
+        _summerOffers.Clear();
+        return outcomes;
     }
 
     /// <summary>The managed franchise as a set the planners exclude, empty when none is set.</summary>
@@ -262,7 +403,8 @@ public sealed partial class LeagueSession
                 break;
             }
 
-            var plans = _frontOfficeAdvisor.PlanMarketRound(_snapshot, pool, round, restricted, ManagedTeams());
+            var standing = _summerOffers.Values.Where(offer => offer.TeamId == ManagedTeamId).ToList();
+            var plans = _frontOfficeAdvisor.PlanMarketRound(_snapshot, pool, round, restricted, ManagedTeams(), standing);
             if (plans.IsFailure)
             {
                 notes.AddRange(plans.Errors.Select(error => new RuleFinding(error.Code, error.Message)));

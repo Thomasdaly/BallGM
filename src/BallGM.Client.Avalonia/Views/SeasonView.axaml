@@ -82,6 +82,14 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
           <TextBlock Text="{Binding Retired}" Classes="caption wrap" IsVisible="{Binding HasRetired}" />
+          <TextBlock Text="YOUR SUMMER OFFERS" Classes="label-caps" IsVisible="{Binding HasYourOffers}" />
+          <ItemsControl ItemsSource="{Binding YourOffers}" IsVisible="{Binding HasYourOffers}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <TextBlock Text="{Binding}" Classes="caption wrap" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
           <TextBlock Text="{Binding NextSeason}" Classes="body secondary" />
         </StackPanel>
       </ctl:Tile>

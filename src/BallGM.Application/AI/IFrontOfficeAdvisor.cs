@@ -100,12 +100,21 @@ public interface IFrontOfficeAdvisor
     DomainOperationResult<IReadOnlyList<BuyoutPlan>> PlanBuyouts(LeagueSnapshot snapshot);
 
     /// <param name="restricted">This summer's restricted free agents and the team that may match for each.</param>
+    /// <param name="standingOffers">
+    /// The person's own offers for the summer: each bids in the round when it can (a roster spot, at
+    /// least what the player will take this round, a legal signing), and the player weighs it against
+    /// every AI bid by the same rule.
+    /// </param>
     DomainOperationResult<IReadOnlyList<MarketSigningPlan>> PlanMarketRound(
         LeagueSnapshot snapshot,
         IReadOnlyCollection<Player> freeAgents,
         int round,
         IReadOnlyDictionary<PlayerId, TeamId>? restricted = null,
-        IReadOnlySet<TeamId>? nonBiddingTeams = null);
+        IReadOnlySet<TeamId>? nonBiddingTeams = null,
+        IReadOnlyList<SummerOffer>? standingOffers = null);
+
+    /// <summary>Why a standing offer would not bid at this round's prices, or that it would.</summary>
+    DomainOperationResult<RuleFinding> ExplainStandingOffer(LeagueSnapshot snapshot, SummerOffer offer, int round);
 
     /// <summary>
     /// The qualifying offers every team tenders to its expiring restricted players it did not re-sign
@@ -155,6 +164,12 @@ public sealed record ReSigningPlan(TeamId TeamId, PlayerId PlayerId, int Seasons
 
 /// <summary>An offer a free agent accepted in a market round: the offer, why the team made it, and why he took it.</summary>
 public sealed record MarketSigningPlan(Offer Offer, RuleFinding Bid, RuleFinding Choice);
+
+/// <summary>
+/// An offer the person playing makes before the summer, standing for the whole market: a flat salary
+/// for a number of seasons from the season the market opens (<c>docs/franchise-realism.md</c> → §19).
+/// </summary>
+public sealed record SummerOffer(TeamId TeamId, PlayerId PlayerId, Money Salary, int Seasons);
 
 /// <summary>
 /// A draft recommendation alongside the prospect it names. <see cref="DraftPickRecommendation"/> only

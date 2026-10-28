@@ -43,8 +43,11 @@ internal sealed class StubFrontOfficeAdvisor : IFrontOfficeAdvisor
     public DomainOperationResult<IReadOnlyList<ReSigningPlan>> PlanReSignings(LeagueSnapshot snapshot, IReadOnlyDictionary<TeamId, Domain.Seasons.TeamRecord> records) =>
         DomainOperationResult<IReadOnlyList<ReSigningPlan>>.Success([]);
 
-    public DomainOperationResult<IReadOnlyList<MarketSigningPlan>> PlanMarketRound(LeagueSnapshot snapshot, IReadOnlyCollection<Player> freeAgents, int round, IReadOnlyDictionary<Domain.Players.PlayerId, TeamId>? restricted = null, IReadOnlySet<TeamId>? nonBiddingTeams = null) =>
+    public DomainOperationResult<IReadOnlyList<MarketSigningPlan>> PlanMarketRound(LeagueSnapshot snapshot, IReadOnlyCollection<Player> freeAgents, int round, IReadOnlyDictionary<Domain.Players.PlayerId, TeamId>? restricted = null, IReadOnlySet<TeamId>? nonBiddingTeams = null, IReadOnlyList<SummerOffer>? standingOffers = null) =>
         DomainOperationResult<IReadOnlyList<MarketSigningPlan>>.Success([]);
+
+    public DomainOperationResult<RuleFinding> ExplainStandingOffer(LeagueSnapshot snapshot, SummerOffer offer, int round) =>
+        DomainOperationResult<RuleFinding>.Success(new RuleFinding("stub", "stub"));
 
     public DomainOperationResult<IReadOnlyList<BuyoutPlan>> PlanBuyouts(LeagueSnapshot snapshot) =>
         DomainOperationResult<IReadOnlyList<BuyoutPlan>>.Success([]);

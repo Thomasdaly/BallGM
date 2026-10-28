@@ -53,6 +53,7 @@ public sealed class SeasonReview
             .Select(note => note.Explanation)
             .ToList();
         Retired = summary.PlayersRetired.Count == 0 ? string.Empty : $"Retired: {string.Join(", ", summary.PlayersRetired.Take(12))}{(summary.PlayersRetired.Count > 12 ? $" and {summary.PlayersRetired.Count - 12} more" : string.Empty)}";
+        YourOffers = summary.SummerOfferOutcomes;
         NextSeason = $"Next: the {SeasonLabel(summary.NextSeasonYear)} season. Continue to start it.";
     }
 
@@ -71,6 +72,11 @@ public sealed class SeasonReview
     public string Retired { get; }
 
     public bool HasRetired => Retired.Length > 0;
+
+    /// <summary>What became of each of your summer offers.</summary>
+    public IReadOnlyList<string> YourOffers { get; }
+
+    public bool HasYourOffers => YourOffers.Count > 0;
 
     public string NextSeason { get; }
 

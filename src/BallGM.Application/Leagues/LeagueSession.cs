@@ -129,6 +129,7 @@ public sealed partial class LeagueSession
 
         _snapshot = snapshotResult.Value;
         _seasonRun = null;
+        _summerOffers.Clear();
         return _overviewQuery.Project(_snapshot, LiveInjuryMap());
     }
 

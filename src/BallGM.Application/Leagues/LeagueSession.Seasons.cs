@@ -168,6 +168,7 @@ public sealed partial class LeagueSession
         var dumpedTeams = ManagedTeams();
         var (dumps, dumpNotes) = RunSalaryDumps(dumpedTeams);
         var (marketSigned, marketNotes) = RunFreeAgencyMarket(tendered.ToDictionary(plan => plan.PlayerId, plan => plan.TeamId));
+        var summerOfferOutcomes = SettleSummerOffers();
         var (qualifyingSigned, qualifyingNotes) = SignQualifyingOffers(tendered);
         var (lateDumps, lateDumpNotes) = RunSalaryDumps(dumpedTeams);
         var (sales, saleNotes) = RunVeteranSales(alreadyTraded: dumpedTeams);
@@ -194,6 +195,7 @@ public sealed partial class LeagueSession
             PlayersReSigned = reSigned,
             OptionsDecided = optionsDecided,
             MarketSignings = marketSigned + qualifyingSigned,
+            SummerOfferOutcomes = summerOfferOutcomes,
             QualifyingOffersTendered = tendered.Count,
             SalaryDumps = dumps + lateDumps,
             VeteranSales = sales,

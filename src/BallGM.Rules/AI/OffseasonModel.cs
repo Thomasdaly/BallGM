@@ -173,7 +173,7 @@ public static class OffseasonModel
     /// <summary>
     /// Which of a team's players in the final season of their contracts it re-signs, best first, at
     /// his asking price (what he accepts from his own team), while the budget allows — or, for one of
-    /// its three best players on a contending team, up to the second apron. A player is worth keeping
+    /// its three best players, up to the second apron on a contending team and the tax line on any other. A player is worth keeping
     /// if he is in the rotation, or young with a ceiling above the team's fifth-best player.
     /// </summary>
     public static IReadOnlyList<ReSigningDecision> ReSignings(
@@ -243,7 +243,13 @@ public static class OffseasonModel
             }
 
             var salary = RoundToTenThousand(ask.SmallestUnits);
-            var limit = direction == CompetitiveDirection.Contending && topThree.Contains(player.Id) ? stretch : budget;
+            // One of its three best players is kept on his incumbent rights past the direction's budget:
+            // a contender up to the second apron, anyone else up to the tax line. A rebuilding team whose
+            // budget is the cap does not let its best young player walk to stay under it.
+            var keepLine = thresholds.LuxuryTax?.SmallestUnits is long tax && budget is long within ? Math.Max(tax, within) : budget;
+            var limit = topThree.Contains(player.Id)
+                ? direction == CompetitiveDirection.Contending ? stretch : keepLine
+                : budget;
             if (limit is long line && payroll + salary > line)
             {
                 continue;
@@ -670,6 +676,60 @@ public static class OffseasonModel
         var eighth = ranked.Count >= RotationSize ? ranked[RotationSize - 1] : 0;
         return rating.Overall >= worst || rating.PotentialAbility > eighth;
     }
+
+    /// <summary>
+    /// A standing offer the person playing made before the summer (<c>docs/franchise-realism.md</c> → §19),
+    /// as a bid in one market round — or null, with the reason, when it cannot be one this round. It
+    /// bids when his team has a roster spot, the salary reaches what the player will take this round
+    /// (his asking price falling round by round as the AI's prices do, down to the share of it he would
+    /// still accept) and the signing is legal. The player then chooses among it and every AI bid by the
+    /// same rule (<see cref="ResolveRound"/>): the person gets no better treatment than a front office.
+    /// </summary>
+    public static (MarketOffer? Bid, RuleFinding Reason) StandingOffer(Team team, Player player, Money salary, int seasons, MarketContext context, int round)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(context);
+
+        if (team.RosterCount >= team.RosterLimits.MaximumPlayers)
+        {
+            return (null, new RuleFinding(StandingRosterFullCode, $"{team.Name} has no roster spot for {player.FullName}.", team.Id));
+        }
+
+        var minimumSalary = context.NegotiationRules.CompensationFloor.FloorFor(player.SeasonsOfService)?.SmallestUnits ?? 0;
+        var ask = PreferenceModel.AskingPriceFor(player, context.NegotiationRules, context.CapThresholds, context.SalaryScale)?.SmallestUnits ?? minimumSalary;
+        var roundPrice = Math.Max(minimumSalary, ask * Math.Max(0, 100 - (PriceDropPercentPerRound * round)) / 100);
+        var acceptable = RoundToTenThousand(Math.Max(minimumSalary, roundPrice * PreferenceModel.ReservationPercentOfAsk / 100));
+        if (salary.SmallestUnits < acceptable)
+        {
+            return (null, new RuleFinding(StandingBelowAskCode,
+                $"{player.FullName} will not take {ExplanationText.Money(salary)} a season this round: he wants at least {ExplanationText.Money(acceptable)}.", team.Id));
+        }
+
+        var offer = BuildOffer(team.Id, player.Id, context.CurrentSeason, seasons, salary, round);
+        if (offer is null)
+        {
+            return (null, new RuleFinding(StandingIllegalCode, $"The offer to {player.FullName} does not state a valid contract.", team.Id));
+        }
+
+        var assessment = new SigningValidator().Validate(offer, (context with { Player = player }).SigningContextFor(team));
+        if (assessment.IsFailure || !assessment.Value.IsLegal)
+        {
+            var reasons = assessment.IsFailure
+                ? assessment.Errors.Select(error => error.Message)
+                : assessment.Value.Violations.Select(violation => violation.Explanation);
+            return (null, new RuleFinding(StandingIllegalCode, $"{team.Name} cannot sign {player.FullName} on these terms: {string.Join(" ", reasons)}", team.Id));
+        }
+
+        var bid = new RuleFinding(BidCode,
+            $"{team.Name} offers {ExplanationText.Money(salary)} a season for {ExplanationText.Count(offer.Terms.Count, "season")} to {player.FullName} ({player.Rating.Overall}).",
+            team.Id);
+        return (new MarketOffer(offer, 0, bid), bid);
+    }
+
+    private const string StandingRosterFullCode = "summer_offer.roster_full";
+    private const string StandingBelowAskCode = "summer_offer.below_asking_price";
+    private const string StandingIllegalCode = "summer_offer.not_legal";
 
     private static Offer? BuildOffer(TeamId teamId, PlayerId playerId, Season start, int seasons, Money salary, int round)
     {

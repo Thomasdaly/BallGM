@@ -52,7 +52,7 @@ public sealed class LongSaveRealismTests
                 static double Usage(BallGM.Domain.Seasons.CountingStats line) => (line.FieldGoalsAttempted + (0.44 * line.FreeThrowsAttempted) + line.Turnovers) / (double)Math.Max(1, line.Games);
                 var winner = stats[mvp.PlayerId];
                 var teammates = stats.Values.Where(line => line.TeamName == winner.TeamName && line.PlayerId != winner.PlayerId && line.Stats.Games >= 75 && line.Stats.Minutes >= 30 * line.Stats.Games);
-                Assert.All(teammates, mate => Assert.True(Usage(mate.Stats) <= Usage(winner.Stats), $"Season {season}: {mvp.PlayerName} won MVP while {mate.FullName} used more of their team's possessions."));
+                Assert.All(teammates, mate => Assert.True(Usage(mate.Stats) <= Usage(winner.Stats), $"Season {season}: {mvp.PlayerName} ({Usage(winner.Stats):F4} a game) won MVP while {mate.FullName} ({Usage(mate.Stats):F4}) used more of their team's possessions."));
             }
 
             if (summary.Awards.FirstOrDefault(award => award.AwardCode == "sixth-man") is { } bench)

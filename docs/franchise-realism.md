@@ -394,7 +394,7 @@ sale or summer trade. What the league itself requires still happens to it — op
 signed on the scale, a roster below the minimum filled — because an empty roster is not a choice.
 Session state, like an in-flight negotiation: not saved. `ManagedTeamTests` plays three summers and
 checks nobody under contract left, nobody arrived but draft picks, and no expiring player was re-signed
-on its behalf (and fails if the team is left unmanaged). Open: an interactive offseason, where the
+on its behalf (and fails if the team is left unmanaged). Partly closed by §19 (summer offers). Open: an interactive offseason, where the
 person makes those moves themselves before the AI market runs.
 
 **The payroll floor.** It was informational: nothing made a team spend to it, and payrolls fell to a
@@ -483,3 +483,46 @@ Three runs of eight seasons on the private real-data pack, after §14–17:
 - **Still open:** a few teams still sit well under the payroll floor in some summers on the real pack (the
   free-agent pool is thin late in a long save); the shortfall is not charged, as there are no team
   finances.
+
+## 19. Your offers in the summer market
+
+The managed franchise could extend its own players during the season, but took no part in the summer
+market: the AI ran it in one go at Continue, and the person got the leftovers. Now the person makes
+**standing summer offers** before the season ends (Contracts → *Summer offer…* on next summer's free
+agents, their own expiring players included): a flat salary for 1–5 seasons
+(`LeagueSession.PlaceSummerOffer` / `WithdrawSummerOffer` / `SummerOffers`).
+
+- Each offer joins every round of the market (`IFrontOfficeAdvisor.PlanMarketRound`'s `standingOffers`) as
+  a bid when it can be one (`OffseasonModel.StandingOffer`): a roster spot, a salary at least the player's
+  reservation (85%) of that round's price (his asking price, falling 12% a round as the AI's do), and a
+  legal signing by the same validator. He then chooses among it and the AI's bids by the same rule
+  (money weighted a little by last season's record): no better treatment than a front office.
+- Like any team, the managed team signs at most one player a round, so several offers settle over
+  several rounds.
+- The season review lists what became of each: accepted, chose another team (and for what), or still
+  unsigned with the reason at the market's final prices (`ExplainStandingOffer`).
+- Session state, like an in-flight negotiation and the managed team itself: not saved with the league,
+  cleared when the market runs or a league is loaded. Tests: `SummerOfferTests` (integration),
+  `SummerOfferFlowTests` (client).
+- Still open: offers are not saved, the person cannot match an offer sheet for their own restricted
+  free agent, and there is no live, round-by-round market screen.
+
+## 20. Two fixes the private-pack run surfaced
+
+- **The depth-chart cache could go stale (introduced in §18's performance work).** Teams and players are
+  mutable aggregates, so one snapshot object does not pin a roster: the advisor now reuses a team's chart
+  only while its roster reads exactly as it did (each player's identity, rating object, injury, retirement
+  and position, under the same roster limits). `FrontOfficeAdvisorCacheTests` fails against the stale
+  version. The stale cache had been quietly suppressing AI trades.
+- **Stars walked from rebuilding teams.** A rebuilding team's re-signing budget is the cap, so its best
+  young player could leave to keep it under. One of a team's three best players is now kept up to the tax
+  line whatever its direction (contenders still to the second apron). With trades running correctly
+  again, `LongSaveRealismTests`' "at most three of the top 30 move in a summer" had started failing about a
+  third of the time; after this, 31 consecutive runs passed.
+- The MVP focal-point comparison is exact (cross-multiplied totals rather than per-game hundredths).
+  The long-save MVP check failed intermittently once in this stretch, and it could not be reproduced in
+  31 later runs. The test's league differs on every load (identifiers are minted per load), so a rare
+  case may remain; its message now prints both usage figures.
+- Open, from an 8-season run on the private pack: payroll-floor shortfalls grow over a long save (up to ten
+  teams under it by year four), rebounding leaders sit at 16–18 a game, the free-agent pool grows each
+  season while rosters thin, and stars still move as free agents more often than they should.

@@ -146,7 +146,7 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
 
         var candidates = TradeTargetingModel.FindCandidates(
             teamId, context, ruleset.DevelopmentRules, ruleset.NegotiationRules, options,
-            (team, playersById) => ChartFor(snapshot, team, playersById, ruleset.RosterLimits));
+            (team, playersById) => ChartFor(team, playersById, ruleset.RosterLimits));
         return DomainOperationResult<IReadOnlyList<TradeTargetCandidate>>.Success(candidates);
     }
 
@@ -375,7 +375,8 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         IReadOnlyCollection<Player> freeAgents,
         int round,
         IReadOnlyDictionary<PlayerId, TeamId>? restricted = null,
-        IReadOnlySet<TeamId>? nonBiddingTeams = null)
+        IReadOnlySet<TeamId>? nonBiddingTeams = null,
+        IReadOnlyList<SummerOffer>? standingOffers = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(freeAgents);
@@ -421,6 +422,17 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
             offers.AddRange(OffseasonModel.MarketOffers(team, freeAgents, context, direction, asOf, round, MarketOffersPerTeam));
         }
 
+        var available = freeAgents.Select(player => player.Id).ToHashSet();
+        foreach (var standing in standingOffers ?? [])
+        {
+            if (available.Contains(standing.PlayerId) &&
+                snapshot.Teams.FirstOrDefault(team => team.Id == standing.TeamId) is { } team &&
+                OffseasonModel.StandingOffer(team, playersById[standing.PlayerId], standing.Salary, standing.Seasons, context, round).Bid is { } bid)
+            {
+                offers.Add(bid);
+            }
+        }
+
         var plans = new List<MarketSigningPlan>();
         foreach (var (bid, choice) in OffseasonModel.ResolveRound(offers, playersById, records, asOf))
         {
@@ -440,6 +452,45 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
         }
 
         return DomainOperationResult<IReadOnlyList<MarketSigningPlan>>.Success(plans);
+    }
+
+    public DomainOperationResult<RuleFinding> ExplainStandingOffer(LeagueSnapshot snapshot, SummerOffer offer, int round)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        ArgumentNullException.ThrowIfNull(offer);
+
+        var rulesetResult = BuildRuleset(snapshot);
+        if (rulesetResult.IsFailure)
+        {
+            return DomainOperationResult<RuleFinding>.Failure(rulesetResult.Errors.ToArray());
+        }
+
+        var team = snapshot.Teams.FirstOrDefault(candidate => candidate.Id == offer.TeamId);
+        var player = snapshot.Players.FirstOrDefault(candidate => candidate.Id == offer.PlayerId);
+        if (team is null || player is null)
+        {
+            return DomainOperationResult<RuleFinding>.Failure(new DomainError(UnknownTeamCode, "The offer names a team or player this league does not have."));
+        }
+
+        var ruleset = rulesetResult.Value;
+        var context = new MarketContext(
+            snapshot.CurrentSeason,
+            SeasonDay.Opening,
+            player,
+            snapshot.Teams,
+            snapshot.Players,
+            snapshot.Contracts,
+            snapshot.Ledger,
+            ruleset.RosterLimits,
+            ruleset.CapThresholds,
+            ruleset.NegotiationRules,
+            new SeededRandomSource(AskingPriceSeed),
+            ruleset.PostseasonRules,
+            ruleset.CapMechanics,
+            ruleset.BuyoutRules,
+            ruleset.IncumbentRightsRules,
+            LeagueSalaryScale.For(snapshot));
+        return DomainOperationResult<RuleFinding>.Success(OffseasonModel.StandingOffer(team, player, offer.Salary, offer.Seasons, context, round).Reason);
     }
 
     public DomainOperationResult<IReadOnlyList<OptionPlan>> PlanOptionDecisions(LeagueSnapshot snapshot)
@@ -576,29 +627,40 @@ public sealed class RulesFrontOfficeAdvisor(ICapLedger capLedger) : IFrontOffice
     }
 
     /// <summary>
-    /// A team's depth chart as this snapshot leaves it, built once per snapshot: every team's trade
-    /// search reads every other team's chart, and a snapshot is immutable, so the charts only change
-    /// when a trade (a new snapshot) does.
+    /// A team's depth chart, built again only when what it is built from has changed: every team's
+    /// trade search reads every other team's chart, and between two trades almost none of them change.
+    /// A team and its players are mutable, so a cached chart is reused only while the roster reads
+    /// exactly as it did — the same players in the same order, each with the same rating object,
+    /// injury, retirement and position — under the same roster limits. Anything else rebuilds it.
     /// </summary>
-    private DepthChart? ChartFor(LeagueSnapshot snapshot, Team team, IReadOnlyDictionary<PlayerId, Player> playersById, RosterSizeLimits rosterLimits)
+    private DepthChart? ChartFor(Team team, IReadOnlyDictionary<PlayerId, Player> playersById, RosterSizeLimits rosterLimits)
     {
-        if (!ReferenceEquals(_chartsSnapshot, snapshot))
+        var roster = team.PlayerIds
+            .Select(playerId => playersById.GetValueOrDefault(playerId) is { } player
+                ? new ChartInput(playerId, player.Rating, player.IsInjured, player.IsRetired, player.Position)
+                : new ChartInput(playerId, null, false, false, default))
+            .ToArray();
+
+        if (_charts.TryGetValue(team.Id, out var cached) && cached.Limits == rosterLimits && cached.Roster.Length == roster.Length &&
+            cached.Roster.Zip(roster).All(pair => pair.First.SameAs(pair.Second)))
         {
-            _charts.Clear();
-            _chartsSnapshot = snapshot;
+            return cached.Chart;
         }
 
-        if (!_charts.TryGetValue(team.Id, out var chart))
-        {
-            chart = DepthChartSupport.BuildChart(team, playersById, rosterLimits);
-            _charts[team.Id] = chart;
-        }
-
+        var chart = DepthChartSupport.BuildChart(team, playersById, rosterLimits);
+        _charts[team.Id] = (chart, roster, rosterLimits);
         return chart;
     }
 
-    private readonly Dictionary<TeamId, DepthChart?> _charts = [];
-    private LeagueSnapshot? _chartsSnapshot;
+    /// <summary>One rostered player as a depth chart reads him.</summary>
+    private readonly record struct ChartInput(PlayerId PlayerId, PlayerRating? Rating, bool IsInjured, bool IsRetired, Position Position)
+    {
+        public bool SameAs(ChartInput other) =>
+            PlayerId == other.PlayerId && ReferenceEquals(Rating, other.Rating) && IsInjured == other.IsInjured &&
+            IsRetired == other.IsRetired && Position == other.Position;
+    }
+
+    private readonly Dictionary<TeamId, (DepthChart? Chart, ChartInput[] Roster, RosterSizeLimits Limits)> _charts = [];
     private DomainOperationResult<LeagueRuleset>? _ruleset;
     private LeagueConfiguration? _rulesetConfiguration;
     private bool _rulesetFlat;
