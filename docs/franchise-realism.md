@@ -526,3 +526,16 @@ agents, their own expiring players included): a flat salary for 1–5 seasons
 - Open, from an 8-season run on the private pack: payroll-floor shortfalls grow over a long save (up to ten
   teams under it by year four), rebounding leaders sit at 16–18 a game, the free-agent pool grows each
   season while rosters thin, and stars still move as free agents more often than they should.
+
+## 21. Unsigned players leave the league; a real-league roster minimum
+
+- **The free-agent pool no longer grows forever.** About 45 players enter a 30-team league each summer and
+  about 25 retire, so unsigned players piled up (a private real-league pack: 113 to 310 in six seasons).
+  A free agent with neither a game nor a contract in the season just concluded now leaves the league at
+  the retirement step (`RetirementModel.LeavesTheLeague`, code `retirement.left_the_league`), unless he
+  is injured. A deep reserve under contract who never got into a game stays. Only in a league that models
+  retirement.
+- **A real-league pack should state the agreement's roster minimum (14).** The shipped fictional ruleset
+  keeps 12. With 14 on the private pack, every roster carries 14–15 and the pool holds 47–70.
+- **Still open:** payroll-floor shortfalls (seven to nine teams at 78–89% of the floor in a summer, once
+  63%), rebounding leaders at 17–18 a game on the private pack, and star movement in free agency.

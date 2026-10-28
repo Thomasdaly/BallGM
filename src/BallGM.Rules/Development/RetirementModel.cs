@@ -45,6 +45,26 @@ public static class RetirementModel
 
     public static RetirementAssessment Assess(int age, RetirementRules rules, IRandomSource random) => Assess(age, rules, random, 100);
 
+    private const string LeftTheLeagueCode = "retirement.left_the_league";
+
+    /// <summary>
+    /// Whether a free agent leaves the league (<c>docs/franchise-realism.md</c> → §21): nobody signed him
+    /// all season and he did not play a game (<paramref name="playedThisSeason"/> is false only for a player
+    /// with neither a game nor a contract in the season), so he has gone overseas, to the minor leagues or home — the
+    /// real league's free-agent pool does not keep every unsigned player forever. A player out injured is
+    /// still waiting to show he is healthy, and stays. Only for a league that models retirement.
+    /// </summary>
+    public static RetirementAssessment LeavesTheLeague(bool playedThisSeason, bool injured, RetirementRules rules)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+        if (!rules.IsConfigured || playedThisSeason || injured)
+        {
+            return new RetirementAssessment(false, new RuleFinding(ContinuesPlayingCode, "He played this season, is injured, or this league does not model retirement."));
+        }
+
+        return new RetirementAssessment(true, new RuleFinding(LeftTheLeagueCode, "Unsigned all season without playing a game, he leaves the league."));
+    }
+
     private static RetirementAssessment Assess(int age, RetirementRules rules, IRandomSource random, int oddsPercent)
     {
         ArgumentNullException.ThrowIfNull(rules);

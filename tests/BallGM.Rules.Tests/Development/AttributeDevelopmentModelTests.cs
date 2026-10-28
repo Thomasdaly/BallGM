@@ -75,4 +75,18 @@ public sealed class AttributeDevelopmentModelTests
         var star = Count(percentile: 98, underContract: true);
         Assert.True(fringe > star * 8, $"{fringe} fringe free agents and {star} contracted stars retired out of 4,000.");
     }
+    [Fact]
+    public void AFreeAgentNobodySignedAndWhoNeverPlayed_LeavesTheLeague_UnlessHeIsInjured()
+    {
+        var odds = BandedScale.Create([new ScaleBand(0, 0), new ScaleBand(30, 1_500)]).Value;
+        var rules = RetirementRules.Create(30, 0, odds).Value;
+
+        var gone = RetirementModel.LeavesTheLeague(playedThisSeason: false, injured: false, rules);
+        Assert.True(gone.Retires);
+        Assert.Equal("retirement.left_the_league", gone.Finding.RuleCode);
+
+        Assert.False(RetirementModel.LeavesTheLeague(playedThisSeason: true, injured: false, rules).Retires);
+        Assert.False(RetirementModel.LeavesTheLeague(playedThisSeason: false, injured: true, rules).Retires);
+        Assert.False(RetirementModel.LeavesTheLeague(playedThisSeason: false, injured: false, RetirementRules.None).Retires);
+    }
 }

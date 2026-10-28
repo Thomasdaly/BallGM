@@ -183,6 +183,17 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
             .Select((player, rank) => (player.Id.Value, Percent: byAbility.Count <= 1 ? 50 : rank * 100 / (byAbility.Count - 1)))
             .ToDictionary(entry => entry.Value, entry => entry.Percent, StringComparer.Ordinal);
 
+        // Who played in the season just concluded: a free agent who did not, and was not signed, leaves the league.
+        var concludedLabel = LeagueSession.SeasonLabel(snapshot.CurrentSeason.Year - 1);
+        // A player under contract at any point of it counts too: a deep reserve who never got into a game
+        // was still in the league.
+        var concludedSeason = new Season(snapshot.CurrentSeason.Year - 1);
+        var playedThisSeason = snapshot.CareerHistory
+            .Where(entry => entry.Value.Any(line => line.Season == concludedLabel && line.GamesPlayed > 0))
+            .Select(entry => entry.Key)
+            .Concat(snapshot.Contracts.Where(contract => contract.TermFor(concludedSeason) is not null).Select(contract => contract.PlayerId.Value))
+            .ToHashSet(StringComparer.Ordinal);
+
         var developed = 0;
         var retired = new List<PlayerId>();
         var notes = new List<RuleFinding>();
@@ -216,7 +227,10 @@ public sealed class RulesSeasonEngine(IMatchEngine? matchEngine = null) : ISeaso
                 continue;
             }
 
-            var verdict = RetirementModel.Assess(age, percentile.GetValueOrDefault(player.Id.Value, 50), underContract: false, ruleset.RetirementRules, random);
+            var leaves = RetirementModel.LeavesTheLeague(playedThisSeason.Contains(player.Id.Value), player.IsInjured, ruleset.RetirementRules);
+            var verdict = leaves.Retires
+                ? leaves
+                : RetirementModel.Assess(age, percentile.GetValueOrDefault(player.Id.Value, 50), underContract: false, ruleset.RetirementRules, random);
             if (verdict.Retires && player.Retire().IsSuccess)
             {
                 retired.Add(player.Id);
